@@ -242,13 +242,21 @@ export default function VisaResultCard({ item, travellers = 1, onApply }: Props)
     </span>
 
     <span className="font-extrabold text-gray-950">
-      ₹{(
-        pricingSnapshot.baseVisaAmount +
-        pricingSnapshot.serviceFee +
-        pricingSnapshot.taxesAndFees
-      ).toLocaleString("en-IN")}
+  ₹{pricingSnapshot.serviceFee.toLocaleString("en-IN")}
+</span>
+  </div>
+
+{pricingSnapshot.taxesAndFees > 0 && (
+  <div className="flex justify-between">
+    <span className="font-semibold text-gray-600">
+      Taxes & Charges
+    </span>
+
+    <span className="font-extrabold text-gray-950">
+      ₹{pricingSnapshot.taxesAndFees.toLocaleString("en-IN")}
     </span>
   </div>
+)}
 
   {offerDiscount > 0 && (
     <div className="flex items-center justify-between rounded-xl border border-green-200 bg-green-50 px-3 py-2">

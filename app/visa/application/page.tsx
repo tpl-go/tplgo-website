@@ -17,6 +17,9 @@ import VisaBookingOffersSection from "@/app/components/booking/visa/VisaBookingO
 
 import { applyBenefitPricing } from "@/app/lib/pricing/applyBenefitPricing";
 import { getWallet } from "@/app/lib/wallet/walletStorage";
+import { getSavedProfile } from "@/app/lib/account/profileStorage";
+import { getSavedTravellers } from "@/app/lib/booking/safeProfileSeed";
+
 import {
   calculateSmartOfferDiscount,
   getSmartActiveOfferItem,
@@ -36,6 +39,39 @@ function getActiveUser() {
 function safeNumber(value: any, fallback = 0) {
   const num = Number(value);
   return Number.isFinite(num) ? num : fallback;
+}
+
+function cleanMobile(value?: string) {
+  return String(value || "")
+    .replace(/^\+91\s?/, "")
+    .replace(/^\+91-?/, "")
+    .replace(/\D/g, "")
+    .slice(-10);
+}
+
+function joinName(firstName?: string, lastName?: string) {
+  return `${String(firstName || "").trim()} ${String(lastName || "").trim()}`.trim();
+}
+
+function resolveVisaLoggedInDisplayName(user: any) {
+  const mobile = cleanMobile(user?.mobile);
+  if (!mobile) return "";
+
+  const profile = getSavedProfile(mobile);
+  const profileName = joinName(profile?.firstName, profile?.lastName);
+
+  if (profileName) return profileName;
+
+  const savedTravellers = getSavedTravellers(mobile);
+  const leadTraveller = savedTravellers.find((traveller: any) =>
+    joinName(traveller?.firstName, traveller?.lastName)
+  );
+
+  const leadName = joinName(leadTraveller?.firstName, leadTraveller?.lastName);
+
+  if (leadName) return leadName;
+
+  return mobile;
 }
 
 type Applicant = {
@@ -83,8 +119,9 @@ export default function VisaApplicationPage() {
   const router = useRouter();
 
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [activeUser, setActiveUser] = useState<any>(null);
-  const [appliedOffer, setAppliedOffer] = useState<VisaOfferItem | null>(null);
+const [activeUser, setActiveUser] = useState<any>(null);
+const [displayUserName, setDisplayUserName] = useState("");
+const [appliedOffer, setAppliedOffer] = useState<VisaOfferItem | null>(null);
 
   const [selectedData, setSelectedData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -109,9 +146,10 @@ export default function VisaApplicationPage() {
   useEffect(() => {
     const loadUserAndWallet = () => {
       const user = getActiveUser();
-      setActiveUser(user);
+setActiveUser(user);
+setDisplayUserName(user?.mobile ? resolveVisaLoggedInDisplayName(user) : "");
 
-      if (user?.mobile) {
+if (user?.mobile) {
         setWallet(getWallet(user.mobile));
       } else {
         setWallet({
@@ -541,7 +579,7 @@ export default function VisaApplicationPage() {
                   applicantIndex={index}
                   onChange={(value) => updateApplicant(index, value)}
                   isAuthenticated={Boolean(activeUser)}
-                  userName={activeUser?.name || ""}
+                  userName={displayUserName}
                   onLoginClick={() => setShowLoginModal(true)}
                   showLoginBox={index === 0}
                 />
