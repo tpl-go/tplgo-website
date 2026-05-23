@@ -120,8 +120,8 @@ export default function Calendar({
           onClick={() => setOpenDep(true)}
           className={`flex cursor-pointer flex-col justify-center ${
             isResults
-              ? "h-[64px] w-[140px] rounded-md border border-[#1f2937] bg-white px-3"
-              : "h-[86px] w-[180px] rounded-2xl border border-slate-700 bg-white/60 px-4 py-3"
+              ? "h-[64px] w-full md:w-[140px] rounded-md border border-[#1f2937] bg-white px-3"
+              : "h-[86px] w-full md:w-[180px] rounded-2xl border border-slate-700 bg-white/60 px-4 py-3"
           }`}
         >
           <span

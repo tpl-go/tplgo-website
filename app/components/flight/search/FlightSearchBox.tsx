@@ -29,7 +29,6 @@ export default function FlightSearchBox({
         setCalendarOpen(null);
       }
     }
-
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
@@ -39,7 +38,7 @@ export default function FlightSearchBox({
       className={
         isResults
           ? "w-full rounded-lg border border-black bg-white px-3 py-2 shadow-none"
-          : "mt-7 w-full rounded-[26px] border border-white/45 bg-white/20 px-5 py-4 shadow-xl backdrop-blur-md"
+          : "mt-7 w-full rounded-[26px] border border-white/45 bg-white/20 px-4 py-4 shadow-xl backdrop-blur-md"
       }
     >
       {!isResults && (
@@ -58,7 +57,8 @@ export default function FlightSearchBox({
           className={
             isResults
               ? "flex items-stretch gap-4 mt-2 w-full"
-              : "flex items-center gap-3"
+              : // Mobile: stack karo, Desktop: ek line
+                "flex flex-col md:flex-row md:items-center gap-3"
           }
         >
           {isResults && (
@@ -71,22 +71,31 @@ export default function FlightSearchBox({
             </div>
           )}
 
-          <AirportSelect
-            state={state}
-            dispatch={dispatch}
-            variant={variant}
-          />
+          {/* AirportSelect — full width mobile pe */}
+          <div className="w-full md:w-auto">
+            <AirportSelect
+              state={state}
+              dispatch={dispatch}
+              variant={variant}
+            />
+          </div>
 
-          <Calendar state={state} dispatch={dispatch} variant={variant} />
+          {/* Calendar — full width mobile pe */}
+          <div className="w-full md:w-auto">
+            <Calendar state={state} dispatch={dispatch} variant={variant} />
+          </div>
 
-          <TravelSelector
-            state={state}
-            dispatch={dispatch}
-            variant={variant}
-          />
+          {/* TravelSelector — full width mobile pe */}
+          <div className="w-full md:w-auto">
+            <TravelSelector
+              state={state}
+              dispatch={dispatch}
+              variant={variant}
+            />
+          </div>
 
           {isResults && (
-            <div className="w-[140px] shrink-0 ml-auto">
+            <div className="w-full md:w-[140px] shrink-0 md:ml-auto">
               <SearchButton state={state} variant={variant} />
             </div>
           )}
@@ -100,27 +109,25 @@ export default function FlightSearchBox({
             return (
               <div
                 key={i}
-                className={
-                  isResults
-                    ? "flex gap-3 items-center flex-nowrap"
-                    : "flex gap-3 items-center flex-nowrap"
-                }
+                className="flex flex-col md:flex-row gap-3 md:items-center"
               >
-                <AirportSelect
-                  state={state}
-                  dispatch={dispatch}
-                  segmentIndex={i}
-                  variant={variant}
-                />
+                <div className="w-full md:w-auto">
+                  <AirportSelect
+                    state={state}
+                    dispatch={dispatch}
+                    segmentIndex={i}
+                    variant={variant}
+                  />
+                </div>
 
                 {/* DATE */}
-                <div className="relative">
+                <div className="relative w-full md:w-auto">
                   <div
                     onClick={() => setCalendarOpen(i)}
                     className={
                       isResults
-                        ? "h-[75px] w-56 border border-black rounded-xl px-4 bg-white/10 flex flex-col justify-center cursor-pointer"
-                        : "h-[86px] w-56 rounded-2xl border border-slate-700 bg-white/60 px-4 py-3 flex flex-col justify-center cursor-pointer"
+                        ? "h-[75px] w-full md:w-56 border border-black rounded-xl px-4 bg-white/10 flex flex-col justify-center cursor-pointer"
+                        : "h-[86px] w-full md:w-56 rounded-2xl border border-slate-700 bg-white/60 px-4 py-3 flex flex-col justify-center cursor-pointer"
                     }
                   >
                     <span
@@ -170,11 +177,10 @@ export default function FlightSearchBox({
                     </span>
                   </div>
 
-                  {/* CALENDAR */}
                   {calendarOpen === i && (
                     <div
                       ref={calendarRef}
-                      className="absolute top-[80px] left-0 bg-white rounded-2xl shadow-2xl z-60 p-4 flex gap-8 border border-black"
+                      className="absolute top-[80px] left-0 bg-white rounded-2xl shadow-2xl z-60 p-4 flex flex-col md:flex-row gap-4 md:gap-8 border border-black max-w-[95vw] overflow-x-auto"
                     >
                       {months.slice(0, 2).map((month, mIndex) => {
                         const today = new Date();
@@ -199,13 +205,8 @@ export default function FlightSearchBox({
                                   return <div key={di} className="w-8 h-8" />;
                                 }
 
-                                const d = new Date(
-                                  month.year,
-                                  month.month,
-                                  day
-                                );
+                                const d = new Date(month.year, month.month, day);
                                 d.setHours(0, 0, 0, 0);
-
                                 const disabled = d < minDate;
 
                                 return (
@@ -240,11 +241,13 @@ export default function FlightSearchBox({
                 </div>
 
                 {i === 0 && (
-                  <TravelSelector
-                    state={state}
-                    dispatch={dispatch}
-                    variant={variant}
-                  />
+                  <div className="w-full md:w-auto">
+                    <TravelSelector
+                      state={state}
+                      dispatch={dispatch}
+                      variant={variant}
+                    />
+                  </div>
                 )}
 
                 {state.segments.length > 1 && (
