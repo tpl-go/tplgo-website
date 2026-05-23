@@ -1,0 +1,746 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import LoginModal from "@/app/components/common/LoginModal";
+import { AUTH_UPDATED_EVENT } from "@/app/lib/booking/guestAuth";
+import { applyPaymentMethod } from "@/app/data/booking/applyPaymentMethod";
+import { startPaymentProcess } from "@/app/data/booking/startPaymentProcess";
+import {
+  handlePaymentSuccess,
+  handlePaymentFailure,
+} from "@/app/data/booking/completePaymentProcess";
+import { confirmBooking } from "@/app/data/booking/confirmBooking";
+import { expireBooking } from "@/app/data/booking/expireBooking";
+import { applyBenefitPricing } from "@/app/lib/pricing/applyBenefitPricing";
+import {
+  getWallet,
+  saveWallet,
+  addWalletLedgerItem,
+  type Wallet,
+} from "@/app/lib/wallet/walletStorage";
+
+import FlightPaymentTopSummary from "@/app/components/payment/flight/FlightPaymentTopSummary";
+import FlightPaymentInsuranceCard from "@/app/components/payment/flight/FlightPaymentInsuranceCard";
+import FlightPaymentOptionSection from "@/app/components/payment/flight/FlightPaymentOptionSection";
+import FlightPaymentPriceCard from "@/app/components/payment/flight/FlightPaymentPriceCard";
+
+type StoredPayload = {
+  reviewData?: any;
+  travellerValidation?: any;
+  seatMealData?: {
+    seatTotal?: number;
+    mealTotal?: number;
+    seatStatus?: "pending" | "selected" | "skipped";
+    mealStatus?: "pending" | "selected" | "skipped";
+    seats?: {
+      travellerId: string;
+      seatNumber: string;
+      price: number;
+    }[];
+    meals?: {
+      travellerId: string;
+      mealName: string;
+      price: number;
+    }[];
+  };
+  cabData?: {
+    cabPrice?: number;
+    cabStatus?: "pending" | "selected" | "skipped";
+    cabLabel?: string;
+    cabType?: "airport" | "outstation" | "none";
+  };
+  insuranceData?: {
+    insurancePrice?: number;
+    insuranceStatus?: "pending" | "selected" | "skipped";
+    insuranceLabel?: string;
+  };
+  addonsData?: {
+    addonsPrice?: number;
+    addonsStatus?: "pending" | "selected" | "skipped";
+    addonsLabel?: string;
+    selectedItems?: string[];
+  };
+  offerData?: {
+    discountAmount?: number;
+    code?: string;
+    title?: string;
+    description?: string;
+  } | null;
+  walletData?: {
+    promoUsed: number;
+    earnedUsed: number;
+    refundUsed: number;
+    refundCredit: number;
+    finalPayable: number;
+    settlementMode: "payment" | "save" | "wallet_credit";
+  };
+  earnedCreditAmount?: number;
+  timerLeft?: number;
+};
+
+function getActiveUser() {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const raw = localStorage.getItem("tpl_auth_session_v1");
+    const parsed = raw ? JSON.parse(raw) : null;
+    return parsed?.user || null;
+  } catch {
+    return null;
+  }
+}
+
+export default function FlightPaymentPage() {
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
+  const [paymentActionState, setPaymentActionState] = useState<
+    "idle" | "processing" | "success" | "failure"
+  >("idle");
+  const [storedPayload, setStoredPayload] = useState<StoredPayload | null>(null);
+  const [insuranceSelected, setInsuranceSelected] = useState(false);
+  const [insuranceAmount, setInsuranceAmount] = useState(0);
+  const [activeUser, setActiveUser] = useState<any>(null);
+  const [wallet, setWallet] = useState<Wallet>({
+    promoCredit: 0,
+    earnedCredit: 0,
+    refundableBalance: 0,
+  });
+
+  const [timeLeft, setTimeLeft] = useState(10 * 60);
+  const [isExpired, setIsExpired] = useState(false);
+
+  useEffect(() => {
+    const raw =
+      typeof window !== "undefined"
+        ? sessionStorage.getItem("tplFlightBookingReviewData")
+        : null;
+
+    if (!raw) return;
+
+    try {
+      const parsed: StoredPayload = JSON.parse(raw);
+      setStoredPayload(parsed);
+
+      if (
+        parsed?.insuranceData?.insurancePrice &&
+        parsed.insuranceData.insurancePrice > 0
+      ) {
+        setInsuranceSelected(true);
+        setInsuranceAmount(parsed.insuranceData.insurancePrice);
+      }
+
+      if (typeof parsed?.timerLeft === "number" && parsed.timerLeft > 0) {
+        setTimeLeft(parsed.timerLeft);
+      }
+    } catch (error) {
+      console.error("Failed to parse flight payment payload:", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    const syncUserWallet = () => {
+      const user = getActiveUser();
+      setActiveUser(user);
+
+      if (user?.mobile) {
+        setWallet(getWallet(user.mobile));
+      } else {
+        setWallet({
+          promoCredit: 0,
+          earnedCredit: 0,
+          refundableBalance: 0,
+        });
+      }
+    };
+
+    syncUserWallet();
+
+    window.addEventListener(AUTH_UPDATED_EVENT, syncUserWallet);
+    window.addEventListener("storage", syncUserWallet);
+
+    return () => {
+      window.removeEventListener(AUTH_UPDATED_EVENT, syncUserWallet);
+      window.removeEventListener("storage", syncUserWallet);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (timeLeft <= 0) {
+      setIsExpired(true);
+      expireBooking();
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        const next = prev - 1;
+
+        const raw =
+          typeof window !== "undefined"
+            ? sessionStorage.getItem("tplFlightBookingReviewData")
+            : null;
+
+        if (raw) {
+          try {
+            const parsed: StoredPayload = JSON.parse(raw);
+            sessionStorage.setItem(
+              "tplFlightBookingReviewData",
+              JSON.stringify({
+                ...parsed,
+                timerLeft: next > 0 ? next : 0,
+              })
+            );
+          } catch (error) {
+            console.error("Failed to update timerLeft in session:", error);
+          }
+        }
+
+        return next;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [timeLeft]);
+
+  const formattedTime = useMemo(() => {
+    const mm = String(Math.floor(timeLeft / 60)).padStart(2, "0");
+    const ss = String(timeLeft % 60).padStart(2, "0");
+    return `${mm}:${ss}`;
+  }, [timeLeft]);
+
+  const reviewData = storedPayload?.reviewData;
+  const travellerValidation = storedPayload?.travellerValidation;
+  const seatMealData = storedPayload?.seatMealData || {};
+  const cabData = storedPayload?.cabData || {};
+  const addonsData = storedPayload?.addonsData || {};
+  const offerData = storedPayload?.offerData || null;
+
+  const totalTravellers =
+    (reviewData?.passengers?.adults || 0) +
+      (reviewData?.passengers?.children || 0) +
+      (reviewData?.passengers?.infants || 0) || 1;
+
+  const priceBreakup = useMemo(() => {
+    const baseFare =
+  Number(reviewData?.pricing?.baseFareTotal || 0) ||
+  (reviewData?.pricing?.perAdultBaseFare || 0) *
+    totalTravellers;
+    const tax = reviewData?.pricing?.tax || 0;
+    const surcharge = reviewData?.pricing?.surcharge || 0;
+    const seatTotal = seatMealData?.seatTotal || 0;
+    const mealTotal = seatMealData?.mealTotal || 0;
+    const cabTotal = cabData?.cabPrice || 0;
+    const addonsTotal = addonsData?.addonsPrice || 0;
+    const appliedOffer = offerData?.discountAmount || 0;
+    const discount = reviewData?.pricing?.discount || 0;
+    const oldTplCredit = reviewData?.pricing?.tplCredit || 0;
+
+    const benefitPricing = applyBenefitPricing({
+  baseAmount: baseFare,
+
+  taxes: tax,
+  fees: surcharge,
+
+  seatCharges: seatTotal,
+  mealCharges: mealTotal,
+  cabCharges: cabTotal,
+  insuranceCharges: insuranceSelected
+    ? insuranceAmount
+    : 0,
+
+  addOns: addonsTotal,
+
+  offerDiscount:
+  appliedOffer + discount,
+
+  promoCredit: activeUser?.mobile
+    ? wallet.promoCredit
+    : 0,
+
+  earnedCredit: activeUser?.mobile
+    ? wallet.earnedCredit
+    : 0,
+
+  refundWallet: activeUser?.mobile
+    ? wallet.refundableBalance
+    : 0,
+});
+
+const walletCalc = {
+  promoUsed: benefitPricing.promoUsed,
+  earnedUsed: benefitPricing.earnedUsed,
+  refundUsed: benefitPricing.refundUsed,
+  finalPayable: benefitPricing.finalPayable,
+};
+
+const tplCredit =
+  benefitPricing.promoUsed +
+  benefitPricing.earnedUsed;
+
+const totalBeforeWallet =
+  benefitPricing.payableBeforeRefundWallet;
+
+const finalTotalAmount =
+  benefitPricing.finalPayable;
+
+    return {
+  baseFare,
+  tax,
+  surcharge,
+  seatTotal,
+  mealTotal,
+  cabTotal,
+  insuranceTotal: insuranceSelected ? insuranceAmount : 0,
+  addonsTotal,
+  appliedOffer,
+  discount,
+  tplCredit,
+  walletCalc,
+  totalBeforeWallet,
+  baseAfterOffer: benefitPricing.baseAfterOffer,
+  totalAmount: finalTotalAmount,
+};
+  }, [
+    reviewData,
+    totalTravellers,
+    seatMealData,
+    cabData,
+    addonsData,
+    insuranceSelected,
+    insuranceAmount,
+    offerData,
+    activeUser,
+    wallet,
+  ]);
+
+  const earnedOnThisBooking = Number(
+  storedPayload?.earnedCreditAmount ||
+    Math.floor(
+      Number(priceBreakup.baseAfterOffer || 0) * 0.02
+    )
+);
+
+  const handleMockPayment = async (shouldSucceed = true) => {
+    if (!selectedPaymentMethod || isExpired) return;
+
+    setPaymentActionState("processing");
+    startPaymentProcess();
+
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+
+    if (shouldSucceed) {
+      const activeMobile = activeUser?.mobile || "";
+
+      if (activeMobile) {
+        const latestWallet = getWallet(activeMobile);
+
+        const latestWalletCalc = applyBenefitPricing({
+  baseAmount: priceBreakup.baseFare || 0,
+
+  taxes:
+    (priceBreakup.tax || 0) +
+    (priceBreakup.surcharge || 0),
+
+  seatCharges: priceBreakup.seatTotal || 0,
+  mealCharges: priceBreakup.mealTotal || 0,
+  cabCharges: priceBreakup.cabTotal || 0,
+  insuranceCharges:
+    priceBreakup.insuranceTotal || 0,
+
+  addOns: priceBreakup.addonsTotal || 0,
+
+  offerDiscount:
+  Number(priceBreakup.appliedOffer || 0),
+
+  promoCredit: latestWallet.promoCredit,
+  earnedCredit: latestWallet.earnedCredit,
+  refundWallet: latestWallet.refundableBalance,
+});
+
+        const nextWallet: Wallet = {
+          promoCredit: Math.max(
+            Number(latestWallet.promoCredit || 0) -
+              Number(latestWalletCalc.promoUsed || 0),
+            0
+          ),
+          earnedCredit: Math.max(
+            Number(latestWallet.earnedCredit || 0) -
+              Number(latestWalletCalc.earnedUsed || 0),
+            0
+          ),
+          refundableBalance: Math.max(
+            Number(latestWallet.refundableBalance || 0) -
+              Number(latestWalletCalc.refundUsed || 0),
+            0
+          ),
+        };
+
+        saveWallet(nextWallet, activeMobile);
+        setWallet(nextWallet);
+
+        if (Number(latestWalletCalc.promoUsed || 0) > 0) {
+          addWalletLedgerItem(
+            {
+              type: "wallet_used",
+              title: "TPL Promo Credit Used",
+              description: "Promo credit used for flight booking payment",
+              amount: Number(latestWalletCalc.promoUsed || 0),
+            },
+            activeMobile
+          );
+        }
+
+        if (Number(latestWalletCalc.earnedUsed || 0) > 0) {
+          addWalletLedgerItem(
+            {
+              type: "wallet_used",
+              title: "TPL Earned Credit Used",
+              description: "Earned credit used for flight booking payment",
+              amount: Number(latestWalletCalc.earnedUsed || 0),
+            },
+            activeMobile
+          );
+        }
+
+        if (Number(latestWalletCalc.refundUsed || 0) > 0) {
+          addWalletLedgerItem(
+            {
+              type: "wallet_used",
+              title: "Refund Wallet Used",
+              description: "Refund wallet used for flight booking payment",
+              amount: Number(latestWalletCalc.refundUsed || 0),
+            },
+            activeMobile
+          );
+        }
+      }
+
+      handlePaymentSuccess();
+      confirmBooking();
+      setPaymentActionState("success");
+
+const contactDetails = travellerValidation?.contactDetails || {};
+const leadTraveller = travellerValidation?.travellers?.[0] || {};
+
+const confirmationMobile =
+  contactDetails?.mobile ||
+  contactDetails?.phone ||
+  activeUser?.mobile ||
+  "";
+
+const confirmationEmail =
+  contactDetails?.email ||
+  leadTraveller?.email ||
+  activeUser?.email ||
+  "";
+
+      const confirmationPayload = {
+        reviewData,
+        travellerValidation,
+        seatMealData,
+        cabData,
+        insuranceData: {
+          insuranceStatus: insuranceSelected ? "selected" : "skipped",
+          insurancePrice: insuranceSelected ? insuranceAmount : 0,
+        },
+        addonsData,
+        offerData,
+        walletData: priceBreakup.walletCalc,
+
+pricingSnapshot: {
+  baseFare: priceBreakup.baseFare,
+  baseAfterOffer: priceBreakup.baseAfterOffer,
+  appliedOffer: priceBreakup.appliedOffer,
+  totalBeforeWallet: priceBreakup.totalBeforeWallet,
+  finalPayable: priceBreakup.totalAmount,
+},
+
+earnedCreditAmount: earnedOnThisBooking,
+
+paymentData: {
+  method: selectedPaymentMethod,
+  totalPaid: priceBreakup.totalAmount,
+  paidAt: new Date().toISOString(),
+  mobile: confirmationMobile,
+  email: confirmationEmail,
+leadTraveller: {
+  ...leadTraveller,
+  mobile: confirmationMobile,
+  email: confirmationEmail,
+},
+          walletUsed:
+            Number(priceBreakup.walletCalc.promoUsed || 0) +
+            Number(priceBreakup.walletCalc.earnedUsed || 0) +
+            Number(priceBreakup.walletCalc.refundUsed || 0),
+          promoUsed: priceBreakup.walletCalc.promoUsed,
+          earnedUsed: priceBreakup.walletCalc.earnedUsed,
+          refundUsed: priceBreakup.walletCalc.refundUsed,
+        },
+        bookingMeta: {
+          bookingId: `TPL-FLT-${Date.now()}`,
+          bookingStatus: "confirmed",
+          paymentStatus: "paid",
+          createdAt: new Date().toISOString(),
+        },
+      };
+
+      sessionStorage.setItem(
+        "tplFlightConfirmationData",
+        JSON.stringify(confirmationPayload)
+      );
+
+      window.location.href = "/flights/confirmation";
+    } else {
+      handlePaymentFailure();
+      setPaymentActionState("failure");
+    }
+  };
+
+  if (!reviewData) {
+    return (
+      <main
+        style={{
+          minHeight: "100vh",
+          background: "#eef3f8",
+          color: "#000",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <div
+          style={{
+            background: "#fff",
+            border: "1px solid #d9e2ec",
+            padding: "24px",
+            borderRadius: "12px",
+            fontSize: "16px",
+            fontWeight: 600,
+            color: "#374151",
+          }}
+        >
+          Flight payment data not found.
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main className="min-h-screen bg-[#eef3f8] text-black">
+      <div
+        style={{
+          height: "72px",
+          background: "#ffffff",
+          borderBottom: "1px solid #d9e2ec",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "0 28px",
+        }}
+      >
+        <div
+          style={{
+            fontSize: "26px",
+            fontWeight: 900,
+            color: "#111827",
+            letterSpacing: "-0.4px",
+          }}
+        >
+          TPL
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            fontSize: "13px",
+            fontWeight: 800,
+          }}
+        >
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              minWidth: "64px",
+              height: "30px",
+              borderRadius: "999px",
+              background: "#ffffff",
+              border: "1px solid #d9e2ec",
+              padding: "0 12px",
+              color: timeLeft < 120 ? "#dc2626" : "#111827",
+              fontWeight: 800,
+            }}
+          >
+            {formattedTime}
+          </span>
+
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              height: "30px",
+              borderRadius: "999px",
+              background: "#ffffff",
+              border: "1px solid #d9e2ec",
+              padding: "0 12px",
+              color: "#0f766e",
+              fontWeight: 800,
+            }}
+          >
+            SAFE &amp; SECURED
+          </span>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        <div
+          style={{
+            display: "flex",
+            alignItems: "stretch",
+            gap: "18px",
+          }}
+        >
+          <div
+            style={{
+              width: "72%",
+              minWidth: 0,
+              display: "flex",
+              flexDirection: "column",
+              gap: "16px",
+            }}
+          >
+            <FlightPaymentTopSummary
+              reviewData={reviewData}
+              travellerValidation={travellerValidation}
+              seatMealData={storedPayload?.seatMealData}
+              cabData={storedPayload?.cabData}
+              insuranceData={{
+                insuranceStatus: insuranceSelected ? "selected" : "skipped",
+                insuranceLabel: insuranceSelected
+                  ? "Travel Insurance Added"
+                  : "Travel Insurance Skipped",
+                insurancePrice: insuranceSelected ? insuranceAmount : 0,
+              }}
+              addonsData={storedPayload?.addonsData}
+              offerData={storedPayload?.offerData}
+            />
+
+            <div
+              style={{
+                border: "1px solid #d9e2ec",
+                background: "#ffffff",
+                borderRadius: "16px",
+                overflow: "hidden",
+                boxShadow: "0 2px 8px rgba(15,23,42,0.04)",
+              }}
+            >
+              <div
+                style={{
+                  padding: "18px 20px",
+                  borderBottom: "1px solid #e5e7eb",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: "16px",
+                  flexWrap: "wrap",
+                }}
+              >
+                <div>
+                  <div
+                    style={{
+                      fontSize: "16px",
+                      fontWeight: 800,
+                      color: "#111827",
+                    }}
+                  >
+                    Additional discounts and saved payment options
+                  </div>
+                  <div
+                    style={{
+                      marginTop: "4px",
+                      fontSize: "13px",
+                      color: "#6b7280",
+                    }}
+                  >
+                    {activeUser?.mobile
+                      ? "Wallet benefits are applied as per your account balance."
+                      : "Login to access saved payments and wallet discounts!"}
+                  </div>
+                </div>
+
+                {!activeUser?.mobile ? (
+                  <button
+                    onClick={() => setShowLoginModal(true)}
+                    style={{
+                      minWidth: "110px",
+                      height: "42px",
+                      border: "none",
+                      borderRadius: "10px",
+                      background: "#1d9bf0",
+                      color: "#ffffff",
+                      fontSize: "14px",
+                      fontWeight: 800,
+                      cursor: "pointer",
+                    }}
+                  >
+                    LOGIN
+                  </button>
+                ) : null}
+              </div>
+            </div>
+
+            <FlightPaymentInsuranceCard
+              totalTravellers={totalTravellers}
+              defaultSelected={insuranceSelected}
+              pricePerTraveller={
+                totalTravellers > 0
+                  ? Math.round(
+                      (storedPayload?.insuranceData?.insurancePrice ||
+                        349 * totalTravellers) / totalTravellers
+                    )
+                  : 349
+              }
+              onSelectionChange={({ selected, totalInsuranceAmount }) => {
+                setInsuranceSelected(selected);
+                setInsuranceAmount(totalInsuranceAmount);
+              }}
+            />
+
+            <FlightPaymentOptionSection
+              onPaymentMethodChange={(method) => {
+                setSelectedPaymentMethod(method);
+                applyPaymentMethod(method);
+              }}
+            />
+          </div>
+
+          <div
+            style={{
+              width: "28%",
+              minWidth: 0,
+              alignSelf: "stretch",
+            }}
+          >
+            <FlightPaymentPriceCard
+              priceBreakup={priceBreakup}
+              earnedOnThisBooking={earnedOnThisBooking}
+              selectedPaymentMethod={selectedPaymentMethod}
+              paymentActionState={paymentActionState}
+              isExpired={isExpired}
+              onPayNow={() => handleMockPayment(true)}
+              onRetryPayment={() => handleMockPayment(true)}
+            />
+          </div>
+        </div>
+      </div>
+
+      <LoginModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+      />
+    </main>
+  );
+}

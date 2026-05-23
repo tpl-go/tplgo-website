@@ -1,0 +1,468 @@
+"use client";
+
+import { Suspense, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import HotelResultsSearchBar from "@/app/components/hotel/results/HotelResultsSearchBar";
+import HotelResultsTopStrip from "@/app/components/hotel/results/HotelResultsTopStrip";
+import HotelResultsSortBar from "@/app/components/hotel/results/HotelResultsSortBar";
+import HotelResultCard from "@/app/components/hotel/results/HotelResultCard";
+import HotelResultsFilters, {
+  type FilterChip,
+  type HotelFilterState,
+} from "@/app/components/hotel/results/HotelResultsFilters";
+import { hotelResultsDummy } from "@/app/data/stays/hotels/hotelResultsDummy";
+import SmartResultsOfferStrip from "@/app/components/smartOffers/SmartResultsOfferStrip";
+
+type HotelSortOption =
+  | "tplGuaranteed"
+  | "popularity"
+  | "priceLowToHigh"
+  | "priceHighToLow"
+  | "userRatingHighest"
+  | "lowestPriceBestRated";
+
+const INITIAL_FILTERS: HotelFilterState = {
+  searchText: "",
+  suggestedForYou: [],
+  priceRanges: [],
+  budgetMin: "",
+  budgetMax: "",
+  starCategory: [],
+  userRating: [],
+  propertyType: [],
+  topLocation: [],
+  roomViews: [],
+  roomAmenities: [],
+  chains: [],
+  tplLuxury: false,
+  bookingPreference: [],
+  hotelRules: [],
+};
+
+function toggleValue<T extends string | number>(list: T[], value: T) {
+  return list.includes(value)
+    ? list.filter((item) => item !== value)
+    : [...list, value];
+}
+
+function matchesPriceRange(price: number, range: string) {
+  switch (range) {
+    case "0-2000":
+      return price >= 0 && price < 2000;
+    case "2000-5000":
+      return price >= 2000 && price < 5000;
+    case "5000-8500":
+      return price >= 5000 && price < 8500;
+    case "8500-12000":
+      return price >= 8500 && price < 12000;
+    case "12000-15000":
+      return price >= 12000 && price < 15000;
+    case "15000-30000":
+      return price >= 15000 && price < 30000;
+    case "30000-plus":
+      return price >= 30000;
+    default:
+      return true;
+  }
+}
+
+function HotelResultsPageContent() {
+  const searchParams = useSearchParams();
+  const city = searchParams.get("city") || "Goa";
+
+  const [activeSort, setActiveSort] =
+    useState<HotelSortOption>("popularity");
+  const [filters, setFilters] = useState<HotelFilterState>(INITIAL_FILTERS);
+
+  const cityHotels = useMemo(() => {
+    return hotelResultsDummy.filter(
+      (hotel) => hotel.city.toLowerCase() === city.toLowerCase()
+    );
+  }, [city]);
+
+  const fallbackHotels = useMemo(() => hotelResultsDummy.slice(0, 4), []);
+  const sourceHotels = cityHotels.length > 0 ? cityHotels : fallbackHotels;
+
+  const filteredHotels = useMemo(() => {
+    return sourceHotels.filter((hotel) => {
+      const searchText = filters.searchText.trim().toLowerCase();
+
+      const searchMatch =
+        !searchText ||
+        [
+          hotel.title,
+          hotel.area,
+          hotel.chain || "",
+          hotel.description || "",
+          ...(hotel.topLocation || []),
+          ...(hotel.amenities || []),
+          ...(hotel.roomAmenities || []),
+          ...(hotel.searchableAmenities || []),
+          ...(hotel.locationHighlights || []),
+        ]
+          .join(" ")
+          .toLowerCase()
+          .includes(searchText);
+
+      const suggestedMatch =
+        filters.suggestedForYou.length === 0 ||
+        filters.suggestedForYou.every((item) => {
+          if (item === "TPL Guaranteed") return hotel.guaranteed;
+          if (item === "Couple Friendly") return hotel.coupleFriendly;
+          if (item === "Free Cancellation") {
+            return hotel.variants.some(
+              (variant) => variant.cancellation === "Free Cancellation"
+            );
+          }
+          if (item === "Breakfast Included") {
+            return hotel.variants.some((variant) => variant.mealPlan !== "EP");
+          }
+          return true;
+        });
+
+      const priceRangeMatch =
+        filters.priceRanges.length === 0 ||
+        filters.priceRanges.some((range) =>
+          matchesPriceRange(hotel.pricePerNight, range)
+        );
+
+      const budgetMinMatch =
+        !filters.budgetMin || hotel.pricePerNight >= Number(filters.budgetMin);
+
+      const budgetMaxMatch =
+        !filters.budgetMax || hotel.pricePerNight <= Number(filters.budgetMax);
+
+      const starMatch =
+        filters.starCategory.length === 0 ||
+        filters.starCategory.includes(hotel.starRating);
+
+      const userRatingMatch =
+        filters.userRating.length === 0 ||
+        filters.userRating.some((item) => {
+          if (item === "excellent") return hotel.rating >= 4.2;
+          if (item === "veryGood") return hotel.rating >= 3.5;
+          if (item === "good") return hotel.rating >= 3;
+          return true;
+        });
+
+      const propertyTypeMatch =
+        filters.propertyType.length === 0 ||
+        filters.propertyType.includes(hotel.propertyType || "Hotel");
+
+      const topLocationMatch =
+        filters.topLocation.length === 0 ||
+        filters.topLocation.some((item) => hotel.topLocation?.includes(item));
+
+      const roomViewsMatch =
+        filters.roomViews.length === 0 ||
+        filters.roomViews.some((item) => hotel.roomViews?.includes(item));
+
+      const roomAmenitiesMatch =
+        filters.roomAmenities.length === 0 ||
+        filters.roomAmenities.some((item) => hotel.roomAmenities?.includes(item));
+
+      const chainMatch =
+        filters.chains.length === 0 ||
+        filters.chains.includes(hotel.chain || "");
+
+      const luxuryMatch = !filters.tplLuxury || hotel.luxuryTag;
+
+      const bookingPreferenceMatch =
+        filters.bookingPreference.length === 0 ||
+        filters.bookingPreference.some((item) =>
+          hotel.bookingPreference?.includes(item)
+        );
+
+      const hotelRulesMatch =
+        filters.hotelRules.length === 0 ||
+        filters.hotelRules.some((item) => hotel.houseRules?.includes(item));
+
+      return (
+        searchMatch &&
+        suggestedMatch &&
+        priceRangeMatch &&
+        budgetMinMatch &&
+        budgetMaxMatch &&
+        starMatch &&
+        userRatingMatch &&
+        propertyTypeMatch &&
+        topLocationMatch &&
+        roomViewsMatch &&
+        roomAmenitiesMatch &&
+        chainMatch &&
+        luxuryMatch &&
+        bookingPreferenceMatch &&
+        hotelRulesMatch
+      );
+    });
+  }, [sourceHotels, filters]);
+
+  const sortedHotels = useMemo(() => {
+    const baseList = [...filteredHotels];
+
+    switch (activeSort) {
+      case "priceLowToHigh":
+        return baseList.sort((a, b) => a.pricePerNight - b.pricePerNight);
+
+      case "priceHighToLow":
+        return baseList.sort((a, b) => b.pricePerNight - a.pricePerNight);
+
+      case "userRatingHighest":
+        return baseList.sort((a, b) => b.rating - a.rating);
+
+      case "lowestPriceBestRated":
+        return baseList.sort((a, b) => {
+          const scoreA = a.pricePerNight - a.rating * 1000;
+          const scoreB = b.pricePerNight - b.rating * 1000;
+          return scoreA - scoreB;
+        });
+
+      case "tplGuaranteed":
+        return baseList.sort((a, b) => {
+          const aGuaranteed = a.guaranteed ? 1 : 0;
+          const bGuaranteed = b.guaranteed ? 1 : 0;
+          return bGuaranteed - aGuaranteed || b.rating - a.rating;
+        });
+
+      case "popularity":
+      default:
+        return baseList.sort((a, b) => b.reviews - a.reviews);
+    }
+  }, [filteredHotels, activeSort]);
+
+  const chips = useMemo<FilterChip[]>(() => {
+    const next: FilterChip[] = [];
+
+    if (filters.searchText.trim()) {
+      next.push({
+        type: "searchText",
+        label: `Search: ${filters.searchText.trim()}`,
+      });
+    }
+
+    filters.suggestedForYou.forEach((value) =>
+      next.push({ type: "suggestedForYou", value, label: value })
+    );
+
+    const rangeLabelMap: Record<string, string> = {
+      "0-2000": "₹ 0 - ₹ 2000",
+      "2000-5000": "₹ 2000 - ₹ 5000",
+      "5000-8500": "₹ 5000 - ₹ 8500",
+      "8500-12000": "₹ 8500 - ₹ 12000",
+      "12000-15000": "₹ 12000 - ₹ 15000",
+      "15000-30000": "₹ 15000 - ₹ 30000",
+      "30000-plus": "₹ 30000+",
+    };
+
+    filters.priceRanges.forEach((value) =>
+      next.push({
+        type: "priceRanges",
+        value,
+        label: rangeLabelMap[value] || value,
+      })
+    );
+
+    if (filters.budgetMin) {
+      next.push({ type: "budgetMin", label: `Min ₹${filters.budgetMin}` });
+    }
+
+    if (filters.budgetMax) {
+      next.push({ type: "budgetMax", label: `Max ₹${filters.budgetMax}` });
+    }
+
+    filters.starCategory.forEach((value) =>
+      next.push({
+        type: "starCategory",
+        value,
+        label: `${value} Star`,
+      })
+    );
+
+    const ratingLabelMap: Record<string, string> = {
+      excellent: "Excellent: 4.2+",
+      veryGood: "Very Good: 3.5+",
+      good: "Good: 3+",
+    };
+
+    filters.userRating.forEach((value) =>
+      next.push({
+        type: "userRating",
+        value,
+        label: ratingLabelMap[value] || value,
+      })
+    );
+
+    filters.propertyType.forEach((value) =>
+      next.push({ type: "propertyType", value, label: value })
+    );
+    filters.topLocation.forEach((value) =>
+      next.push({ type: "topLocation", value, label: value })
+    );
+    filters.roomViews.forEach((value) =>
+      next.push({ type: "roomViews", value, label: value })
+    );
+    filters.roomAmenities.forEach((value) =>
+      next.push({ type: "roomAmenities", value, label: value })
+    );
+    filters.chains.forEach((value) =>
+      next.push({ type: "chains", value, label: value })
+    );
+    filters.bookingPreference.forEach((value) =>
+      next.push({ type: "bookingPreference", value, label: value })
+    );
+    filters.hotelRules.forEach((value) =>
+      next.push({ type: "hotelRules", value, label: value })
+    );
+
+    if (filters.tplLuxury) {
+      next.push({ type: "tplLuxury", label: "TPL Luxe Selections" });
+    }
+
+    return next;
+  }, [filters]);
+
+  const handleToggleArray = (
+    key:
+      | "suggestedForYou"
+      | "priceRanges"
+      | "starCategory"
+      | "userRating"
+      | "propertyType"
+      | "topLocation"
+      | "roomViews"
+      | "roomAmenities"
+      | "chains"
+      | "bookingPreference"
+      | "hotelRules",
+    value: string | number
+  ) => {
+    setFilters((prev) => ({
+      ...prev,
+      [key]: toggleValue(prev[key] as (string | number)[], value),
+    }));
+  };
+
+  const handleSetField = (
+    key: "searchText" | "budgetMin" | "budgetMax",
+    value: string
+  ) => {
+    setFilters((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+  };
+
+  const handleClearAll = () => {
+    setFilters(INITIAL_FILTERS);
+  };
+
+  const handleRemoveChip = (chip: FilterChip) => {
+    switch (chip.type) {
+      case "searchText":
+        return handleSetField("searchText", "");
+      case "budgetMin":
+        return handleSetField("budgetMin", "");
+      case "budgetMax":
+        return handleSetField("budgetMax", "");
+      case "tplLuxury":
+        return setFilters((prev) => ({ ...prev, tplLuxury: false }));
+      default:
+        return handleToggleArray(chip.type as any, (chip as any).value);
+    }
+  };
+
+  const totalToShow = sortedHotels.length;
+
+  return (
+    <main className="min-h-screen bg-[#f5f7fb] text-black">
+      <div className=" border-b border-[#d7dce3] bg-white px-6 py-2">
+        <div className="mx-auto max-w-7xl">
+          <HotelResultsSearchBar />
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-7xl px-4 py-4">
+        <div className="flex gap-6">
+          {/* LEFT FILTER */}
+          <div className="w-[320px] shrink-0">
+            <HotelResultsFilters
+              city={city}
+              hotels={sourceHotels}
+              filters={filters}
+              chips={chips}
+              onToggleArray={handleToggleArray}
+              onSetField={handleSetField}
+              onToggleLuxury={() =>
+                setFilters((prev) => ({ ...prev, tplLuxury: !prev.tplLuxury }))
+              }
+              onClearAll={handleClearAll}
+              onRemoveChip={handleRemoveChip}
+            />
+          </div>
+
+          {/* RIGHT CONTENT */}
+          <div className="min-w-0 flex-1">
+            <HotelResultsSortBar
+  activeSort={activeSort}
+  onChange={(value: HotelSortOption) => setActiveSort(value)}
+/>
+
+<SmartResultsOfferStrip
+  service="hotel"
+  destination={city}
+  bookingValue={
+    (sourceHotels[0]?.pricePerNight || 0) +
+    (sourceHotels[0]?.taxes || 0)
+  }
+  isInternational={false}
+/>
+
+<div className="mb-4 text-[20px] font-extrabold text-[#111827]">
+  Showing Properties in {city}
+</div>
+
+            {cityHotels.length === 0 && (
+              <div className="mb-4 rounded-lg border border-[#f3e8a3] bg-[#fffbea] px-4 py-3 text-sm font-semibold text-[#92400e]">
+                No exact hotel match found for{" "}
+                <span className="font-extrabold">{city}</span>. Showing featured
+                hotels instead.
+              </div>
+            )}
+
+            {sortedHotels.length === 0 ? (
+              <div className="rounded-lg border border-[#d9e2ec] bg-white px-5 py-8 text-center">
+                <div className="text-[18px] font-extrabold text-[#111827]">
+                  No hotels found
+                </div>
+                <div className="mt-2 text-sm text-[#6b7280]">
+                  Try removing some filters or use Clear All.
+                </div>
+                <button
+                  type="button"
+                  onClick={handleClearAll}
+                  className="mt-4 rounded-md bg-[#0b74ff] px-4 py-2 text-sm font-bold text-white"
+                >
+                  Clear All Filters
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {sortedHotels.map((hotel) => (
+                  <HotelResultCard key={hotel.id} hotel={hotel} />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+export default function HotelResultsPage() {
+  return (
+    <Suspense fallback={<div />}>
+      <HotelResultsPageContent />
+    </Suspense>
+  );
+}

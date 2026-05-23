@@ -1,0 +1,743 @@
+"use client";
+
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import LoginModal from "@/app/components/common/LoginModal";
+
+import HomestayBookingTopNav from "@/app/components/booking/homestay/HomestayBookingTopNav";
+import HomestayBookingHomestayDetailSection from "@/app/components/booking/homestay/HomestayBookingHomestayDetailSection";
+import HomestayBookingImportantInfoSection from "@/app/components/booking/homestay/HomestayBookingImportantInfoSection";
+import HomestayBookingGuestDetailSection from "@/app/components/booking/homestay/HomestayBookingGuestDetailSection";
+import HomestayBookingTripSecureSection from "@/app/components/booking/homestay/HomestayBookingTripSecureSection";
+import HomestayBookingCabSection from "@/app/components/booking/homestay/HomestayBookingCabSection";
+import HomestayBookingAddonsSection from "@/app/components/booking/homestay/HomestayBookingAddonsSection";
+import HomestayBookingFareSummaryCard from "@/app/components/booking/homestay/HomestayBookingFareSummaryCard";
+import HomestayBookingOffersSection, {
+  HomestayOfferItem,
+} from "@/app/components/booking/homestay/HomestayBookingOffersSection";
+
+import type { Homestay, RoomVariant } from "@/app/data/stays/types";
+import { applyBenefitPricing } from "@/app/lib/pricing/applyBenefitPricing";
+import { getWallet } from "@/app/lib/wallet/walletStorage";
+import {
+  SMART_OFFERS_DATA,
+  getSmartActiveOfferItem,
+  calculateSmartOfferDiscount,
+} from "@/app/lib/smartOffers";
+
+function getActiveUser() {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const raw = localStorage.getItem("tpl_auth_session_v1");
+    return raw ? JSON.parse(raw)?.user : null;
+  } catch {
+    return null;
+  }
+}
+
+type StoredHomestayPayload = {
+  homestay: Homestay;
+  selectedVariant: RoomVariant | null;
+  searchMeta: {
+    city: string;
+    checkIn: string;
+    checkOut: string;
+    rooms: number;
+    adults: number;
+    children?: number;
+  };
+  timestamp: number;
+};
+
+type SectionKey =
+  | "homestaySummary"
+  | "guestDetail"
+  | "tripSecure"
+  | "cab"
+  | "addons";
+
+type GuestValidationPayload = {
+  guests?: any[];
+  travellers?: any[];
+  isValid: boolean;
+  contactDetails?: {
+    countryCode?: string;
+    mobile?: string;
+    email?: string;
+  };
+};
+
+type TripSecurePayload = {
+  tripSecureStatus: "pending" | "selected" | "skipped";
+  tripSecureLabel: string;
+  tripSecurePrice: number;
+};
+
+type CabPayload = {
+  cabType: "airport" | "outstation" | "none";
+  cabStatus: "pending" | "selected" | "skipped";
+  cabLabel: string;
+  cabPrice: number;
+};
+
+type AddonsPayload = {
+  addonsStatus: "pending" | "selected" | "skipped";
+  addonsLabel: string;
+  addonsPrice: number;
+  selectedItems?: string[];
+};
+
+function calculateNights(checkIn: string, checkOut: string) {
+  const start = new Date(checkIn);
+  const end = new Date(checkOut);
+
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 1;
+
+  const diff = end.getTime() - start.getTime();
+  const nights = Math.ceil(diff / (1000 * 60 * 60 * 24));
+  return nights > 0 ? nights : 1;
+}
+
+export default function HomestayBookPage() {
+  const router = useRouter();
+
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [sessionData, setSessionData] = useState<StoredHomestayPayload | null>(
+    null
+  );
+  const [selectedVariant, setSelectedVariant] =
+    useState<RoomVariant | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const [wallet, setWallet] = useState({
+    promoCredit: 0,
+    earnedCredit: 0,
+    refundableBalance: 0,
+  });
+
+  const [guestValidation, setGuestValidation] =
+    useState<GuestValidationPayload>({
+      guests: [],
+      travellers: [],
+      isValid: false,
+      contactDetails: {
+        countryCode: "+91",
+        mobile: "",
+        email: "",
+      },
+    });
+
+  const [tripSecureData, setTripSecureData] = useState<TripSecurePayload>({
+    tripSecureStatus: "pending",
+    tripSecureLabel: "No trip secure selected",
+    tripSecurePrice: 0,
+  });
+
+  const [cabData, setCabData] = useState<CabPayload>({
+    cabType: "none",
+    cabStatus: "pending",
+    cabLabel: "No cab selected",
+    cabPrice: 0,
+  });
+
+  const [addonsData, setAddonsData] = useState<AddonsPayload>({
+    addonsStatus: "pending",
+    addonsLabel: "No add-ons selected",
+    addonsPrice: 0,
+    selectedItems: [],
+  });
+
+  const [selectedOffer, setSelectedOffer] =
+  useState<HomestayOfferItem | null>(null);
+
+const [specialRequest, setSpecialRequest] = useState("");
+const [timeLeft, setTimeLeft] = useState(10 * 60);
+
+const [activeSection, setActiveSection] =
+  useState<SectionKey>("homestaySummary");
+
+const homestaySummaryRef = useRef<HTMLDivElement | null>(null);
+const guestDetailRef = useRef<HTMLDivElement | null>(null);
+const tripSecureRef = useRef<HTMLDivElement | null>(null);
+const cabRef = useRef<HTMLDivElement | null>(null);
+const addonsRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const user = getActiveUser();
+
+    if (user?.mobile) {
+      setWallet(getWallet(user.mobile));
+    }
+  }, []);
+
+  useEffect(() => {
+    const raw =
+      typeof window !== "undefined"
+        ? sessionStorage.getItem("tplSelectedHomestayResult")
+        : null;
+
+    if (!raw) {
+      alert("No homestay selected. Please choose a homestay first.");
+      router.push("/homestays/results");
+      return;
+    }
+
+    try {
+      const parsed: StoredHomestayPayload = JSON.parse(raw);
+      const isExpired = Date.now() - parsed.timestamp > 10 * 60 * 1000;
+
+      if (isExpired) {
+        sessionStorage.removeItem("tplSelectedHomestayResult");
+        alert("Session expired. Please select homestay again.");
+        router.push("/homestays/results");
+        return;
+      }
+
+      setSessionData(parsed);
+      setSelectedVariant(parsed.selectedVariant || null);
+      setLoading(false);
+    } catch (error) {
+      console.error("Failed to parse homestay session:", error);
+      sessionStorage.removeItem("tplSelectedHomestayResult");
+      alert("Something went wrong. Please select homestay again.");
+      router.push("/homestays/results");
+    }
+  }, [router]);
+
+  useEffect(() => {
+    if (!sessionData) return;
+
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          sessionStorage.removeItem("tplSelectedHomestayResult");
+          alert("Session expired. Please select homestay again.");
+          router.push("/homestays/results");
+          return 0;
+        }
+
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [sessionData, router]);
+
+  useEffect(() => {
+    const sections = [
+      { key: "homestaySummary", ref: homestaySummaryRef },
+      { key: "guestDetail", ref: guestDetailRef },
+      { key: "tripSecure", ref: tripSecureRef },
+      { key: "cab", ref: cabRef },
+      { key: "addons", ref: addonsRef },
+    ] as const;
+
+    const onScroll = () => {
+      let current: SectionKey = "homestaySummary";
+
+      for (const section of sections) {
+        if (!section.ref.current) continue;
+
+        const top = section.ref.current.getBoundingClientRect().top;
+
+        if (top <= 180) {
+          current = section.key;
+        }
+      }
+
+      setActiveSection(current);
+    };
+
+    window.addEventListener("scroll", onScroll);
+    onScroll();
+
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const handleSectionScroll = (key: SectionKey) => {
+    const map: Record<SectionKey, React.RefObject<HTMLDivElement | null>> = {
+      homestaySummary: homestaySummaryRef,
+      guestDetail: guestDetailRef,
+      tripSecure: tripSecureRef,
+      cab: cabRef,
+      addons: addonsRef,
+    };
+
+    map[key].current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  };
+
+  const formattedTime = useMemo(() => {
+    const mm = String(Math.floor(timeLeft / 60)).padStart(2, "0");
+    const ss = String(timeLeft % 60).padStart(2, "0");
+    return `${mm}:${ss}`;
+  }, [timeLeft]);
+
+  const homestay = sessionData?.homestay || null;
+  const activeVariant =
+    selectedVariant || sessionData?.homestay?.variants?.[0] || null;
+
+  const city = sessionData?.searchMeta?.city || "";
+  const checkIn = sessionData?.searchMeta?.checkIn || "";
+  const checkOut = sessionData?.searchMeta?.checkOut || "";
+  const rooms = Math.max(Number(sessionData?.searchMeta?.rooms || 1), 1);
+  const adults = Math.max(Number(sessionData?.searchMeta?.adults || 2), 1);
+  const children = Math.max(Number(sessionData?.searchMeta?.children || 0), 0);
+
+  const nights = useMemo(() => {
+    return calculateNights(checkIn, checkOut);
+  }, [checkIn, checkOut]);
+
+  const stayPrice = activeVariant?.price || homestay?.pricePerNight || 0;
+  const taxesPerNight = activeVariant?.taxes || homestay?.taxes || 0;
+
+  const subtotal = stayPrice * rooms * nights;
+  const totalTaxes = taxesPerNight * rooms * nights;
+
+  const isInternational = false;
+
+  const smartActiveOffer = getSmartActiveOfferItem();
+
+  const isSmartOfferValidForHomestay =
+    Boolean(smartActiveOffer) &&
+    (smartActiveOffer?.service === "homestay" ||
+      smartActiveOffer?.service === "all") &&
+    !(smartActiveOffer?.rule?.internationalOnly && !isInternational) &&
+    !(smartActiveOffer?.rule?.domesticOnly && isInternational);
+
+  const smartMappedOffer: HomestayOfferItem | null =
+    isSmartOfferValidForHomestay && smartActiveOffer && !selectedOffer
+      ? {
+          code: smartActiveOffer.couponCode || smartActiveOffer.slug,
+          title: smartActiveOffer.title,
+          description:
+            smartActiveOffer.description ||
+            smartActiveOffer.subtitle ||
+            "Smart homestay offer applied.",
+          discountAmount: calculateSmartOfferDiscount(
+            smartActiveOffer,
+            subtotal
+          ),
+        }
+      : null;
+
+  const dynamicOffers = useMemo(() => {
+    const target = city.toLowerCase();
+
+    return SMART_OFFERS_DATA.filter((offer: any) => {
+      if (!offer.active) return false;
+
+      const serviceOk = offer.service === "homestay" || offer.service === "all";
+
+      if (!serviceOk) return false;
+
+      if (offer.offerType === "membership") return false;
+
+      if (offer.rule?.internationalOnly && !isInternational) {
+        return false;
+      }
+
+      if (offer.rule?.domesticOnly && isInternational) {
+        return false;
+      }
+
+      if (offer.rule?.destinations?.length && target) {
+        const matched = offer.rule.destinations.some((item: string) => {
+          const current = String(item || "").toLowerCase();
+
+          return (
+            current === target ||
+            current.includes(target) ||
+            target.includes(current)
+          );
+        });
+
+        if (!matched) return false;
+      }
+
+      return true;
+    })
+      .map((offer: any) => ({
+        code: offer.couponCode || offer.slug,
+        title: offer.title,
+        description:
+          offer.description ||
+          offer.subtitle ||
+          "Special homestay offer available.",
+        discountAmount: calculateSmartOfferDiscount(offer, subtotal),
+      }))
+      .filter((offer) => offer.discountAmount > 0)
+      .slice(0, 4);
+  }, [city, subtotal, isInternational]);
+
+  const finalSelectedOffer = selectedOffer || smartMappedOffer;
+  const appliedOffer = Number(finalSelectedOffer?.discountAmount || 0);
+
+  const tripSecureTotal =
+    tripSecureData.tripSecureStatus === "selected"
+      ? tripSecureData.tripSecurePrice
+      : 0;
+
+  const cabTotal = cabData.cabStatus === "selected" ? cabData.cabPrice : 0;
+
+  const addOnsTotal =
+    addonsData.addonsStatus === "selected" ? addonsData.addonsPrice : 0;
+
+  const benefitPricing = applyBenefitPricing({
+    baseAmount: subtotal,
+
+    taxes: totalTaxes,
+
+    insuranceCharges: tripSecureTotal,
+    cabCharges: cabTotal,
+    addOns: addOnsTotal,
+
+    offerDiscount: appliedOffer,
+
+    promoCredit: wallet.promoCredit,
+    earnedCredit: wallet.earnedCredit,
+    refundWallet: wallet.refundableBalance,
+  });
+
+  const walletCalc = {
+    promoUsed: benefitPricing.promoUsed,
+    earnedUsed: benefitPricing.earnedUsed,
+    refundUsed: benefitPricing.refundUsed,
+    finalPayable: benefitPricing.finalPayable,
+  };
+
+  const tplCredit = benefitPricing.promoUsed + benefitPricing.earnedUsed;
+
+  const totalBeforeWallet = benefitPricing.payableBeforeRefundWallet;
+
+  const finalTotal = benefitPricing.finalPayable;
+
+  const earnedOnThisBooking = Math.floor(benefitPricing.baseAfterOffer * 0.02);
+
+  const isTripSecureDone = tripSecureData.tripSecureStatus !== "pending";
+  const isCabDone = cabData.cabStatus !== "pending";
+  const isAddonsDone = addonsData.addonsStatus !== "pending";
+
+  const canProceed =
+    guestValidation.isValid &&
+    isTripSecureDone &&
+    isCabDone &&
+    isAddonsDone &&
+    timeLeft > 0;
+
+  const blockerMessage =
+    timeLeft === 0
+      ? "Session expired. Please select homestay again."
+      : !guestValidation.isValid
+      ? "Please fill Guest Detail section."
+      : !isTripSecureDone
+      ? "Please complete Trip Secure section."
+      : !isCabDone
+      ? "Please complete Cab section."
+      : !isAddonsDone
+      ? "Please complete Add-ons section."
+      : "";
+
+  if (loading || !homestay) {
+    return (
+      <main className="min-h-screen bg-[#f5f7fb] text-black">
+        <div className="mx-auto max-w-6xl px-4 py-10">
+          <div className="rounded-xl border border-[#d9e2ec] bg-white p-6 text-lg font-semibold text-[#374151]">
+            Loading homestay booking...
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main className="min-h-screen bg-[#f5f7fb] text-black">
+      <div className="sticky top-0 z-30 bg-[#f5f7fb]">
+        <HomestayBookingTopNav
+          timeLeft={formattedTime}
+          isExpired={timeLeft === 0}
+          activeSection={activeSection}
+          onSectionClick={handleSectionScroll}
+          sections={[
+            {
+              key: "homestaySummary",
+              label: "Homestay Summary",
+              completed: true,
+            },
+            {
+              key: "guestDetail",
+              label: "Guest Detail",
+              completed: guestValidation.isValid,
+            },
+            {
+              key: "tripSecure",
+              label: "Trip Secure",
+              completed: isTripSecureDone,
+            },
+            {
+              key: "cab",
+              label: "Cab",
+              completed: isCabDone,
+            },
+            {
+              key: "addons",
+              label: "Addons",
+              completed: isAddonsDone,
+            },
+          ]}
+        />
+      </div>
+
+      <div className="mx-auto max-w-7xl px-4 py-6">
+        <div className="mb-4 flex items-center justify-between gap-4">
+          <button
+            type="button"
+            onClick={() => router.push("/homestays/results")}
+            className="text-[13px] font-bold text-[#0b74ff] hover:underline"
+          >
+            ← Modify Search
+          </button>
+
+          <div className="text-[12px] font-semibold text-[#6b7280]">
+            {city
+              ? `${city} • ${rooms} Room${rooms > 1 ? "s" : ""}`
+              : "Booking flow in progress"}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[2.6fr_0.9fr]">
+          <div className="space-y-5">
+            <div ref={homestaySummaryRef}>
+              <HomestayBookingHomestayDetailSection
+  homestay={homestay}
+  selectedVariant={activeVariant}
+  checkIn={checkIn}
+  checkOut={checkOut}
+  rooms={rooms}
+  adults={adults}
+  offerDiscount={benefitPricing.offerDiscount}
+  onRoomChange={(variant) => setSelectedVariant(variant)}
+/>
+            </div>
+
+            <HomestayBookingImportantInfoSection />
+
+            <div ref={guestDetailRef}>
+              <HomestayBookingGuestDetailSection
+                adultCount={adults}
+                childCount={children}
+                tripMode="domestic"
+                onValidationChange={setGuestValidation}
+              />
+            </div>
+
+            <div ref={tripSecureRef}>
+              <HomestayBookingTripSecureSection
+                isEnabled={guestValidation.isValid}
+                onChange={setTripSecureData}
+              />
+            </div>
+
+            <div className="rounded-xl border border-[#d9e2ec] bg-white p-4">
+              <div className="text-[20px] font-extrabold text-[#111827]">
+                Special Request
+              </div>
+
+              <textarea
+                value={specialRequest}
+                onChange={(e) => setSpecialRequest(e.target.value)}
+                placeholder="Any special request for homestay? Example: early check-in, bonfire setup, scenic room, local meal preference, etc."
+                className="mt-4 min-h-[120px] w-full rounded-xl border border-[#d9e2ec] p-4 text-[14px] font-medium text-[#111827] outline-none focus:border-[#0b74ff]"
+              />
+            </div>
+
+            <div ref={cabRef}>
+              <HomestayBookingCabSection
+                isEnabled={isTripSecureDone}
+                onChange={setCabData}
+              />
+            </div>
+
+            <div ref={addonsRef}>
+              <HomestayBookingAddonsSection
+                isEnabled={isCabDone}
+                onChange={setAddonsData}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <HomestayBookingFareSummaryCard
+              stayPrice={stayPrice}
+              rooms={rooms}
+              nights={nights}
+              subtotal={subtotal}
+              taxes={totalTaxes}
+              tplCredit={tplCredit}
+              appliedOffer={benefitPricing.offerDiscount}
+              walletBreakdown={{
+                promoUsed: walletCalc.promoUsed,
+                earnedUsed: walletCalc.earnedUsed,
+                refundUsed: walletCalc.refundUsed,
+              }}
+              earnedOnThisBooking={earnedOnThisBooking}
+              refundWalletAvailable={wallet.refundableBalance}
+              useRefundWallet={true}
+              tripSecureTotal={tripSecureTotal}
+              addOnsTotal={addOnsTotal}
+              cabTotal={cabTotal}
+              tripSecureStatus={tripSecureData.tripSecureStatus}
+              cabStatus={cabData.cabStatus}
+              addonsStatus={addonsData.addonsStatus}
+              finalTotal={finalTotal}
+              canProceed={canProceed}
+              blockerMessage={blockerMessage}
+              buttonLabel="Proceed to Payment"
+              onProceed={() => {
+                if (!canProceed) return;
+
+                const payload = {
+                  serviceType: "homestay",
+                  bookingType: "homestay",
+                  bookingStatus: "draft",
+                  paymentStatus: "pending",
+
+                  homestay,
+                  selectedVariant: activeVariant,
+
+                  searchMeta: {
+                    city,
+                    checkIn,
+                    checkOut,
+                    rooms,
+                    adults,
+                    children,
+                    nights,
+                  },
+
+                  guestValidation,
+
+                  tripSecureSelected:
+                    tripSecureData.tripSecureStatus === "selected",
+                  tripSecureTotal,
+                  tripSecureLabel:
+                    tripSecureData.tripSecureStatus === "selected"
+                      ? tripSecureData.tripSecureLabel
+                      : "Trip Secure skipped",
+
+                  cabSelected: cabData.cabStatus === "selected",
+                  cabTotal,
+                  cabLabel:
+                    cabData.cabStatus === "selected"
+                      ? cabData.cabLabel
+                      : "Cab skipped",
+
+                  addonsSelected: addonsData.addonsStatus === "selected",
+                  addOnsTotal,
+                  addonsLabel:
+                    addonsData.addonsStatus === "selected"
+                      ? addonsData.addonsLabel
+                      : "Add-ons skipped",
+                  selectedAddonItems: addonsData.selectedItems || [],
+
+                  appliedOffer: benefitPricing.offerDiscount,
+                  appliedOfferCode: finalSelectedOffer?.code || "",
+                  appliedOfferTitle: finalSelectedOffer?.title || "",
+                  offerData: finalSelectedOffer
+                    ? {
+                        ...finalSelectedOffer,
+                        discountAmount: benefitPricing.offerDiscount,
+                      }
+                    : null,
+
+                  baseAfterOffer: benefitPricing.baseAfterOffer,
+                  earnedCreditAmount: earnedOnThisBooking,
+
+                  walletBreakdown: {
+                    promoUsed: walletCalc.promoUsed,
+                    earnedUsed: walletCalc.earnedUsed,
+                    refundUsed: walletCalc.refundUsed,
+                    promoAvailable: wallet.promoCredit,
+                    earnedAvailable: wallet.earnedCredit,
+                    refundWalletAvailable: wallet.refundableBalance,
+                    totalWalletUsed:
+                      walletCalc.promoUsed +
+                      walletCalc.earnedUsed +
+                      walletCalc.refundUsed,
+                    tplCreditUsed: tplCredit,
+                    earnedOnThisBooking,
+                  },
+
+                  fareBreakup: {
+                    stayPrice,
+                    rooms,
+                    nights,
+                    subtotal,
+                    taxes: totalTaxes,
+                    tripSecureTotal,
+                    cabTotal,
+                    addOnsTotal,
+                    appliedOffer: benefitPricing.offerDiscount,
+                    baseAfterOffer: benefitPricing.baseAfterOffer,
+                    totalBeforeWallet,
+                    promoUsed: walletCalc.promoUsed,
+                    earnedUsed: walletCalc.earnedUsed,
+                    refundUsed: walletCalc.refundUsed,
+                    tplCredit,
+                    finalTotal,
+                    earnedCreditAmount: earnedOnThisBooking,
+                  },
+
+                  originalBookingBaseline: {
+                    amount: totalBeforeWallet,
+                    payableAmount: finalTotal,
+                    totalBeforeWallet,
+                    selectedVariantId: activeVariant?.id || "",
+                    selectedVariantTitle:
+                      activeVariant?.title || "Selected Room",
+                    stayPrice,
+                    rooms,
+                    nights,
+                    tripSecureTotal,
+                    cabTotal,
+                    addOnsTotal,
+                  },
+
+                  manageBookingReady: true,
+
+                  specialRequest,
+                  finalTotal,
+                  timerLeft: timeLeft,
+                  timestamp: Date.now(),
+                };
+
+                sessionStorage.setItem(
+                  "tplHomestayBookingData",
+                  JSON.stringify(payload)
+                );
+
+                router.push("/homestays/payment");
+              }}
+            />
+
+            <HomestayBookingOffersSection
+              offers={dynamicOffers}
+              appliedOfferCode={finalSelectedOffer?.code || ""}
+              onApplyOffer={(offer) => setSelectedOffer(offer)}
+              onRemoveOffer={() => setSelectedOffer(null)}
+            />
+          </div>
+        </div>
+      </div>
+
+      <LoginModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+      />
+    </main>
+  );
+}

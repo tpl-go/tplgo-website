@@ -1,0 +1,609 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import OneWayCardMainRow from "./card/OneWayCardMainRow";
+import OneWayCardDetailsPanel from "./card/OneWayCardDetailsPanel";
+import OneWayCardComparePanel from "./card/OneWayCardComparePanel";
+import OneWayModal from "./card/OneWayModal";
+import { DetailTab, Fare, StopDetail } from "./card/OneWayCardTypes";
+import { saveFlightReviewPayload } from "@/app/lib/flights/review/buildFlightReviewData";
+
+type Props = {
+  airline: string;
+  code: string;
+  depart: string;
+  departCity: string;
+  duration: string;
+  stop: string;
+  arrive: string;
+  arriveCity: string;
+  price: string;
+  timing: string;
+  promo: string;
+  stopDetails?: StopDetail[];
+};
+
+type ActiveOfferSnapshot = {
+  code: string;
+  title: string;
+  discountType: "flat" | "percent";
+  discountValue: number;
+  maxDiscount: number;
+  minBookingValue: number;
+};
+
+const COMPARE_VISIBLE_COUNT = 3;
+
+const INDIAN_AIRPORT_CODES = new Set([
+  "DEL","BOM","BLR","HYD","MAA","CCU","AMD","PNQ","GOI","COK","JAI","LKO",
+  "IXC","PAT","SXR","GAU","BBI","NAG","IDR","VTZ","TRV","IXB","VNS","RPR",
+  "UDR","JDH","ATQ","BHO","GOP","IXR","IMF","DIB","DMU","IXA","JLR","HBX",
+  "RAJ","BHU","DED","SAG","TIR","VGA","MYQ","STV","NDC","JGA","BDQ","CCJ",
+  "CNN","CJB","IXM","TRZ","TCR","AGX",
+]);
+
+function normalizeValue(value: string | null | undefined) {
+  return (value || "").trim();
+}
+
+function normalizeCode(value: string | null | undefined) {
+  return normalizeValue(value).toUpperCase();
+}
+
+function normalizeCountry(value: string | null | undefined) {
+  return normalizeValue(value).toLowerCase();
+}
+
+function parseFareNumber(value: string) {
+  return Number(String(value || "").replace(/[^\d]/g, "")) || 0;
+}
+
+function formatRupee(value: number) {
+  return `₹${Math.max(0, Math.round(value)).toLocaleString("en-IN")}`;
+}
+
+function normalizeSearchDate(value: string | null | undefined) {
+  const raw = normalizeValue(value);
+  if (!raw) return "";
+
+  const dateOnlyMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (dateOnlyMatch) return raw;
+
+  const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})T/);
+
+  if (isoMatch) {
+    const parsed = new Date(raw);
+
+    if (!Number.isNaN(parsed.getTime())) {
+      const parts = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Kolkata",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).formatToParts(parsed);
+
+      const year = parts.find((p) => p.type === "year")?.value || isoMatch[1];
+      const month = parts.find((p) => p.type === "month")?.value || isoMatch[2];
+      const day = parts.find((p) => p.type === "day")?.value || isoMatch[3];
+
+      return `${year}-${month}-${day}`;
+    }
+
+    return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+  }
+
+  return raw;
+}
+
+function detectTripMode(params: URLSearchParams, fromCode: string, toCode: string) {
+  const fromCountry =
+    normalizeCountry(params.get("fromCountry")) ||
+    normalizeCountry(params.get("fromCountry_0"));
+
+  const toCountry =
+    normalizeCountry(params.get("toCountry")) ||
+    normalizeCountry(params.get("toCountry_0"));
+
+  if (fromCountry && toCountry) {
+    return fromCountry === "india" && toCountry === "india"
+      ? "domestic"
+      : "international";
+  }
+
+  if (
+    INDIAN_AIRPORT_CODES.has(normalizeCode(fromCode)) &&
+    INDIAN_AIRPORT_CODES.has(normalizeCode(toCode))
+  ) {
+    return "domestic";
+  }
+
+  return "international";
+}
+
+function readJsonStorage(key: string) {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const sessionValue = window.sessionStorage.getItem(key);
+    if (sessionValue) return JSON.parse(sessionValue);
+  } catch {}
+
+  try {
+    const localValue = window.localStorage.getItem(key);
+    if (localValue) return JSON.parse(localValue);
+  } catch {}
+
+  return null;
+}
+
+function resolveOfferFromRaw(raw: any): ActiveOfferSnapshot | null {
+  if (!raw) return null;
+
+  const offer = raw.offer || raw.offerData || raw.appliedOffer || raw;
+
+  const code =
+    offer.couponCode ||
+    offer.code ||
+    offer.offerCode ||
+    offer.slug ||
+    offer.id ||
+    "";
+
+  const title =
+    offer.title ||
+    offer.name ||
+    offer.offerTitle ||
+    "Offer applied";
+
+  const minBookingValue = Number(
+    offer.minBookingValue ||
+      offer.minimumBookingValue ||
+      offer.minAmount ||
+      offer.minValue ||
+      0
+  );
+
+  const discountMode = String(
+    offer.discountMode ||
+      offer.discountType ||
+      offer.type ||
+      offer.offerType ||
+      ""
+  ).toLowerCase();
+
+  const discountValue = Number(
+    offer.discountValue ||
+      offer.value ||
+      offer.discountPercent ||
+      offer.percent ||
+      offer.percentage ||
+      0
+  );
+
+  const discountAmount = Number(
+    offer.discountAmount ||
+      offer.appliedOfferAmount ||
+      offer.flatDiscount ||
+      offer.amount ||
+      0
+  );
+
+  const maxDiscount = Number(
+    offer.maxDiscount ||
+      offer.maximumDiscount ||
+      offer.capAmount ||
+      offer.discountCap ||
+      0
+  );
+
+  if (discountMode.includes("percent") || discountMode.includes("percentage")) {
+    return {
+      code,
+      title,
+      discountType: "percent",
+      discountValue,
+      maxDiscount,
+      minBookingValue,
+    };
+  }
+
+  if (discountMode.includes("flat") || discountAmount > 0 || discountValue > 0) {
+    return {
+      code,
+      title,
+      discountType: "flat",
+      discountValue: discountAmount || discountValue,
+      maxDiscount,
+      minBookingValue,
+    };
+  }
+
+  return null;
+}
+
+function getActiveFlightOffer(): ActiveOfferSnapshot | null {
+  const smartOffer =
+    readJsonStorage("tpl_smart_active_offer_v1") ||
+    readJsonStorage("tplActiveOfferPayload") ||
+    readJsonStorage("tplActiveOfferActivation");
+
+  return resolveOfferFromRaw(smartOffer);
+}
+
+function calculateOfferDiscount(baseAmount: number, offer: ActiveOfferSnapshot | null) {
+  if (!offer || baseAmount <= 0) return 0;
+
+  if (offer.minBookingValue > 0 && baseAmount < offer.minBookingValue) {
+    return 0;
+  }
+
+  if (offer.discountType === "percent") {
+    const percentDiscount = Math.round((baseAmount * offer.discountValue) / 100);
+    return offer.maxDiscount > 0
+      ? Math.min(percentDiscount, offer.maxDiscount)
+      : percentDiscount;
+  }
+
+  return Math.min(Math.round(offer.discountValue), baseAmount);
+}
+
+export default function FlightResultCard(props: Props) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const {
+    airline,
+    code,
+    depart,
+    departCity,
+    duration,
+    stop,
+    arrive,
+    arriveCity,
+    stopDetails = [],
+  } = props;
+
+  const baseCardFare = useMemo(() => parseFareNumber(props.price), [props.price]);
+  const [activeOffer, setActiveOffer] = useState<ActiveOfferSnapshot | null>(null);
+
+  useEffect(() => {
+    setActiveOffer(getActiveFlightOffer());
+
+    const syncOffer = () => setActiveOffer(getActiveFlightOffer());
+
+    window.addEventListener("storage", syncOffer);
+    window.addEventListener("TPL_SMART_OFFER_UPDATED", syncOffer as EventListener);
+    window.addEventListener("TPL_ACTIVE_OFFER_UPDATED", syncOffer as EventListener);
+    window.addEventListener("tpl_smart_offer_updated", syncOffer as EventListener);
+
+    return () => {
+      window.removeEventListener("storage", syncOffer);
+      window.removeEventListener("TPL_SMART_OFFER_UPDATED", syncOffer as EventListener);
+      window.removeEventListener("TPL_ACTIVE_OFFER_UPDATED", syncOffer as EventListener);
+      window.removeEventListener("tpl_smart_offer_updated", syncOffer as EventListener);
+    };
+  }, []);
+
+  const fares: Fare[] = useMemo(() => {
+    const publishedBase = baseCardFare || 9154;
+
+    return [
+      {
+        id: "1",
+        title: "Published",
+        price: formatRupee(publishedBase),
+        baggage: "Economy, Refundable",
+        meals: "Chargeable",
+        seatCharge: "Chargeable",
+        cancellationFee: "NA",
+        dateChangeFee: "NA",
+      },
+      {
+        id: "2",
+        title: "Flexi Plus",
+        price: formatRupee(publishedBase + 315),
+        baggage: "Economy, Free Meal, Refundable",
+        meals: "Complimentary",
+        seatCharge: "Chargeable",
+        cancellationFee: "NA",
+        dateChangeFee: "NA",
+      },
+      {
+        id: "3",
+        title: "SME",
+        price: formatRupee(publishedBase + 840),
+        baggage: "Economy, Refundable",
+        meals: "Chargeable",
+        seatCharge: "Chargeable",
+        cancellationFee: "NA",
+        dateChangeFee: "NA",
+      },
+      {
+        id: "4",
+        title: "Upfront",
+        price: formatRupee(publishedBase + 1995),
+        baggage: "Economy, Refundable",
+        meals: "Chargeable",
+        seatCharge: "Complimentary",
+        cancellationFee: "NA",
+        dateChangeFee: "NA",
+      },
+    ];
+  }, [baseCardFare]);
+
+  const [showAllFares, setShowAllFares] = useState(false);
+  const [selectedFareId, setSelectedFareId] = useState(fares[0].id);
+  const [showDetailsPanel, setShowDetailsPanel] = useState(false);
+  const [activeTab, setActiveTab] = useState<DetailTab>("flight");
+  const [showComparePanel, setShowComparePanel] = useState(false);
+  const [compareStartIndex, setCompareStartIndex] = useState(0);
+
+  const visibleFares = showAllFares ? fares : fares.slice(0, 2);
+
+  const selectedFare = useMemo(
+    () => fares.find((fare) => fare.id === selectedFareId) || fares[0],
+    [fares, selectedFareId]
+  );
+
+  const selectedBaseFare = useMemo(
+    () => parseFareNumber(selectedFare.price),
+    [selectedFare.price]
+  );
+
+  const selectedOfferDiscount = useMemo(
+    () => calculateOfferDiscount(selectedBaseFare, activeOffer),
+    [selectedBaseFare, activeOffer]
+  );
+
+  const selectedBaseAfterOffer = Math.max(
+    selectedBaseFare - selectedOfferDiscount,
+    0
+  );
+
+  const earnedOnThisFare = Math.round(selectedBaseAfterOffer * 0.02);
+  const displayFareAfterOffer = formatRupee(selectedBaseAfterOffer);
+
+  const selectedFareForDetails: Fare = useMemo(
+    () => ({
+      ...selectedFare,
+      price:
+        selectedOfferDiscount > 0
+          ? displayFareAfterOffer
+          : selectedFare.price,
+    }),
+    [selectedFare, selectedOfferDiscount, displayFareAfterOffer]
+  );
+
+  const toggleDetails = () => {
+    setShowDetailsPanel((prev) => !prev);
+    if (!showDetailsPanel) setActiveTab("flight");
+    setShowComparePanel(false);
+  };
+
+  const toggleCompare = () => {
+    setShowComparePanel((prev) => !prev);
+    setShowDetailsPanel(false);
+    setCompareStartIndex(0);
+  };
+
+  const handleBookNow = (payload: {
+    airline: string;
+    code: string;
+    depart: string;
+    departCity: string;
+    duration: string;
+    stop: string;
+    arrive: string;
+    arriveCity: string;
+    stopDetails: StopDetail[];
+    selectedFare: Fare;
+  }) => {
+    const adults = Math.max(Number(searchParams.get("adults") || "1"), 1);
+    const children = Math.max(Number(searchParams.get("children") || "0"), 0);
+    const infants = Math.max(Number(searchParams.get("infants") || "0"), 0);
+    const cabinClass = searchParams.get("cabin") || "Economy";
+
+    const fromCode = normalizeCode(searchParams.get("from"));
+    const toCode = normalizeCode(searchParams.get("to"));
+
+    const fromCity =
+      normalizeValue(searchParams.get("fromCity")) || payload.departCity || "";
+    const toCity =
+      normalizeValue(searchParams.get("toCity")) || payload.arriveCity || "";
+
+    const from = fromCity || fromCode || payload.departCity || "";
+    const to = toCity || toCode || payload.arriveCity || "";
+
+    const departureDate = normalizeSearchDate(searchParams.get("departure"));
+    const arrivalDate = departureDate;
+
+    const rawFare = parseFareNumber(selectedFare.price);
+    const baseFareTotal = rawFare * adults;
+
+    const appliedOffer = calculateOfferDiscount(baseFareTotal, activeOffer);
+    const baseAfterOffer = Math.max(baseFareTotal - appliedOffer, 0);
+
+    const tax = Math.round(baseFareTotal * 0.18);
+    const surcharge = 0;
+    const discount = 0;
+    const tplCredit = 0;
+    const totalAmount = baseAfterOffer + tax + surcharge - discount - tplCredit;
+
+    const tripMode = detectTripMode(searchParams, fromCode, toCode);
+
+    saveFlightReviewPayload({
+      bookingType: "oneWay",
+      tripMode,
+      passengers: {
+        adults,
+        children,
+        infants,
+      },
+      cabinClass,
+      pricing: {
+        perAdultBaseFare: rawFare,
+        baseFareTotal,
+        appliedOffer,
+        appliedOfferCode: activeOffer?.code || "",
+        appliedOfferTitle: activeOffer?.title || "",
+        baseAfterOffer,
+        earnedOnThisBooking: Math.round(baseAfterOffer * 0.02),
+        tax,
+        surcharge,
+        discount,
+        tplCredit,
+        totalAmount,
+        benefitRule: {
+          offerOnBaseOnly: true,
+          promoEarnedOnBaseAfterOfferOnly: true,
+          refundWalletOnFinalPayable: true,
+          nonBenefitAmounts: [
+            "tax",
+            "seats",
+            "meals",
+            "baggage",
+            "insurance",
+            "convenienceFee",
+            "gatewayFee",
+            "addons",
+          ],
+        },
+      },
+      journeys: [
+        {
+          journeyLabel: "Flight 1",
+          segments: [
+            {
+              airline: payload.airline,
+              flightNumber: payload.code,
+              from,
+              to,
+              fromCode,
+              toCode,
+              departureTime: payload.depart,
+              arrivalTime: payload.arrive,
+              departureDate,
+              arrivalDate,
+              duration: payload.duration,
+              cabinBaggage: "7 Kg / Adult",
+              checkinBaggage: "15 Kg / Adult",
+              aircraft: "",
+              terminalFrom: fromCity,
+              terminalTo: toCity,
+            },
+          ],
+          layovers: payload.stopDetails.map((item) => ({
+            airport: item.airport,
+            code: item.airport,
+            duration: item.layover,
+            note: item.type,
+          })),
+        },
+      ],
+    });
+
+    router.push("/flights/review");
+  };
+
+  return (
+    <>
+      <div className="overflow-visible rounded-xl border border-[#e5e7eb] bg-white shadow-sm">
+        {selectedOfferDiscount > 0 && activeOffer ? (
+  <div className="flex items-center justify-between gap-3 bg-[#fff7ed] px-4 py-2">
+    <div className="flex flex-wrap items-center gap-2 text-[12px]">
+      <span className="font-semibold text-[#15803d]">
+        Offer applied on base fare only:
+      </span>
+
+      <span className="text-gray-600">
+        {selectedFare.price} - {formatRupee(selectedOfferDiscount)} =
+      </span>
+
+      <span className="font-bold text-[#111827]">
+        {displayFareAfterOffer}
+      </span>
+
+      <span className="text-[#6b7280]">
+        · Earn {formatRupee(earnedOnThisFare)} TPL Earned Credit
+      </span>
+    </div>
+
+    <span className="shrink-0 rounded-full bg-[#16a34a] px-3 py-1 text-[11px] font-bold text-white">
+      {activeOffer.code || "OFFER"} applied · Save{" "}
+      {formatRupee(selectedOfferDiscount)}
+    </span>
+  </div>
+) : null}
+
+        <div className="px-4 py-3">
+          <OneWayCardMainRow
+            airline={airline}
+            code={code}
+            depart={depart}
+            departCity={departCity}
+            duration={duration}
+            stop={stop}
+            arrive={arrive}
+            arriveCity={arriveCity}
+            stopDetails={stopDetails}
+            fares={fares}
+            visibleFares={visibleFares}
+            selectedFareId={selectedFareId}
+            selectedFare={selectedFare}
+            selectedFareOriginalPrice={selectedFare.price}
+            selectedFareFinalPrice={displayFareAfterOffer}
+            selectedOfferDiscount={selectedOfferDiscount}
+            showAllFares={showAllFares}
+            setSelectedFareId={setSelectedFareId}
+            setShowAllFares={setShowAllFares}
+            onToggleDetails={toggleDetails}
+            onToggleCompare={toggleCompare}
+            onBookNow={handleBookNow}
+          />
+        </div>
+      </div>
+
+      <OneWayModal
+        isOpen={showDetailsPanel}
+        onClose={() => setShowDetailsPanel(false)}
+        title="Flight Details"
+        maxWidthClass="max-w-5xl"
+      >
+        <OneWayCardDetailsPanel
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          selectedFare={selectedFareForDetails}
+          depart={depart}
+          departCity={departCity}
+          duration={duration}
+          stop={stop}
+          arrive={arrive}
+          arriveCity={arriveCity}
+          code={code}
+        />
+      </OneWayModal>
+
+      <OneWayModal
+        isOpen={showComparePanel}
+        onClose={() => setShowComparePanel(false)}
+        title="Compare Fares"
+        maxWidthClass="max-w-7xl"
+      >
+        <OneWayCardComparePanel
+          fares={fares}
+          selectedFareId={selectedFareId}
+          setSelectedFareId={setSelectedFareId}
+          compareStartIndex={compareStartIndex}
+          setCompareStartIndex={setCompareStartIndex}
+          compareVisibleCount={COMPARE_VISIBLE_COUNT}
+          code={code}
+          onSelectFare={(id) => {
+            setSelectedFareId(id);
+            setShowComparePanel(false);
+          }}
+        />
+      </OneWayModal>
+    </>
+  );
+}

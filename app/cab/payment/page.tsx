@@ -1,0 +1,666 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+
+import LoginModal from "@/app/components/common/LoginModal";
+
+import CabBookingTopBar from "@/app/components/booking/cab/CabBookingTopBar";
+import CabPaymentTopSummary from "@/app/components/payment/cab/CabPaymentTopSummary";
+import CabPaymentOptionSection from "@/app/components/payment/cab/CabPaymentOptionSection";
+import CabPaymentPriceCard from "@/app/components/payment/cab/CabPaymentPriceCard";
+
+import {
+  generateCabBookingId,
+  generateCabTransactionId,
+  saveCabConfirmedBooking,
+} from "@/app/lib/cab/cabConfirmationHelpers";
+
+import { AUTH_UPDATED_EVENT } from "@/app/lib/booking/guestAuth";
+import {
+  getWallet,
+  saveWallet,
+  addWalletLedgerItem,
+  type Wallet,
+} from "@/app/lib/wallet/walletStorage";
+
+type CabPaymentPayload = {
+  cab: {
+    id: string;
+    name: string;
+    brand?: string;
+    image?: string;
+    rideType?: string;
+    vehicleType?: string;
+    fuelType?: string;
+    transmission?: string;
+    seats?: number;
+    luggage?: number;
+    engineCc?: number;
+    helmetIncluded?: boolean;
+    rating?: number;
+    reviewCount?: number;
+    finalPrice: number;
+    kmsIncluded?: number;
+    extraKmFare?: number;
+  };
+  searchMeta: {
+  rideType?: string;
+  from?: string;
+  to?: string;
+  pickup?: string;
+  drop?: string;
+  departureDate?: string;
+  returnDate?: string;
+  pickupDate?: string;
+  dropDate?: string;
+  pickupTime?: string;
+  dropTime?: string;
+  rentalPackage?: string;
+};
+  traveller: {
+    pickupLocation?: string;
+    fullName?: string;
+    gender?: string;
+    mobile?: string;
+    email?: string;
+    usePickupAsBillingAddress?: boolean;
+  };
+  selectedAddons: {
+    id: string;
+    title: string;
+    description: string;
+    price: number;
+  }[];
+  appliedOffer?: {
+    id?: string;
+    code?: string;
+    title?: string;
+    description?: string;
+    discountAmount?: number;
+  } | null;
+  fare: {
+    baseFare: number;
+    taxesAndFees: number;
+    specialRequestTotal: number;
+    offerDiscount: number;
+    tplCredit: number;
+    totalPayable: number;
+  };
+  walletBreakdown?: {
+    promoUsed?: number;
+    earnedUsed?: number;
+    refundUsed?: number;
+    promoAvailable?: number;
+    earnedAvailable?: number;
+    refundWalletAvailable?: number;
+    totalWalletUsed?: number;
+    earnedOnThisBooking?: number;
+  };
+  originalBookingBaseline?: {
+    amount?: number;
+    payableAmount?: number;
+    totalBeforeWallet?: number;
+    baseFare?: number;
+    taxesAndFees?: number;
+    specialRequestTotal?: number;
+  };
+  bookingData?: any;
+  timerLeft: number;
+};
+
+function getActiveUser() {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const raw = localStorage.getItem("tpl_auth_session_v1");
+    const parsed = raw ? JSON.parse(raw) : null;
+    return parsed?.user || null;
+  } catch {
+    return null;
+  }
+}
+
+export default function CabPaymentPage() {
+  const router = useRouter();
+
+  const [paymentData, setPaymentData] = useState<CabPaymentPayload | null>(null);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
+  const [paymentActionState, setPaymentActionState] = useState<
+    "idle" | "processing" | "success" | "failure"
+  >("idle");
+
+  const [activeUser, setActiveUser] = useState<any>(null);
+  const [wallet, setWallet] = useState<Wallet>({
+    promoCredit: 0,
+    earnedCredit: 0,
+    refundableBalance: 0,
+  });
+
+  useEffect(() => {
+    const raw = sessionStorage.getItem("tplCabPaymentData");
+    if (!raw) return;
+
+    try {
+      const parsed = JSON.parse(raw) as CabPaymentPayload;
+      setPaymentData(parsed);
+    } catch (error) {
+      console.error("Failed to parse cab payment data", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    const syncUserWallet = () => {
+      const user = getActiveUser();
+      setActiveUser(user);
+
+      if (user?.mobile) {
+        setWallet(getWallet(user.mobile));
+      } else {
+        setWallet({
+          promoCredit: 0,
+          earnedCredit: 0,
+          refundableBalance: 0,
+        });
+      }
+    };
+
+    syncUserWallet();
+
+    window.addEventListener(AUTH_UPDATED_EVENT, syncUserWallet);
+    window.addEventListener("storage", syncUserWallet);
+
+    return () => {
+      window.removeEventListener(AUTH_UPDATED_EVENT, syncUserWallet);
+      window.removeEventListener("storage", syncUserWallet);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!paymentData) return;
+    if (paymentData.timerLeft <= 0) return;
+
+    const timer = setInterval(() => {
+      setPaymentData((prev) => {
+        if (!prev) return prev;
+
+        const nextTimer = prev.timerLeft > 0 ? prev.timerLeft - 1 : 0;
+
+        const updated = {
+          ...prev,
+          timerLeft: nextTimer,
+        };
+
+        try {
+          sessionStorage.setItem("tplCabPaymentData", JSON.stringify(updated));
+        } catch (error) {
+          console.error("Failed to update cab timer in sessionStorage", error);
+        }
+
+        return updated;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [paymentData?.timerLeft]);
+
+  const timerLabel = useMemo(() => {
+    if (!paymentData) return "10:00";
+    const mm = String(Math.floor(paymentData.timerLeft / 60)).padStart(2, "0");
+    const ss = String(paymentData.timerLeft % 60).padStart(2, "0");
+    return `${mm}:${ss}`;
+  }, [paymentData]);
+
+  const isExpired = !paymentData || paymentData.timerLeft <= 0;
+
+  const walletPriceBreakup = useMemo(() => {
+    if (!paymentData) return null;
+
+    const baseFare = Number(paymentData.fare?.baseFare || 0);
+    const taxesAndFees = Number(paymentData.fare?.taxesAndFees || 0);
+    const specialRequestTotal = Number(
+      paymentData.fare?.specialRequestTotal || 0
+    );
+    const offerDiscount = Number(paymentData.fare?.offerDiscount || 0);
+
+    const promoUsed = Number(paymentData.walletBreakdown?.promoUsed || 0);
+    const earnedUsed = Number(paymentData.walletBreakdown?.earnedUsed || 0);
+    const refundUsed = Number(paymentData.walletBreakdown?.refundUsed || 0);
+
+    const totalWalletUsed = Number(
+      paymentData.walletBreakdown?.totalWalletUsed ||
+        promoUsed + earnedUsed + refundUsed ||
+        paymentData.fare?.tplCredit ||
+        0
+    );
+
+    const totalBeforeWallet = Number(
+      paymentData.originalBookingBaseline?.totalBeforeWallet ||
+        baseFare + taxesAndFees + specialRequestTotal - offerDiscount
+    );
+
+    const totalPayable = Number(
+      paymentData.fare?.totalPayable ||
+        paymentData.originalBookingBaseline?.payableAmount ||
+        Math.max(totalBeforeWallet - totalWalletUsed, 0)
+    );
+
+    return {
+      ...paymentData.fare,
+      baseFare,
+      taxesAndFees,
+      specialRequestTotal,
+      offerDiscount,
+      tplCredit: totalWalletUsed,
+      oldTplCredit: totalWalletUsed,
+      walletUsed: totalWalletUsed,
+      walletCalc: {
+        promoUsed,
+        earnedUsed,
+        refundUsed,
+      },
+      walletBreakdown: {
+        promoUsed,
+        earnedUsed,
+        refundUsed,
+      },
+      totalBeforeWallet,
+      totalPayable,
+      totalAmount: totalPayable,
+      earnedOnThisBooking: Number(
+        paymentData.walletBreakdown?.earnedOnThisBooking ||
+          Math.floor(totalBeforeWallet * 0.02)
+      ),
+    };
+  }, [paymentData]);
+
+  function handlePayNow() {
+    if (!paymentData || isExpired || !selectedPaymentMethod) return;
+
+    setPaymentActionState("processing");
+
+    setTimeout(() => {
+      try {
+        const now = new Date().toISOString();
+        const bookingId = generateCabBookingId();
+        const transactionId = generateCabTransactionId();
+        const rideId = `RIDE-${Date.now().toString().slice(-8)}`;
+
+        const finalFare = walletPriceBreakup || paymentData.fare;
+
+        const walletCalc = walletPriceBreakup?.walletCalc || {
+          promoUsed: 0,
+          earnedUsed: 0,
+          refundUsed: 0,
+        };
+
+        if (activeUser?.mobile && walletPriceBreakup?.walletCalc) {
+          const latestWallet = getWallet(activeUser.mobile);
+
+          const nextWallet: Wallet = {
+            promoCredit: Math.max(
+              Number(latestWallet.promoCredit || 0) -
+                Number(walletCalc.promoUsed || 0),
+              0
+            ),
+            earnedCredit: Math.max(
+              Number(latestWallet.earnedCredit || 0) -
+                Number(walletCalc.earnedUsed || 0),
+              0
+            ),
+            refundableBalance: Math.max(
+              Number(latestWallet.refundableBalance || 0) -
+                Number(walletCalc.refundUsed || 0),
+              0
+            ),
+          };
+
+          saveWallet(nextWallet, activeUser.mobile);
+          setWallet(nextWallet);
+
+          if (Number(walletCalc.promoUsed || 0) > 0) {
+            addWalletLedgerItem(
+              {
+                type: "wallet_used",
+                title: "TPL Promo Credit Used",
+                description: "Promo credit used for cab booking payment",
+                amount: Number(walletCalc.promoUsed || 0),
+              },
+              activeUser.mobile
+            );
+          }
+
+          if (Number(walletCalc.earnedUsed || 0) > 0) {
+            addWalletLedgerItem(
+              {
+                type: "wallet_used",
+                title: "TPL Earned Credit Used",
+                description: "Earned credit used for cab booking payment",
+                amount: Number(walletCalc.earnedUsed || 0),
+              },
+              activeUser.mobile
+            );
+          }
+
+          if (Number(walletCalc.refundUsed || 0) > 0) {
+            addWalletLedgerItem(
+              {
+                type: "wallet_used",
+                title: "Refund Wallet Used",
+                description: "Refund wallet used for cab booking payment",
+                amount: Number(walletCalc.refundUsed || 0),
+              },
+              activeUser.mobile
+            );
+          }
+        }
+
+        const bookingRecord = {
+          bookingId,
+          bookingStatus: "confirmed" as const,
+          createdAt: now,
+          confirmedAt: now,
+
+          cab: paymentData.cab,
+          searchMeta: paymentData.searchMeta,
+
+          traveller: {
+            pickupLocation: paymentData.traveller.pickupLocation || "",
+            fullName: paymentData.traveller.fullName || "",
+            gender: paymentData.traveller.gender || "",
+            mobile: paymentData.traveller.mobile || "",
+            email: paymentData.traveller.email || "",
+            usePickupAsBillingAddress:
+              paymentData.traveller.usePickupAsBillingAddress ?? true,
+          },
+
+          travellers: paymentData.traveller?.fullName
+            ? [
+                {
+                  id: "1",
+                  fullName: paymentData.traveller.fullName || "",
+                  gender: paymentData.traveller.gender || "",
+                },
+              ]
+            : [],
+
+          contactDetails: {
+            countryCode: "+91",
+            mobile: paymentData.traveller.mobile || "",
+            email: paymentData.traveller.email || "",
+          },
+
+          selectedAddons: paymentData.selectedAddons || [],
+          appliedOffer: paymentData.appliedOffer || null,
+
+          fare: {
+            baseFare: Number(finalFare?.baseFare || 0),
+            driverAllowance: 0,
+            nightCharge: 0,
+            tollTax: 0,
+            stateTax: 0,
+            parkingCharge: 0,
+            gst: Number(finalFare?.taxesAndFees || 0),
+            tplCredit: Number(finalFare?.tplCredit || 0),
+            oldTplCredit: Number((finalFare as any)?.oldTplCredit || 0),
+            walletUsed: Number((finalFare as any)?.walletUsed || 0),
+            walletBreakdown: {
+              promoUsed: Number(walletCalc.promoUsed || 0),
+              earnedUsed: Number(walletCalc.earnedUsed || 0),
+              refundUsed: Number(walletCalc.refundUsed || 0),
+              totalWalletUsed: Number((finalFare as any)?.walletUsed || 0),
+              earnedOnThisBooking: Number(
+                (finalFare as any)?.earnedOnThisBooking || 0
+              ),
+            },
+            appliedOffer: Number(finalFare?.offerDiscount || 0),
+            totalPaid: Number(
+              (finalFare as any)?.totalPayable || paymentData.fare?.totalPayable || 0
+            ),
+            totalAmount: Number(
+              (finalFare as any)?.totalPayable || paymentData.fare?.totalPayable || 0
+            ),
+          },
+
+          payment: {
+            paymentMethod: selectedPaymentMethod,
+            paymentStatus: "success" as const,
+            paidAt: now,
+            transactionId,
+          },
+        };
+
+        saveCabConfirmedBooking(bookingRecord as any);
+
+        const confirmationPayload = {
+          bookingId,
+          paymentId: transactionId,
+          transactionId,
+          rideId,
+          bookingStatus: "confirmed",
+          paymentStatus: "paid",
+          bookedOn: now,
+          paidAt: now,
+          paymentMethod: selectedPaymentMethod,
+
+          cabType:
+            paymentData.cab.vehicleType ||
+            paymentData.cab.rideType ||
+            paymentData.cab.name ||
+            "Cab Booking",
+          cabName: paymentData.cab.name || "Cab Booking",
+
+          fromLocation:
+            paymentData.searchMeta.from ||
+            paymentData.searchMeta.pickup ||
+            paymentData.traveller.pickupLocation ||
+            "",
+          toLocation:
+            paymentData.searchMeta.to || paymentData.searchMeta.drop || "",
+          pickupDate:
+  paymentData.searchMeta.pickupDate ||
+  paymentData.searchMeta.departureDate ||
+  "",
+
+pickupTime: paymentData.searchMeta.pickupTime || "",
+
+dropDate:
+  paymentData.searchMeta.returnDate ||
+  (paymentData.searchMeta as any).dropDate ||
+  paymentData.searchMeta.pickupDate ||
+  paymentData.searchMeta.departureDate ||
+  "",
+
+dropTime: paymentData.searchMeta.dropTime || "",
+
+tripType:
+  paymentData.searchMeta.rideType || paymentData.cab.rideType || "",
+
+          specialRequest:
+            paymentData.selectedAddons?.map((item) => item.title).join(", ") ||
+            "",
+
+          travellers: paymentData.traveller?.fullName
+            ? [
+                {
+                  id: "1",
+                  fullName: paymentData.traveller.fullName || "",
+                  gender: paymentData.traveller.gender || "",
+                },
+              ]
+            : [],
+
+          contactDetails: {
+            countryCode: "+91",
+            mobile: paymentData.traveller.mobile || "",
+            email: paymentData.traveller.email || "",
+          },
+
+          fare: {
+            baseFare: Number(finalFare?.baseFare || 0),
+            driverAllowance: 0,
+            nightCharge: 0,
+            tollTax: 0,
+            stateTax: 0,
+            parkingCharge: 0,
+            gst: Number(finalFare?.taxesAndFees || 0),
+            tplCredit: Number(finalFare?.tplCredit || 0),
+            oldTplCredit: Number((finalFare as any)?.oldTplCredit || 0),
+            walletUsed: Number((finalFare as any)?.walletUsed || 0),
+            walletBreakdown: {
+              promoUsed: Number(walletCalc.promoUsed || 0),
+              earnedUsed: Number(walletCalc.earnedUsed || 0),
+              refundUsed: Number(walletCalc.refundUsed || 0),
+              totalWalletUsed: Number((finalFare as any)?.walletUsed || 0),
+              earnedOnThisBooking: Number(
+                (finalFare as any)?.earnedOnThisBooking || 0
+              ),
+            },
+            earnedOnThisBooking: Number(
+              (finalFare as any)?.earnedOnThisBooking || 0
+            ),
+            appliedOffer: Number(finalFare?.offerDiscount || 0),
+            totalBeforeWallet: Number((finalFare as any)?.totalBeforeWallet || 0),
+            totalPaid: Number(
+              (finalFare as any)?.totalPayable || paymentData.fare?.totalPayable || 0
+            ),
+            totalAmount: Number(
+              (finalFare as any)?.totalPayable || paymentData.fare?.totalPayable || 0
+            ),
+          },
+
+          paymentData: {
+            method: selectedPaymentMethod,
+            totalPaid: Number(
+              (finalFare as any)?.totalPayable || paymentData.fare?.totalPayable || 0
+            ),
+            paidAt: now,
+            walletUsed: Number((finalFare as any)?.walletUsed || 0),
+            promoUsed: Number(walletCalc.promoUsed || 0),
+            earnedUsed: Number(walletCalc.earnedUsed || 0),
+            refundUsed: Number(walletCalc.refundUsed || 0),
+          },
+
+          earnedCreditAmount: Number((finalFare as any)?.earnedOnThisBooking || 0),
+
+          cab: paymentData.cab,
+          searchMeta: paymentData.searchMeta,
+          traveller: paymentData.traveller,
+          selectedAddons: paymentData.selectedAddons || [],
+          appliedOffer: paymentData.appliedOffer || null,
+        };
+
+        sessionStorage.setItem(
+          "cabConfirmationData",
+          JSON.stringify(confirmationPayload)
+        );
+
+        sessionStorage.setItem(
+          "cabPaymentSuccessData",
+          JSON.stringify(confirmationPayload)
+        );
+
+        sessionStorage.setItem(
+          "tplCabConfirmationData",
+          JSON.stringify(confirmationPayload)
+        );
+
+        setPaymentActionState("success");
+
+        setTimeout(() => {
+          router.push("/cab/confirmation");
+        }, 700);
+      } catch (error) {
+        console.error("Cab payment success handling failed", error);
+        setPaymentActionState("failure");
+      }
+    }, 1800);
+  }
+
+  function handleRetryPayment() {
+    if (isExpired) return;
+    setPaymentActionState("idle");
+  }
+
+  if (!paymentData) {
+    return (
+      <main className="min-h-screen bg-[#f5f7fb] text-black">
+        <CabBookingTopBar timerLabel="10:00" />
+        <div className="mx-auto max-w-[1400px] px-4 py-6">
+          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-[18px] font-bold text-slate-700">
+            No payment data found.
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main className="min-h-screen bg-[#f5f7fb] text-black">
+      <CabBookingTopBar timerLabel={timerLabel} />
+
+      <div className="mx-auto max-w-[1400px] px-4 py-6">
+        <div className="flex items-start gap-5">
+          <div className="w-[74%] min-w-0 space-y-5">
+            <CabPaymentTopSummary
+              cab={paymentData.cab}
+              searchMeta={paymentData.searchMeta}
+              traveller={paymentData.traveller}
+              selectedAddons={paymentData.selectedAddons}
+              appliedOffer={paymentData.appliedOffer || null}
+            />
+
+            <section className="rounded-2xl border border-[#f3d7c7] bg-[#fff7ed] px-5 py-3 shadow-sm">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <div className="text-[15px] font-extrabold text-slate-900">
+                    {activeUser?.mobile
+                      ? "Wallet benefits are applied as per your account balance"
+                      : "Login Now to save your payment details faster"}
+                  </div>
+                </div>
+
+                {!activeUser?.mobile ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowLoginModal(true)}
+                    className="h-[40px] rounded-xl border border-slate-300 bg-white px-5 text-[13px] font-extrabold text-slate-900 transition hover:border-sky-400 hover:text-sky-600"
+                  >
+                    LOGIN
+                  </button>
+                ) : null}
+              </div>
+            </section>
+
+            <CabPaymentOptionSection
+              onPaymentMethodChange={(method) => {
+                setSelectedPaymentMethod(method);
+
+                if (paymentActionState === "failure") {
+                  setPaymentActionState("idle");
+                }
+              }}
+            />
+          </div>
+
+          <div className="w-[26%] min-w-0 self-start">
+            <CabPaymentPriceCard
+              priceBreakup={walletPriceBreakup || paymentData.fare}
+              selectedPaymentMethod={selectedPaymentMethod}
+              paymentActionState={paymentActionState}
+              isExpired={isExpired}
+              onPayNow={handlePayNow}
+              onRetryPayment={handleRetryPayment}
+            />
+          </div>
+        </div>
+      </div>
+
+      <LoginModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+      />
+    </main>
+  );
+}

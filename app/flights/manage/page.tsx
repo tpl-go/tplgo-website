@@ -1,0 +1,749 @@
+"use client";
+
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+
+import ManageBookingLayout from "@/app/components/manage/flight/ManageBookingLayout";
+import ManageBookingDetails from "@/app/components/manage/flight/ManageBookingDetails";
+import ManageActionPanel from "@/app/components/manage/flight/ManageActionPanel";
+
+import ManageTravellerDetailsSection from "@/app/components/manage/flight/actions/ManageTravellerDetailsSection";
+import ManageContactDetailsSection from "@/app/components/manage/flight/actions/ManageContactDetailsSection";
+import ManageSpecialRequestSection from "@/app/components/manage/flight/actions/ManageSpecialRequestSection";
+import ManageSeatsSection from "@/app/components/manage/flight/actions/ManageSeatsSection";
+import ManageMealsSection from "@/app/components/manage/flight/actions/ManageMealsSection";
+import ManageBaggageSection, {
+  TravellerBaggageSelection,
+} from "@/app/components/manage/flight/actions/ManageBaggageSection";
+
+import { buildManageQuote } from "@/app/lib/manage/managePricing";
+import { FlightManageBookingRecord } from "@/app/lib/manage/manageTypes";
+
+import {
+  TravellerSeatSelection,
+  TravellerMealSelection,
+} from "@/app/lib/flights/ancillaries/ancillaryTypes";
+import { FLIGHT_ANCILLARY_CATALOG } from "@/app/lib/flights/ancillaries/ancillaryCatalog";
+
+import {
+  getAllBookings,
+  BOOKING_UPDATED_EVENT,
+  type BookingItem,
+} from "@/app/lib/booking/bookingStorage";
+import { getBookingPayload } from "@/app/lib/booking/bookingActionHelpers";
+import { resolveFlightBookingSource } from "@/app/lib/booking/resolvers/flightResolver";
+import {
+  saveFlightSeatChanges,
+  saveFlightMealChanges,
+  saveFlightBaggageChanges,
+} from "@/app/lib/booking/flightManageUpdate";
+
+type SidebarKey =
+  | "summary"
+  | "traveller-details"
+  | "contact-details"
+  | "special-request"
+  | "seats"
+  | "meals"
+  | "baggage";
+
+type ManageTraveller = {
+  id: string;
+  title: string;
+  firstName: string;
+  middleName?: string;
+  lastName: string;
+  type: "adult" | "child" | "infant";
+};
+
+type ManageContact = {
+  email: string;
+  phone: string;
+};
+
+const emptyBookingSummary: FlightManageBookingRecord = {
+  bookingId: "",
+  pnr: "",
+  bookingStatus: "confirmed",
+  origin: "",
+  destination: "",
+  travelDate: "",
+  airlineName: "",
+  flightNumber: "",
+  travellers: [],
+  contact: {
+    email: "",
+    phone: "",
+  },
+  specialRequest: "",
+  seats: [],
+  meals: [],
+  baggage: [],
+  baseFareSnapshot: {
+    totalPaidAmount: 0,
+    currency: "INR",
+  },
+};
+
+function getTitleFromTraveller(item: { title?: string; gender?: string }) {
+  if (item.title?.trim()) return item.title.trim();
+  if (item.gender === "female") return "Ms";
+  return "Mr";
+}
+
+function normalizeTravellerType(value?: string): "adult" | "child" | "infant" {
+  if (value === "child") return "child";
+  if (value === "infant") return "infant";
+  return "adult";
+}
+
+function mapMealNameToCatalogId(mealName?: string | null) {
+  if (!mealName) return null;
+
+  const matched = FLIGHT_ANCILLARY_CATALOG.meals.find(
+    (item) => item.name.trim().toLowerCase() === mealName.trim().toLowerCase()
+  );
+
+  return matched?.id ?? null;
+}
+
+function findSeatByTravellerOrIndex(
+  seats: Array<{ travellerId?: string; seatNumber?: string; price?: number }> = [],
+  travellerId: string,
+  index: number
+) {
+  const byId = seats.find((item) => item?.travellerId === travellerId);
+  if (byId) return byId;
+  return seats[index] ?? null;
+}
+
+function findMealByTravellerOrIndex(
+  meals: Array<{ travellerId?: string; mealName?: string; price?: number }> = [],
+  travellerId: string,
+  index: number
+) {
+  const byId = meals.find((item) => item?.travellerId === travellerId);
+  if (byId) return byId;
+  return meals[index] ?? null;
+}
+
+function findBaggageByTravellerOrIndex(
+  baggage: Array<{
+    travellerId?: string;
+    baggageCode?: string;
+    code?: string;
+    price?: number;
+  }> = [],
+  travellerId: string,
+  index: number
+) {
+  const byId = baggage.find((item) => item?.travellerId === travellerId);
+  if (byId) return byId;
+  return baggage[index] ?? null;
+}
+
+function dispatchBookingUpdate() {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event(BOOKING_UPDATED_EVENT));
+}
+
+function savePayloadToStorage(payloadStorageKey: string | undefined, payload: any) {
+  if (typeof window === "undefined") return;
+  if (!payloadStorageKey) return;
+
+  localStorage.setItem(payloadStorageKey, JSON.stringify(payload));
+  dispatchBookingUpdate();
+}
+
+function saveTravellerChangesToPayload(
+  payloadStorageKey: string | undefined,
+  travellers: ManageTraveller[]
+) {
+  if (!payloadStorageKey) return;
+
+  const payload = getBookingPayload<any>(payloadStorageKey);
+  if (!payload) return;
+
+  const existingTravellers = payload?.travellerValidation?.travellers || [];
+
+  payload.travellerValidation = {
+    ...(payload.travellerValidation || {}),
+    travellers: travellers.map((item, index) => {
+      const existing = existingTravellers[index] || {};
+
+      return {
+        ...existing,
+        id: item.id,
+        title: item.title,
+        firstName: item.firstName,
+        middleName: item.middleName || "",
+        lastName: item.lastName,
+        travellerType: item.type,
+      };
+    }),
+  };
+
+  savePayloadToStorage(payloadStorageKey, payload);
+}
+
+function saveContactChangesToPayload(
+  payloadStorageKey: string | undefined,
+  contact: ManageContact
+) {
+  if (!payloadStorageKey) return;
+
+  const payload = getBookingPayload<any>(payloadStorageKey);
+  if (!payload) return;
+
+  payload.travellerValidation = {
+    ...(payload.travellerValidation || {}),
+    contactDetails: {
+      ...(payload.travellerValidation?.contactDetails || {}),
+      email: contact.email,
+      mobile: contact.phone,
+    },
+  };
+
+  savePayloadToStorage(payloadStorageKey, payload);
+}
+
+function saveSpecialRequestChangesToPayload(
+  payloadStorageKey: string | undefined,
+  specialRequest: string
+) {
+  if (!payloadStorageKey) return;
+
+  const payload = getBookingPayload<any>(payloadStorageKey);
+  if (!payload) return;
+
+  payload.reviewData = {
+    ...(payload.reviewData || {}),
+    specialRequest,
+  };
+
+  savePayloadToStorage(payloadStorageKey, payload);
+}
+
+function buildManageStateFromResolvedFlightSource(
+  booking: BookingItem,
+  source: ReturnType<typeof resolveFlightBookingSource>
+): {
+  summary: FlightManageBookingRecord;
+  travellers: ManageTraveller[];
+  contact: ManageContact;
+  specialRequest: string;
+  seats: TravellerSeatSelection[];
+  meals: TravellerMealSelection[];
+  baggage: TravellerBaggageSelection[];
+} {
+  const travellers: ManageTraveller[] = (
+    source.travellerValidation?.travellers || []
+  ).map((item, index) => ({
+    id: item.id || `traveller-${index + 1}`,
+    title: getTitleFromTraveller(item),
+    firstName: item.firstName || "Traveller",
+    middleName: item.middleName || "",
+    lastName: item.lastName || `${index + 1}`,
+    type: normalizeTravellerType(item.travellerType),
+  }));
+
+  const contact: ManageContact = {
+    email: source.travellerValidation?.contactDetails?.email || "",
+    phone: source.travellerValidation?.contactDetails?.mobile || "",
+  };
+
+  const seats: TravellerSeatSelection[] = travellers.map((traveller, index) => {
+    const seat = findSeatByTravellerOrIndex(
+      source.seatMealData?.seats || [],
+      traveller.id,
+      index
+    );
+
+    return {
+      travellerId: traveller.id,
+      oldSeatCode: seat?.seatNumber ?? null,
+      newSeatCode: seat?.seatNumber ?? null,
+      oldPrice: seat?.price ?? 0,
+      newPrice: seat?.price ?? 0,
+      skipped: false,
+    };
+  });
+
+  const meals: TravellerMealSelection[] = travellers.map((traveller, index) => {
+    const meal = findMealByTravellerOrIndex(
+      source.seatMealData?.meals || [],
+      traveller.id,
+      index
+    );
+
+    const mappedMealId = mapMealNameToCatalogId(meal?.mealName ?? null);
+
+    return {
+      travellerId: traveller.id,
+      oldMealId: mappedMealId,
+      newMealId: mappedMealId,
+      oldPrice: meal?.price ?? 0,
+      newPrice: meal?.price ?? 0,
+      skipped: false,
+    };
+  });
+
+  const baggage: TravellerBaggageSelection[] = travellers.map(
+    (traveller, index) => {
+      const item = findBaggageByTravellerOrIndex(
+        source.addonsData?.baggageSelections || [],
+        traveller.id,
+        index
+      );
+
+      return {
+        travellerId: traveller.id,
+        oldBaggageCode: item?.baggageCode ?? item?.code ?? "BG0",
+        newBaggageCode: item?.baggageCode ?? item?.code ?? "BG0",
+        oldPrice: item?.price ?? 0,
+        newPrice: item?.price ?? 0,
+        skipped: false,
+      };
+    }
+  );
+
+  const summary: FlightManageBookingRecord = {
+    bookingId: booking.id,
+    pnr:
+      source.payload?.confirmationData?.pnr ||
+      source.payload?.pnr ||
+      "PNR Pending",
+    bookingStatus: "confirmed",
+    origin: source.firstSegment?.fromCode || source.firstSegment?.from || "",
+    destination:
+      source.reviewData?.bookingType === "roundTrip"
+        ? source.lastSegment?.toCode || source.lastSegment?.to || ""
+        : source.firstSegment?.toCode || source.firstSegment?.to || "",
+    travelDate: source.journeyDateLabel || booking.travelDate,
+    airlineName: source.firstSegment?.airline || "Flight",
+    flightNumber: source.firstSegment?.flightNumber || "Flight Number Pending",
+    travellers,
+    contact,
+    specialRequest: source.reviewData?.specialRequest || "",
+    seats: seats.map((item) => ({
+      travellerId: item.travellerId,
+      oldSeatCode: item.oldSeatCode ?? undefined,
+      newSeatCode: item.newSeatCode ?? undefined,
+      oldPrice: item.oldPrice,
+      newPrice: item.newPrice,
+    })),
+    meals: meals.map((item) => ({
+      travellerId: item.travellerId,
+      oldMealCode: item.oldMealId ?? undefined,
+      newMealCode: item.newMealId ?? undefined,
+      oldPrice: item.oldPrice,
+      newPrice: item.newPrice,
+    })),
+    baggage: baggage.map((item) => ({
+      travellerId: item.travellerId,
+      oldBaggageCode: item.oldBaggageCode ?? undefined,
+      newBaggageCode: item.newBaggageCode ?? undefined,
+      oldPrice: item.oldPrice,
+      newPrice: item.newPrice,
+    })),
+    baseFareSnapshot: {
+      totalPaidAmount: source.priceBreakup.totalAmount || booking.amount || 0,
+      currency: "INR",
+    },
+  };
+
+  return {
+    summary,
+    travellers,
+    contact,
+    specialRequest: summary.specialRequest || "",
+    seats,
+    meals,
+    baggage,
+  };
+}
+
+function FlightManagePageContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const bookingId = searchParams.get("bookingId") || "";
+
+  const [activeTab, setActiveTab] = useState<SidebarKey>("summary");
+  const [isLoading, setIsLoading] = useState(true);
+  const [bookingItem, setBookingItem] = useState<BookingItem | null>(null);
+  const [manageSummary, setManageSummary] =
+    useState<FlightManageBookingRecord>(emptyBookingSummary);
+
+  const [travellers, setTravellers] = useState<ManageTraveller[]>([]);
+  const [contact, setContact] = useState<ManageContact>({
+    email: "",
+    phone: "",
+  });
+  const [specialRequest, setSpecialRequest] = useState("");
+
+  const [seatSelections, setSeatSelections] = useState<TravellerSeatSelection[]>([]);
+  const [mealSelections, setMealSelections] = useState<TravellerMealSelection[]>([]);
+  const [baggageSelections, setBaggageSelections] = useState<
+    TravellerBaggageSelection[]
+  >([]);
+
+  useEffect(() => {
+    if (!bookingId) {
+      setIsLoading(false);
+      return;
+    }
+
+    const allBookings = getAllBookings();
+    const matchedBooking = allBookings.find(
+      (item) => item.id === bookingId && item.type === "flight"
+    );
+
+    if (!matchedBooking) {
+      setBookingItem(null);
+      setIsLoading(false);
+      return;
+    }
+
+    const payload = getBookingPayload<any>(matchedBooking.payloadStorageKey);
+    const resolvedSource = resolveFlightBookingSource(matchedBooking, payload);
+    const hydrated = buildManageStateFromResolvedFlightSource(
+      matchedBooking,
+      resolvedSource
+    );
+
+    setBookingItem(matchedBooking);
+    setManageSummary(hydrated.summary);
+    setTravellers(hydrated.travellers);
+    setContact(hydrated.contact);
+    setSpecialRequest(hydrated.specialRequest);
+    setSeatSelections(hydrated.seats);
+    setMealSelections(hydrated.meals);
+    setBaggageSelections(hydrated.baggage);
+    setIsLoading(false);
+  }, [bookingId]);
+
+  const bookingForSummary = useMemo<FlightManageBookingRecord>(() => {
+    return {
+      ...manageSummary,
+      travellers,
+      contact,
+      specialRequest,
+      seats: seatSelections.map((item) => ({
+        travellerId: item.travellerId,
+        oldSeatCode: item.oldSeatCode ?? undefined,
+        newSeatCode: item.newSeatCode ?? undefined,
+        oldPrice: item.oldPrice,
+        newPrice: item.newPrice,
+      })),
+      meals: mealSelections.map((item) => ({
+        travellerId: item.travellerId,
+        oldMealCode: item.oldMealId ?? undefined,
+        newMealCode: item.newMealId ?? undefined,
+        oldPrice: item.oldPrice,
+        newPrice: item.newPrice,
+      })),
+      baggage: baggageSelections.map((item) => ({
+        travellerId: item.travellerId,
+        oldBaggageCode: item.oldBaggageCode ?? undefined,
+        newBaggageCode: item.newBaggageCode ?? undefined,
+        oldPrice: item.oldPrice,
+        newPrice: item.newPrice,
+      })),
+    };
+  }, [
+    manageSummary,
+    travellers,
+    contact,
+    specialRequest,
+    seatSelections,
+    mealSelections,
+    baggageSelections,
+  ]);
+
+  const seatQuote = useMemo(() => {
+    return buildManageQuote({
+      seats: seatSelections.map((item) => ({
+        travellerId: item.travellerId,
+        oldSeatCode: item.oldSeatCode ?? undefined,
+        newSeatCode: item.newSeatCode ?? undefined,
+        oldPrice: item.oldPrice,
+        newPrice: item.newPrice,
+      })),
+      meals: [],
+      baggage: [],
+      airlineCharges: 0,
+    });
+  }, [seatSelections]);
+
+  const mealQuote = useMemo(() => {
+    return buildManageQuote({
+      seats: [],
+      meals: mealSelections.map((item) => ({
+        travellerId: item.travellerId,
+        oldMealCode: item.oldMealId ?? undefined,
+        newMealCode: item.newMealId ?? undefined,
+        oldPrice: item.oldPrice,
+        newPrice: item.newPrice,
+      })),
+      baggage: [],
+      airlineCharges: 0,
+    });
+  }, [mealSelections]);
+
+  const baggageQuote = useMemo(() => {
+    return buildManageQuote({
+      seats: [],
+      meals: [],
+      baggage: baggageSelections.map((item) => ({
+        travellerId: item.travellerId,
+        oldBaggageCode: item.oldBaggageCode ?? undefined,
+        newBaggageCode: item.newBaggageCode ?? undefined,
+        oldPrice: item.oldPrice,
+        newPrice: item.newPrice,
+      })),
+      airlineCharges: 0,
+    });
+  }, [baggageSelections]);
+
+  const handleMoneyContinue = async (
+    section: "seats" | "meals" | "baggage",
+    mode: "save" | "payment" | "wallet_credit"
+  ) => {
+    if (!bookingItem) return;
+
+    try {
+      if (mode === "payment" || mode === "wallet_credit") {
+        const payload = getBookingPayload<any>(bookingItem.payloadStorageKey);
+
+        if (!payload || !bookingItem.payloadStorageKey) {
+          alert("Booking payload not found.");
+          return;
+        }
+
+        payload.manageDraft = {
+          seats: seatSelections,
+          meals: mealSelections,
+          baggage: baggageSelections,
+          section,
+        };
+
+        localStorage.setItem(
+          bookingItem.payloadStorageKey,
+          JSON.stringify(payload)
+        );
+
+        router.push(
+  `/manage/payment?bookingId=${encodeURIComponent(
+    bookingItem.id
+  )}&section=${section}&type=flight`
+);
+        return;
+      }
+
+      if (section === "seats") {
+        saveFlightSeatChanges({
+          bookingId: bookingItem.id,
+          payloadStorageKey: bookingItem.payloadStorageKey,
+          seats: seatSelections,
+        });
+      }
+
+      if (section === "meals") {
+        saveFlightMealChanges({
+          bookingId: bookingItem.id,
+          payloadStorageKey: bookingItem.payloadStorageKey,
+          meals: mealSelections,
+          mealCatalog: FLIGHT_ANCILLARY_CATALOG.meals,
+        });
+      }
+
+      if (section === "baggage") {
+        saveFlightBaggageChanges({
+          bookingId: bookingItem.id,
+          payloadStorageKey: bookingItem.payloadStorageKey,
+          baggage: baggageSelections,
+        });
+      }
+
+      if (mode === "wallet_credit") {
+        alert(`${section} updated successfully. Refund Wallet credit will be added.`);
+      } else {
+        alert(`${section} updated successfully.`);
+      }
+
+      const allBookings = getAllBookings();
+      const refreshedBooking =
+        allBookings.find(
+          (item) => item.id === bookingItem.id && item.type === "flight"
+        ) || bookingItem;
+
+      const refreshedPayload = getBookingPayload<any>(
+        refreshedBooking.payloadStorageKey
+      );
+      const refreshedSource = resolveFlightBookingSource(
+        refreshedBooking,
+        refreshedPayload
+      );
+      const refreshedHydrated = buildManageStateFromResolvedFlightSource(
+        refreshedBooking,
+        refreshedSource
+      );
+
+      setBookingItem(refreshedBooking);
+      setManageSummary(refreshedHydrated.summary);
+      setTravellers(refreshedHydrated.travellers);
+      setContact(refreshedHydrated.contact);
+      setSpecialRequest(refreshedHydrated.specialRequest);
+      setSeatSelections(refreshedHydrated.seats);
+      setMealSelections(refreshedHydrated.meals);
+      setBaggageSelections(refreshedHydrated.baggage);
+    } catch (error) {
+      console.error(error);
+      alert(`Unable to update ${section}. Please try again.`);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <section className="bg-[#f8f9fb] px-4 py-10">
+        <div className="mx-auto max-w-[1440px] rounded-[28px] border border-black/5 bg-white p-8 text-sm text-[#6b7280] shadow-[0_10px_40px_rgba(0,0,0,0.04)]">
+          Loading manage booking...
+        </div>
+      </section>
+    );
+  }
+
+  if (!bookingId || !bookingItem) {
+    return (
+      <section className="bg-[#f8f9fb] px-4 py-10">
+        <div className="mx-auto max-w-[1440px] rounded-[28px] border border-black/5 bg-white p-8 shadow-[0_10px_40px_rgba(0,0,0,0.04)]">
+          <h1 className="text-xl font-bold text-[#111827]">Booking not found</h1>
+          <p className="mt-2 text-sm text-[#6b7280]">
+            Requested manage booking record load nahi ho paaya.
+          </p>
+          <button
+            type="button"
+            onClick={() => router.push("/account/bookings")}
+            className="mt-5 rounded-full bg-[#111827] px-5 py-3 text-sm font-semibold text-white"
+          >
+            Back to My Bookings
+          </button>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <ManageBookingLayout
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      bookingId={manageSummary.bookingId}
+      pnr={manageSummary.pnr}
+      tripLabel={`${manageSummary.origin} → ${manageSummary.destination}`}
+      journeyLabel={`${travellers.length} Traveller • One Way`}
+      sidebarItems={[
+        { key: "summary", label: "Booking Summary" },
+        { key: "traveller-details", label: "Traveller Details" },
+        { key: "contact-details", label: "Contact Details" },
+        { key: "special-request", label: "Special Request" },
+        { key: "seats", label: "Seats", badge: "Paid" },
+        { key: "meals", label: "Meals", badge: "Paid" },
+        { key: "baggage", label: "Baggage", badge: "Paid" },
+      ]}
+    >
+      {activeTab === "summary" && (
+        <ManageBookingDetails booking={bookingForSummary} />
+      )}
+
+      {activeTab === "traveller-details" && (
+        <ManageTravellerDetailsSection
+          travellers={travellers}
+          onChange={(next) => {
+            setTravellers(next);
+            saveTravellerChangesToPayload(bookingItem.payloadStorageKey, next);
+          }}
+        />
+      )}
+
+      {activeTab === "contact-details" && (
+        <ManageContactDetailsSection
+          value={contact}
+          onChange={(next) => {
+            setContact(next);
+            saveContactChangesToPayload(bookingItem.payloadStorageKey, next);
+          }}
+        />
+      )}
+
+      {activeTab === "special-request" && (
+        <ManageSpecialRequestSection
+          value={specialRequest}
+          onChange={(next) => {
+            setSpecialRequest(next);
+            saveSpecialRequestChangesToPayload(
+              bookingItem.payloadStorageKey,
+              next
+            );
+          }}
+        />
+      )}
+
+      {activeTab === "seats" && (
+        <div className="space-y-5">
+          <ManageSeatsSection
+            travellers={travellers}
+            value={seatSelections}
+            onChange={setSeatSelections}
+          />
+          <ManageActionPanel
+            quote={seatQuote}
+            onContinue={() =>
+              handleMoneyContinue("seats", seatQuote.settlementMode)
+            }
+          />
+        </div>
+      )}
+
+      {activeTab === "meals" && (
+        <div className="space-y-5">
+          <ManageMealsSection
+            travellers={travellers}
+            value={mealSelections}
+            onChange={setMealSelections}
+          />
+          <ManageActionPanel
+            quote={mealQuote}
+            onContinue={() =>
+              handleMoneyContinue("meals", mealQuote.settlementMode)
+            }
+          />
+        </div>
+      )}
+
+      {activeTab === "baggage" && (
+        <div className="space-y-5">
+          <ManageBaggageSection
+            travellers={travellers}
+            value={baggageSelections}
+            onChange={setBaggageSelections}
+          />
+          <ManageActionPanel
+            quote={baggageQuote}
+            onContinue={() =>
+              handleMoneyContinue("baggage", baggageQuote.settlementMode)
+            }
+          />
+        </div>
+      )}
+    </ManageBookingLayout>
+  );
+}
+
+export default function FlightManagePage() {
+  return (
+    <Suspense fallback={<div />}>
+      <FlightManagePageContent />
+    </Suspense>
+  );
+}
