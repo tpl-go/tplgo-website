@@ -68,8 +68,8 @@ export default function HotelSearchBox() {
   }, []);
 
   return (
-    <div className="mt-7 w-full rounded-[26px] border border-white/45 bg-white/20 px-5 pt-3 pb-7 shadow-xl backdrop-blur-md">
-      <div className="flex flex-nowrap items-center justify-center gap-3">
+    <div className="mt-4 md:mt-7 w-full rounded-[24px] md:rounded-[26px] border border-white/45 bg-white/20 px-3 md:px-5 pt-3 pb-5 md:pb-7 shadow-xl backdrop-blur-md">
+      <div className="grid grid-cols-1 gap-3 md:flex md:flex-nowrap md:items-center md:justify-center md:gap-3">
         <CitySelector dispatch={dispatch} />
 
         <HotelCalender dispatch={dispatch} type="CHECKIN" date={state.checkIn} />
@@ -91,16 +91,18 @@ export default function HotelSearchBox() {
         <PriceFilter dispatch={dispatch} />
       </div>
 
-      <div className="mt-7 flex items-center justify-between">
-        <span className="cursor-pointer text-sm font-bold text-orange-600 hover:underline">
+      <div className="relative mt-5 md:mt-7 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <span className="order-2 cursor-pointer text-center text-sm font-bold text-orange-600 hover:underline md:order-none md:text-left">
           List Your Property
         </span>
 
-        <div className="absolute left-1/2 -translate-x-1/2">
-          <HotelSearchButton state={state} />
+        <div className="order-1 flex w-full justify-center md:absolute md:left-1/2 md:order-none md:w-auto md:-translate-x-1/2">
+          <div className="w-full md:w-auto">
+            <HotelSearchButton state={state} />
+          </div>
         </div>
 
-        <div className="w-[130px]" />
+        <div className="hidden w-[130px] md:block" />
       </div>
     </div>
   );

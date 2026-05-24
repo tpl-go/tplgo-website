@@ -27,13 +27,10 @@ export async function generateStaticParams() {
   }));
 }
 
-export async function generateMetadata({
-  params,
-}: Props): Promise<Metadata> {
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { theme } = await params;
 
-  const themeName =
-    deslugifyTravelGuide(theme);
+  const themeName = deslugifyTravelGuide(theme);
 
   return {
     title: `${themeName} Travel Guides | TPL`,
@@ -41,59 +38,52 @@ export async function generateMetadata({
   };
 }
 
-export default async function TravelGuideThemePage({
-  params,
-}: Props) {
+export default async function TravelGuideThemePage({ params }: Props) {
   const { theme } = await params;
 
-  const articles =
-    getTravelGuideArticlesByThemeSlug(theme);
+  const articles = getTravelGuideArticlesByThemeSlug(theme);
 
   if (!articles.length) {
     notFound();
   }
 
-  const themeName =
-    deslugifyTravelGuide(theme);
+  const themeName = deslugifyTravelGuide(theme);
 
   return (
     <main className="min-h-screen bg-gray-50">
       {/* HERO */}
-      <section className="bg-[#0B1F3A] text-white py-20">
-        <div className="max-w-7xl mx-auto px-6">
+      <section className="bg-[#0B1F3A] px-3 py-12 text-white sm:px-6 sm:py-20">
+        <div className="mx-auto max-w-7xl">
           <Link
             href="/travel-guide"
-            className="inline-flex rounded-full border border-white/20 bg-white/10 px-5 py-2 text-sm font-semibold hover:bg-white/20 transition"
+            className="inline-flex rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold transition hover:bg-white/20 sm:px-5 sm:text-sm"
           >
             ← Back to Travel Guide
           </Link>
 
-          <div className="mt-8">
-            <div className="inline-flex rounded-full bg-orange-500 px-4 py-1 text-sm font-bold">
+          <div className="mt-7 sm:mt-8">
+            <div className="inline-flex rounded-full bg-orange-500 px-4 py-1 text-xs font-bold sm:text-sm">
               Theme
             </div>
 
-            <h1 className="mt-5 text-5xl font-bold leading-tight">
+            <h1 className="mt-4 text-3xl font-bold leading-tight sm:mt-5 sm:text-5xl">
               {themeName} Travel Guides
             </h1>
 
-            <p className="mt-5 max-w-3xl text-lg leading-8 text-white/80">
-              Explore expert travel guides, destination
-              inspiration and curated travel experiences
-              related to {themeName.toLowerCase()} travel.
+            <p className="mt-4 max-w-3xl text-sm leading-7 text-white/80 sm:mt-5 sm:text-lg sm:leading-8">
+              Explore expert travel guides, destination inspiration and curated
+              travel experiences related to{" "}
+              {themeName.toLowerCase()} travel.
             </p>
           </div>
         </div>
       </section>
 
       {/* ARTICLES */}
-      <section className="max-w-7xl mx-auto px-6 py-14">
-        <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-7">
+      <section className="mx-auto max-w-7xl px-3 py-10 sm:px-6 sm:py-14">
+        <div className="grid gap-5 md:grid-cols-2 md:gap-7 xl:grid-cols-3">
           {articles.map((article) => (
-            <ArticleCard
-              key={article.slug}
-              article={article}
-            />
+            <ArticleCard key={article.slug} article={article} />
           ))}
         </div>
       </section>

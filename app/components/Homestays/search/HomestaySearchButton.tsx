@@ -6,7 +6,9 @@ export default function HomestaySearchButton({ state }: any) {
   const router = useRouter();
 
   function handleSearch() {
-    const rooms = Array.isArray(state.rooms) ? state.rooms : [{ adults: 2, children: 0 }];
+    const rooms = Array.isArray(state.rooms)
+      ? state.rooms
+      : [{ adults: 2, children: 0 }];
 
     const totalAdults = rooms.reduce(
       (sum: number, room: any) => sum + (room.adults || 0),
@@ -18,7 +20,13 @@ export default function HomestaySearchButton({ state }: any) {
       0
     );
 
-    if (!state.city || !state.checkIn || !state.checkOut || rooms.length < 1 || totalAdults < 1) {
+    if (
+      !state.city ||
+      !state.checkIn ||
+      !state.checkOut ||
+      rooms.length < 1 ||
+      totalAdults < 1
+    ) {
       alert("Please fill City, Check-in, Check-out and Guests");
       return;
     }
@@ -40,13 +48,19 @@ export default function HomestaySearchButton({ state }: any) {
     <button
       type="button"
       onClick={handleSearch}
-      className="bg-gradient-to-r from-orange-500 to-green-400 
-                 text-white font-semibold 
-                 px-10 py-3 
-                 rounded-xl 
-                 shadow-md 
-                 hover:scale-105 
-                 transition-all duration-200"
+      className="
+        w-full md:w-auto
+        min-h-[48px] md:min-h-0
+        bg-gradient-to-r from-orange-500 to-lime-500
+        text-white font-semibold
+        text-sm md:text-base
+        px-6 md:px-10
+        py-3
+        rounded-xl
+        shadow-md
+        transition-all duration-200
+        hover:scale-105
+      "
     >
       SEARCH
     </button>

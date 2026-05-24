@@ -80,12 +80,12 @@ export default function HomestayCitySelector({
   };
 
   return (
-    <div ref={ref} className="relative shrink-0">
+    <div ref={ref} className="relative w-full shrink-0 md:w-auto">
       <div
         onClick={() => setOpen(true)}
-        className="flex h-[86px] w-[240px] cursor-pointer flex-col justify-center rounded-2xl border border-slate-700 bg-white/60 px-4 py-3"
+        className="flex h-[76px] md:h-[86px] w-full md:w-[240px] cursor-pointer flex-col justify-center rounded-2xl border border-slate-700 bg-white/60 px-4 py-3"
       >
-        <span className="text-[11px] font-bold text-slate-600">
+        <span className="text-[10px] md:text-[11px] font-bold text-slate-600">
           City, Property or Location
         </span>
 
@@ -94,7 +94,7 @@ export default function HomestayCitySelector({
             value={search}
             onChange={(e) => handleChange(e.target.value)}
             onFocus={() => setOpen(true)}
-            className="min-w-0 flex-1 bg-transparent text-lg font-extrabold text-slate-950 outline-none placeholder:text-slate-500"
+            className="min-w-0 flex-1 bg-transparent text-base md:text-lg font-extrabold text-slate-950 outline-none placeholder:text-slate-500"
             placeholder={placeholder}
           />
 
@@ -104,13 +104,13 @@ export default function HomestayCitySelector({
           />
         </div>
 
-        <span className="text-[11px] text-slate-600">
+        <span className="text-[10px] md:text-[11px] text-slate-600">
           Search homestay destination
         </span>
       </div>
 
       {open && (
-        <div className="absolute left-0 top-[90px] z-[9999] max-h-60 w-full overflow-y-auto rounded-2xl border border-slate-700 bg-white text-black shadow-2xl">
+        <div className="absolute left-0 top-[82px] md:top-[90px] z-[9999] max-h-60 w-full overflow-y-auto rounded-2xl border border-slate-700 bg-white text-black shadow-2xl">
           {filtered.length > 0 ? (
             filtered.map((city, i) => (
               <div

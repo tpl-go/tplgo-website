@@ -36,39 +36,35 @@ export default function BusSearchBox() {
   }, [state.travelDate, todayISO]);
 
   return (
-    <div className="mt-7 w-full rounded-[26px] border border-white/45 bg-white/20 px-5 pt-4 pb-5 shadow-xl backdrop-blur-md">
+    <div className="mt-7 w-full rounded-[22px] border border-white/45 bg-white/20 px-3 pt-4 pb-5 shadow-xl backdrop-blur-md sm:rounded-[26px] sm:px-5">
       {/* TOP */}
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h3 className="text-2xl font-extrabold leading-tight text-slate-900">
+          <h3 className="text-xl font-extrabold leading-tight text-slate-900 sm:text-2xl">
             Book Bus Tickets
           </h3>
 
-          <p className="text-sm font-semibold text-slate-700">
+          <p className="mt-1 text-xs font-semibold text-slate-700 sm:text-sm">
             Search routes, boarding points and drop points
           </p>
         </div>
 
-        <div className="rounded-full border border-orange-300 bg-orange-50 px-4 py-2 text-xs font-bold text-orange-700">
+        <div className="w-fit rounded-full border border-orange-300 bg-orange-50 px-4 py-2 text-xs font-bold text-orange-700">
           Smart Bus Search
         </div>
       </div>
 
       {/* SEARCH ROW */}
-      <div className="grid grid-cols-[1fr_52px_1fr_220px_170px] items-center gap-3 overflow-visible">
+      <div className="grid grid-cols-1 items-stretch gap-3 overflow-visible md:grid-cols-[1fr_52px_1fr_220px_170px] md:items-center">
         {/* FROM */}
-        <BusCityPointSelector
-          mode="FROM"
-          state={state}
-          dispatch={dispatch}
-        />
+        <BusCityPointSelector mode="FROM" state={state} dispatch={dispatch} />
 
         {/* SWAP */}
         <div className="flex items-center justify-center">
           <button
             type="button"
             onClick={() => dispatch({ type: "SWAP_LOCATIONS" })}
-            className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-300 bg-white/80 text-slate-700 shadow-sm transition hover:scale-105 hover:bg-orange-50"
+            className="flex h-10 w-10 rotate-90 items-center justify-center rounded-full border border-slate-300 bg-white/90 text-slate-700 shadow-sm transition hover:scale-105 hover:bg-orange-50 md:h-11 md:w-11 md:rotate-0 md:bg-white/80"
             aria-label="Swap locations"
           >
             <ArrowRightLeft size={18} />
@@ -76,11 +72,7 @@ export default function BusSearchBox() {
         </div>
 
         {/* TO */}
-        <BusCityPointSelector
-          mode="TO"
-          state={state}
-          dispatch={dispatch}
-        />
+        <BusCityPointSelector mode="TO" state={state} dispatch={dispatch} />
 
         {/* DATE */}
         <BusDatePicker state={state} dispatch={dispatch} />

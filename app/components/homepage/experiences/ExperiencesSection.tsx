@@ -30,12 +30,10 @@ export default function ExperiencesSection() {
       return `${path}?sub=${encodeURIComponent(sub)}&source=experience`;
     };
 
-    // 1) Service driven experience
     if (s.includes("cruise")) {
       return "/cruise/result?source=experience&mode=smart&advanceDays=30&sort=cheapest";
     }
 
-    // 2) Smart mapping → Theme pages with subtheme preselected
     if (s.includes("adventure")) {
       return withSub("/themes/adventure", "Himalayan Adventure");
     }
@@ -68,12 +66,10 @@ export default function ExperiencesSection() {
       return withSub("/themes/weekend", "Weekend Getaways");
     }
 
-    // 3) Group tour driven experience
     if (s.includes("corporate")) {
-  return "/group-tours?source=experience&tab=Corporate";
-}
+      return "/group-tours?source=experience&tab=Corporate";
+    }
 
-    // 4) fallback safe
     return "/themes/culture?source=experience";
   };
 
@@ -84,16 +80,18 @@ export default function ExperiencesSection() {
 
   return (
     <section
-      className="relative w-full mt-2 px-8 py-6 rounded-3xl bg-cover bg-center"
+      className="relative mt-2 w-full rounded-[24px] bg-cover bg-center px-3 py-5 sm:rounded-3xl sm:px-8 sm:py-6"
       style={{ backgroundImage: "url('/bg/experiencebg.jpg')" }}
     >
-      <div className="absolute inset-0 bg-white/5 pointer-events-none"></div>
+      <div className="pointer-events-none absolute inset-0 rounded-[24px] bg-white/5 sm:rounded-3xl"></div>
 
-      <h2 className="text-center text-4xl font-bold text-gray-900 mb-14">
+      <h2 className="relative z-10 mb-5 text-center text-2xl font-bold text-gray-900 sm:mb-14 sm:text-4xl">
         TPL Experiences
       </h2>
 
-      <ExperienceGrid sorted={sorted} handleClick={handleClick} />
+      <div className="relative z-10">
+        <ExperienceGrid sorted={sorted} handleClick={handleClick} />
+      </div>
     </section>
   );
 }

@@ -42,7 +42,7 @@ export default function RootLayout({
           {/* 🔥 STICKY HEADER SECTION */}
           <StickyHeaderWrapper />
 
-          <main className="bg-white min-h-screen">
+          <main className="bg-white min-h-screen w-full overflow-x-hidden">
             {children}
           </main>
 

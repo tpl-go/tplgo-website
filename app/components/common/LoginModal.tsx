@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/app/hooks/useAuth";
 
 type LoginModalProps = {
@@ -27,6 +27,8 @@ export default function LoginModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorText, setErrorText] = useState("");
   const [infoText, setInfoText] = useState("");
+  const [successText, setSuccessText] = useState("");
+  const [isMobile, setIsMobile] = useState(false);
 
   const cleanedMobile = useMemo(() => mobile.replace(/\D/g, ""), [mobile]);
   const cleanedOtp = useMemo(() => otp.replace(/\D/g, ""), [otp]);
@@ -34,13 +36,31 @@ export default function LoginModal({
   const isValidMobile = cleanedMobile.length === 10;
   const isValidOtp = cleanedOtp.length === 5;
 
-  const handleClose = () => {
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+
+    return () => {
+      window.removeEventListener("resize", checkMobile);
+    };
+  }, []);
+
+  const resetState = () => {
     setStep("mobile");
     setMobile("");
     setOtp("");
     setErrorText("");
     setInfoText("");
+    setSuccessText("");
     setIsSubmitting(false);
+  };
+
+  const handleClose = () => {
+    resetState();
     onClose();
   };
 
@@ -51,6 +71,7 @@ export default function LoginModal({
       setIsSubmitting(true);
       setErrorText("");
       setInfoText("");
+      setSuccessText("");
 
       await sendOtp(cleanedMobile, activeAccountType);
 
@@ -72,12 +93,16 @@ export default function LoginModal({
       setIsSubmitting(true);
       setErrorText("");
       setInfoText("");
+      setSuccessText("");
 
       await verifyOtp(cleanedMobile, cleanedOtp, activeAccountType);
 
-      setStep("mobile");
-      setMobile("");
-      setOtp("");
+      setSuccessText("Login successful. Welcome to TPL.");
+
+      setTimeout(() => {
+        resetState();
+        onClose();
+      }, 900);
     } catch (error) {
       setErrorText(
         error instanceof Error ? error.message : "Failed to verify OTP."
@@ -92,6 +117,7 @@ export default function LoginModal({
     setOtp("");
     setErrorText("");
     setInfoText("");
+    setSuccessText("");
     setIsSubmitting(false);
   };
 
@@ -106,22 +132,23 @@ export default function LoginModal({
         background: "rgba(0,0,0,0.55)",
         zIndex: 1000,
         display: "flex",
-        alignItems: "center",
+        alignItems: isMobile ? "flex-end" : "center",
         justifyContent: "center",
-        padding: "20px",
+        padding: isMobile ? "12px" : "20px",
       }}
     >
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          width: "820px",
+          width: isMobile ? "100%" : "820px",
           maxWidth: "100%",
-          minHeight: "470px",
+          minHeight: isMobile ? "auto" : "470px",
+          maxHeight: isMobile ? "92dvh" : "none",
+          overflowY: isMobile ? "auto" : "hidden",
           background: "#ffffff",
-          borderRadius: "16px",
-          overflow: "hidden",
+          borderRadius: isMobile ? "22px" : "16px",
           display: "grid",
-          gridTemplateColumns: "1fr 1.1fr",
+          gridTemplateColumns: isMobile ? "1fr" : "1fr 1.1fr",
           boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
           position: "relative",
         }}
@@ -137,7 +164,8 @@ export default function LoginModal({
             fontSize: "28px",
             lineHeight: 1,
             cursor: "pointer",
-            color: "#6b7280",
+            color: isMobile ? "#ffffff" : "#6b7280",
+            zIndex: 5,
           }}
         >
           ×
@@ -148,7 +176,7 @@ export default function LoginModal({
             background:
               "linear-gradient(180deg, rgba(15,23,42,0.88), rgba(17,24,39,0.88)), url('/demo/kerala-cover.jpg') center/cover",
             color: "#ffffff",
-            padding: "44px 34px",
+            padding: isMobile ? "24px 20px" : "44px 34px",
             display: "flex",
             flexDirection: "column",
             justifyContent: "center",
@@ -157,21 +185,27 @@ export default function LoginModal({
           <h3
             style={{
               margin: 0,
-              fontSize: "34px",
-              lineHeight: "42px",
+              fontSize: isMobile ? "22px" : "34px",
+              lineHeight: isMobile ? "30px" : "42px",
               fontWeight: 800,
             }}
           >
             Sign up now to get
           </h3>
 
-          <div style={{ marginTop: "34px", display: "grid", gap: "24px" }}>
+          <div
+            style={{
+              marginTop: isMobile ? "18px" : "34px",
+              display: "grid",
+              gap: isMobile ? "12px" : "24px",
+            }}
+          >
             <div style={{ display: "flex", gap: "14px", alignItems: "center" }}>
-              <span style={{ fontSize: "26px" }}>✈️</span>
+              <span style={{ fontSize: isMobile ? "20px" : "26px" }}>✈️</span>
               <span
                 style={{
-                  fontSize: "22px",
-                  lineHeight: "28px",
+                  fontSize: isMobile ? "15px" : "22px",
+                  lineHeight: isMobile ? "21px" : "28px",
                   fontWeight: 700,
                 }}
               >
@@ -180,11 +214,11 @@ export default function LoginModal({
             </div>
 
             <div style={{ display: "flex", gap: "14px", alignItems: "center" }}>
-              <span style={{ fontSize: "26px" }}>🏨</span>
+              <span style={{ fontSize: isMobile ? "20px" : "26px" }}>🏨</span>
               <span
                 style={{
-                  fontSize: "22px",
-                  lineHeight: "28px",
+                  fontSize: isMobile ? "15px" : "22px",
+                  lineHeight: isMobile ? "21px" : "28px",
                   fontWeight: 700,
                 }}
               >
@@ -193,11 +227,11 @@ export default function LoginModal({
             </div>
 
             <div style={{ display: "flex", gap: "14px", alignItems: "center" }}>
-              <span style={{ fontSize: "26px" }}>🚆</span>
+              <span style={{ fontSize: isMobile ? "20px" : "26px" }}>🚆</span>
               <span
                 style={{
-                  fontSize: "22px",
-                  lineHeight: "28px",
+                  fontSize: isMobile ? "15px" : "22px",
+                  lineHeight: isMobile ? "21px" : "28px",
                   fontWeight: 700,
                 }}
               >
@@ -209,7 +243,7 @@ export default function LoginModal({
 
         <div
           style={{
-            padding: "36px 34px",
+            padding: isMobile ? "22px 18px 20px" : "36px 34px",
             display: "flex",
             flexDirection: "column",
             justifyContent: "center",
@@ -230,7 +264,7 @@ export default function LoginModal({
               onClick={() => setActiveAccountType("personal")}
               style={{
                 flex: 1,
-                height: "44px",
+                height: isMobile ? "40px" : "44px",
                 border: "none",
                 borderRadius: "999px",
                 background:
@@ -238,7 +272,7 @@ export default function LoginModal({
                 color:
                   activeAccountType === "personal" ? "#ffffff" : "#475569",
                 fontWeight: 700,
-                fontSize: "15px",
+                fontSize: isMobile ? "13px" : "15px",
                 cursor: "pointer",
                 boxShadow:
                   activeAccountType === "personal"
@@ -254,7 +288,7 @@ export default function LoginModal({
               onClick={() => setActiveAccountType("partner")}
               style={{
                 flex: 1,
-                height: "44px",
+                height: isMobile ? "40px" : "44px",
                 border: "none",
                 borderRadius: "999px",
                 background:
@@ -262,7 +296,7 @@ export default function LoginModal({
                 color:
                   activeAccountType === "partner" ? "#ffffff" : "#475569",
                 fontWeight: 700,
-                fontSize: "15px",
+                fontSize: isMobile ? "13px" : "15px",
                 cursor: "pointer",
                 boxShadow:
                   activeAccountType === "partner"
@@ -274,6 +308,24 @@ export default function LoginModal({
               PARTNER DESK
             </button>
           </div>
+
+          {successText ? (
+            <div
+              style={{
+                marginBottom: "16px",
+                border: "1px solid #bbf7d0",
+                background: "#f0fdf4",
+                color: "#15803d",
+                borderRadius: "10px",
+                padding: "12px 14px",
+                fontSize: "14px",
+                fontWeight: 700,
+                textAlign: "center",
+              }}
+            >
+              {successText}
+            </div>
+          ) : null}
 
           {step === "mobile" ? (
             <>

@@ -151,7 +151,7 @@ export default function HolidaySearchBox() {
   };
 
   return (
-    <div className="mt-4 w-full rounded-[26px] border border-white/45 bg-white/20 px-5 pt-3 pb-7 shadow-xl backdrop-blur-md">
+    <div className="mt-4 w-full rounded-[22px] border border-white/45 bg-white/20 px-3 pt-3 pb-5 shadow-xl backdrop-blur-md sm:rounded-[26px] sm:px-5 sm:pb-7">
       <HolidayTabs activeTab={activeTab} setActiveTab={setActiveTab} />
 
       {activeTab !== "search" && (
@@ -159,38 +159,50 @@ export default function HolidaySearchBox() {
       )}
 
       {activeTab === "search" && (
-        <div className="mt-3 flex flex-nowrap items-center justify-center gap-3">
-          <HolidayFromCity value={fromCity} setValue={setFromCity} />
+        <div className="mt-3 flex w-full flex-col items-stretch justify-center gap-3 md:flex-row md:flex-nowrap md:items-center">
+          <div className="w-full md:w-auto">
+            <HolidayFromCity value={fromCity} setValue={setFromCity} />
+          </div>
 
-<div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-slate-300 bg-white/80 shadow-sm">
-  <span className="text-lg font-bold text-slate-700">⇄</span>
-</div>
+          <div className="flex justify-center md:block">
+            <div className="flex h-10 w-10 shrink-0 rotate-90 items-center justify-center rounded-full border border-slate-300 bg-white/90 shadow-sm md:h-11 md:w-11 md:rotate-0 md:bg-white/80">
+              <span className="text-lg font-bold text-slate-700">⇄</span>
+            </div>
+          </div>
 
-          <HolidayToCity value={toCity} setValue={setToCity} />
+          <div className="w-full md:w-auto">
+            <HolidayToCity value={toCity} setValue={setToCity} />
+          </div>
 
-          <GlobalDatePicker
-            label="Departure Date"
-            value={departure}
-            setValue={setDeparture}
-          />
+          <div className="w-full md:w-auto">
+            <GlobalDatePicker
+              label="Departure Date"
+              value={departure}
+              setValue={setDeparture}
+            />
+          </div>
 
-          <HolidayRoomGuest rooms={rooms} setRooms={setRooms} />
+          <div className="w-full md:w-auto">
+            <HolidayRoomGuest rooms={rooms} setRooms={setRooms} />
+          </div>
 
-          <HolidayFilters
-            showFilterPopup={showFilterPopup}
-            setShowFilterPopup={setShowFilterPopup}
-            filterRef={filterRef}
-            filters={filters}
-            setFilters={setFilters}
-          />
+          <div className="w-full md:w-auto">
+            <HolidayFilters
+              showFilterPopup={showFilterPopup}
+              setShowFilterPopup={setShowFilterPopup}
+              filterRef={filterRef}
+              filters={filters}
+              setFilters={setFilters}
+            />
+          </div>
         </div>
       )}
 
-      <div className="mt-7 flex justify-center">
+      <div className="mt-5 flex justify-center sm:mt-7">
         <button
           type="button"
           onClick={handleSearch}
-          className="rounded-xl bg-gradient-to-r from-orange-500 to-lime-500 px-10 py-3 text-base font-extrabold text-white shadow-lg transition hover:scale-[1.02]"
+          className="w-full rounded-xl bg-gradient-to-r from-orange-500 to-lime-500 px-8 py-3 text-base font-extrabold text-white shadow-lg transition hover:scale-[1.02] sm:w-auto sm:px-10"
         >
           {activeTab === "search" ? "SEARCH" : "EXPLORE PACKAGES"}
         </button>

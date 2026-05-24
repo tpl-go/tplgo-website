@@ -27,7 +27,7 @@ export default function TrainBookTicketForm() {
 
   return (
     <div>
-      <div className="grid grid-cols-[1.1fr_52px_1.1fr_240px_180px] items-center gap-3 overflow-visible">
+      <div className="grid grid-cols-1 md:grid-cols-[1.1fr_52px_1.1fr_240px_180px] items-center gap-3 overflow-visible">
         <TrainStationSelector
           label="From"
           value={from}
@@ -61,12 +61,14 @@ export default function TrainBookTicketForm() {
       </div>
 
       <div className="mt-5 flex justify-center">
-        <TrainSearchButton
-          from={from}
-          to={to}
-          travelDate={travelDate}
-          trainClass={trainClass}
-        />
+        <div className="w-full md:w-auto">
+          <TrainSearchButton
+            from={from}
+            to={to}
+            travelDate={travelDate}
+            trainClass={trainClass}
+          />
+        </div>
       </div>
     </div>
   );

@@ -44,14 +44,38 @@ export default function FlightTrackingPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#f4f7fb]">
-      <FlightTrackingHero />
+    <main className="min-h-screen bg-[#f4f7fb] overflow-x-hidden">
+      {/* Desktop untouched */}
+      <div className="hidden md:block">
+        <FlightTrackingHero />
 
-      <FlightTrackingSearchCard
-        onSearch={handleSearch}
-      />
+        <FlightTrackingSearchCard
+          onSearch={handleSearch}
+        />
 
-      <FlightStatusResults results={results} />
+        <FlightStatusResults results={results} />
+      </div>
+
+      {/* Mobile responsive layer */}
+      <div className="md:hidden">
+        <div className="px-3 pt-3 pb-4">
+          <div className="overflow-hidden rounded-[28px] shadow-sm">
+            <FlightTrackingHero />
+          </div>
+        </div>
+
+        <div className="px-3 -mt-3 relative z-10">
+          <div className="rounded-[28px] bg-white shadow-lg">
+            <FlightTrackingSearchCard
+              onSearch={handleSearch}
+            />
+          </div>
+        </div>
+
+        <div className="px-3 pb-6 pt-4">
+          <FlightStatusResults results={results} />
+        </div>
+      </div>
     </main>
   );
 }

@@ -8,19 +8,25 @@ export default function TermsAndConditionsPage() {
       title={termsContent.title}
       description={termsContent.description}
     >
-      <div className="space-y-8 text-gray-700 leading-7">
-        <div className="rounded-2xl bg-blue-50 border border-blue-100 px-5 py-4">
-          <p className="text-sm font-semibold text-blue-800">
+      <div className="space-y-6 text-gray-700 sm:space-y-8 sm:leading-7">
+        <div className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-4 sm:px-5">
+          <p className="text-sm font-semibold leading-6 text-blue-800">
             Last Updated: {termsContent.lastUpdated}
           </p>
         </div>
 
         {termsContent.sections.map((section) => (
-          <section key={section.title}>
-            <h2 className="text-xl font-bold text-gray-900 mb-3">
+          <section
+            key={section.title}
+            className="rounded-[22px] border border-gray-200 bg-white p-4 shadow-sm sm:p-6"
+          >
+            <h2 className="mb-3 text-lg font-bold text-gray-900 sm:text-xl">
               {section.title}
             </h2>
-            <p>{section.description}</p>
+
+            <p className="text-sm leading-7 text-gray-700 sm:text-base">
+              {section.description}
+            </p>
           </section>
         ))}
       </div>

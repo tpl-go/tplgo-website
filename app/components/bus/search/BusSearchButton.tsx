@@ -31,7 +31,7 @@ export default function BusSearchButton({ state }: any) {
     <button
       type="button"
       onClick={handleSearch}
-      className="h-[78px] w-full min-w-[180px] rounded-2xl bg-gradient-to-r from-orange-500 via-orange-500 to-rose-500 px-8 text-base font-semibold text-white shadow-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+      className="h-[78px] w-full min-w-[180px] rounded-2xl bg-gradient-to-r from-orange-500 to-lime-500 px-8 text-base font-semibold text-white shadow-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
     >
       Search Buses
     </button>

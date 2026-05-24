@@ -187,7 +187,9 @@ export default function OfferCard({ o }: Props) {
     matchedOffer?.discountMode === "percent"
       ? `${matchedOffer.discountValue}% OFF`
       : matchedOffer?.discountMode === "flat"
-      ? `₹${Number(matchedOffer.discountValue || 0).toLocaleString("en-IN")} OFF`
+      ? `₹${Number(matchedOffer.discountValue || 0).toLocaleString(
+          "en-IN"
+        )} OFF`
       : matchedOffer?.discountMode === "membership"
       ? "PRIVILEGE"
       : "SPECIAL DEAL";
@@ -196,13 +198,15 @@ export default function OfferCard({ o }: Props) {
     <>
       <div
         className="
-group relative flex-shrink-0
-w-[calc((100%-72px)/4)]
-overflow-hidden rounded-3xl bg-white
-shadow-[0_12px_30px_rgba(15,23,42,0.16)]
-transition duration-300 hover:-translate-y-1 hover:shadow-[0_18px_42px_rgba(15,23,42,0.22)]
-cursor-pointer
-"
+          group relative flex-shrink-0
+          w-[82vw] max-w-[330px]
+          overflow-hidden rounded-3xl bg-white
+          shadow-[0_12px_30px_rgba(15,23,42,0.16)]
+          transition duration-300 hover:-translate-y-1 hover:shadow-[0_18px_42px_rgba(15,23,42,0.22)]
+          cursor-pointer
+          sm:w-[320px]
+          lg:w-[calc((100%-72px)/4)] lg:max-w-none
+        "
         onMouseEnter={() => {
           const scroll = document.querySelector(".offer-scroll") as any;
           if (scroll) scroll.dataset.pause = "true";
@@ -216,52 +220,52 @@ cursor-pointer
         }}
       >
         <div
-          className={`relative h-[168px] overflow-hidden bg-gradient-to-br ${meta.tone}`}
+          className={`relative h-[148px] overflow-hidden bg-gradient-to-br ${meta.tone} sm:h-[168px]`}
         >
           <div className="absolute -left-10 -top-10 h-32 w-32 rounded-full bg-white/20 blur-2xl" />
           <div className="absolute -right-12 bottom-0 h-36 w-36 rounded-full bg-white/15 blur-3xl" />
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.20),transparent_32%),radial-gradient(circle_at_80%_70%,rgba(255,255,255,0.16),transparent_30%)]" />
 
-          <div className="absolute left-3 top-3 right-3 flex items-start justify-between">
-            <div className="flex items-center gap-2 rounded-2xl border border-white/20 bg-black/25 px-3 py-2 shadow-[0_8px_24px_rgba(0,0,0,0.24)] backdrop-blur-xl">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/15 text-white shadow-lg">
+          <div className="absolute left-3 right-3 top-3 flex items-start justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-2 rounded-2xl border border-white/20 bg-black/25 px-2.5 py-2 shadow-[0_8px_24px_rgba(0,0,0,0.24)] backdrop-blur-xl sm:px-3">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white/15 text-white shadow-lg">
                 <Icon className="h-4 w-4" />
               </div>
 
-              <div>
-                <div className="text-[9px] font-black uppercase tracking-[0.18em] text-white/65">
+              <div className="min-w-0">
+                <div className="text-[8px] font-black uppercase tracking-[0.14em] text-white/65 sm:text-[9px] sm:tracking-[0.18em]">
                   TPL Exclusive
                 </div>
 
-                <div className="text-[12px] font-black leading-none text-white">
+                <div className="truncate text-[11px] font-black leading-none text-white sm:text-[12px]">
                   {meta.label}
                 </div>
               </div>
             </div>
 
-            <div className="rounded-2xl border border-[#facc15]/30 bg-[#111827]/60 px-3 py-2 shadow-lg backdrop-blur-xl">
-              <div className="text-[9px] font-black uppercase tracking-[0.18em] text-[#facc15]">
+            <div className="shrink-0 rounded-2xl border border-[#facc15]/30 bg-[#111827]/60 px-2.5 py-2 shadow-lg backdrop-blur-xl sm:px-3">
+              <div className="text-[8px] font-black uppercase tracking-[0.14em] text-[#facc15] sm:text-[9px] sm:tracking-[0.18em]">
                 Premium
               </div>
 
-              <div className="mt-0.5 text-[12px] font-black text-white">
+              <div className="mt-0.5 text-[11px] font-black text-white sm:text-[12px]">
                 TPL GO
               </div>
             </div>
           </div>
 
           <div className="absolute bottom-4 left-4 right-4">
-            <div className="inline-flex rounded-full bg-white/95 px-3 py-1 text-[11px] font-black tracking-wide text-[#0f172a] shadow-sm">
-              {couponCode}
+            <div className="inline-flex max-w-full rounded-full bg-white/95 px-3 py-1 text-[11px] font-black tracking-wide text-[#0f172a] shadow-sm">
+              <span className="truncate">{couponCode}</span>
             </div>
 
-            <div className="mt-2 text-[28px] font-black leading-none text-white drop-shadow">
+            <div className="mt-2 truncate text-[24px] font-black leading-none text-white drop-shadow sm:text-[28px]">
               {discountText}
             </div>
 
             <div className="mt-2 flex items-center gap-2 text-[11px] font-bold text-white/85">
-              <Sparkles className="h-3.5 w-3.5" />
-              AI matched smart travel deal
+              <Sparkles className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">AI matched smart travel deal</span>
             </div>
           </div>
         </div>

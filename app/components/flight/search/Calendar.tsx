@@ -110,25 +110,25 @@ export default function Calendar({
 
   return (
     <div
-      className={`flex items-center ${
-        isResults ? "gap-2 shrink-0" : "gap-3 shrink-0"
-      }`}
+      className={`grid w-full grid-cols-1 ${
+        !multiCityMode ? "gap-3 md:flex md:w-auto md:items-center" : ""
+      } ${isResults ? "md:gap-2 md:shrink-0" : "md:gap-3 md:shrink-0"}`}
     >
       {/* DEPARTURE */}
-      <div ref={depRef} className="relative">
+      <div ref={depRef} className="relative w-full md:w-auto">
         <div
           onClick={() => setOpenDep(true)}
           className={`flex cursor-pointer flex-col justify-center ${
             isResults
               ? "h-[64px] w-full md:w-[140px] rounded-md border border-[#1f2937] bg-white px-3"
-              : "h-[86px] w-full md:w-[180px] rounded-2xl border border-slate-700 bg-white/60 px-4 py-3"
+              : "h-[76px] md:h-[86px] w-full md:w-[180px] rounded-2xl border border-slate-700 bg-white/60 px-4 py-3"
           }`}
         >
           <span
             className={`${
               isResults
                 ? "text-[11px] font-semibold uppercase text-[#374151]"
-                : "text-[11px] font-bold text-slate-600"
+                : "text-[10px] md:text-[11px] font-bold text-slate-600"
             }`}
           >
             Departure
@@ -138,7 +138,7 @@ export default function Calendar({
             className={`${
               isResults
                 ? "text-[18px] font-bold text-black"
-                : "text-lg font-extrabold text-slate-950"
+                : "text-base md:text-lg font-extrabold text-slate-950"
             }`}
           >
             {format(departure, "dd MMM yy")}
@@ -146,7 +146,9 @@ export default function Calendar({
 
           <span
             className={`${
-              isResults ? "text-[11px] text-black" : "text-[11px] text-slate-600"
+              isResults
+                ? "text-[11px] text-black"
+                : "text-[10px] md:text-[11px] text-slate-600"
             }`}
           >
             {format(departure, "EEEE")}
@@ -155,16 +157,20 @@ export default function Calendar({
 
         {openDep && (
           <div
-            className={`absolute left-0 z-9999 bg-white shadow-xl ${
+            className={`absolute left-0 z-[40] bg-white shadow-xl ${
               isResults
                 ? "top-[68px] rounded-xl border border-black"
-                : "top-[90px] rounded-2xl border border-slate-700"
-            }`}
+                : "top-[82px] md:top-[90px] rounded-2xl border border-slate-700"
+            } w-[calc(100vw-40px)] md:w-auto max-w-[95vw] overflow-visible`}
           >
             <DateRange
               ranges={range}
-              months={2}
-              direction="horizontal"
+              months={typeof window !== "undefined" && window.innerWidth < 768 ? 1 : 2}
+              direction={
+                typeof window !== "undefined" && window.innerWidth < 768
+                  ? "vertical"
+                  : "horizontal"
+              }
               moveRangeOnFirstSelection={false}
               showDateDisplay={false}
               onChange={handleDateChange}
@@ -176,7 +182,7 @@ export default function Calendar({
 
       {/* RETURN - hide in multicity */}
       {!multiCityMode && (
-        <div ref={retRef} className="relative">
+        <div ref={retRef} className="relative w-full md:w-auto">
           <div
             onClick={() => {
               if (state.tripType === "roundtrip") {
@@ -185,8 +191,8 @@ export default function Calendar({
             }}
             className={`flex flex-col justify-center ${
               isResults
-                ? "h-[64px] w-[150px] rounded-md border border-black px-4"
-                : "h-[86px] w-[180px] rounded-2xl border border-slate-700 px-4 py-3"
+                ? "h-[64px] w-full md:w-[150px] rounded-md border border-black px-4"
+                : "h-[76px] md:h-[86px] w-full md:w-[180px] rounded-2xl border border-slate-700 px-4 py-3"
             } ${
               state.tripType === "oneway"
                 ? isResults
@@ -201,7 +207,7 @@ export default function Calendar({
               className={`${
                 isResults
                   ? "text-[11px] font-semibold uppercase text-black"
-                  : "text-[11px] font-bold text-slate-600"
+                  : "text-[10px] md:text-[11px] font-bold text-slate-600"
               }`}
             >
               Return
@@ -211,7 +217,7 @@ export default function Calendar({
               className={`${
                 isResults
                   ? "text-[18px] font-bold text-black"
-                  : "text-lg font-extrabold text-slate-950"
+                  : "text-base md:text-lg font-extrabold text-slate-950"
               }`}
             >
               {format(returnDate, "dd MMM yy")}
@@ -219,7 +225,9 @@ export default function Calendar({
 
             <span
               className={`${
-                isResults ? "text-[11px] text-black" : "text-[11px] text-slate-600"
+                isResults
+                  ? "text-[11px] text-black"
+                  : "text-[10px] md:text-[11px] text-slate-600"
               }`}
             >
               {format(returnDate, "EEEE")}
@@ -228,16 +236,20 @@ export default function Calendar({
 
           {openRet && state.tripType === "roundtrip" && (
             <div
-              className={`absolute left-0 z-30 bg-white shadow-xl ${
+              className={`absolute left-0 z-[40] bg-white shadow-xl ${
                 isResults
                   ? "top-[68px] rounded-xl border border-black"
-                  : "top-[90px] rounded-2xl border border-slate-700"
-              }`}
+                  : "top-[82px] md:top-[90px] rounded-2xl border border-slate-700"
+              } w-[calc(100vw-40px)] md:w-auto max-w-[95vw] overflow-visible`}
             >
               <DateRange
                 ranges={range}
-                months={2}
-                direction="horizontal"
+                months={typeof window !== "undefined" && window.innerWidth < 768 ? 1 : 2}
+                direction={
+                  typeof window !== "undefined" && window.innerWidth < 768
+                    ? "vertical"
+                    : "horizontal"
+                }
                 moveRangeOnFirstSelection={false}
                 showDateDisplay={false}
                 onChange={handleDateChange}

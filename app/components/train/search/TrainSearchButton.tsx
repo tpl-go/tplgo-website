@@ -45,7 +45,7 @@ export default function TrainSearchButton({
     <button
       type="button"
       onClick={handleSearch}
-      className="h-[56px] min-w-[220px] rounded-full bg-gradient-to-r from-orange-500 to-orange-600 px-8 text-[17px] font-extrabold text-white shadow-[0_14px_32px_rgba(234,88,12,0.28)] transition-all duration-300 hover:scale-[1.02] hover:from-orange-600 hover:to-orange-700 active:scale-[0.98]"
+      className="h-11 md:h-[56px] w-full md:w-auto min-w-0 md:min-w-[220px] rounded-full bg-gradient-to-r from-orange-500 to-lime-500 px-8 text-sm md:text-[17px] font-extrabold text-white shadow-[0_14px_32px_rgba(234,88,12,0.28)] transition-all duration-300 hover:scale-[1.02] hover:from-orange-600 hover:to-orange-700 active:scale-[0.98]"
     >
       Search Trains
     </button>

@@ -83,13 +83,13 @@ export default function TravelSelector({
   } • ${state.travellers.cabin}`;
 
   return (
-    <div className={isResults ? "relative shrink-0" : "relative shrink-0"} ref={ref}>
+    <div className={isResults ? "relative shrink-0" : "relative shrink-0 w-full md:w-auto"} ref={ref}>
       <div
         onClick={() => setOpen(!open)}
         className={`cursor-pointer ${
           isResults
-            ? "flex h-[72px] w-[210px] flex-col justify-center rounded-md border border-black bg-white px-4"
-            : "flex h-[86px] w-[230px] flex-col justify-center rounded-2xl border border-slate-700 bg-white/60 px-4 py-3"
+            ? "flex h-[72px] w-full md:w-[210px] flex-col justify-center rounded-md border border-black bg-white px-4"
+            : "flex h-[76px] md:h-[86px] w-full md:w-[230px] flex-col justify-center rounded-2xl border border-slate-700 bg-white/60 px-4 py-3"
         }`}
       >
         {isResults ? (
@@ -103,13 +103,13 @@ export default function TravelSelector({
           </div>
         ) : (
           <div className="min-w-0">
-            <span className="block text-[11px] font-bold text-slate-600">
+            <span className="block text-[10px] md:text-[11px] font-bold text-slate-600">
               Traveller & Class
             </span>
-            <p className="truncate text-lg font-extrabold text-slate-950">
+            <p className="truncate text-base md:text-lg font-extrabold text-slate-950">
               {summaryText}
             </p>
-            <span className="block text-[11px] text-slate-600">
+            <span className="block text-[10px] md:text-[11px] text-slate-600">
               Passenger details
             </span>
           </div>
@@ -118,14 +118,14 @@ export default function TravelSelector({
 
       {open && (
         <div
-          className={`absolute z-30 rounded-xl border bg-white p-6 shadow-2xl ${
+          className={`absolute z-[9999] rounded-xl border bg-white p-4 md:p-6 shadow-2xl ${
             isResults
-              ? "top-[72px] right-0 w-[700px] border-gray-200"
-              : "top-[90px] right-0 w-[700px] border-slate-700"
-          }`}
+              ? "top-[76px] right-0 w-[calc(100vw-32px)] md:w-[700px] border-gray-200"
+              : "top-[82px] md:top-[90px] right-0 w-[calc(100vw-32px)] md:w-[700px] border-slate-700"
+          } max-w-[95vw]`}
         >
           <div className="flex gap-10">
-            <div className="flex w-full flex-col gap-6">
+            <div className="flex w-full flex-col gap-5 md:gap-6">
               {renderCounter(
                 "Adults (12+)",
                 tempTravellers.adults,
@@ -133,8 +133,8 @@ export default function TravelSelector({
                 9
               )}
 
-              <div className="flex gap-10">
-                <div className="w-1/2">
+              <div className="flex flex-col gap-5 md:flex-row md:gap-10">
+                <div className="w-full md:w-1/2">
                   {renderCounter(
                     "Children (2y - 12y)",
                     tempTravellers.children,
@@ -143,7 +143,7 @@ export default function TravelSelector({
                   )}
                 </div>
 
-                <div className="w-1/2">
+                <div className="w-full md:w-1/2">
                   {renderCounter(
                     "Infants (below 2y)",
                     tempTravellers.infants,
@@ -159,12 +159,12 @@ export default function TravelSelector({
             </div>
           </div>
 
-          <div className="mt-8">
+          <div className="mt-6 md:mt-8">
             <p className="mb-3 text-xs font-bold uppercase tracking-wide text-slate-600">
               Choose Travel Class
             </p>
 
-            <div className="flex flex-wrap gap-3">
+            <div className="grid grid-cols-1 gap-2 md:flex md:flex-wrap md:gap-3">
               {["Economy", "Premium Economy", "Business", "First Class"].map(
                 (cabin) => (
                   <button
@@ -188,10 +188,10 @@ export default function TravelSelector({
             </div>
           </div>
 
-          <div className="mt-8 flex justify-end">
+          <div className="mt-6 md:mt-8 flex justify-end">
             <button
               onClick={applyChanges}
-              className="rounded-full bg-orange-600 px-8 py-2 text-sm font-bold text-white transition hover:bg-orange-700"
+              className="w-full md:w-auto rounded-full bg-orange-600 px-8 py-2 text-sm font-bold text-white transition hover:bg-orange-700"
             >
               APPLY
             </button>

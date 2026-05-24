@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   FileText,
   Briefcase,
+  MoreHorizontal,
 } from "lucide-react";
 
 import FlightSearchBox from "../flight/search/FlightSearchBox";
@@ -29,6 +30,7 @@ import InsuranceSearchBox from "../insurance/search/InsuranceSearchBox";
 export default function HeroSection() {
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState("Flights");
+  const [showMoreServices, setShowMoreServices] = useState(false);
 
   const services = [
     "Flights",
@@ -68,38 +70,52 @@ export default function HeroSection() {
   useEffect(() => {
     const service = searchParams.get("service");
     if (!service) return;
+
     const normalizedService = service.trim().toLowerCase();
     const matchedTab = serviceMap[normalizedService];
+
     if (matchedTab && services.includes(matchedTab)) {
       setActiveTab(matchedTab);
     }
   }, [searchParams]);
 
+  const renderIcon = (tab: string, size = 18) => {
+    if (tab === "Flights") return <Plane size={size} />;
+    if (tab === "Hotels") return <Hotel size={size} />;
+    if (tab === "Homestay") return <Home size={size} />;
+    if (tab === "Holidays") return <Briefcase size={size} />;
+    if (tab === "Bus") return <Bus size={size} />;
+    if (tab === "Train") return <Train size={size} />;
+    if (tab === "Cabs") return <Car size={size} />;
+    if (tab === "Cruise") return <Ship size={size} />;
+    if (tab === "Insurance") return <ShieldCheck size={size} />;
+    if (tab === "Visa") return <FileText size={size} />;
+    return null;
+  };
+
+  const handleMobileTabClick = (tab: string) => {
+    setActiveTab(tab);
+    setShowMoreServices(false);
+  };
+
   return (
     <section
-      className="relative z-30 flex min-h-[500px] w-full items-center md:rounded-3xl bg-cover bg-center overflow-hidden"
+      className="relative z-30 w-full overflow-visible bg-cover bg-center md:flex md:min-h-[500px] md:items-center md:rounded-3xl"
       style={{ backgroundImage: "url('/hero-bg.jpg')" }}
     >
       <div className="absolute inset-0 bg-white/5" />
 
-      <div className="relative mt-20 flex w-full items-start justify-center">
-        <div className="w-full max-w-6xl px-4">
-
-          {/* 
-            TABS ROW — Yahi fix kiya hai:
-            Desktop: flex-nowrap gap-6 (same as before)
-            Mobile:  horizontally scrollable, smaller buttons
-          */}
-          <div className="flex justify-center">
-
-            {/* Desktop tabs — same as before */}
-            <div className="hidden md:flex w-fit flex-nowrap items-center justify-center gap-6">
+      <div className="relative w-full px-3 pb-6 pt-5 md:mt-20 md:flex md:items-start md:justify-center md:px-0 md:pb-10 md:pt-0">
+        <div className="w-full max-w-6xl md:px-4">
+          <div className="flex w-full justify-center">
+            {/* Desktop tabs — unchanged */}
+            <div className="hidden w-fit flex-nowrap items-center justify-center gap-6 md:flex">
               {services.map((tab) => (
                 <button
                   key={tab}
                   type="button"
                   onClick={() => setActiveTab(tab)}
-                  className={`h-13 w-22 flex items-center justify-center rounded-2xl border border-white/40 bg-white/90 text-sm font-semibold backdrop-blur-sm transition-all duration-300 ${
+                  className={`flex h-13 w-22 items-center justify-center rounded-2xl border border-white/40 bg-white/90 text-sm font-semibold backdrop-blur-sm transition-all duration-300 ${
                     activeTab === tab
                       ? "!scale-105 !border-orange-500 !bg-orange-500 !text-white shadow-xl"
                       : "text-gray-700 hover:scale-105 hover:text-black hover:shadow-lg"
@@ -107,64 +123,46 @@ export default function HeroSection() {
                 >
                   <div className="flex flex-col items-center justify-center gap-1">
                     <span>{tab}</span>
-                    {tab === "Flights" && <Plane size={18} />}
-                    {tab === "Hotels" && <Hotel size={18} />}
-                    {tab === "Homestay" && <Home size={18} />}
-                    {tab === "Holidays" && <Briefcase size={18} />}
-                    {tab === "Bus" && <Bus size={18} />}
-                    {tab === "Train" && <Train size={18} />}
-                    {tab === "Cabs" && <Car size={18} />}
-                    {tab === "Cruise" && <Ship size={18} />}
-                    {tab === "Insurance" && <ShieldCheck size={18} />}
-                    {tab === "Visa" && <FileText size={18} />}
+                    {renderIcon(tab, 18)}
                   </div>
                 </button>
               ))}
             </div>
 
-            {/* Mobile tabs — horizontally scrollable */}
-            <div className="md:hidden w-full overflow-x-auto pb-2 [&::-webkit-scrollbar]:hidden [scrollbar-width:none]">
-              <div className="flex flex-nowrap items-center gap-3 px-2 w-max">
+            {/* Mobile tabs — 5 + 5 grid, no More */}
+            <div className="w-full md:hidden">
+              <div className="grid grid-cols-5 gap-2">
                 {services.map((tab) => (
                   <button
                     key={tab}
                     type="button"
-                    onClick={() => setActiveTab(tab)}
-                    className={`flex flex-col items-center justify-center gap-1 rounded-2xl border border-white/40 bg-white/90 px-3 py-2 text-xs font-semibold backdrop-blur-sm transition-all duration-300 min-w-[60px] ${
+                    onClick={() => handleMobileTabClick(tab)}
+                    className={`flex h-[58px] min-w-0 flex-col items-center justify-center gap-1 rounded-2xl border border-white/40 bg-white/90 px-1 text-[9px] font-bold backdrop-blur-sm transition-all duration-300 ${
                       activeTab === tab
-                        ? "!border-orange-500 !bg-orange-500 !text-white shadow-xl scale-105"
+                        ? "!border-orange-500 !bg-orange-500 !text-white shadow-xl"
                         : "text-gray-700"
                     }`}
                   >
-                    {tab === "Flights" && <Plane size={16} />}
-                    {tab === "Hotels" && <Hotel size={16} />}
-                    {tab === "Homestay" && <Home size={16} />}
-                    {tab === "Holidays" && <Briefcase size={16} />}
-                    {tab === "Bus" && <Bus size={16} />}
-                    {tab === "Train" && <Train size={16} />}
-                    {tab === "Cabs" && <Car size={16} />}
-                    {tab === "Cruise" && <Ship size={16} />}
-                    {tab === "Insurance" && <ShieldCheck size={16} />}
-                    {tab === "Visa" && <FileText size={16} />}
-                    <span>{tab}</span>
+                    {renderIcon(tab, 14)}
+                    <span className="max-w-full truncate">{tab}</span>
                   </button>
                 ))}
               </div>
             </div>
-
           </div>
 
-          {/* Search boxes — same as before, bilkul nahi badla */}
-          {activeTab === "Flights" && <FlightSearchBox />}
-          {activeTab === "Hotels" && <HotelSearchBox />}
-          {activeTab === "Homestay" && <HomestaySearchBox />}
-          {activeTab === "Holidays" && <HolidaySearchBox />}
-          {activeTab === "Bus" && <BusSearchBox />}
-          {activeTab === "Train" && <TrainSearchBox />}
-          {activeTab === "Cabs" && <CabSearchBox />}
-          {activeTab === "Cruise" && <CruiseSearchBox />}
-          {activeTab === "Insurance" && <InsuranceSearchBox />}
-          {activeTab === "Visa" && <VisaSearchBox />}
+          <div className="mt-3 w-full overflow-visible md:mt-0 md:overflow-visible">
+            {activeTab === "Flights" && <FlightSearchBox />}
+            {activeTab === "Hotels" && <HotelSearchBox />}
+            {activeTab === "Homestay" && <HomestaySearchBox />}
+            {activeTab === "Holidays" && <HolidaySearchBox />}
+            {activeTab === "Bus" && <BusSearchBox />}
+            {activeTab === "Train" && <TrainSearchBox />}
+            {activeTab === "Cabs" && <CabSearchBox />}
+            {activeTab === "Cruise" && <CruiseSearchBox />}
+            {activeTab === "Insurance" && <InsuranceSearchBox />}
+            {activeTab === "Visa" && <VisaSearchBox />}
+          </div>
         </div>
       </div>
     </section>

@@ -178,40 +178,65 @@ export default function HolidayPackageHighlights() {
   };
 
   return (
-    <div className="w-full mt-4 bg-white rounded-2xl shadow-xl p-6 flex gap-6 items-start">
+    <div className="mt-4 w-full rounded-2xl bg-white p-4 shadow-xl sm:p-6 md:flex md:items-start md:gap-6">
+      {/* ================= MOBILE IMAGE CARDS ================= */}
+      <div className="mb-4 grid grid-cols-2 gap-3 md:hidden">
+        {highlights.slice(0, 2).map((item, i) => (
+          <button
+            type="button"
+            key={i}
+            onClick={() => handleDestinationClick(item)}
+            className="group overflow-hidden rounded-2xl border border-slate-100 bg-white text-left shadow-sm"
+          >
+            <img
+              src={item.image}
+              className="h-[96px] w-full object-cover transition group-hover:scale-105"
+              alt={item.name}
+            />
+
+            <div className="px-3 py-2">
+              <p className="text-sm font-extrabold text-slate-900">
+                {item.name}
+              </p>
+              <p className="mt-0.5 text-[11px] font-semibold text-slate-500">
+                {item.country}
+              </p>
+            </div>
+          </button>
+        ))}
+      </div>
+
       {/* ================= LEFT DEST GRID ================= */}
-      <div className="grid grid-cols-3 gap-y-3 gap-x-6 w-[60%]">
+      <div className="grid w-full grid-cols-2 gap-x-2 gap-y-2 md:w-[60%] md:grid-cols-3 md:gap-x-6 md:gap-y-3">
         {highlights.map((d, i) => (
           <div
             key={i}
             onClick={() => handleDestinationClick(d)}
-            className="flex items-center gap-2 text-sm text-black
-            cursor-pointer hover:bg-orange-50 px-2 py-1
-            rounded-md transition"
+            className="flex cursor-pointer items-center gap-2 rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-2 text-sm text-black transition hover:bg-orange-50 md:rounded-md md:border-0 md:bg-transparent md:px-2 md:py-1"
           >
-            <MapPin size={14} className="text-orange-500" />
-            <span>{d.name}</span>
+            <MapPin size={14} className="shrink-0 text-orange-500" />
+            <span className="truncate font-semibold md:font-normal">
+              {d.name}
+            </span>
           </div>
         ))}
       </div>
 
       {/* ================= RIGHT IMAGES ================= */}
-      <div className="w-[40%] flex items-center justify-center gap-3">
+      <div className="hidden w-[40%] items-center justify-center gap-3 md:flex">
         {highlights.slice(0, 2).map((item, i) => (
           <div
             key={i}
             onClick={() => handleDestinationClick(item)}
-            className="cursor-pointer group text-center"
+            className="group cursor-pointer text-center"
           >
             <img
               src={item.image}
-              className="w-[200px] h-[110px]
-              rounded-lg object-cover
-              group-hover:scale-105 transition"
+              className="h-[110px] w-[200px] rounded-lg object-cover transition group-hover:scale-105"
               alt={item.name}
             />
 
-            <p className="text-xs mt-1 text-black font-medium">
+            <p className="mt-1 text-xs font-medium text-black">
               {item.name}
             </p>
           </div>

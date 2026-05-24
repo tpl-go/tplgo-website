@@ -90,22 +90,22 @@ export default function HomeStayCalender({ dispatch, type, date }: any) {
   };
 
   return (
-    <div ref={calRef} className="relative shrink-0">
+    <div ref={calRef} className="relative w-full shrink-0 md:w-auto">
       <div
         onClick={() => setOpen(true)}
-        className="flex h-[86px] w-[190px] cursor-pointer flex-col justify-center rounded-2xl border border-slate-700 bg-white/60 px-4 py-3"
+        className="flex h-[76px] md:h-[86px] w-full md:w-[190px] cursor-pointer flex-col justify-center rounded-2xl border border-slate-700 bg-white/60 px-4 py-3"
       >
-        <span className="text-[11px] font-bold text-slate-600">
+        <span className="text-[10px] md:text-[11px] font-bold text-slate-600">
           {type === "CHECKIN" ? "CHECK-IN" : "CHECK-OUT"}
         </span>
 
         <div className="flex w-full items-center justify-between">
           <div>
-            <span className="block text-lg font-extrabold text-slate-950">
+            <span className="block text-base md:text-lg font-extrabold text-slate-950">
               {format(date || today, "dd MMM yy")}
             </span>
 
-            <span className="text-[11px] text-slate-600">
+            <span className="text-[10px] md:text-[11px] text-slate-600">
               {format(date || today, "EEEE")}
             </span>
           </div>
@@ -115,11 +115,17 @@ export default function HomeStayCalender({ dispatch, type, date }: any) {
       </div>
 
       {open && (
-        <div className="absolute left-0 top-[90px] z-[9999] rounded-2xl border border-slate-700 bg-white shadow-2xl">
+        <div className="absolute left-0 top-[82px] md:top-[90px] z-[9999] w-[calc(100vw-40px)] md:w-auto max-w-[95vw] overflow-hidden rounded-2xl border border-slate-700 bg-white shadow-2xl">
           <DateRange
             ranges={range}
-            months={2}
-            direction="horizontal"
+            months={
+              typeof window !== "undefined" && window.innerWidth < 768 ? 1 : 2
+            }
+            direction={
+              typeof window !== "undefined" && window.innerWidth < 768
+                ? "vertical"
+                : "horizontal"
+            }
             moveRangeOnFirstSelection={false}
             showDateDisplay={false}
             onChange={handleDateChange}

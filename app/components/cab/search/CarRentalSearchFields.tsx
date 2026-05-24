@@ -35,7 +35,7 @@ export default function CarRentalSearchFields({
   onChangeDropTime,
 }: Props) {
   return (
-    <div className="grid grid-cols-[1.05fr_0.78fr_0.72fr_1.05fr_0.78fr_0.72fr] items-center gap-3 overflow-visible">
+    <div className="grid grid-cols-1 md:grid-cols-[1.05fr_0.78fr_0.72fr_1.05fr_0.78fr_0.72fr] items-center gap-3 overflow-visible">
       <CabLocationSelector
         label="Pickup Location"
         value={pickupLocation}

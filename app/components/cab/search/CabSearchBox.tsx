@@ -222,14 +222,13 @@ export default function CabSearchBox() {
     return true;
   }
 
-function getCabSearchButtonLabel() {
-  if (form.rideType === "bikeRental") return "Search Bikes";
-  if (form.rideType === "carRental") return "Search Cars";
-  return "Search Cabs";
-}  
+  function getCabSearchButtonLabel() {
+    if (form.rideType === "bikeRental") return "Search Bikes";
+    if (form.rideType === "carRental") return "Search Cars";
+    return "Search Cabs";
+  }
 
-
-function handleSearch() {
+  function handleSearch() {
     const isValid = validateCabSearch();
     if (!isValid) return;
 
@@ -258,16 +257,39 @@ function handleSearch() {
   }`;
 
   return (
-    <div className="mt-7 w-full rounded-[26px] border border-white/45 bg-white/20 px-5 pt-3 pb-7 shadow-xl backdrop-blur-md">
-      <CabRideTypeTabs
-        activeRideType={form.rideType}
-        onChange={updateRideType}
-      />
+    <div className="mt-4 md:mt-7 w-full rounded-[24px] md:rounded-[26px] border border-white/45 bg-white/20 px-3 md:px-5 pt-3 pb-5 md:pb-7 shadow-xl backdrop-blur-md">
+      {/* Desktop Search Type Tabs — untouched */}
+<div className="hidden md:block">
+  <CabRideTypeTabs
+    activeRideType={form.rideType}
+    onChange={updateRideType}
+  />
+</div>
+
+{/* Mobile Search Type Dropdown */}
+<div className="md:hidden">
+  <label className="mb-1 block text-[11px] font-extrabold text-white">
+    Cab Search Type
+  </label>
+
+  <select
+    value={form.rideType}
+    onChange={(e) => updateRideType(e.target.value as CabRideType)}
+    className="h-11 w-full rounded-2xl border border-slate-700 bg-white/90 px-3 text-sm font-extrabold text-slate-900 outline-none"
+  >
+    <option value="outstationOneWay">Outstation One Way</option>
+    <option value="outstationRoundTrip">Outstation Round Trip</option>
+    <option value="airportTransfers">Airport Transfers</option>
+    <option value="hourlyRentals">Hourly Rentals</option>
+    <option value="carRental">Car Rental</option>
+    <option value="bikeRental">Bike Rental</option>
+  </select>
+</div>
 
       <div className="mt-3 space-y-3">
         {form.rideType === "outstationOneWay" && (
           <>
-            <div className="grid grid-cols-[1fr_52px_1fr_190px_190px] items-center gap-3 overflow-visible">
+            <div className="grid grid-cols-1 md:grid-cols-[1fr_52px_1fr_190px_190px] items-center gap-3 overflow-visible">
               <CabLocationSelector
                 label="From"
                 value={form.fromLocation}
@@ -312,7 +334,7 @@ function handleSearch() {
               />
             </div>
 
-            <div className="mt-5 grid grid-cols-[320px_1fr_320px] items-start">
+            <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-[320px_1fr_320px] md:items-start">
               <div className="flex flex-col items-start gap-3">
                 <button
                   type="button"
@@ -336,11 +358,13 @@ function handleSearch() {
               </div>
 
               <div className="flex justify-center">
-                <CabSearchButton
-  onClick={handleSearch}
-  compact
-  
-/>
+                <div className="w-full md:w-auto">
+                  <CabSearchButton
+                    onClick={handleSearch}
+                    compact
+                    label={getCabSearchButtonLabel()}
+                  />
+                </div>
               </div>
 
               <div />
@@ -350,7 +374,7 @@ function handleSearch() {
 
         {form.rideType === "outstationRoundTrip" && (
           <>
-            <div className="grid grid-cols-[1fr_52px_1fr_150px_150px_150px_150px] items-center gap-3 overflow-visible">
+            <div className="grid grid-cols-1 md:grid-cols-[1fr_52px_1fr_150px_150px_150px_150px] items-center gap-3 overflow-visible">
               <CabLocationSelector
                 label="From"
                 value={form.fromLocation}
@@ -405,7 +429,7 @@ function handleSearch() {
               />
             </div>
 
-            <div className="mt-5 grid grid-cols-[320px_1fr_320px] items-start">
+            <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-[320px_1fr_320px] md:items-start">
               <div className="flex flex-col items-start gap-3">
                 <button
                   type="button"
@@ -429,11 +453,13 @@ function handleSearch() {
               </div>
 
               <div className="flex justify-center">
-                <CabSearchButton
-  onClick={handleSearch}
-  compact
-  label={getCabSearchButtonLabel()}
-/>
+                <div className="w-full md:w-auto">
+                  <CabSearchButton
+                    onClick={handleSearch}
+                    compact
+                    label={getCabSearchButtonLabel()}
+                  />
+                </div>
               </div>
 
               <div />
@@ -443,7 +469,7 @@ function handleSearch() {
 
         {form.rideType === "airportTransfers" && (
           <>
-            <div className="grid grid-cols-[1fr_52px_1fr_190px_190px] items-center gap-3 overflow-visible">
+            <div className="grid grid-cols-1 md:grid-cols-[1fr_52px_1fr_190px_190px] items-center gap-3 overflow-visible">
               <CabLocationSelector
                 label="Pickup"
                 value={form.pickupLocation}
@@ -487,18 +513,20 @@ function handleSearch() {
             </div>
 
             <div className="mt-5 flex justify-center">
-              <CabSearchButton
-  onClick={handleSearch}
-  compact
-  label={getCabSearchButtonLabel()}
-/>
+              <div className="w-full md:w-auto">
+                <CabSearchButton
+                  onClick={handleSearch}
+                  compact
+                  label={getCabSearchButtonLabel()}
+                />
+              </div>
             </div>
           </>
         )}
 
         {form.rideType === "hourlyRentals" && (
           <>
-            <div className="grid grid-cols-[1fr_190px_190px_220px] items-center gap-3 overflow-visible">
+            <div className="grid grid-cols-1 md:grid-cols-[1fr_190px_190px_220px] items-center gap-3 overflow-visible">
               <CabLocationSelector
                 label="Pickup Location"
                 value={form.pickupLocation}
@@ -527,65 +555,75 @@ function handleSearch() {
             </div>
 
             <div className="mt-5 flex justify-center">
-              <CabSearchButton
-  onClick={handleSearch}
-  compact
-  label={getCabSearchButtonLabel()}
-/>
+              <div className="w-full md:w-auto">
+                <CabSearchButton
+                  onClick={handleSearch}
+                  compact
+                  label={getCabSearchButtonLabel()}
+                />
+              </div>
             </div>
           </>
         )}
 
         {form.rideType === "carRental" && (
           <>
-            <CarRentalSearchFields
-              pickupLocation={form.pickupLocation}
-              dropLocation={form.dropLocation}
-              pickupDate={form.pickupDate}
-              dropDate={form.departureDate}
-              pickupTime={form.pickupTime}
-              dropTime={form.dropTime}
-              onChangePickupLocation={updatePickupLocation}
-              onChangeDropLocation={updateDropLocation}
-              onChangePickupDate={updatePickupDate}
-              onChangeDropDate={updateDepartureDate}
-              onChangePickupTime={updatePickupTime}
-              onChangeDropTime={updateDropTime}
-            />
+            <div className="overflow-visible">
+              <CarRentalSearchFields
+                pickupLocation={form.pickupLocation}
+                dropLocation={form.dropLocation}
+                pickupDate={form.pickupDate}
+                dropDate={form.departureDate}
+                pickupTime={form.pickupTime}
+                dropTime={form.dropTime}
+                onChangePickupLocation={updatePickupLocation}
+                onChangeDropLocation={updateDropLocation}
+                onChangePickupDate={updatePickupDate}
+                onChangeDropDate={updateDepartureDate}
+                onChangePickupTime={updatePickupTime}
+                onChangeDropTime={updateDropTime}
+              />
+            </div>
 
             <div className="mt-5 flex justify-center">
-              <CabSearchButton
-  onClick={handleSearch}
-  compact
-  label={getCabSearchButtonLabel()}
-/>
+              <div className="w-full md:w-auto">
+                <CabSearchButton
+                  onClick={handleSearch}
+                  compact
+                  label={getCabSearchButtonLabel()}
+                />
+              </div>
             </div>
           </>
         )}
 
         {form.rideType === "bikeRental" && (
           <>
-            <BikeRentalSearchFields
-              pickupLocation={form.pickupLocation}
-              dropLocation={form.dropLocation}
-              pickupDate={form.pickupDate}
-              dropDate={form.departureDate}
-              pickupTime={form.pickupTime}
-              dropTime={form.dropTime}
-              onChangePickupLocation={updatePickupLocation}
-              onChangeDropLocation={updateDropLocation}
-              onChangePickupDate={updatePickupDate}
-              onChangeDropDate={updateDepartureDate}
-              onChangePickupTime={updatePickupTime}
-              onChangeDropTime={updateDropTime}
-            />
+            <div className="overflow-visible">
+              <BikeRentalSearchFields
+                pickupLocation={form.pickupLocation}
+                dropLocation={form.dropLocation}
+                pickupDate={form.pickupDate}
+                dropDate={form.departureDate}
+                pickupTime={form.pickupTime}
+                dropTime={form.dropTime}
+                onChangePickupLocation={updatePickupLocation}
+                onChangeDropLocation={updateDropLocation}
+                onChangePickupDate={updatePickupDate}
+                onChangeDropDate={updateDepartureDate}
+                onChangePickupTime={updatePickupTime}
+                onChangeDropTime={updateDropTime}
+              />
+            </div>
 
             <div className="mt-5 flex justify-center">
-              <CabSearchButton
-  onClick={handleSearch}
-  compact
-  label={getCabSearchButtonLabel()}
-/>
+              <div className="w-full md:w-auto">
+                <CabSearchButton
+                  onClick={handleSearch}
+                  compact
+                  label={getCabSearchButtonLabel()}
+                />
+              </div>
             </div>
           </>
         )}

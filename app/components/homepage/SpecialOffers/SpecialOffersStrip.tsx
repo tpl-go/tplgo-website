@@ -68,24 +68,26 @@ export default function SpecialOffersStrip() {
 
   return (
     <div
-      className="relative mt-2 w-full rounded-3xl bg-cover bg-center px-8 py-6"
+      className="relative mt-2 w-full rounded-[24px] bg-cover bg-center px-3 py-5 sm:rounded-3xl sm:px-8 sm:py-6"
       style={{ backgroundImage: "url('/bg/offerbg.jpg')" }}
     >
-      <div className="pointer-events-none absolute inset-0 rounded-3xl bg-black/10"></div>
+      <div className="pointer-events-none absolute inset-0 rounded-[24px] bg-black/10 sm:rounded-3xl"></div>
 
-      <div className="relative z-10 mb-7 flex items-center justify-between gap-5">
-        <OfferTabs activeTab={activeTab} setActiveTab={setActiveTab} />
+      <div className="relative z-10 mb-5 flex flex-col gap-4 sm:mb-7 lg:flex-row lg:items-center lg:justify-between lg:gap-5">
+        <div className="order-2 lg:order-1">
+          <OfferTabs activeTab={activeTab} setActiveTab={setActiveTab} />
+        </div>
 
-        <div className="flex-1 text-center">
-          <h2 className="text-4xl font-black text-white drop-shadow">
+        <div className="order-1 text-center lg:order-2 lg:flex-1">
+          <h2 className="text-2xl font-black text-white drop-shadow sm:text-4xl">
             Special Offers
           </h2>
-          <p className="mt-1 text-sm font-semibold text-white/80">
+          <p className="mt-1 text-xs font-semibold text-white/80 sm:text-sm">
             Smart deals matched from TPL master offer engine
           </p>
         </div>
 
-        <div className="w-[260px] text-right text-xs font-bold text-white/80">
+        <div className="order-3 hidden w-[260px] text-right text-xs font-bold text-white/80 lg:block">
           {activeTab === "all"
             ? "Showing all active offers"
             : `Showing ${activeTab} offers`}
@@ -95,7 +97,7 @@ export default function SpecialOffersStrip() {
       <div
         ref={scrollRef}
         data-pause="true"
-        className="offer-scroll flex gap-6 overflow-x-hidden pb-3"
+        className="offer-scroll flex gap-3 overflow-x-auto pb-3 sm:gap-6 lg:overflow-x-hidden"
       >
         {loopData.map((o, i) => (
           <OfferCard key={`${o.smartOfferSlug}-${activeTab}-${i}`} o={o} />

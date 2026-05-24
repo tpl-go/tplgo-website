@@ -1,8 +1,5 @@
 "use client";
 
-
-
-
 import { Experience } from "./types";
 
 interface Props {
@@ -12,37 +9,28 @@ interface Props {
 }
 
 export default function ExperienceCard({ item, colSpan, onClick }: Props) {
-
-
-
   return (
     <div
       onClick={() => onClick(item.slug)}
-      className={`${colSpan} relative rounded-3xl overflow-hidden cursor-pointer group`}
+      className={`${colSpan} group relative min-h-[180px] overflow-hidden rounded-2xl cursor-pointer md:min-h-0 md:rounded-3xl`}
     >
       <img
         src={item.image}
         alt={item.name}
-        className="w-full h-full object-cover transition duration-700 group-hover:scale-105"
+        className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
       />
 
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
 
-      <div className="absolute bottom-0 left-0 w-full px-6 pb-6 pt-10
-                bg-gradient-to-t from-black/75 via-black/40 to-transparent">
-
-        <div className="flex items-center justify-between">
-
-          <h4 className="text-white text-lg font-semibold tracking-wide">
+      <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/75 via-black/40 to-transparent px-3 pb-3 pt-10 md:px-6 md:pb-6">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <h4 className="line-clamp-2 text-sm font-bold leading-tight tracking-wide text-white md:text-lg md:font-semibold">
             {item.name}
           </h4>
 
-          <button
-            className="bg-white text-black px-4 py-1.5 rounded-full text-xs font-semibold
-                       shadow-md hover:bg-orange-500 hover:text-white transition duration-300">
+          <button className="w-fit rounded-full bg-white px-3 py-1.5 text-[11px] font-semibold text-black shadow-md transition duration-300 hover:bg-orange-500 hover:text-white md:px-4 md:text-xs">
             Explore →
           </button>
-
         </div>
       </div>
     </div>

@@ -37,20 +37,20 @@ export default function HolidayFilters({
       : "Select Filters";
 
   return (
-    <div ref={filterRef} className="relative shrink-0">
+    <div ref={filterRef} className="relative w-full shrink-0 md:w-auto">
       <div
         onClick={() => setShowFilterPopup(!showFilterPopup)}
-        className="relative flex h-[86px] w-[200px] cursor-pointer flex-col justify-center rounded-2xl border border-black bg-white/60 px-4 py-3"
+        className="relative flex min-h-[86px] w-full cursor-pointer flex-col justify-center rounded-2xl border border-black bg-white/70 px-4 py-3 shadow-sm md:h-[86px] md:w-[200px] md:bg-white/60 md:shadow-none"
       >
-        <span className="text-[11px] font-bold text-slate-600">
+        <span className="text-[10px] font-bold uppercase leading-none tracking-wide text-slate-600 md:text-[11px] md:normal-case md:tracking-normal">
           Filters
         </span>
 
-        <p className="truncate pr-6 text-lg font-extrabold text-slate-950">
+        <p className="mt-1 truncate pr-6 text-[20px] font-extrabold leading-tight text-slate-950 md:text-lg">
           {subtitle}
         </p>
 
-        <span className="text-[11px] text-slate-600">
+        <span className="mt-0.5 text-[11px] leading-none text-slate-600">
           Package preferences
         </span>
 
@@ -62,8 +62,8 @@ export default function HolidayFilters({
       </div>
 
       {showFilterPopup && (
-        <div className="absolute right-0 top-[90px] z-[9999] flex h-[360px] w-[420px] flex-col overflow-hidden rounded-2xl border border-black bg-white text-black shadow-2xl">
-          <div className="overflow-y-auto p-5 text-black">
+        <div className="absolute left-0 top-[92px] z-[9999] flex max-h-[72vh] w-full flex-col overflow-hidden rounded-2xl border border-black bg-white text-black shadow-2xl md:left-auto md:right-0 md:top-[90px] md:h-[360px] md:max-h-none md:w-[420px]">
+          <div className="overflow-y-auto p-4 text-black md:p-5">
             <p className="mb-1 text-[13px] font-bold">Duration (in Nights)</p>
 
             <input
@@ -127,7 +127,7 @@ export default function HolidayFilters({
 
             <p className="mb-1 mt-4 text-[13px] font-bold">Flights</p>
 
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {[
                 { label: "With Flights", val: "withFlight" },
                 { label: "Without Flights", val: "withoutFlight" },

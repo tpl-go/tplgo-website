@@ -1,6 +1,14 @@
-import { Clock, Gauge, MapPin, Navigation, Plane } from "lucide-react";
+import {
+  Clock,
+  Gauge,
+  MapPin,
+  Navigation,
+  Plane,
+} from "lucide-react";
 
 import type { FlightTrackingResult } from "@/app/lib/flight-tracking/flightTrackingTypes";
+import { getFlightStatusStyle } from "@/app/lib/flight-tracking/flightTrackingHelpers";
+
 
 type Props = {
   flight: FlightTrackingResult;
@@ -31,24 +39,26 @@ export default function FlightRouteMap({ flight }: Props) {
   const progressLabel = getProgressLabel(flight.status);
 
   return (
-    <div className="rounded-[30px] border border-gray-200 bg-white p-6 shadow-sm">
-      <div className="flex items-start justify-between gap-4">
+    <div className="rounded-[24px] md:rounded-[30px] border border-gray-200 bg-white p-4 md:p-6 shadow-sm">
+      {/* Top */}
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
-          <h3 className="text-2xl font-extrabold text-gray-900">
+          <h3 className="text-2xl md:text-2xl font-extrabold text-gray-900">
             Route Map
           </h3>
 
-          <p className="mt-2 text-sm font-medium text-gray-500">
+          <p className="mt-2 text-sm font-medium leading-6 text-gray-500">
             Visual flight route overview from {flight.from} to {flight.to}
           </p>
         </div>
 
-        <div className="rounded-full bg-orange-50 px-4 py-1.5 text-xs font-extrabold text-orange-700">
+        <div className="w-fit rounded-full bg-orange-50 px-4 py-1.5 text-xs font-extrabold text-orange-700">
           Route overview
         </div>
       </div>
 
-      <div className="relative mt-6 overflow-hidden rounded-[28px] border border-blue-100 bg-gradient-to-br from-[#eaf4ff] via-[#f8fbff] to-[#fff7ed] p-6">
+      {/* Map Area */}
+      <div className="relative mt-5 md:mt-6 overflow-hidden rounded-[24px] md:rounded-[28px] border border-blue-100 bg-gradient-to-br from-[#eaf4ff] via-[#f8fbff] to-[#fff7ed] p-4 md:p-6">
         <div className="absolute inset-0 opacity-50">
           <div className="h-full w-full bg-[radial-gradient(circle_at_1px_1px,#94a3b8_1px,transparent_0)] [background-size:24px_24px]" />
         </div>
@@ -57,7 +67,9 @@ export default function FlightRouteMap({ flight }: Props) {
         <div className="absolute -right-20 bottom-10 h-48 w-48 rounded-full bg-orange-300/20 blur-3xl" />
 
         <div className="relative z-10">
-          <div className="grid grid-cols-[160px_1fr_160px] items-center gap-4">
+          {/* Desktop Route */}
+          <div className="hidden md:grid grid-cols-[160px_1fr_160px] items-center gap-4">
+            {/* FROM */}
             <div className="rounded-3xl bg-white/90 p-5 text-center shadow-sm">
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#0B1F3A] text-white shadow-lg">
                 <MapPin size={20} />
@@ -76,6 +88,7 @@ export default function FlightRouteMap({ flight }: Props) {
               </div>
             </div>
 
+            {/* FLIGHT PATH */}
             <div className="relative h-40">
               <svg
                 viewBox="0 0 520 160"
@@ -109,11 +122,12 @@ export default function FlightRouteMap({ flight }: Props) {
                 <Plane size={28} />
               </div>
 
-              <div className="absolute left-1/2 top-[78%] -translate-x-1/2 rounded-full bg-white/95 px-4 py-2 text-xs font-extrabold text-gray-700 shadow-sm">
+              <div className="absolute left-1/2 top-[78%] -translate-x-1/2 rounded-full bg-white/95 px-4 py-2 text-xs font-extrabold text-gray-700 shadow-sm whitespace-nowrap">
                 {progressLabel}
               </div>
             </div>
 
+            {/* TO */}
             <div className="rounded-3xl bg-white/90 p-5 text-center shadow-sm">
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#0B1F3A] text-white shadow-lg">
                 <MapPin size={20} />
@@ -133,7 +147,99 @@ export default function FlightRouteMap({ flight }: Props) {
             </div>
           </div>
 
-          <div className="mt-6 grid grid-cols-4 gap-3">
+          {/* Mobile Route */}
+          <div className="md:hidden">
+            {/* Airport Cards */}
+            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+              {/* FROM */}
+              <div className="rounded-2xl bg-white/90 p-4 text-center shadow-sm">
+                <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-[#0B1F3A] text-white shadow-lg">
+                  <MapPin size={18} />
+                </div>
+
+                <div className="mt-3 text-2xl font-extrabold text-gray-900">
+                  {flight.from}
+                </div>
+
+                <div className="mt-1 text-[11px] font-semibold text-gray-500">
+                  Departure
+                </div>
+
+                <div className="mt-1 text-xs font-bold text-gray-800">
+                  {flight.departureTime}
+                </div>
+              </div>
+
+              {/* PLANE */}
+              <div className="flex flex-col items-center justify-center gap-2">
+                <div className="h-px w-10 bg-orange-300" />
+
+                <div
+                  className="flex h-11 w-11 items-center justify-center rounded-full bg-orange-500 text-white shadow-xl ring-4 ring-orange-500/15"
+                >
+                  <Plane size={18} />
+                </div>
+
+                <div className="h-px w-10 bg-orange-300" />
+              </div>
+
+              {/* TO */}
+              <div className="rounded-2xl bg-white/90 p-4 text-center shadow-sm">
+                <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-[#0B1F3A] text-white shadow-lg">
+                  <MapPin size={18} />
+                </div>
+
+                <div className="mt-3 text-2xl font-extrabold text-gray-900">
+                  {flight.to}
+                </div>
+
+                <div className="mt-1 text-[11px] font-semibold text-gray-500">
+                  Arrival
+                </div>
+
+                <div className="mt-1 text-xs font-bold text-gray-800">
+                  {flight.arrivalTime}
+                </div>
+              </div>
+            </div>
+
+            {/* Progress */}
+            <div className="mt-4 rounded-2xl bg-white/90 p-4 shadow-sm">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-xs font-semibold text-gray-500">
+                    Flight Progress
+                  </div>
+
+                  <div className="mt-1 text-sm font-bold text-gray-900">
+                    {progressLabel}
+                  </div>
+                </div>
+
+                <div
+                  className={`rounded-full border px-3 py-1 text-[11px] font-extrabold ${getFlightStatusStyle(
+                    flight.status
+                  )}`}
+                >
+                  {flight.status}
+                </div>
+              </div>
+
+              <div className="mt-4 h-2 overflow-hidden rounded-full bg-gray-200">
+                <div
+                  className="h-full rounded-full bg-orange-500 transition-all duration-500"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+
+              <div className="mt-2 text-right text-xs font-bold text-gray-700">
+                {progress}%
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Stats */}
+          <div className="mt-5 md:mt-6 grid grid-cols-2 md:grid-cols-4 gap-3">
             <div className="rounded-2xl bg-white/90 p-4 shadow-sm">
               <Navigation size={18} className="text-orange-600" />
 
@@ -141,7 +247,7 @@ export default function FlightRouteMap({ flight }: Props) {
                 Terminal
               </div>
 
-              <div className="mt-1 text-lg font-extrabold text-gray-900">
+              <div className="mt-1 text-base md:text-lg font-extrabold text-gray-900">
                 {flight.terminal}
               </div>
             </div>
@@ -153,7 +259,7 @@ export default function FlightRouteMap({ flight }: Props) {
                 Gate
               </div>
 
-              <div className="mt-1 text-lg font-extrabold text-gray-900">
+              <div className="mt-1 text-base md:text-lg font-extrabold text-gray-900">
                 {flight.gate}
               </div>
             </div>
@@ -165,7 +271,7 @@ export default function FlightRouteMap({ flight }: Props) {
                 Aircraft
               </div>
 
-              <div className="mt-1 text-lg font-extrabold text-gray-900">
+              <div className="mt-1 text-base md:text-lg font-extrabold text-gray-900 break-words">
                 {flight.aircraft}
               </div>
             </div>
@@ -177,21 +283,22 @@ export default function FlightRouteMap({ flight }: Props) {
                 Progress
               </div>
 
-              <div className="mt-1 text-lg font-extrabold text-gray-900">
+              <div className="mt-1 text-base md:text-lg font-extrabold text-gray-900">
                 {progress}%
               </div>
             </div>
           </div>
 
-          <div className="mt-4 flex items-center gap-3 rounded-2xl bg-[#0B1F3A] px-5 py-4 text-white">
-            <Clock size={18} className="text-orange-300" />
+          {/* Bottom Update */}
+          <div className="mt-4 flex items-start gap-3 rounded-2xl bg-[#0B1F3A] px-4 md:px-5 py-4 text-white">
+            <Clock size={18} className="text-orange-300 shrink-0 mt-0.5" />
 
             <div>
               <div className="text-xs font-semibold text-white/60">
                 Current update
               </div>
 
-              <div className="mt-1 text-sm font-bold">
+              <div className="mt-1 text-sm font-bold leading-6">
                 {flight.status}
                 {flight.delayMinutes
                   ? ` • Expected delay ${flight.delayMinutes} minutes`

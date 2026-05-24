@@ -123,17 +123,30 @@ export default function FlightTrackingSearchCard({
       : "";
 
   return (
-    <section className="relative z-10 -mt-16">
-      <div className="max-w-5xl mx-auto px-6">
-        <div className="rounded-[32px] border border-white/40 bg-white/95 backdrop-blur-xl shadow-2xl p-6 md:p-8">
+    <section className="relative z-10 md:-mt-16">
+      <div className="max-w-5xl mx-auto px-3 md:px-6">
+        <div
+          className="
+            rounded-[24px]
+            md:rounded-[32px]
+            border
+            border-white/40
+            bg-white/95
+            backdrop-blur-xl
+            shadow-xl
+            md:shadow-2xl
+            p-4
+            md:p-8
+          "
+        >
           {/* Tabs */}
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3">
             <button
               type="button"
               onClick={() =>
                 handleTypeChange("flight")
               }
-              className={`flex items-center gap-2 rounded-full px-5 py-3 text-sm font-bold transition ${
+              className={`flex items-center justify-center gap-2 rounded-2xl md:rounded-full px-4 py-3 text-sm font-bold transition ${
                 searchType === "flight"
                   ? "bg-orange-500 text-white shadow-lg"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -148,7 +161,7 @@ export default function FlightTrackingSearchCard({
               onClick={() =>
                 handleTypeChange("pnr")
               }
-              className={`flex items-center gap-2 rounded-full px-5 py-3 text-sm font-bold transition ${
+              className={`flex items-center justify-center gap-2 rounded-2xl md:rounded-full px-4 py-3 text-sm font-bold transition ${
                 searchType === "pnr"
                   ? "bg-orange-500 text-white shadow-lg"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -160,13 +173,13 @@ export default function FlightTrackingSearchCard({
           </div>
 
           {/* Search Area */}
-          <div className="mt-7 grid lg:grid-cols-[1fr_auto] gap-4">
+          <div className="mt-5 grid gap-3 md:mt-7 lg:grid-cols-[1fr_auto] md:gap-4">
             <div className="relative">
-              <div className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400">
+              <div className="absolute left-4 md:left-5 top-1/2 -translate-y-1/2 text-gray-400">
                 {searchType === "flight" ? (
-                  <Plane size={20} />
+                  <Plane size={18} />
                 ) : (
-                  <MapPin size={20} />
+                  <MapPin size={18} />
                 )}
               </div>
 
@@ -178,10 +191,29 @@ export default function FlightTrackingSearchCard({
                 }
                 placeholder={
                   searchType === "flight"
-                    ? "Enter flight number (Example: 6E 204)"
+                    ? "Enter flight number"
                     : "Enter PNR number"
                 }
-                className="h-16 w-full rounded-2xl border border-gray-200 bg-white pl-14 pr-5 text-lg font-semibold text-gray-900 outline-none transition focus:border-orange-500"
+                className="
+                  h-14
+                  md:h-16
+                  w-full
+                  rounded-2xl
+                  border
+                  border-gray-200
+                  bg-white
+                  pl-12
+                  md:pl-14
+                  pr-4
+                  md:pr-5
+                  text-base
+                  md:text-lg
+                  font-semibold
+                  text-gray-900
+                  outline-none
+                  transition
+                  focus:border-orange-500
+                "
               />
             </div>
 
@@ -189,7 +221,26 @@ export default function FlightTrackingSearchCard({
               type="button"
               disabled={!formattedValue.trim() || loading}
               onClick={handleSearch}
-              className="flex h-16 items-center justify-center gap-2 rounded-2xl bg-orange-500 px-8 text-base font-bold text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-60"
+              className="
+                flex
+                h-14
+                md:h-16
+                items-center
+                justify-center
+                gap-2
+                rounded-2xl
+                bg-orange-500
+                px-6
+                md:px-8
+                text-sm
+                md:text-base
+                font-bold
+                text-white
+                transition
+                hover:bg-orange-600
+                disabled:cursor-not-allowed
+                disabled:opacity-60
+              "
             >
               <Search size={18} />
 
@@ -200,58 +251,60 @@ export default function FlightTrackingSearchCard({
           </div>
 
           {/* Quick Hints */}
-          <div className="mt-6 flex flex-wrap gap-3">
-            <button
-              type="button"
-              disabled={!formattedValue.trim()}
-              onClick={() =>
-                handleInsightClick("live")
-              }
-              className="inline-flex items-center gap-2 rounded-full bg-gray-100 px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-orange-100 hover:text-orange-700 transition disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <Radio size={14} />
-              Live Status
-            </button>
+          <div className="mt-5 md:mt-6 overflow-x-auto">
+            <div className="flex items-center gap-2 min-w-max pb-1 md:flex-wrap md:min-w-0 md:gap-3">
+              <button
+                type="button"
+                disabled={!formattedValue.trim()}
+                onClick={() =>
+                  handleInsightClick("live")
+                }
+                className="inline-flex items-center gap-2 rounded-full bg-gray-100 px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-orange-100 hover:text-orange-700 transition disabled:cursor-not-allowed disabled:opacity-50 whitespace-nowrap"
+              >
+                <Radio size={14} />
+                Live Status
+              </button>
 
-            <button
-              type="button"
-              disabled={!formattedValue.trim()}
-              onClick={() =>
-                handleInsightClick("delay")
-              }
-              className="inline-flex items-center gap-2 rounded-full bg-gray-100 px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-orange-100 hover:text-orange-700 transition disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <AlertTriangle size={14} />
-              Delays & Gate Info
-            </button>
+              <button
+                type="button"
+                disabled={!formattedValue.trim()}
+                onClick={() =>
+                  handleInsightClick("delay")
+                }
+                className="inline-flex items-center gap-2 rounded-full bg-gray-100 px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-orange-100 hover:text-orange-700 transition disabled:cursor-not-allowed disabled:opacity-50 whitespace-nowrap"
+              >
+                <AlertTriangle size={14} />
+                Delays & Gate Info
+              </button>
 
-            <button
-              type="button"
-              disabled={!formattedValue.trim()}
-              onClick={() =>
-                handleInsightClick("tracking")
-              }
-              className="inline-flex items-center gap-2 rounded-full bg-gray-100 px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-orange-100 hover:text-orange-700 transition disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <Navigation size={14} />
-              Real-time Tracking
-            </button>
+              <button
+                type="button"
+                disabled={!formattedValue.trim()}
+                onClick={() =>
+                  handleInsightClick("tracking")
+                }
+                className="inline-flex items-center gap-2 rounded-full bg-gray-100 px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-orange-100 hover:text-orange-700 transition disabled:cursor-not-allowed disabled:opacity-50 whitespace-nowrap"
+              >
+                <Navigation size={14} />
+                Real-time Tracking
+              </button>
 
-            <button
-              type="button"
-              disabled={!formattedValue.trim()}
-              onClick={() =>
-                handleInsightClick("airport")
-              }
-              className="inline-flex items-center gap-2 rounded-full bg-gray-100 px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-orange-100 hover:text-orange-700 transition disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <Clock size={14} />
-              Airport updates
-            </button>
+              <button
+                type="button"
+                disabled={!formattedValue.trim()}
+                onClick={() =>
+                  handleInsightClick("airport")
+                }
+                className="inline-flex items-center gap-2 rounded-full bg-gray-100 px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-orange-100 hover:text-orange-700 transition disabled:cursor-not-allowed disabled:opacity-50 whitespace-nowrap"
+              >
+                <Clock size={14} />
+                Airport Updates
+              </button>
+            </div>
           </div>
 
           {activeInsight && (
-            <div className="mt-6 rounded-2xl border border-orange-100 bg-orange-50 p-5">
+            <div className="mt-5 md:mt-6 rounded-2xl border border-orange-100 bg-orange-50 p-4 md:p-5">
               <div className="text-sm font-extrabold text-orange-700">
                 {insightTitle}
               </div>

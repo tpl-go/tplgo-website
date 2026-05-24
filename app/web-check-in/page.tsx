@@ -81,7 +81,7 @@ function WebCheckInPageContent() {
   };
 
   return (
-    <main className="min-h-screen bg-[#f4f7fb]">
+    <main className="min-h-screen bg-[#f4f7fb] overflow-x-hidden">
       <WebCheckInHero />
 
       <WebCheckInForm
@@ -102,8 +102,8 @@ function WebCheckInPageContent() {
         onContinue={handleContinue}
       />
 
-      <section className="max-w-7xl mx-auto px-6 py-12">
-        <div className="grid lg:grid-cols-[1fr_380px] gap-6">
+      <section className="max-w-7xl mx-auto px-3 md:px-6 py-8 md:py-12">
+        <div className="grid gap-5 md:gap-6 lg:grid-cols-[1fr_380px]">
           <WebCheckInGuidance
             airline={airline}
             airlines={webCheckInAirlines}

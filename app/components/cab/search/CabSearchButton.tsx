@@ -15,10 +15,10 @@ export default function CabSearchButton({
     <button
       type="button"
       onClick={onClick}
-      className={`inline-flex items-center justify-center rounded-full bg-gradient-to-r from-orange-500 to-orange-600 font-extrabold text-white shadow-[0_14px_32px_rgba(234,88,12,0.28)] transition hover:scale-[1.02] hover:from-orange-600 hover:to-orange-700 active:scale-[0.98] ${
+      className={`inline-flex w-full md:w-auto items-center justify-center rounded-full bg-gradient-to-r from-orange-500 to-lime-500 font-extrabold text-white shadow-[0_14px_32px_rgba(234,88,12,0.28)] transition hover:scale-[1.02] hover:from-orange-600 hover:to-orange-700 active:scale-[0.98] ${
         compact
-          ? "h-[48px] min-w-[190px] px-8 text-[15px]"
-          : "h-[54px] min-w-[220px] px-8 text-[15px]"
+          ? "h-[48px] md:h-[48px] min-w-full md:min-w-[190px] px-8 text-[15px]"
+          : "h-[54px] md:h-[54px] min-w-full md:min-w-[220px] px-8 text-[15px]"
       }`}
     >
       {label}

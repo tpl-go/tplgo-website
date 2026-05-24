@@ -25,9 +25,7 @@ export async function generateStaticParams() {
   }));
 }
 
-export async function generateMetadata({
-  params,
-}: Props): Promise<Metadata> {
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
 
   const article = getTravelGuideArticleBySlug(slug);
@@ -70,9 +68,7 @@ export async function generateMetadata({
   };
 }
 
-export default async function TravelGuideDetailPage({
-  params,
-}: Props) {
+export default async function TravelGuideDetailPage({ params }: Props) {
   const { slug } = await params;
 
   const article = getTravelGuideArticleBySlug(slug);
@@ -81,8 +77,7 @@ export default async function TravelGuideDetailPage({
     notFound();
   }
 
-  const relatedArticles =
-    getRelatedTravelGuideArticles(article.slug);
+  const relatedArticles = getRelatedTravelGuideArticles(article.slug);
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -112,8 +107,7 @@ export default async function TravelGuideDetailPage({
 
   return (
     <main className="min-h-screen bg-gray-50">
-
-<ReadingProgressBar />
+      <ReadingProgressBar />
 
       {/* JSON-LD */}
       <script
@@ -127,21 +121,19 @@ export default async function TravelGuideDetailPage({
       <ArticleHero article={article} />
 
       {/* BODY */}
-      <section className="max-w-7xl mx-auto px-6 py-14">
-        <div className="grid lg:grid-cols-[1fr_340px] gap-10">
+      <section className="mx-auto max-w-7xl px-3 py-10 sm:px-6 sm:py-14">
+        <div className="grid gap-6 lg:grid-cols-[1fr_340px] lg:gap-10">
           {/* ARTICLE CONTENT */}
-          <div className="rounded-3xl border border-gray-200 bg-white p-8 md:p-10 shadow-sm">
-            <ArticleContentRenderer
-              blocks={article.blocks}
-            />
+          <div className="rounded-[24px] border border-gray-200 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-8 md:p-10">
+            <ArticleContentRenderer blocks={article.blocks} />
           </div>
 
           {/* SIDEBAR */}
           <ArticleSidebar
-  article={article}
-  relatedArticles={relatedArticles}
-  blocks={article.blocks}
-/>
+            article={article}
+            relatedArticles={relatedArticles}
+            blocks={article.blocks}
+          />
         </div>
       </section>
     </main>

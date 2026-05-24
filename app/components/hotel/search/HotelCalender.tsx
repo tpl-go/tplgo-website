@@ -8,19 +8,13 @@ import { format, addDays } from "date-fns";
 import "react-date-range/dist/styles.css";
 import "react-date-range/dist/theme/default.css";
 
-export default function HotelCalender({
-  dispatch,
-  type,
-  date,
-}: any) {
+export default function HotelCalender({ dispatch, type, date }: any) {
   const [open, setOpen] = useState(false);
   const calRef = useRef<any>(null);
 
-  // DEFAULT TODAY
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // DEFAULT RANGE
   const [range, setRange] = useState<any>([
     {
       startDate: date || today,
@@ -29,7 +23,6 @@ export default function HotelCalender({
     },
   ]);
 
-  // OUTSIDE CLICK CLOSE
   useEffect(() => {
     function handleClickOutside(event: any) {
       if (calRef.current && !calRef.current.contains(event.target)) {
@@ -43,24 +36,20 @@ export default function HotelCalender({
       document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // DATE CHANGE
   const handleDateChange = (item: any) => {
     let start = item.selection.startDate;
     let end = item.selection.endDate;
 
-    // ❌ Block Past Check-In
     if (start < today) {
       start = today;
     }
 
-    // CHECK-IN SELECT
     if (type === "CHECKIN") {
       dispatch({
         type: "SET_CHECKIN",
         payload: start,
       });
 
-      // Checkout default next day
       const nextDay = new Date(start);
       nextDay.setDate(nextDay.getDate() + 1);
 
@@ -80,9 +69,7 @@ export default function HotelCalender({
       setOpen(false);
     }
 
-    // CHECK-OUT SELECT
     if (type === "CHECKOUT") {
-      // Must be greater than today
       if (end > today) {
         dispatch({
           type: "SET_CHECKOUT",
@@ -103,22 +90,22 @@ export default function HotelCalender({
   };
 
   return (
-    <div ref={calRef} className="relative shrink-0">
+    <div ref={calRef} className="relative w-full shrink-0 md:w-auto">
       <div
         onClick={() => setOpen(true)}
-        className="flex h-[86px] w-[190px] cursor-pointer flex-col justify-center rounded-2xl border border-slate-700 bg-white/60 px-4 py-3"
+        className="flex h-[76px] md:h-[86px] w-full md:w-[190px] cursor-pointer flex-col justify-center rounded-2xl border border-slate-700 bg-white/60 px-4 py-3"
       >
-        <span className="text-[11px] font-bold text-slate-600">
+        <span className="text-[10px] md:text-[11px] font-bold text-slate-600">
           {type === "CHECKIN" ? "CHECK-IN" : "CHECK-OUT"}
         </span>
 
         <div className="flex w-full items-center justify-between">
           <div>
-            <span className="block text-lg font-extrabold text-slate-950">
+            <span className="block text-base md:text-lg font-extrabold text-slate-950">
               {format(date || today, "dd MMM yy")}
             </span>
 
-            <span className="text-[11px] text-slate-600">
+            <span className="text-[10px] md:text-[11px] text-slate-600">
               {format(date || today, "EEEE")}
             </span>
           </div>
@@ -128,19 +115,21 @@ export default function HotelCalender({
       </div>
 
       {open && (
-        <div className="absolute left-0 top-[90px] z-[9999] rounded-2xl border border-slate-700 bg-white shadow-2xl">
+        <div className="absolute left-0 top-[82px] md:top-[90px] z-[9999] w-[calc(100vw-40px)] md:w-auto max-w-[95vw] overflow-hidden rounded-2xl border border-slate-700 bg-white shadow-2xl">
           <DateRange
             ranges={range}
-            months={2}
-            direction="horizontal"
+            months={
+              typeof window !== "undefined" && window.innerWidth < 768 ? 1 : 2
+            }
+            direction={
+              typeof window !== "undefined" && window.innerWidth < 768
+                ? "vertical"
+                : "horizontal"
+            }
             moveRangeOnFirstSelection={false}
             showDateDisplay={false}
             onChange={handleDateChange}
-            minDate={
-              type === "CHECKIN"
-                ? today
-                : addDays(date || today, 1)
-            }
+            minDate={type === "CHECKIN" ? today : addDays(date || today, 1)}
           />
         </div>
       )}

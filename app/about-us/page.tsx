@@ -9,13 +9,19 @@ export default function AboutUsPage() {
       description={aboutUsContent.description}
       points={aboutUsContent.points}
     >
-      <div className="space-y-8 text-gray-700 leading-7">
+      <div className="space-y-6 text-sm leading-7 text-gray-700 sm:space-y-8 sm:text-base">
         {aboutUsContent.sections.map((section) => (
-          <section key={section.title}>
-            <h2 className="text-2xl font-bold text-gray-900 mb-3">
+          <section
+            key={section.title}
+            className="rounded-[22px] border border-gray-100 bg-white/80 p-4 shadow-sm backdrop-blur-sm sm:rounded-[26px] sm:p-6"
+          >
+            <h2 className="mb-3 text-xl font-bold leading-tight text-gray-900 sm:text-2xl">
               {section.title}
             </h2>
-            <p>{section.description}</p>
+
+            <p className="leading-7 text-gray-700">
+              {section.description}
+            </p>
           </section>
         ))}
       </div>

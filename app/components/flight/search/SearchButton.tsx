@@ -45,9 +45,7 @@ export default function SearchButton({
         return false;
       }
 
-      if (
-        new Date(state.returnDate) < new Date(state.segments[0].departure)
-      ) {
+      if (new Date(state.returnDate) < new Date(state.segments[0].departure)) {
         alert("Return date must be after Departure date");
         return false;
       }
@@ -160,10 +158,10 @@ export default function SearchButton({
   }
 
   return (
-    <div className="mt-8 flex justify-center">
+    <div className="mt-4 md:mt-8 flex justify-center">
       <button
         onClick={handleSearch}
-        className="rounded-lg bg-gradient-to-r from-orange-500 to-green-500 px-8 py-3 font-semibold text-white"
+        className="h-11 md:h-auto w-full md:w-auto rounded-xl md:rounded-lg bg-gradient-to-r from-orange-500 to-lime-500 px-8 py-0 md:py-3 text-sm md:text-base font-semibold text-white"
       >
         SEARCH
       </button>

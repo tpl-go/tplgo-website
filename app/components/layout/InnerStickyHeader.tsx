@@ -22,6 +22,11 @@ const services = [
 
 function isActive(pathname: string, href: string) {
   const base = href.split("/")[1];
+
+  if (!base) {
+    return pathname === "/";
+  }
+
   return pathname.startsWith(`/${base}`);
 }
 
@@ -53,7 +58,8 @@ export default function InnerStickyHeader() {
 
   return (
     <div className="sticky top-0 z-[300] border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur-xl">
-      <div className="mx-auto flex h-[66px] max-w-[1500px] items-center justify-between gap-4 px-5">
+      {/* DESKTOP — untouched */}
+      <div className="hidden md:flex mx-auto h-[66px] max-w-[1500px] items-center justify-between gap-4 px-5">
         <Link href="/" className="flex shrink-0 items-center gap-2">
           <img
             src="/logo.png"
@@ -133,6 +139,91 @@ export default function InnerStickyHeader() {
             </button>
           )}
         </div>
+      </div>
+
+      {/* MOBILE — added separately */}
+      <div className="md:hidden">
+        <div className="flex h-[58px] items-center justify-between gap-2 px-3">
+          <Link href="/" className="flex shrink-0 items-center">
+            <img
+              src="/logo.png"
+              alt="TPL Logo"
+              className="h-9 w-16 object-contain"
+            />
+          </Link>
+
+          <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5">
+            <div className="flex h-8 items-center gap-1 rounded-lg bg-slate-100 px-1.5">
+              <span className="text-[11px]">🌐</span>
+              <select className="w-[34px] bg-transparent text-[10px] font-bold text-slate-800 outline-none">
+                <option>EN</option>
+                <option>HI</option>
+              </select>
+            </div>
+
+            <div className="flex h-8 items-center gap-1 rounded-lg bg-slate-100 px-1.5">
+              <span className="text-[11px]">💱</span>
+              <select className="w-[42px] bg-transparent text-[10px] font-bold text-slate-800 outline-none">
+                <option>INR</option>
+                <option>USD</option>
+                <option>EUR</option>
+              </select>
+            </div>
+
+            {isAuthenticated && user ? (
+              <div ref={accountRef} className="relative">
+                <button
+                  type="button"
+                  onClick={() => setAccountOpen((prev) => !prev)}
+                  className="h-8 rounded-lg bg-blue-600 px-2.5 text-[11px] font-bold text-white"
+                >
+                  Account
+                </button>
+
+                {accountOpen && (
+                  <AccountDropdown
+                    onClose={() => setAccountOpen(false)}
+                    onLogout={handleLogout}
+                  />
+                )}
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() =>
+                  openLoginModal({
+                    accountType: "personal",
+                    intent: "generic",
+                  })
+                }
+                className="h-8 rounded-lg bg-blue-600 px-2.5 text-[11px] font-bold text-white"
+              >
+                Login
+              </button>
+            )}
+          </div>
+        </div>
+
+        <nav className="flex gap-2 overflow-x-auto border-t border-slate-100 px-3 py-2 scrollbar-hide">
+          {services.map((item) => {
+            const active = isActive(pathname, item.href);
+
+            return (
+              <Link
+                key={item.label}
+                href={item.href}
+                className={`flex h-[46px] min-w-[66px] flex-col items-center justify-center rounded-xl border px-2 text-[11px] font-bold transition ${
+                  active
+                    ? "border-blue-500 bg-blue-50 text-blue-700 shadow-sm"
+                    : "border-slate-100 bg-white text-slate-700"
+                }`}
+              >
+                <span className="text-[15px] leading-none">{item.icon}</span>
+                <span className="mt-1 whitespace-nowrap">{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
       </div>
     </div>
   );

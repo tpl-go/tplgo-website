@@ -263,9 +263,9 @@ export default function CruiseSearchBox() {
 
   return (
     <div ref={wrapperRef} className="relative w-full overflow-visible">
-      <div className="relative mt-7 overflow-visible rounded-[28px] border border-white/45 bg-white/20 px-5 pt-4 pb-7 shadow-[0_20px_60px_rgba(15,23,42,0.12)] backdrop-blur-sm">
-        <div className="grid grid-cols-[1.22fr_1.12fr_1fr_0.82fr_0.9fr] items-stretch gap-3 overflow-visible">
-          <div className="min-h-[132px] rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="relative mt-4 md:mt-7 overflow-visible rounded-[24px] md:rounded-[28px] border border-white/45 bg-white/20 px-3 md:px-5 pt-4 pb-5 md:pb-7 shadow-[0_20px_60px_rgba(15,23,42,0.12)] backdrop-blur-sm">
+        <div className="grid grid-cols-2 md:grid-cols-[1.22fr_1.12fr_1fr_0.82fr_0.9fr] items-stretch gap-3 overflow-visible">
+          <div className="col-span-2 md:col-span-1 min-h-[96px] md:min-h-[132px] rounded-2xl border border-slate-200 bg-white shadow-sm">
             <CruiseDestinationField
               value={searchState.destination}
               isOpen={activeField === "destination"}
@@ -277,7 +277,7 @@ export default function CruiseSearchBox() {
             />
           </div>
 
-          <div className="min-h-[132px] rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="col-span-2 md:col-span-1 min-h-[96px] md:min-h-[132px] rounded-2xl border border-slate-200 bg-white shadow-sm">
             <CruiseDeparturePortField
               value={searchState.departurePort}
               isOpen={activeField === "departurePort"}
@@ -289,7 +289,7 @@ export default function CruiseSearchBox() {
             />
           </div>
 
-          <div className="min-h-[132px] rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="col-span-2 md:col-span-1 min-h-[96px] md:min-h-[132px] rounded-2xl border border-slate-200 bg-white shadow-sm">
             <CruiseSailingField
               value={searchState.sailing}
               onChange={handleSailingChange}
@@ -297,7 +297,7 @@ export default function CruiseSearchBox() {
             />
           </div>
 
-          <div className="min-h-[132px] rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="min-h-[96px] md:min-h-[132px] rounded-2xl border border-slate-200 bg-white shadow-sm">
             <CruiseDurationField
               value={searchState.duration}
               isOpen={activeField === "duration"}
@@ -308,7 +308,7 @@ export default function CruiseSearchBox() {
             />
           </div>
 
-          <div className="min-h-[132px] rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="min-h-[96px] md:min-h-[132px] rounded-2xl border border-slate-200 bg-white shadow-sm">
             <CruiseTravellersField
               value={searchState.travellers}
               isOpen={activeField === "travellers"}
@@ -320,12 +320,14 @@ export default function CruiseSearchBox() {
           </div>
         </div>
 
-        <div className="mt-4 flex justify-center">
-          <CruiseSearchButton
-            onClick={handleSubmit}
-            loading={isSubmitting}
-            label="Search Cruises"
-          />
+        <div className="mt-5 flex justify-center">
+          <div className="w-full md:w-auto">
+            <CruiseSearchButton
+              onClick={handleSubmit}
+              loading={isSubmitting}
+              label="Search Cruises"
+            />
+          </div>
         </div>
       </div>
     </div>

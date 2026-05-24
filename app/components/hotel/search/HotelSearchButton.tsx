@@ -37,13 +37,19 @@ export default function HotelSearchButton({ state }: any) {
     <button
       type="button"
       onClick={handleSearch}
-      className="bg-gradient-to-r from-orange-500 to-green-400 
-                 text-white font-semibold 
-                 px-10 py-3 
-                 rounded-xl 
-                 shadow-md 
-                 hover:scale-105 
-                 transition-all duration-200"
+      className="
+        w-full md:w-auto
+        min-h-[48px] md:min-h-0
+        bg-gradient-to-r from-orange-500 to-lime-500
+        text-white font-semibold
+        text-sm md:text-base
+        px-6 md:px-10
+        py-3
+        rounded-xl
+        shadow-md
+        transition-all duration-200
+        hover:scale-105
+      "
     >
       SEARCH
     </button>

@@ -20,7 +20,19 @@ export default function GlobalDatePicker({
   hideInput = false,
 }: Props) {
   const [open, setOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const ref = useRef<any>(null);
+
+  useEffect(() => {
+    function handleResize() {
+      setIsMobile(window.innerWidth < 768);
+    }
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   useEffect(() => {
     function handleClick(e: any) {
@@ -34,7 +46,7 @@ export default function GlobalDatePicker({
   }, []);
 
   const calendarBlock = (
-    <div className="rounded-2xl border border-slate-700 bg-white p-3 shadow-2xl">
+    <div className="w-full rounded-2xl border border-slate-700 bg-white p-3 shadow-2xl md:w-auto">
       <Calendar
         onChange={(date: any) => {
           setValue(date);
@@ -42,7 +54,7 @@ export default function GlobalDatePicker({
         }}
         value={value}
         minDate={new Date()}
-        showDoubleView={true}
+        showDoubleView={!isMobile}
       />
     </div>
   );
@@ -52,18 +64,20 @@ export default function GlobalDatePicker({
   }
 
   return (
-    <div ref={ref} className="relative shrink-0">
+    <div ref={ref} className="relative w-full shrink-0 md:w-auto">
       <div
         onClick={() => setOpen(true)}
-        className="relative flex h-[86px] w-[200px] cursor-pointer flex-col justify-center rounded-2xl border border-slate-700 bg-white/60 px-4 py-3"
+        className="relative flex min-h-[86px] w-full cursor-pointer flex-col justify-center rounded-2xl border border-slate-700 bg-white/70 px-4 py-3 shadow-sm md:h-[86px] md:w-[200px] md:bg-white/60 md:shadow-none"
       >
-        <span className="text-[11px] font-bold text-slate-600">{label}</span>
+        <span className="text-[10px] font-bold uppercase leading-none tracking-wide text-slate-600 md:text-[11px] md:normal-case md:tracking-normal">
+          {label}
+        </span>
 
-        <p className="truncate text-lg font-extrabold text-slate-950">
+        <p className="mt-1 truncate pr-6 text-[22px] font-extrabold leading-tight text-slate-950 md:text-lg">
           {formatDate(value)}
         </p>
 
-        <span className="text-[11px] text-slate-600">
+        <span className="mt-0.5 text-[11px] leading-none text-slate-600">
           {value.toLocaleDateString("en-GB", { weekday: "long" })}
         </span>
 
@@ -71,7 +85,7 @@ export default function GlobalDatePicker({
       </div>
 
       {open && (
-        <div className="absolute left-0 top-[90px] z-[9999]">
+        <div className="absolute left-0 top-[92px] z-[9999] w-full md:top-[90px] md:w-auto">
           {calendarBlock}
         </div>
       )}

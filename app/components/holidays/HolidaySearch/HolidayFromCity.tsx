@@ -8,10 +8,7 @@ type Props = {
   setValue: any;
 };
 
-export default function HolidayFromCity({
-  value,
-  setValue,
-}: Props) {
+export default function HolidayFromCity({ value, setValue }: Props) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -51,30 +48,30 @@ export default function HolidayFromCity({
   }, []);
 
   return (
-    <div ref={ref} className="relative shrink-0">
+    <div ref={ref} className="relative w-full shrink-0 md:w-auto">
       {/* ==== FROM BOX ==== */}
       <div
-        onClick={() => setOpen(!open)}
-        className="relative flex h-[86px] w-[200px] cursor-pointer flex-col justify-center rounded-2xl border border-slate-700 bg-white/60 px-4 py-3"
-      >
-        <span className="text-[11px] font-bold text-slate-600">
-          From City
-        </span>
+  onClick={() => setOpen(!open)}
+  className="relative flex min-h-[86px] w-full cursor-pointer flex-col justify-center rounded-2xl border border-slate-700 bg-white/70 px-4 py-3 shadow-sm md:h-[86px] md:w-[200px] md:bg-white/60 md:shadow-none"
+>
+  <span className="text-[10px] font-bold uppercase leading-none tracking-wide text-slate-600 md:text-[11px] md:normal-case md:tracking-normal">
+    From City
+  </span>
 
-        <p className="truncate text-lg font-extrabold text-slate-950">
-          {value || "Select City"}
-        </p>
+  <p className="mt-1 truncate text-[22px] font-extrabold leading-tight text-slate-950 md:text-lg">
+    {value || "Select City"}
+  </p>
 
-        <span className="text-[11px] text-slate-600">
-          Departure city
-        </span>
+  <span className="mt-0.5 text-[11px] leading-none text-slate-600">
+    Departure city
+  </span>
 
-        <ChevronDown className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-700" />
-      </div>
+  <ChevronDown className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-700" />
+</div>
 
       {/* ==== DROPDOWN ==== */}
       {open && (
-        <div className="absolute left-0 top-[90px] z-[9999] max-h-60 w-[240px] overflow-y-auto rounded-2xl border border-slate-700 bg-white text-black shadow-2xl">
+        <div className="absolute left-0 top-[92px] z-[9999] max-h-64 w-full overflow-y-auto rounded-2xl border border-slate-700 bg-white text-black shadow-2xl md:top-[90px] md:max-h-60 md:w-[240px]">
           <input
             type="text"
             placeholder="Search City"

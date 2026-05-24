@@ -121,53 +121,74 @@ export default function VisaSearchBox() {
   };
 
   return (
-    <div className="mt-7 w-full rounded-3xl border border-white/40 bg-white/15 p-7 backdrop-blur-sm">
-      <div className="mb-5 flex flex-wrap items-center gap-3">
-        {(["Tourist", "Business", "Student", "Transit"] as VisaType[]).map(
-          (type) => (
-            <button
-              key={type}
-              type="button"
-              onClick={() => setVisaType(type)}
-              className={`rounded-full border px-6 py-2 text-sm font-bold transition ${
-                visaType === type
-                  ? "border-orange-500 bg-orange-600 text-white"
-                  : "border-black bg-white/70 text-black hover:bg-white"
-              }`}
-            >
-              {type}
-            </button>
-          )
-        )}
-      </div>
+    <div className="mt-4 md:mt-7 w-full rounded-3xl border border-white/40 bg-white/15 p-3 md:p-7 backdrop-blur-sm">
+      {/* Desktop Visa Type Tabs — untouched */}
+<div className="hidden md:flex md:flex-wrap md:items-center md:gap-3 mb-5">
+  {(["Tourist", "Business", "Student", "Transit"] as VisaType[]).map(
+    (type) => (
+      <button
+        key={type}
+        type="button"
+        onClick={() => setVisaType(type)}
+        className={`rounded-full border px-6 py-2 text-sm font-bold transition ${
+          visaType === type
+            ? "border-orange-500 bg-orange-600 text-white"
+            : "border-black bg-white/70 text-black hover:bg-white"
+        }`}
+      >
+        {type}
+      </button>
+    )
+  )}
+</div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-[1.25fr_1.05fr_1.05fr_1.05fr_1fr]">
-        <div ref={destinationRef} className="relative">
+{/* Mobile Visa Type Dropdown */}
+<div className="mb-4 md:hidden">
+  <label className="mb-1 block text-[11px] font-extrabold text-white">
+    Visa Type
+  </label>
+
+  <select
+    value={visaType}
+    onChange={(e) => setVisaType(e.target.value as VisaType)}
+    className="h-11 w-full rounded-2xl border border-black bg-white/90 px-3 text-sm font-extrabold text-black outline-none"
+  >
+    <option value="Tourist">Tourist</option>
+    <option value="Business">Business</option>
+    <option value="Student">Student</option>
+    <option value="Transit">Transit</option>
+  </select>
+</div>
+
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-[1.25fr_1.05fr_1.05fr_1.05fr_1fr] md:gap-4">
+        <div ref={destinationRef} className="relative col-span-2 md:col-span-1">
           <button
             type="button"
             onClick={() => setOpenDestination((prev) => !prev)}
-            className="flex min-h-[128px] w-full flex-col items-start rounded-2xl border border-black bg-white/60 p-4 text-left"
+            className="flex min-h-[86px] md:min-h-[128px] w-full flex-col items-start rounded-2xl border border-black bg-white/60 p-3 md:p-4 text-left"
           >
-            <div className="mb-2 flex items-center gap-2 text-sm font-bold text-black">
-              <Globe2 size={17} />
+            <div className="mb-1 md:mb-2 flex items-center gap-2 text-xs md:text-sm font-bold text-black">
+              <Globe2 size={15} className="md:h-[17px] md:w-[17px]" />
               Destination
             </div>
 
-            <p className="line-clamp-2 h-[40px] pr-6 text-[17px] font-extrabold leading-[22px] text-black">
-  {destinationCountry}
-</p>
+            <p className="line-clamp-2 h-[34px] md:h-[40px] pr-6 text-[14px] md:text-[17px] font-extrabold leading-[17px] md:leading-[22px] text-black">
+              {destinationCountry}
+            </p>
 
-            <p className="mt-2 text-xs text-black/70">Select visa country</p>
+            <p className="mt-1 md:mt-2 text-[10px] md:text-xs text-black/70">
+              Select visa country
+            </p>
 
             <ChevronDown
-              className={`absolute right-4 top-5 h-4 w-4 text-black transition ${
+              className={`absolute right-3 md:right-4 top-4 md:top-5 h-4 w-4 text-black transition ${
                 openDestination ? "rotate-180" : ""
               }`}
             />
           </button>
 
           {openDestination && (
-            <div className="absolute left-0 top-[calc(100%+10px)] z-[9999] max-h-[290px] w-full overflow-y-auto rounded-2xl border border-black bg-white p-2 text-black shadow-2xl">
+            <div className="absolute left-0 top-[calc(100%+10px)] z-[9999] max-h-[260px] md:max-h-[290px] w-full overflow-y-auto rounded-2xl border border-black bg-white p-2 text-black shadow-2xl">
               {DESTINATION_COUNTRIES.map((country) => (
                 <button
                   key={country}
@@ -193,28 +214,30 @@ export default function VisaSearchBox() {
           <button
             type="button"
             onClick={() => setOpenNationality((prev) => !prev)}
-            className="flex min-h-[128px] w-full flex-col items-start rounded-2xl border border-black bg-white/60 p-4 text-left"
+            className="flex min-h-[86px] md:min-h-[128px] w-full flex-col items-start rounded-2xl border border-black bg-white/60 p-3 md:p-4 text-left"
           >
-            <div className="mb-2 flex items-center gap-2 text-sm font-bold text-black">
-              <PlaneTakeoff size={17} />
+            <div className="mb-1 md:mb-2 flex items-center gap-2 text-xs md:text-sm font-bold text-black">
+              <PlaneTakeoff size={15} className="md:h-[17px] md:w-[17px]" />
               Nationality
             </div>
 
-            <p className="line-clamp-2 h-[40px] pr-6 text-[17px] font-extrabold leading-[22px] text-black">
-  {nationality}
-</p>
+            <p className="line-clamp-2 h-[34px] md:h-[40px] pr-6 text-[14px] md:text-[17px] font-extrabold leading-[17px] md:leading-[22px] text-black">
+              {nationality}
+            </p>
 
-            <p className="mt-2 text-xs text-black/70">Passport nationality</p>
+            <p className="mt-1 md:mt-2 text-[10px] md:text-xs text-black/70">
+              Passport nationality
+            </p>
 
             <ChevronDown
-              className={`absolute right-4 top-5 h-4 w-4 text-black transition ${
+              className={`absolute right-3 md:right-4 top-4 md:top-5 h-4 w-4 text-black transition ${
                 openNationality ? "rotate-180" : ""
               }`}
             />
           </button>
 
           {openNationality && (
-            <div className="absolute left-0 top-[calc(100%+10px)] z-[9999] max-h-[260px] w-full overflow-y-auto rounded-2xl border border-black bg-white p-2 text-black shadow-2xl">
+            <div className="absolute left-0 top-[calc(100%+10px)] z-[9999] max-h-[240px] md:max-h-[260px] w-full overflow-y-auto rounded-2xl border border-black bg-white p-2 text-black shadow-2xl">
               {NATIONALITIES.map((country) => (
                 <button
                   key={country}
@@ -240,28 +263,30 @@ export default function VisaSearchBox() {
           <button
             type="button"
             onClick={() => setOpenDate((prev) => !prev)}
-            className="flex min-h-[128px] w-full flex-col items-start rounded-2xl border border-black bg-white/60 p-4 text-left"
+            className="flex min-h-[86px] md:min-h-[128px] w-full flex-col items-start rounded-2xl border border-black bg-white/60 p-3 md:p-4 text-left"
           >
-            <div className="mb-2 flex items-center gap-2 text-sm font-bold text-black">
-              <CalendarDays size={17} />
+            <div className="mb-1 md:mb-2 flex items-center gap-2 text-xs md:text-sm font-bold text-black">
+              <CalendarDays size={15} className="md:h-[17px] md:w-[17px]" />
               Travel Date
             </div>
 
-            <p className="text-xl font-extrabold leading-snug text-black">
+            <p className="text-[14px] md:text-xl font-extrabold leading-snug text-black">
               {formatDisplayDate(travelDate)}
             </p>
 
-            <p className="mt-2 text-xs text-black/70">Approx travel date</p>
+            <p className="mt-1 md:mt-2 text-[10px] md:text-xs text-black/70">
+              Approx travel date
+            </p>
 
             <ChevronDown
-              className={`absolute right-4 top-5 h-4 w-4 text-black transition ${
+              className={`absolute right-3 md:right-4 top-4 md:top-5 h-4 w-4 text-black transition ${
                 openDate ? "rotate-180" : ""
               }`}
             />
           </button>
 
           {openDate && (
-            <div className="absolute left-0 top-[calc(100%+10px)] z-[9999] rounded-2xl border border-black bg-white p-3 shadow-2xl">
+            <div className="absolute left-0 top-[calc(100%+10px)] z-[9999] rounded-2xl border border-black bg-white p-2 md:p-3 shadow-2xl scale-[0.88] origin-top-left md:scale-100">
               <Calendar
                 onChange={(date: any) => {
                   setTravelDate(formatDateToYMD(date));
@@ -279,28 +304,30 @@ export default function VisaSearchBox() {
           <button
             type="button"
             onClick={() => setOpenTravellers((prev) => !prev)}
-            className="flex min-h-[128px] w-full flex-col items-start rounded-2xl border border-black bg-white/60 p-4 text-left"
+            className="flex min-h-[86px] md:min-h-[128px] w-full flex-col items-start rounded-2xl border border-black bg-white/60 p-3 md:p-4 text-left"
           >
-            <div className="mb-2 flex items-center gap-2 text-sm font-bold text-black">
-              <Users size={17} />
+            <div className="mb-1 md:mb-2 flex items-center gap-2 text-xs md:text-sm font-bold text-black">
+              <Users size={15} className="md:h-[17px] md:w-[17px]" />
               Travellers
             </div>
 
-            <p className="text-xl font-extrabold leading-snug text-black">
+            <p className="text-[14px] md:text-xl font-extrabold leading-snug text-black">
               {travellers} Traveller{travellers > 1 ? "s" : ""}
             </p>
 
-            <p className="mt-2 text-xs text-black/70">Applicant count</p>
+            <p className="mt-1 md:mt-2 text-[10px] md:text-xs text-black/70">
+              Applicant count
+            </p>
 
             <ChevronDown
-              className={`absolute right-4 top-5 h-4 w-4 text-black transition ${
+              className={`absolute right-3 md:right-4 top-4 md:top-5 h-4 w-4 text-black transition ${
                 openTravellers ? "rotate-180" : ""
               }`}
             />
           </button>
 
           {openTravellers && (
-            <div className="absolute right-0 top-[calc(100%+10px)] z-[9999] w-[280px] rounded-2xl border border-black bg-white p-4 text-black shadow-2xl">
+            <div className="absolute right-0 top-[calc(100%+10px)] z-[9999] w-[260px] md:w-[280px] rounded-2xl border border-black bg-white p-4 text-black shadow-2xl">
               <p className="mb-3 text-sm font-extrabold text-slate-900">
                 Select Applicants
               </p>
@@ -329,13 +356,13 @@ export default function VisaSearchBox() {
         </div>
 
         <button
-          type="button"
-          onClick={handleSearch}
-          className="flex min-h-[128px] items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-4 text-lg font-extrabold text-white shadow-lg transition hover:scale-[1.02]"
-        >
-          <Search size={22} />
-          SEARCH
-        </button>
+  type="button"
+  onClick={handleSearch}
+  className="col-span-2 md:col-span-1 flex h-11 md:h-auto min-h-0 md:min-h-[128px] w-full md:w-auto items-center justify-center gap-2 rounded-xl md:rounded-2xl bg-gradient-to-r from-orange-500 to-lime-500 px-8 py-0 md:py-4 text-sm md:text-lg font-extrabold text-white shadow-lg transition hover:scale-[1.02]"
+>
+  <Search size={18} className="md:h-[22px] md:w-[22px]" />
+  SEARCH
+</button>
       </div>
     </div>
   );

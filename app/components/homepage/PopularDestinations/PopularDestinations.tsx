@@ -71,26 +71,51 @@ export default function PopularDestinations() {
 
   return (
     <section
-      className="relative w-full mt-2 px-8 py-6 rounded-3xl bg-cover bg-center"
+      className="relative mt-2 w-full rounded-[24px] bg-cover bg-center px-3 py-5 sm:rounded-3xl sm:px-8 sm:py-6"
       style={{ backgroundImage: "url('/bg/destinationbg.jpg')" }}
     >
-      <div className="absolute inset-0 bg-white/5 pointer-events-none"></div>
+      <div className="pointer-events-none absolute inset-0 rounded-[24px] bg-white/5 sm:rounded-3xl"></div>
 
-      <h2 className="text-center text-4xl font-bold mb-14 text-gray-800">
+      <h2 className="mb-5 text-center text-2xl font-bold text-gray-800 sm:mb-14 sm:text-4xl">
         Popular Destination
       </h2>
 
-      <DestinationRow
-        data={destinations.slice(0, 6)}
-        onDestinationClick={handleDestinationClick}
-      />
+      {/* Mobile compact 2-row grid */}
+      <div className="relative z-10 grid grid-cols-5 gap-2 md:hidden">
+        {destinations.map((destination) => (
+          <button
+            key={destination.name}
+            type="button"
+            onClick={() => handleDestinationClick(destination.name)}
+            className="flex min-h-[82px] flex-col items-center justify-center rounded-2xl border border-white/50 bg-white/80 px-1.5 py-2 text-center shadow-sm backdrop-blur-md transition hover:bg-orange-50"
+          >
+            <img
+              src={destination.img}
+              alt={destination.name}
+              className="h-8 w-8 object-contain"
+            />
 
-      <div className="mb-12"></div>
+            <span className="mt-1 line-clamp-2 text-[10px] font-extrabold leading-tight text-slate-800">
+              {destination.name}
+            </span>
+          </button>
+        ))}
+      </div>
 
-      <DestinationRow
-        data={destinations.slice(6, 10)}
-        onDestinationClick={handleDestinationClick}
-      />
+      {/* Desktop untouched */}
+      <div className="relative z-10 hidden md:block">
+        <DestinationRow
+          data={destinations.slice(0, 6)}
+          onDestinationClick={handleDestinationClick}
+        />
+
+        <div className="mb-12"></div>
+
+        <DestinationRow
+          data={destinations.slice(6, 10)}
+          onDestinationClick={handleDestinationClick}
+        />
+      </div>
     </section>
   );
 }

@@ -5,12 +5,7 @@ import { useRouter } from "next/navigation";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 
-import {
-  CalendarDays,
-  ChevronDown,
-  Search,
-  MapPin,
-} from "lucide-react";
+import { CalendarDays, ChevronDown, Search, MapPin } from "lucide-react";
 
 import {
   COVERAGE_OPTIONS,
@@ -197,8 +192,9 @@ export default function InsuranceSearchBox() {
   };
 
   return (
-    <div className="mt-7 w-full rounded-[26px] border border-white/45 bg-white/20 px-5 py-4 shadow-xl backdrop-blur-md">
-      <div className="mb-4 flex flex-wrap items-center justify-start gap-3">
+    <div className="mt-4 md:mt-7 w-full rounded-[24px] md:rounded-[26px] border border-white/45 bg-white/20 px-3 md:px-5 py-4 shadow-xl backdrop-blur-md">
+      {/* DESKTOP INSURANCE TYPE CHIPS — untouched */}
+      <div className="mb-4 hidden md:flex flex-wrap items-center justify-start gap-3">
         {INSURANCE_TYPE_OPTIONS.map((item) => (
           <button
             key={item.value}
@@ -215,15 +211,34 @@ export default function InsuranceSearchBox() {
         ))}
       </div>
 
-      <div className="grid grid-cols-5 gap-3">
-        <div ref={destinationRef} className="relative">
+      {/* MOBILE INSURANCE TYPE DROPDOWN */}
+      <div className="mb-3 md:hidden">
+        <label className="mb-1 block text-[11px] font-extrabold text-white">
+          Insurance Type
+        </label>
+
+        <select
+          value={insuranceType}
+          onChange={(e) => setInsuranceType(e.target.value as InsuranceType)}
+          className="h-11 w-full rounded-2xl border border-slate-700 bg-white/90 px-3 text-sm font-extrabold text-slate-900 outline-none"
+        >
+          {INSURANCE_TYPE_OPTIONS.map((item) => (
+            <option key={item.value} value={item.value}>
+              {item.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+        <div ref={destinationRef} className="relative col-span-2 md:col-span-1">
           <button
             type="button"
             onClick={() => setOpenDestination((prev) => !prev)}
-            className="flex h-[98px] w-full flex-col items-start rounded-2xl border border-slate-700 bg-white/60 px-4 py-3 text-left"
+            className="flex h-[86px] md:h-[98px] w-full flex-col items-start rounded-2xl border border-slate-700 bg-white/60 px-3 md:px-4 py-3 text-left"
           >
             <div className="flex w-full items-start justify-between gap-2">
-              <p className="text-[11px] font-bold text-slate-600">
+              <p className="text-[10px] md:text-[11px] font-bold text-slate-600">
                 Destination
               </p>
               <ChevronDown
@@ -234,17 +249,17 @@ export default function InsuranceSearchBox() {
               />
             </div>
 
-            <p className="mt-1 line-clamp-1 text-lg font-extrabold text-slate-950">
+            <p className="mt-1 line-clamp-1 text-base md:text-lg font-extrabold text-slate-950">
               {destination}
             </p>
 
-            <p className="mt-1 text-[11px] text-slate-600">
+            <p className="mt-1 text-[10px] md:text-[11px] text-slate-600">
               Where are you travelling?
             </p>
           </button>
 
           {openDestination && (
-            <div className="absolute left-0 top-[calc(100%+10px)] z-[9999] max-h-[280px] w-full overflow-y-auto rounded-2xl border border-black bg-white p-2 text-black shadow-2xl">
+            <div className="absolute left-0 top-[calc(100%+10px)] z-[9999] max-h-[260px] md:max-h-[280px] w-full overflow-y-auto rounded-2xl border border-black bg-white p-2 text-black shadow-2xl">
               {DESTINATION_OPTIONS.map((item) => (
                 <button
                   key={item}
@@ -271,24 +286,26 @@ export default function InsuranceSearchBox() {
           <button
             type="button"
             onClick={() => setOpenStartDate((prev) => !prev)}
-            className="flex h-[98px] w-full flex-col items-start rounded-2xl border border-slate-700 bg-white/60 px-4 py-3 text-left"
+            className="flex h-[86px] md:h-[98px] w-full flex-col items-start rounded-2xl border border-slate-700 bg-white/60 px-3 md:px-4 py-3 text-left"
           >
             <div className="flex w-full items-start justify-between gap-2">
-              <p className="text-[11px] font-bold text-slate-600">
+              <p className="text-[10px] md:text-[11px] font-bold text-slate-600">
                 Start Date
               </p>
               <CalendarDays size={16} className="text-black" />
             </div>
 
-            <p className="mt-1 line-clamp-1 text-lg font-extrabold text-slate-950">
+            <p className="mt-1 line-clamp-1 text-sm md:text-lg font-extrabold text-slate-950">
               {formatDateInput(startDate)}
             </p>
 
-            <p className="mt-1 text-[11px] text-slate-600">{startDate}</p>
+            <p className="mt-1 text-[10px] md:text-[11px] text-slate-600">
+              {startDate}
+            </p>
           </button>
 
           {openStartDate && (
-            <div className="absolute left-0 top-[calc(100%+10px)] z-[9999] rounded-2xl border border-black bg-white p-3 shadow-2xl">
+            <div className="absolute left-0 top-[calc(100%+10px)] z-[9999] rounded-2xl border border-black bg-white p-2 md:p-3 shadow-2xl scale-[0.88] origin-top-left md:scale-100">
               <Calendar
                 onChange={(date: any) => {
                   const nextStart = formatDateToYMD(date);
@@ -312,22 +329,26 @@ export default function InsuranceSearchBox() {
           <button
             type="button"
             onClick={() => setOpenEndDate((prev) => !prev)}
-            className="flex h-[98px] w-full flex-col items-start rounded-2xl border border-slate-700 bg-white/60 px-4 py-3 text-left"
+            className="flex h-[86px] md:h-[98px] w-full flex-col items-start rounded-2xl border border-slate-700 bg-white/60 px-3 md:px-4 py-3 text-left"
           >
             <div className="flex w-full items-start justify-between gap-2">
-              <p className="text-[11px] font-bold text-slate-600">End Date</p>
+              <p className="text-[10px] md:text-[11px] font-bold text-slate-600">
+                End Date
+              </p>
               <CalendarDays size={16} className="text-black" />
             </div>
 
-            <p className="mt-1 line-clamp-1 text-lg font-extrabold text-slate-950">
+            <p className="mt-1 line-clamp-1 text-sm md:text-lg font-extrabold text-slate-950">
               {formatDateInput(endDate)}
             </p>
 
-            <p className="mt-1 text-[11px] text-slate-600">{endDate}</p>
+            <p className="mt-1 text-[10px] md:text-[11px] text-slate-600">
+              {endDate}
+            </p>
           </button>
 
           {openEndDate && (
-            <div className="absolute left-0 top-[calc(100%+10px)] z-[9999] rounded-2xl border border-black bg-white p-3 shadow-2xl">
+            <div className="absolute right-0 md:left-0 md:right-auto top-[calc(100%+10px)] z-[9999] rounded-2xl border border-black bg-white p-2 md:p-3 shadow-2xl scale-[0.88] origin-top-right md:origin-top-left md:scale-100">
               <Calendar
                 onChange={(date: any) => {
                   setEndDate(formatDateToYMD(date));
@@ -345,10 +366,10 @@ export default function InsuranceSearchBox() {
           <button
             type="button"
             onClick={() => setOpenTravellers((prev) => !prev)}
-            className="flex h-[98px] w-full flex-col items-start rounded-2xl border border-slate-700 bg-white/60 px-4 py-3 text-left"
+            className="flex h-[86px] md:h-[98px] w-full flex-col items-start rounded-2xl border border-slate-700 bg-white/60 px-3 md:px-4 py-3 text-left"
           >
             <div className="flex w-full items-start justify-between gap-2">
-              <p className="text-[11px] font-bold text-slate-600">
+              <p className="text-[10px] md:text-[11px] font-bold text-slate-600">
                 Travellers
               </p>
               <ChevronDown
@@ -359,17 +380,17 @@ export default function InsuranceSearchBox() {
               />
             </div>
 
-            <p className="mt-1 line-clamp-1 text-lg font-extrabold text-slate-950">
+            <p className="mt-1 line-clamp-1 text-sm md:text-lg font-extrabold text-slate-950">
               {travellerCount} Traveller{travellerCount > 1 ? "s" : ""}
             </p>
 
-            <p className="mt-1 line-clamp-1 text-[11px] text-slate-600">
+            <p className="mt-1 line-clamp-1 text-[10px] md:text-[11px] text-slate-600">
               {ageSummary}
             </p>
           </button>
 
           {openTravellers && (
-            <div className="absolute right-0 top-[calc(100%+10px)] z-[9999] w-[380px] rounded-2xl border border-black bg-white p-4 text-black shadow-2xl">
+            <div className="absolute right-0 top-[calc(100%+10px)] z-[9999] w-[calc(100vw-32px)] max-w-[380px] rounded-2xl border border-black bg-white p-4 text-black shadow-2xl">
               <div className="mb-4 flex items-center justify-between rounded-2xl bg-orange-50 p-3">
                 <div>
                   <p className="text-sm font-extrabold text-slate-900">
@@ -411,7 +432,7 @@ export default function InsuranceSearchBox() {
                 {Array.from({ length: travellerCount }).map((_, index) => (
                   <div
                     key={index}
-                    className="grid grid-cols-[1fr_110px] items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3"
+                    className="grid grid-cols-[1fr_90px] md:grid-cols-[1fr_110px] items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3"
                   >
                     <div>
                       <p className="text-sm font-bold text-slate-900">
@@ -452,10 +473,12 @@ export default function InsuranceSearchBox() {
           <button
             type="button"
             onClick={() => setOpenCoverage((prev) => !prev)}
-            className="flex h-[98px] w-full flex-col items-start rounded-2xl border border-slate-700 bg-white/60 px-4 py-3 text-left"
+            className="flex h-[86px] md:h-[98px] w-full flex-col items-start rounded-2xl border border-slate-700 bg-white/60 px-3 md:px-4 py-3 text-left"
           >
             <div className="flex w-full items-start justify-between gap-2">
-              <p className="text-[11px] font-bold text-slate-600">Coverage</p>
+              <p className="text-[10px] md:text-[11px] font-bold text-slate-600">
+                Coverage
+              </p>
               <ChevronDown
                 size={16}
                 className={`text-black transition ${
@@ -464,15 +487,17 @@ export default function InsuranceSearchBox() {
               />
             </div>
 
-            <p className="mt-1 line-clamp-1 text-lg font-extrabold text-slate-950">
+            <p className="mt-1 line-clamp-1 text-sm md:text-lg font-extrabold text-slate-950">
               ${coverageAmount.toLocaleString()}
             </p>
 
-            <p className="mt-1 text-[11px] text-slate-600">Sum insured</p>
+            <p className="mt-1 text-[10px] md:text-[11px] text-slate-600">
+              Sum insured
+            </p>
           </button>
 
           {openCoverage && (
-            <div className="absolute right-0 top-[calc(100%+10px)] z-[9999] w-full rounded-2xl border border-black bg-white p-2 text-black shadow-2xl">
+            <div className="absolute right-0 top-[calc(100%+10px)] z-[9999] w-full min-w-[160px] rounded-2xl border border-black bg-white p-2 text-black shadow-2xl">
               {COVERAGE_OPTIONS.map((amount) => (
                 <button
                   key={amount}
@@ -495,7 +520,8 @@ export default function InsuranceSearchBox() {
         </div>
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center justify-start gap-3">
+      {/* DESKTOP PURPOSE CHIPS — untouched */}
+      <div className="mt-4 hidden md:flex flex-wrap items-center justify-start gap-3">
         {["Leisure", "Business", "Study", "Visa", "Adventure"].map(
           (purpose) => (
             <button
@@ -523,11 +549,43 @@ export default function InsuranceSearchBox() {
         </label>
       </div>
 
+      {/* MOBILE PURPOSE DROPDOWN */}
+      <div className="mt-3 grid grid-cols-1 gap-3 md:hidden">
+        <div>
+          <label className="mb-1 block text-[11px] font-extrabold text-white">
+            Trip Purpose
+          </label>
+
+          <select
+            value={tripPurpose}
+            onChange={(e) => setTripPurpose(e.target.value)}
+            className="h-11 w-full rounded-2xl border border-slate-700 bg-white/90 px-3 text-sm font-extrabold text-slate-900 outline-none"
+          >
+            {["Leisure", "Business", "Study", "Visa", "Adventure"].map(
+              (purpose) => (
+                <option key={purpose} value={purpose}>
+                  {purpose}
+                </option>
+              )
+            )}
+          </select>
+        </div>
+
+        <label className="flex h-11 cursor-pointer items-center gap-2 rounded-2xl border border-slate-700 bg-white/90 px-3 text-sm font-bold text-slate-900">
+          <input
+            type="checkbox"
+            checked={hasMedicalCondition}
+            onChange={(e) => setHasMedicalCondition(e.target.checked)}
+          />
+          Existing Medical Condition
+        </label>
+      </div>
+
       <div className="mt-5 flex justify-center">
         <button
           type="button"
           onClick={handleSearch}
-          className="flex h-12 min-w-[180px] items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-lime-500 px-8 text-base font-extrabold text-white shadow-lg transition hover:scale-[1.02]"
+          className="flex h-11 md:h-12 w-full md:w-auto min-w-[180px] items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-lime-500 px-8 text-sm md:text-base font-extrabold text-white shadow-lg transition hover:scale-[1.02]"
         >
           <Search size={18} />
           SEARCH
