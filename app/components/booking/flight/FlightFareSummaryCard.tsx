@@ -147,13 +147,15 @@ export default function FlightFareSummaryCard({
     ? smartOfferAmount
     : appliedOffer;
 
+  const taxesAndFees = tax + surcharge;
+
   return (
     <aside className="w-full">
-      <div className="sticky top-[96px] z-20">
-        <div className="overflow-hidden rounded-[24px] border border-[#d9e2ec] bg-white shadow-[0_12px_34px_rgba(15,23,42,0.08)]">
+      <div className="sticky top-[96px] z-20 max-md:static">
+        <div className="overflow-hidden rounded-[24px] border border-[#d9e2ec] bg-white shadow-[0_12px_34px_rgba(15,23,42,0.08)] max-md:rounded-xl">
           {/* HEADER */}
-          <div className="border-b border-[#e5e7eb] bg-white px-4 py-4">
-            <div className="text-[22px] font-extrabold text-[#1f2937]">
+          <div className="border-b border-[#e5e7eb] bg-white px-4 py-4 max-md:px-3 max-md:py-3">
+            <div className="text-[22px] font-extrabold text-[#1f2937] max-md:text-[18px]">
               Fare Summary
             </div>
           </div>
@@ -200,7 +202,7 @@ export default function FlightFareSummaryCard({
           ) : null}
 
           {/* BODY */}
-          <div className="border-b border-[#eef2f7] px-4 py-4">
+          <div className="border-b border-[#eef2f7] px-4 py-4 max-md:px-3 max-md:py-3">
             <FareRow
               label="Base Fare"
               value={baseFare}
@@ -211,8 +213,7 @@ export default function FlightFareSummaryCard({
               }
             />
 
-            <FareRow label="Tax" value={tax} />
-            <FareRow label="Surcharge" value={surcharge} />
+            <FareRow label="Taxes & Fees" value={taxesAndFees} />
 
             {seatStatus === "skipped" ? (
               <StatusRow label="Seat Selection" value="Skipped" />
@@ -345,25 +346,25 @@ export default function FlightFareSummaryCard({
           </div>
 
           {/* TOTAL */}
-          <div className="border-b border-[#e5e7eb] bg-white px-4 py-4">
+          <div className="border-b border-[#e5e7eb] bg-white px-4 py-4 max-md:px-3 max-md:py-3">
             <div className="flex items-center justify-between gap-3">
-              <div className="text-[20px] font-extrabold text-[#111827]">
+              <div className="text-[20px] font-extrabold text-[#111827] max-md:text-[17px]">
                 Total Amount
               </div>
 
-              <div className="whitespace-nowrap text-[30px] font-extrabold text-[#111827]">
+              <div className="whitespace-nowrap text-[30px] font-extrabold text-[#111827] max-md:text-[24px]">
                 ₹{totalAmount.toLocaleString("en-IN")}
               </div>
             </div>
           </div>
 
           {/* CTA */}
-          <div className="bg-white px-4 py-4">
+          <div className="bg-white px-4 py-4 max-md:px-3 max-md:py-3">
             <button
               type="button"
               disabled={!canProceed}
               onClick={onProceed}
-              className={`h-[50px] w-full rounded-full text-[16px] font-extrabold transition ${
+              className={`h-[50px] w-full rounded-full text-[16px] font-extrabold transition max-md:h-12 max-md:text-[15px] ${
                 canProceed
                   ? "bg-[#ef4444] text-white shadow-[0_10px_24px_rgba(239,68,68,0.25)] hover:opacity-95"
                   : "cursor-not-allowed bg-[#cfd8e3] text-white"

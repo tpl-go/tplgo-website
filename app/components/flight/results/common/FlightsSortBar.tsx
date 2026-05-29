@@ -100,7 +100,7 @@ export default function FlightsSortBar({
     activeSort === "other" || otherOptions.includes(sortType);
 
   const baseCard =
-    "relative rounded-xl bg-white px-3 py-4 shadow-sm cursor-pointer transition border";
+    "relative rounded-xl bg-white px-3 py-3 shadow-sm cursor-pointer transition border sm:py-4";
 
   const activeStyle = "border-b-[3px] border-[#1d4ed8] bg-[#f8fbff]";
   const inactiveStyle = "border-[#e5e7eb] hover:bg-[#f9fafb]";
@@ -120,7 +120,121 @@ export default function FlightsSortBar({
 
   return (
     <>
-      <div className="grid grid-cols-[1fr_1fr_1fr_140px] gap-3">
+      <div className="sm:hidden">
+        <div className="rounded-2xl border border-[#d9e2ef] bg-white p-2 shadow-sm">
+          <div className="mb-2 flex items-center justify-between gap-3 px-1">
+            <div className="text-[12px] font-black text-[#111827]">
+              Sort flights
+            </div>
+            <div className="max-w-[58%] truncate text-right text-[11px] font-semibold text-[#64748b]">
+              {getHeading()}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-1.5">
+            <button
+              type="button"
+              onClick={() => {
+                onSortChange("cheapest");
+                setOpenDropdown(false);
+              }}
+              className={`rounded-xl px-2 py-2 text-left transition ${
+                activeSort === "cheapest"
+                  ? "bg-[#0f172a] text-white"
+                  : "bg-[#f8fafc] text-[#334155]"
+              }`}
+            >
+              <div className="text-[11px] font-black">Cheapest</div>
+              <div className="mt-0.5 truncate text-[10px] font-semibold opacity-80">
+                {cheapestLabel}
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                onSortChange("nonstop");
+                setOpenDropdown(false);
+              }}
+              className={`rounded-xl px-2 py-2 text-left transition ${
+                activeSort === "nonstop"
+                  ? "bg-[#0f172a] text-white"
+                  : "bg-[#f8fafc] text-[#334155]"
+              }`}
+            >
+              <div className="text-[11px] font-black">Non stop</div>
+              <div className="mt-0.5 truncate text-[10px] font-semibold opacity-80">
+                {nonstopLabel}
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                onSortChange("prefer");
+                setOpenDropdown(false);
+              }}
+              className={`rounded-xl px-2 py-2 text-left transition ${
+                activeSort === "prefer"
+                  ? "bg-[#0f172a] text-white"
+                  : "bg-[#f8fafc] text-[#334155]"
+              }`}
+            >
+              <div className="text-[11px] font-black">Best</div>
+              <div className="mt-0.5 truncate text-[10px] font-semibold opacity-80">
+                {preferLabel}
+              </div>
+            </button>
+          </div>
+
+          <div className="relative mt-1.5">
+            <button
+              type="button"
+              onClick={() => {
+                onSortChange("other");
+                setOpenDropdown((prev) => !prev);
+              }}
+              className={`flex h-9 w-full items-center justify-between rounded-xl px-3 text-[11px] font-black ${
+                isOtherActive
+                  ? "bg-[#eff6ff] text-[#1d4ed8]"
+                  : "bg-[#f8fafc] text-[#475569]"
+              }`}
+            >
+              <span>{selectedOtherOption || "More sorting options"}</span>
+              <span>⌄</span>
+            </button>
+
+            {openDropdown && (
+              <div className="absolute left-0 right-0 top-10 z-50 overflow-hidden rounded-xl border border-[#d9e2ef] bg-white shadow-xl">
+                {otherOptions.map((item) => {
+                  const isSelected = selectedOtherOption === item;
+
+                  return (
+                    <button
+                      type="button"
+                      key={item}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOtherOptionClick(item);
+                      }}
+                      className="flex w-full items-center justify-between px-3 py-2.5 text-left text-[12px] font-bold text-[#111827] hover:bg-[#f8fafc]"
+                    >
+                      <span>{item}</span>
+                      <span className="text-[#2563eb]">{isSelected ? "✓" : ""}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-2 rounded-full bg-[#fff7ed] px-3 py-1.5 text-[11px] font-bold text-[#9a3412]">
+          Cheaper non-stop fares available nearby
+        </div>
+      </div>
+
+      <div className="hidden grid-cols-[minmax(140px,1fr)_minmax(140px,1fr)_minmax(140px,1fr)_100px] gap-2 overflow-x-auto overflow-y-visible pb-1 sm:grid sm:grid-cols-[1fr_1fr_1fr_140px] sm:gap-3 sm:overflow-visible sm:pb-0 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <div
           onClick={() => {
             onSortChange("cheapest");
@@ -131,15 +245,17 @@ export default function FlightsSortBar({
           }`}
         >
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[#0ea5e9] text-sm text-white">
+            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-[#0ea5e9] text-xs text-white sm:h-8 sm:w-8 sm:text-sm">
               ₹
             </div>
 
             <div>
-              <div className="text-[14px] font-semibold text-[#111827]">
+              <div className="text-[12px] font-semibold text-[#111827] sm:text-[14px]">
                 CHEAPEST
               </div>
-              <div className="text-[12px] text-[#6b7280]">{cheapestLabel}</div>
+              <div className="text-[11px] text-[#6b7280] sm:text-[12px]">
+                {cheapestLabel}
+              </div>
             </div>
           </div>
         </div>
@@ -153,10 +269,12 @@ export default function FlightsSortBar({
             activeSort === "nonstop" ? activeStyle : inactiveStyle
           }`}
         >
-          <div className="text-[14px] font-semibold text-[#111827]">
+          <div className="text-[12px] font-semibold text-[#111827] sm:text-[14px]">
             NON STOP FIRST
           </div>
-          <div className="mt-1 text-[12px] text-[#6b7280]">{nonstopLabel}</div>
+          <div className="mt-1 text-[11px] text-[#6b7280] sm:text-[12px]">
+            {nonstopLabel}
+          </div>
         </div>
 
         <div
@@ -168,10 +286,12 @@ export default function FlightsSortBar({
             activeSort === "prefer" ? activeStyle : inactiveStyle
           }`}
         >
-          <div className="text-[14px] font-semibold text-[#111827]">
+          <div className="text-[12px] font-semibold text-[#111827] sm:text-[14px]">
             YOU MAY PREFER
           </div>
-          <div className="mt-1 text-[12px] text-[#6b7280]">{preferLabel}</div>
+          <div className="mt-1 text-[11px] text-[#6b7280] sm:text-[12px]">
+            {preferLabel}
+          </div>
         </div>
 
         <div
@@ -184,14 +304,14 @@ export default function FlightsSortBar({
             setOpenDropdown((prev) => !prev);
           }}
         >
-          <div className="text-center text-[13px] font-semibold leading-tight text-[#111827]">
+          <div className="text-center text-[12px] font-semibold leading-tight text-[#111827] sm:text-[13px]">
             Other
             <br />
             Sort
           </div>
 
           {openDropdown && (
-            <div className="absolute right-0 top-[70px] z-50 w-[210px] rounded-lg border border-[#e5e7eb] bg-white shadow-lg">
+            <div className="absolute right-0 top-[62px] z-50 w-[210px] rounded-lg border border-[#e5e7eb] bg-white shadow-lg sm:top-[70px]">
               {otherOptions.map((item) => {
                 const isSelected = selectedOtherOption === item;
 
@@ -216,12 +336,12 @@ export default function FlightsSortBar({
         </div>
       </div>
 
-      <div className="mt-0 flex items-center justify-between gap-4">
-        <div className="text-[14px] font-semibold text-[#111827]">
+      <div className="mt-2 hidden flex-col gap-2 sm:mt-0 sm:flex sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        <div className="text-[12px] font-semibold text-[#111827] sm:text-[14px]">
           {getHeading()}
         </div>
 
-        <div className="rounded-full bg-[#fde2d7] px-4 py-2 text-[12px] font-medium text-[#7c2d12]">
+        <div className="w-fit rounded-full bg-[#fde2d7] px-3 py-1.5 text-[11px] font-medium text-[#7c2d12] sm:px-4 sm:py-2 sm:text-[12px]">
           Cheaper Non-stop Flights available on 24 Mar & 27 Mar
         </div>
       </div>

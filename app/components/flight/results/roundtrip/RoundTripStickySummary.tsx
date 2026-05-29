@@ -133,7 +133,11 @@ function normalizeSearchDate(value: string | null | undefined) {
   return raw;
 }
 
-function detectTripMode(params: URLSearchParams, fromCode: string, toCode: string) {
+function detectTripMode(
+  params: URLSearchParams,
+  fromCode: string,
+  toCode: string
+) {
   const fromCountry =
     normalizeCountry(params.get("fromCountry")) ||
     normalizeCountry(params.get("fromCountry_0"));
@@ -193,10 +197,7 @@ function resolveOfferFromRaw(raw: any): ActiveOfferSnapshot | null {
     "";
 
   const title =
-    offer.title ||
-    offer.name ||
-    offer.offerTitle ||
-    "Offer applied";
+    offer.title || offer.name || offer.offerTitle || "Offer applied";
 
   const minBookingValue = Number(
     offer.minBookingValue ||
@@ -273,7 +274,10 @@ function getActiveFlightOffer(): ActiveOfferSnapshot | null {
   return resolveOfferFromRaw(smartOffer);
 }
 
-function calculateOfferDiscount(baseAmount: number, offer: ActiveOfferSnapshot | null) {
+function calculateOfferDiscount(
+  baseAmount: number,
+  offer: ActiveOfferSnapshot | null
+) {
   if (!offer || baseAmount <= 0) return 0;
 
   if (offer.minBookingValue > 0 && baseAmount < offer.minBookingValue) {
@@ -300,9 +304,13 @@ export default function RoundTripStickySummary({
   const searchParams = useSearchParams();
 
   const [showFareDetails, setShowFareDetails] = useState(false);
-  const [openDetailsFor, setOpenDetailsFor] = useState<"departure" | "return" | null>(null);
+  const [openDetailsFor, setOpenDetailsFor] = useState<
+    "departure" | "return" | null
+  >(null);
   const [activeTab, setActiveTab] = useState<DetailTab>("flight");
-  const [activeOffer, setActiveOffer] = useState<ActiveOfferSnapshot | null>(null);
+  const [activeOffer, setActiveOffer] = useState<ActiveOfferSnapshot | null>(
+    null
+  );
 
   const detailsPanelRef = useRef<HTMLDivElement | null>(null);
   const stickyBarRef = useRef<HTMLDivElement | null>(null);
@@ -314,15 +322,33 @@ export default function RoundTripStickySummary({
     const syncOffer = () => setActiveOffer(getActiveFlightOffer());
 
     window.addEventListener("storage", syncOffer);
-    window.addEventListener("TPL_SMART_OFFER_UPDATED", syncOffer as EventListener);
-    window.addEventListener("TPL_ACTIVE_OFFER_UPDATED", syncOffer as EventListener);
-    window.addEventListener("tpl_smart_offer_updated", syncOffer as EventListener);
+    window.addEventListener(
+      "TPL_SMART_OFFER_UPDATED",
+      syncOffer as EventListener
+    );
+    window.addEventListener(
+      "TPL_ACTIVE_OFFER_UPDATED",
+      syncOffer as EventListener
+    );
+    window.addEventListener(
+      "tpl_smart_offer_updated",
+      syncOffer as EventListener
+    );
 
     return () => {
       window.removeEventListener("storage", syncOffer);
-      window.removeEventListener("TPL_SMART_OFFER_UPDATED", syncOffer as EventListener);
-      window.removeEventListener("TPL_ACTIVE_OFFER_UPDATED", syncOffer as EventListener);
-      window.removeEventListener("tpl_smart_offer_updated", syncOffer as EventListener);
+      window.removeEventListener(
+        "TPL_SMART_OFFER_UPDATED",
+        syncOffer as EventListener
+      );
+      window.removeEventListener(
+        "TPL_ACTIVE_OFFER_UPDATED",
+        syncOffer as EventListener
+      );
+      window.removeEventListener(
+        "tpl_smart_offer_updated",
+        syncOffer as EventListener
+      );
     };
   }, []);
 
@@ -332,12 +358,17 @@ export default function RoundTripStickySummary({
 
     const totalBaseFare = departurePrice + returnPrice;
     const returnTripDiscount = departure && returnFlight ? 0 : 0;
-    const appliedOffer = departure && returnFlight
-      ? calculateOfferDiscount(totalBaseFare, activeOffer)
-      : 0;
+    const appliedOffer =
+      departure && returnFlight
+        ? calculateOfferDiscount(totalBaseFare, activeOffer)
+        : 0;
 
     const baseAfterOffer = Math.max(totalBaseFare - appliedOffer, 0);
-    const totalAmount = baseAfterOffer - returnTripDiscount;
+
+const tax = Math.round(totalBaseFare * 0.18);
+
+const totalAmount =
+  baseAfterOffer + tax - returnTripDiscount;
     const earnedOnThisBooking = Math.round(baseAfterOffer * 0.02);
 
     return {
@@ -345,6 +376,7 @@ export default function RoundTripStickySummary({
       returnTripDiscount,
       appliedOffer,
       baseAfterOffer,
+      tax,
       earnedOnThisBooking,
       totalAmount,
       departurePrice,
@@ -419,10 +451,10 @@ export default function RoundTripStickySummary({
       <button
         type="button"
         onClick={() => setActiveTab(tab)}
-        className={`border-b-2 px-3 py-2 text-[13px] font-semibold transition ${
+        className={`shrink-0 rounded-full px-3 py-2 text-[12px] font-black transition sm:text-[13px] ${
           isActive
-            ? "border-[#ef4444] text-[#ef4444]"
-            : "border-transparent text-[#111827] hover:text-[#ef4444]"
+            ? "bg-slate-950 text-white shadow-sm"
+            : "text-slate-600 hover:bg-white hover:text-slate-950"
         }`}
       >
         {label}
@@ -438,14 +470,22 @@ export default function RoundTripStickySummary({
     const infants = Math.max(Number(searchParams.get("infants") || "0"), 0);
     const cabinClass = searchParams.get("cabin") || "Economy";
 
-    const fromCode = normalizeCode(searchParams.get("from")) || departure.fromCode || "";
-    const toCode = normalizeCode(searchParams.get("to")) || departure.toCode || "";
+    const fromCode =
+      normalizeCode(searchParams.get("from")) || departure.fromCode || "";
+    const toCode =
+      normalizeCode(searchParams.get("to")) || departure.toCode || "";
 
-    const fromCity = normalizeValue(searchParams.get("fromCity")) || departure.fromCity || "";
-    const toCity = normalizeValue(searchParams.get("toCity")) || departure.toCity || "";
+    const fromCity =
+      normalizeValue(searchParams.get("fromCity")) || departure.fromCity || "";
+    const toCity =
+      normalizeValue(searchParams.get("toCity")) || departure.toCity || "";
 
-    const onwardDepartureDate = normalizeSearchDate(searchParams.get("departure"));
-    const returnDepartureDate = normalizeSearchDate(searchParams.get("returnDate"));
+    const onwardDepartureDate = normalizeSearchDate(
+      searchParams.get("departure")
+    );
+    const returnDepartureDate = normalizeSearchDate(
+      searchParams.get("returnDate")
+    );
 
     const baseFareTotal = fareSummary.totalBaseFare * adults;
     const appliedOffer = calculateOfferDiscount(baseFareTotal, activeOffer);
@@ -454,7 +494,7 @@ export default function RoundTripStickySummary({
     const discount = fareSummary.returnTripDiscount || 0;
     const tplCredit = 0;
     const surcharge = 0;
-    const tax = 0;
+    const tax = Math.round(baseFareTotal * 0.18);
 
     const tripMode = detectTripMode(searchParams, fromCode, toCode);
 
@@ -479,12 +519,7 @@ export default function RoundTripStickySummary({
         surcharge,
         discount,
         tplCredit,
-        totalAmount:
-          baseAfterOffer +
-          tax +
-          surcharge -
-          discount -
-          tplCredit,
+        totalAmount: baseAfterOffer + tax + surcharge - discount - tplCredit,
         benefitRule: {
           offerOnBaseOnly: true,
           promoEarnedOnBaseAfterOfferOnly: true,
@@ -581,54 +616,64 @@ export default function RoundTripStickySummary({
 
     if (activeTab === "flight") {
       return (
-        <div className="px-4 py-4">
-          <div className="mb-4 text-[16px] font-semibold text-[#111827]">
-            {detailFlight.fromCity} → {detailFlight.toCity}
+        <div className="px-3 py-4 sm:px-5 sm:py-5">
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <span className="text-[16px] font-black text-slate-950 sm:text-[18px]">
+              {detailFlight.fromCity} → {detailFlight.toCity}
+            </span>
+            <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700">
+              {detailFlight.stopType}
+            </span>
           </div>
 
-          <div className="grid grid-cols-4 items-start gap-5">
-            <div>
-              <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-md bg-[#1d4ed8] text-[11px] font-bold text-white">
+          <div className="grid grid-cols-1 gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:grid-cols-[150px_1fr_130px_1fr] sm:items-center sm:gap-5 sm:p-4">
+            <div className="rounded-2xl bg-slate-50 p-3">
+              <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-[#1d4ed8] text-[11px] font-black text-white shadow-sm">
                 {detailFlight.logoText}
               </div>
-              <div className="text-[13px] font-semibold text-[#111827]">
+              <div className="text-[13px] font-black text-slate-950">
                 {detailFlight.flightNumber}
               </div>
-              <div className="text-[12px] text-[#6b7280]">Economy</div>
-              <div className="mt-1 text-[12px] text-[#dc2626]">
+              <div className="text-[12px] font-semibold text-slate-500">Economy</div>
+              <div className="mt-2 inline-flex rounded-full bg-orange-50 px-2 py-1 text-[11px] font-bold text-orange-700">
                 CB: {detailFlight.seatsLeft || 9} seats left
               </div>
             </div>
 
-            <div>
-              <div className="text-[14px] font-semibold text-[#111827]">
+            <div className="min-w-0">
+              <div className="text-[20px] font-black leading-none text-slate-950">
                 {detailFlight.departureTime}
               </div>
-              <div className="mt-1 text-[13px] text-[#111827]">
+              <div className="mt-2 text-[13px] font-semibold text-slate-700">
                 {detailFlight.fromCity}, India
               </div>
-              <div className="text-[12px] text-[#6b7280]">
+              <div className="text-[12px] text-slate-500">
                 {detailFlight.fromCity} {detailFlight.terminal || "Terminal 1"}
               </div>
             </div>
 
-            <div className="pt-1 text-center">
-              <div className="text-[13px] font-medium text-[#111827]">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-center">
+              <div className="text-[12px] font-black uppercase tracking-[0.08em] text-slate-500">
                 {detailFlight.stopType}
               </div>
-              <div className="text-[13px] text-[#111827]">
+              <div className="my-2 flex items-center gap-1">
+                <div className="h-px flex-1 bg-slate-300" />
+                <div className="h-2 w-2 rounded-full bg-orange-500" />
+                <div className="h-px flex-1 bg-slate-300" />
+              </div>
+              <div className="text-[13px] font-black text-slate-900">
                 {detailFlight.duration}
               </div>
             </div>
 
-            <div>
-              <div className="text-[14px] font-semibold text-[#111827]">
+            <div className="min-w-0 sm:text-right">
+              <div className="text-[20px] font-black leading-none text-slate-950">
                 {detailFlight.arrivalTime}
               </div>
-              <div className="mt-1 text-[13px] text-[#111827]">
+              <div className="mt-2 text-[13px] font-semibold text-slate-700">
                 {detailFlight.toCity}, India
               </div>
-              <div className="text-[12px] text-[#6b7280]">
+              <div className="text-[12px] text-slate-500">
                 {detailFlight.toCity} Airport
               </div>
             </div>
@@ -638,37 +683,41 @@ export default function RoundTripStickySummary({
     }
 
     if (activeTab === "fare") {
-      const basePrice = Math.max(selectedDetailPrice - 1054, 0);
-
       return (
-        <div className="px-4 py-4">
-          <div className="grid grid-cols-[1.3fr_1fr_1fr] border-b border-[#e5e7eb] pb-2 text-[13px] font-semibold text-[#111827]">
-            <div>TYPE</div>
-            <div>Fare</div>
-            <div>Total</div>
-          </div>
-
-          <div className="py-3 text-[13px] text-[#111827]">
-            <div className="mb-2 text-[13px] text-[#6b7280]">
-              Fare Details for Adult
+        <div className="px-3 py-4 sm:px-5 sm:py-5">
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="border-b border-slate-100 px-4 py-3">
+              <div className="text-[15px] font-black text-slate-950">
+                Fare Details for Adult
+              </div>
+              <div className="text-[11px] font-semibold text-slate-500">
+                Result page fare preview
+              </div>
             </div>
 
-            <div className="grid grid-cols-[1.3fr_1fr_1fr] py-1.5">
-              <div>Base Price</div>
-              <div>₹{basePrice.toLocaleString("en-IN")} x 1</div>
-              <div>₹{basePrice.toLocaleString("en-IN")}</div>
-            </div>
+            <div className="space-y-3 px-4 py-4 text-[13px] text-slate-700">
+              <div className="flex items-center justify-between gap-4">
+                <span>Base Fare</span>
+                <span className="font-semibold text-slate-950">
+                  ₹{selectedDetailPrice.toLocaleString("en-IN")}
+                </span>
+              </div>
 
-            <div className="grid grid-cols-[1.3fr_1fr_1fr] py-1.5">
-              <div>Taxes and fees</div>
-              <div>₹1,054 x 1</div>
-              <div>₹1,054</div>
-            </div>
+              <div className="flex items-center justify-between gap-4 text-emerald-700">
+                <span>Offer Discount</span>
+                <span className="font-semibold">- ₹0</span>
+              </div>
 
-            <div className="mt-2 grid grid-cols-[1.3fr_1fr_1fr] border-t border-[#e5e7eb] pt-2 text-[16px] font-semibold">
-              <div>Total</div>
-              <div></div>
-              <div>₹{selectedDetailPrice.toLocaleString("en-IN")}</div>
+              <div className="border-t border-slate-200 pt-3">
+                <div className="flex items-center justify-between gap-4 text-[15px] font-black text-slate-950">
+                  <span>Flight Price after offer</span>
+                  <span>₹{selectedDetailPrice.toLocaleString("en-IN")}</span>
+                </div>
+
+                <div className="mt-3 rounded-xl bg-slate-50 px-3 py-2 text-[11px] font-bold text-slate-500 sm:text-[12px]">
+                  Taxes & fees shown on booking page.
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -677,19 +726,19 @@ export default function RoundTripStickySummary({
 
     if (activeTab === "rules") {
       return (
-        <div className="px-4 py-4">
-          <div className="flex items-center gap-3">
+        <div className="px-3 py-4 sm:px-5 sm:py-5">
+          <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center">
             <button
               type="button"
               onClick={openDetailedRules}
-              className="rounded bg-[#fff7ed] px-3 py-1.5 text-[12px] font-semibold text-[#d97706]"
+              className="w-fit rounded-full bg-orange-50 px-3 py-1.5 text-[12px] font-black text-orange-700"
             >
               Detailed Rules
             </button>
 
-            <div className="text-[13px] text-[#111827]">
-              Sorry, unable to fetch fare rules from airline. Please refer to detailed
-              fare rules or contact customer service.
+            <div className="text-[12px] font-medium text-slate-700 sm:text-[13px]">
+              Sorry, unable to fetch fare rules from airline. Please refer to
+              detailed fare rules or contact customer service.
             </div>
           </div>
         </div>
@@ -697,74 +746,125 @@ export default function RoundTripStickySummary({
     }
 
     return (
-      <div className="px-4 py-4">
-        <div className="grid grid-cols-3 border-b border-[#e5e7eb] pb-2 text-[13px] font-semibold text-[#111827]">
-          <div>SECTOR</div>
-          <div>CHECKIN</div>
-          <div>CABIN</div>
-        </div>
-
-        <div className="grid grid-cols-3 py-3 text-[13px] text-[#111827]">
-          <div>
+      <div className="px-3 py-4 sm:px-5 sm:py-5">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="text-[11px] font-black uppercase tracking-[0.1em] text-slate-400">Sector</div>
+            <div className="mt-2 text-[13px] font-bold text-slate-950">
             {detailFlight.fromCode}-{detailFlight.toCode}
+            </div>
           </div>
-          <div>Adult : {detailFlight.checkInBag || "15 Kg"}</div>
-          <div>Adult : {detailFlight.cabinBag || "7 Kg"}</div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="text-[11px] font-black uppercase tracking-[0.1em] text-slate-400">Check-in</div>
+            <div className="mt-2 text-[13px] font-bold text-slate-950">Adult : {detailFlight.checkInBag || "15 Kg"}</div>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="text-[11px] font-black uppercase tracking-[0.1em] text-slate-400">Cabin</div>
+            <div className="mt-2 text-[13px] font-bold text-slate-950">Adult : {detailFlight.cabinBag || "7 Kg"}</div>
+          </div>
         </div>
       </div>
     );
   };
 
   return (
-    <div className="sticky bottom-0 z-20 mt-4 w-full">
-      <div ref={stickyBarRef} className="relative">
-        <div className="overflow-hidden rounded-[10px] bg-[#07204B] text-white shadow-2xl">
-          {canBook && fareSummary.appliedOffer > 0 && activeOffer ? (
-            <div className="flex items-center justify-between gap-3 border-b border-white/15 bg-[#fff7ed] px-5 py-2 text-[#111827]">
-              <div className="flex flex-wrap items-center gap-2 text-[12px]">
-                <span className="font-semibold text-[#15803d]">
-                  Offer applied on base fare only:
-                </span>
+  <div className="relative w-full">
+    <div className="md:hidden rounded-2xl bg-[#071b3d] p-3 text-white shadow-2xl">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <div className="flex min-w-0 gap-1.5">
+          <span
+            className={`rounded-full px-2 py-1 text-[10px] font-black ${
+              departure ? "bg-emerald-400/15 text-emerald-200" : "bg-white/10 text-white/65"
+            }`}
+          >
+            Onward {departure ? "selected" : "pending"}
+          </span>
+          <span
+            className={`rounded-full px-2 py-1 text-[10px] font-black ${
+              returnFlight ? "bg-emerald-400/15 text-emerald-200" : "bg-white/10 text-white/65"
+            }`}
+          >
+            Return {returnFlight ? "selected" : "pending"}
+          </span>
+        </div>
 
-                <span className="text-gray-600">
-                  {formatRupee(fareSummary.totalBaseFare)} -{" "}
-                  {formatRupee(fareSummary.appliedOffer)} =
-                </span>
+        <button
+          type="button"
+          onClick={toggleFareDetails}
+          className="shrink-0 text-[11px] font-black text-sky-300"
+        >
+          Fare details
+        </button>
+      </div>
 
-                <span className="font-bold text-[#111827]">
-                  {formatRupee(fareSummary.baseAfterOffer)}
-                </span>
-
-                <span className="text-[#6b7280]">
-                  · Earn {formatRupee(fareSummary.earnedOnThisBooking)} TPL Earned Credit
-                </span>
+      <div className="grid grid-cols-[minmax(0,1fr)_104px] items-end gap-3">
+        <div className="min-w-0">
+          {canBook ? (
+            <div className="space-y-1">
+              <div className="flex items-center justify-between gap-3 text-[10px] font-semibold text-white/70">
+                <span>Base Fare</span>
+                <span>{formatRupee(fareSummary.totalBaseFare)}</span>
               </div>
 
-              <span className="shrink-0 rounded-full bg-[#16a34a] px-3 py-1 text-[11px] font-bold text-white">
-                {activeOffer.code || "OFFER"} applied · Save{" "}
-                {formatRupee(fareSummary.appliedOffer)}
-              </span>
-            </div>
-          ) : null}
+              <div className="flex items-center justify-between gap-3 text-[10px] font-black text-emerald-300">
+                <span>Offer Discount</span>
+                <span>-{formatRupee(fareSummary.appliedOffer)}</span>
+              </div>
 
+              <div className="flex items-center justify-between gap-3 text-[15px] font-black leading-tight">
+                <span>Flight Price after offer</span>
+                <span>{formatRupee(fareSummary.baseAfterOffer)}</span>
+              </div>
+            </div>
+          ) : (
+            <div className="text-[13px] font-semibold text-white/70">
+              Select onward and return flights
+            </div>
+          )}
+
+          <div className="mt-1 text-[10px] text-white/65">
+            Taxes & fees shown on booking page.
+          </div>
+        </div>
+
+        <div className="flex flex-col items-stretch gap-1.5">
+          <button
+            type="button"
+            onClick={handleBookNow}
+            disabled={!canBook}
+            className={`h-10 rounded-xl px-3 text-[12px] font-black ${
+              canBook
+                ? "bg-sky-400 text-slate-950"
+                : "cursor-not-allowed bg-white/10 text-white/50"
+            }`}
+          >
+            BOOK NOW
+          </button>
+        </div>
+      </div>
+    </div>
+      <div ref={stickyBarRef} className="relative hidden xl:block">
+        <div className="overflow-hidden rounded-[10px] bg-[#07204B] text-white shadow-2xl">
           <div className="grid grid-cols-1 xl:grid-cols-[1.0fr_1.0fr_1.3fr]">
-            <div className="border-b border-white/15 px-5 py-2 xl:border-b-0 xl:border-r">
+            <div className="border-b border-white/15 px-4 py-3 xl:border-b-0 xl:border-r">
               {departure ? (
                 <div className="mt-1">
                   <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm font-medium text-white/80">Departure</p>
-                    <p className="text-base font-semibold text-white">
+                    <p className="text-xs font-medium text-white/80 sm:text-sm">
+                      Departure
+                    </p>
+                    <p className="text-sm font-semibold text-white sm:text-base">
                       {departure.airline}
                     </p>
                   </div>
 
-                  <p className="mt-1 text-lg font-bold">
+                  <p className="mt-1 text-base font-bold sm:text-lg">
                     {departure.departureTime} → {departure.arrivalTime}
                   </p>
 
                   <div className="mt-2 flex items-center justify-between gap-4">
                     <div>
-                      <p className="text-sm font-medium text-sky-300">
+                      <p className="text-xs font-medium text-sky-300 sm:text-sm">
                         Selected fare
                       </p>
                       <button
@@ -776,7 +876,7 @@ export default function RoundTripStickySummary({
                       </button>
                     </div>
 
-                    <p className="text-xl font-bold">
+                    <p className="text-lg font-bold sm:text-xl">
                       ₹ {fareSummary.departurePrice.toLocaleString("en-IN")}
                     </p>
                   </div>
@@ -788,23 +888,25 @@ export default function RoundTripStickySummary({
               )}
             </div>
 
-            <div className="border-b border-white/15 px-5 py-2 xl:border-b-0 xl:border-r">
+            <div className="border-b border-white/15 px-4 py-3 xl:border-b-0 xl:border-r">
               {returnFlight ? (
                 <div className="mt-1">
                   <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm font-medium text-white/80">Return</p>
-                    <p className="text-base font-semibold text-white">
+                    <p className="text-xs font-medium text-white/80 sm:text-sm">
+                      Return
+                    </p>
+                    <p className="text-sm font-semibold text-white sm:text-base">
                       {returnFlight.airline}
                     </p>
                   </div>
 
-                  <p className="mt-1 text-lg font-bold">
+                  <p className="mt-1 text-base font-bold sm:text-lg">
                     {returnFlight.departureTime} → {returnFlight.arrivalTime}
                   </p>
 
                   <div className="mt-2 flex items-center justify-between gap-4">
                     <div>
-                      <p className="text-sm font-medium text-sky-300">
+                      <p className="text-xs font-medium text-sky-300 sm:text-sm">
                         Selected fare
                       </p>
                       <button
@@ -816,7 +918,7 @@ export default function RoundTripStickySummary({
                       </button>
                     </div>
 
-                    <p className="text-xl font-bold">
+                    <p className="text-lg font-bold sm:text-xl">
                       ₹ {fareSummary.returnPrice.toLocaleString("en-IN")}
                     </p>
                   </div>
@@ -828,33 +930,33 @@ export default function RoundTripStickySummary({
               )}
             </div>
 
-            <div className="px-5 py-2">
-              <div className="flex h-full items-start justify-between gap-4">
-                <div>
-                  {canBook && fareSummary.appliedOffer > 0 ? (
-                    <div>
-                      <p className="text-sm font-semibold text-white/55 line-through">
-                        {formatRupee(fareSummary.totalBaseFare)}
-                      </p>
+            <div className="px-4 py-3 sm:px-5 sm:py-2">
+              <div className="flex h-full flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0 flex-1">
+                  {canBook ? (
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between gap-4 text-[12px] font-semibold text-white/75">
+                        <span>Base Fare</span>
+                        <span>{formatRupee(fareSummary.totalBaseFare)}</span>
+                      </div>
 
-                      <p className="text-2xl font-bold">
-                        {formatRupee(fareSummary.totalAmount)}
+                      <div className="flex items-center justify-between gap-4 text-[12px] font-bold text-emerald-300">
+                        <span>Offer Discount</span>
+                        <span>-{formatRupee(fareSummary.appliedOffer)}</span>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-4 text-[16px] font-bold text-white">
+                        <span>Flight Price after offer</span>
+                        <span>{formatRupee(fareSummary.baseAfterOffer)}</span>
+                      </div>
+
+                      <p className="text-[11px] font-medium text-white/60">
+                        Taxes & fees shown on booking page.
                       </p>
                     </div>
                   ) : (
-                    <p className="text-2xl font-bold">
-                      {canBook
-                        ? formatRupee(fareSummary.totalAmount)
-                        : "--"}
-                    </p>
-                  )}
-
-                  <p className="text-xs text-white/70">/adult</p>
-
-                  {fareSummary.returnTripDiscount > 0 && (
-                    <p className="mt-2 text-sm text-emerald-300">
-                      Return discount applied ₹{" "}
-                      {fareSummary.returnTripDiscount.toLocaleString("en-IN")}
+                    <p className="text-sm font-medium text-white/70">
+                      Select onward and return flights
                     </p>
                   )}
 
@@ -871,7 +973,7 @@ export default function RoundTripStickySummary({
                   type="button"
                   onClick={handleBookNow}
                   disabled={!canBook}
-                  className={`mt-[1px] rounded-full px-6 py-3 text-sm font-semibold transition ${
+                  className={`mt-[1px] w-full rounded-full px-6 py-3 text-sm font-semibold transition sm:w-auto ${
                     canBook
                       ? "bg-sky-400 text-slate-950 hover:bg-sky-300"
                       : "cursor-not-allowed bg-white/10 text-white/50"
@@ -883,32 +985,61 @@ export default function RoundTripStickySummary({
             </div>
           </div>
 
-          {showFareDetails && (
-            <div
-              ref={farePopupRef}
-              className="absolute bottom-[100%] right-[170px] z-30 "
-            >
-              <div className="relative">
-                <RoundTripFareSummary
-                  totalBaseFare={fareSummary.totalBaseFare}
-                  returnTripDiscount={fareSummary.returnTripDiscount}
-                  totalAmount={fareSummary.totalAmount}
-                />
 
-                <div className="absolute left-1/2 top-full h-4 w-4 -translate-x-1/2 -translate-y-1/2 rotate-45 border-r border-b border-[#e5e7eb] bg-white" />
-              </div>
-            </div>
-          )}
         </div>
       </div>
+
+      {showFareDetails && (
+        <div className="fixed inset-0 z-[130] flex items-end bg-black/45 px-3 pb-3 md:absolute md:bottom-[105%] md:left-auto md:right-[170px] md:top-auto md:z-30 md:block md:w-auto md:bg-transparent md:px-0 md:pb-0">
+          <button
+            type="button"
+            aria-label="Close fare details"
+            onClick={toggleFareDetails}
+            className="absolute inset-0 md:hidden"
+          />
+
+          <div
+            ref={farePopupRef}
+            className="relative z-10 w-full overflow-hidden rounded-3xl bg-white md:w-auto md:overflow-visible md:rounded-none md:bg-transparent"
+          >
+            <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 md:hidden">
+              <div>
+                <div className="text-[15px] font-black text-slate-900">
+                  Fare details
+                </div>
+                <div className="text-[11px] font-semibold text-slate-500">
+                  Base Fare and Offer Discount
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={toggleFareDetails}
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-[22px] font-bold text-slate-900"
+              >
+                ×
+              </button>
+            </div>
+
+            <RoundTripFareSummary
+              totalBaseFare={fareSummary.totalBaseFare}
+              appliedOffer={fareSummary.appliedOffer}
+              baseAfterOffer={fareSummary.baseAfterOffer}
+              returnTripDiscount={fareSummary.returnTripDiscount}
+            />
+
+            <div className="absolute left-1/2 top-full hidden h-4 w-4 -translate-x-1/2 -translate-y-1/2 rotate-45 border-r border-b border-[#e5e7eb] bg-white md:block" />
+          </div>
+        </div>
+      )}
 
       {detailFlight && openDetailsFor && (
         <div
           ref={detailsPanelRef}
-          className="mt-0 overflow-hidden rounded-xl border border-[#dbe4ef] bg-[#f8fbff] shadow-xl"
+          className="mt-0 overflow-hidden rounded-3xl border border-slate-200 bg-slate-50 shadow-2xl"
         >
-          <div className="flex items-center justify-between border-b border-[#dbe4ef] px-4 pr-6">
-            <div className="flex items-center gap-1">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-slate-100/80 px-3 py-2 sm:px-4 sm:pr-6">
+            <div className="flex max-w-full items-center gap-1 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {renderTabButton("flight", "Flight Details")}
               {renderTabButton("fare", "Fare Details")}
               {renderTabButton("rules", "Fare Rules")}
@@ -918,13 +1049,15 @@ export default function RoundTripStickySummary({
             <button
               type="button"
               onClick={closeDetails}
-              className="flex h-10 w-10 items-center justify-center text-[30px] leading-none text-[#111827]"
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-[24px] leading-none text-slate-700 shadow-sm sm:h-10 sm:w-10"
             >
               ×
             </button>
           </div>
 
-          {renderDetailsPanelContent()}
+          <div className="max-h-[55vh] overflow-y-auto sm:max-h-none sm:overflow-visible">
+            {renderDetailsPanelContent()}
+          </div>
         </div>
       )}
     </div>

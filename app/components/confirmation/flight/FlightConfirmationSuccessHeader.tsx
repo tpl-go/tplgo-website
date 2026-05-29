@@ -96,6 +96,7 @@ export default function FlightConfirmationSuccessHeader({
 
   return (
     <section
+      className="flight-success-header"
       style={{
         border: "1px solid #d9e2ec",
         borderRadius: "24px",
@@ -106,6 +107,7 @@ export default function FlightConfirmationSuccessHeader({
       }}
     >
       <div
+        className="success-header-body"
         style={{
           padding: "28px 26px 24px 26px",
           position: "relative",
@@ -148,7 +150,7 @@ export default function FlightConfirmationSuccessHeader({
             flexWrap: "wrap",
           }}
         >
-          <div style={{ minWidth: 0, flex: 1 }}>
+          <div className="w-full min-w-0 md:w-auto md:flex-1">
             <div
               style={{
                 display: "inline-flex",
@@ -185,6 +187,7 @@ export default function FlightConfirmationSuccessHeader({
             </div>
 
             <h1
+              className="success-title"
               style={{
                 margin: "16px 0 0 0",
                 fontSize: "34px",
@@ -214,6 +217,7 @@ export default function FlightConfirmationSuccessHeader({
 
             {routeTitle ? (
               <div
+                className="route-title"
                 style={{
                   marginTop: "22px",
                   fontSize: "28px",
@@ -265,8 +269,9 @@ export default function FlightConfirmationSuccessHeader({
           </div>
 
           <div
+            className="booking-reference-card w-full md:w-auto"
             style={{
-              minWidth: "320px",
+              minWidth: "min(320px, 100%)",
               maxWidth: "100%",
               border: "1px solid #dbe4ee",
               borderRadius: "22px",
@@ -290,13 +295,12 @@ export default function FlightConfirmationSuccessHeader({
             </div>
 
             <div
+              className="text-[22px] leading-7 md:text-[28px] md:leading-[34px]"
               style={{
-                fontSize: "28px",
                 fontWeight: 900,
                 color: "#0f172a",
                 letterSpacing: "0.3px",
                 wordBreak: "break-word",
-                lineHeight: "34px",
               }}
             >
               {bookingId}
@@ -361,6 +365,38 @@ export default function FlightConfirmationSuccessHeader({
           </div>
         </div>
       </div>
+      <style>{`
+        @media (max-width: 767px) {
+          .flight-success-header {
+            border-radius: 18px !important;
+          }
+
+          .flight-success-header .success-header-body {
+            padding: 18px 16px !important;
+          }
+
+          .flight-success-header .success-title {
+            margin-top: 12px !important;
+            font-size: 25px !important;
+            line-height: 32px !important;
+            letter-spacing: 0 !important;
+          }
+
+          .flight-success-header .route-title {
+            margin-top: 16px !important;
+            font-size: 21px !important;
+            line-height: 28px !important;
+            letter-spacing: 0 !important;
+            overflow-wrap: anywhere;
+          }
+
+          .flight-success-header .booking-reference-card {
+            min-width: 0 !important;
+            border-radius: 18px !important;
+            padding: 16px !important;
+          }
+        }
+      `}</style>
     </section>
   );
 }

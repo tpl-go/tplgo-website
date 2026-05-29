@@ -56,7 +56,7 @@ export default function FlightsModifySearchBar({
     if (!filledSegments.length) return "Select route";
 
     const firstFrom = filledSegments[0]?.from?.city || "";
-const lastTo = filledSegments[filledSegments.length - 1]?.to?.city || "";
+    const lastTo = filledSegments[filledSegments.length - 1]?.to?.city || "";
 
     const viaCities = filledSegments
       .map((seg: any) => seg.to.city)
@@ -70,66 +70,74 @@ const lastTo = filledSegments[filledSegments.length - 1]?.to?.city || "";
   }, [state.segments]);
 
   return (
-    <div className="w-full rounded-2xl border border-white/10 bg-gradient-to-r from-[#0f172a] via-[#111827] to-[#0b1220] px-4 py-4 shadow-[0_18px_45px_rgba(2,6,23,0.28)]">
+    <div className="w-full rounded-2xl border border-white/10 bg-gradient-to-r from-[#0f172a] via-[#111827] to-[#0b1220] px-3 py-3 shadow-[0_18px_45px_rgba(2,6,23,0.28)] sm:px-4 sm:py-4">
       {!isMultiCity ? (
         <>
-          <div className="flex w-full items-center gap-[6px]">
-            <div className="shrink-0">
-              <TripTypeTabs
-                tripType={state.tripType}
+          <div className="flex w-full flex-col gap-3 lg:flex-row lg:items-center lg:gap-[6px]">
+            <div className="w-full overflow-x-auto overflow-y-hidden pb-1 lg:w-auto lg:shrink-0 lg:overflow-visible lg:pb-0 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <div className="min-w-max lg:min-w-0">
+                <TripTypeTabs
+                  tripType={state.tripType}
+                  dispatch={dispatch}
+                  variant="results"
+                />
+              </div>
+            </div>
+
+            <div className="grid w-full min-w-0 grid-cols-1 gap-2 sm:grid-cols-2 lg:flex lg:items-center lg:gap-[6px]">
+              <AirportSelect
+                state={state}
+                dispatch={dispatch}
+                variant="results"
+              />
+
+              <Calendar
+                state={state}
+                dispatch={dispatch}
+                variant="results"
+              />
+
+              <TravelSelector
+                state={state}
                 dispatch={dispatch}
                 variant="results"
               />
             </div>
 
-            <AirportSelect
-              state={state}
-              dispatch={dispatch}
-              variant="results"
-            />
-
-            <Calendar
-              state={state}
-              dispatch={dispatch}
-              variant="results"
-            />
-
-            <TravelSelector
-              state={state}
-              dispatch={dispatch}
-              variant="results"
-            />
-
-            <div className="ml-auto w-[140px] shrink-0">
+            <div className="w-full shrink-0 lg:ml-auto lg:w-[140px]">
               <SearchButton state={state} variant="results" />
             </div>
           </div>
 
-          <div className="mt-3 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2">
-            <FareTypeSelector fareType={state.fareType} dispatch={dispatch} />
+          <div className="mt-3 overflow-x-auto overflow-y-hidden rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="min-w-max lg:min-w-0">
+              <FareTypeSelector fareType={state.fareType} dispatch={dispatch} />
+            </div>
           </div>
         </>
       ) : (
         <>
-          <div className="flex w-full items-center gap-[8px]">
-            <div className="shrink-0">
-              <TripTypeTabs
-                tripType={state.tripType}
-                dispatch={dispatch}
-                variant="results"
-              />
+          <div className="flex w-full flex-col gap-3 lg:flex-row lg:items-center lg:gap-[8px]">
+            <div className="w-full overflow-x-auto overflow-y-hidden pb-1 lg:w-auto lg:shrink-0 lg:overflow-visible lg:pb-0 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <div className="min-w-max lg:min-w-0">
+                <TripTypeTabs
+                  tripType={state.tripType}
+                  dispatch={dispatch}
+                  variant="results"
+                />
+              </div>
             </div>
 
             <button
               type="button"
               onClick={() => setIsMultiCityExpanded((prev) => !prev)}
-              className="flex h-[60px] flex-1 items-center justify-between rounded-xl border border-white/10 bg-white/[0.06] px-4 text-left transition hover:bg-white/[0.1]"
+              className="flex h-[56px] w-full min-w-0 items-center justify-between rounded-xl border border-white/10 bg-white/[0.06] px-3 text-left transition hover:bg-white/[0.1] sm:h-[60px] sm:px-4 lg:flex-1"
             >
               <div className="min-w-0">
-                <div className="text-[11px] font-black uppercase tracking-[0.14em] text-cyan-300">
+                <div className="text-[10px] font-black uppercase tracking-[0.14em] text-cyan-300 sm:text-[11px]">
                   Route
                 </div>
-                <div className="mt-1 truncate text-[16px] font-extrabold text-white">
+                <div className="mt-1 truncate text-[14px] font-extrabold text-white sm:text-[16px]">
                   {multiCitySummary}
                 </div>
               </div>
@@ -137,27 +145,32 @@ const lastTo = filledSegments[filledSegments.length - 1]?.to?.city || "";
               <Pencil className="ml-3 h-4 w-4 shrink-0 text-cyan-300" />
             </button>
 
-            <TravelSelector
-              state={state}
-              dispatch={dispatch}
-              variant="results"
-            />
-
-            <div className="w-[140px] shrink-0">
-              <SearchButton
+            <div className="grid w-full min-w-0 grid-cols-1 gap-2 sm:grid-cols-2 lg:flex lg:w-auto lg:items-center lg:gap-[8px]">
+              <TravelSelector
                 state={state}
+                dispatch={dispatch}
                 variant="results"
-                onSearchComplete={() => {
-                  setIsMultiCityExpanded(false);
-                }}
               />
+
+              <div className="w-full shrink-0 lg:w-[140px]">
+                <SearchButton
+                  state={state}
+                  variant="results"
+                  onSearchComplete={() => {
+                    setIsMultiCityExpanded(false);
+                  }}
+                />
+              </div>
             </div>
           </div>
 
           {isMultiCityExpanded && (
-            <div className="mt-4 max-h-[60vh] space-y-3 overflow-visible rounded-xl border border-white/10 bg-white/[0.04] p-3">
+            <div className="relative z-[130] mt-4 max-h-none space-y-3 overflow-visible rounded-xl border border-white/10 bg-white/[0.04] p-3 lg:max-h-[60vh] lg:overflow-visible">
               {state.segments.map((seg: any, index: number) => (
-                <div key={index} className="flex items-center gap-[8px]">
+                <div
+                  key={index}
+                  className="grid grid-cols-1 gap-2 rounded-xl border border-white/10 bg-white/[0.03] p-2 lg:flex lg:items-center lg:gap-[8px] lg:border-0 lg:bg-transparent lg:p-0"
+                >
                   <AirportSelect
                     state={state}
                     dispatch={dispatch}
@@ -199,8 +212,10 @@ const lastTo = filledSegments[filledSegments.length - 1]?.to?.city || "";
             </div>
           )}
 
-          <div className="mt-3 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2">
-            <FareTypeSelector fareType={state.fareType} dispatch={dispatch} />
+          <div className="mt-3 overflow-x-auto overflow-y-hidden rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="min-w-max lg:min-w-0">
+              <FareTypeSelector fareType={state.fareType} dispatch={dispatch} />
+            </div>
           </div>
         </>
       )}

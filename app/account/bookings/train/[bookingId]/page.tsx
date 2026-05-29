@@ -273,13 +273,13 @@ export default function TrainBookingDetailPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#eef3f8] text-black">
-      <div className="h-[72px] bg-white border-b flex justify-between items-center px-6">
+    <main className="min-h-screen overflow-x-hidden bg-[#eef3f8] text-black">
+      <div className="min-h-[72px] bg-white border-b flex flex-col items-start justify-center gap-3 px-3 py-3 md:h-[72px] md:flex-row md:items-center md:justify-between md:px-6 md:py-0">
         <div className="text-2xl font-black">TPL</div>
 
         <button
           onClick={() => router.push("/account/bookings")}
-          className="inline-flex items-center gap-2 rounded-full border border-[#d9e2ec] bg-white px-5 py-2 text-[13px] font-extrabold text-[#111827] shadow-[0_6px_18px_rgba(15,23,42,0.06)] transition hover:bg-[#f8fbff] hover:border-[#bfd3ea]"
+          className="inline-flex min-h-10 items-center gap-2 rounded-full border border-[#d9e2ec] bg-white px-4 py-2 text-[12px] font-extrabold text-[#111827] shadow-[0_6px_18px_rgba(15,23,42,0.06)] transition hover:border-[#bfd3ea] hover:bg-[#f8fbff] md:px-5 md:text-[13px]"
         >
           <span style={{ fontSize: "14px", lineHeight: 1 }}>←</span>
           <span>Back to My Bookings</span>
@@ -287,17 +287,17 @@ export default function TrainBookingDetailPage() {
       </div>
 
       <div className="bg-white border-b border-gray-200 py-4">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="text-[22px] font-black text-slate-900">
+        <div className="max-w-7xl mx-auto px-3 md:px-4">
+          <div className="text-[19px] font-black leading-7 text-slate-900 md:text-[22px]">
             Train Booking Detail
           </div>
-          <div className="text-sm text-slate-600 mt-1">
+          <div className="mt-1 break-words text-[12px] text-slate-600 md:text-sm">
             Booking ID: {booking.id}
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-6 flex flex-col gap-4">
+      <div className="max-w-7xl mx-auto px-3 py-4 flex flex-col gap-4 md:px-4 md:py-6">
         <TrainConfirmationJourneyCard
           trainName={trainName}
           trainNumber={trainNumber}

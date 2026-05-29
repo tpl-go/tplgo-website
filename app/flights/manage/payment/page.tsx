@@ -382,40 +382,40 @@ const latestCalculation =
       : "Pay Now";
 
   return (
-    <main className="min-h-screen bg-[#f8f9fb] px-4 py-8">
-      <div className="mx-auto max-w-4xl space-y-6">
-        <div className="rounded-[28px] border border-black/5 bg-white p-6 shadow-[0_10px_40px_rgba(0,0,0,0.04)]">
+    <main className="min-h-screen overflow-x-hidden bg-[#f8f9fb] px-3 py-4 md:px-4 md:py-8">
+      <div className="mx-auto max-w-4xl space-y-4 md:space-y-6">
+        <div className="rounded-[20px] border border-black/5 bg-white p-4 shadow-[0_10px_40px_rgba(0,0,0,0.04)] md:rounded-[28px] md:p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <button
               type="button"
               onClick={() => router.back()}
-              className="inline-flex items-center gap-2 rounded-full border border-[#d9e2ec] bg-white px-5 py-2 text-[13px] font-extrabold text-[#111827] shadow-[0_6px_18px_rgba(15,23,42,0.06)] transition hover:bg-[#f8fbff] hover:border-[#bfd3ea]"
+              className="inline-flex min-h-10 items-center gap-2 rounded-full border border-[#d9e2ec] bg-white px-4 py-2 text-[12px] font-extrabold text-[#111827] shadow-[0_6px_18px_rgba(15,23,42,0.06)] transition hover:border-[#bfd3ea] hover:bg-[#f8fbff] md:px-5 md:text-[13px]"
             >
               <span style={{ fontSize: "14px", lineHeight: 1 }}>←</span>
               <span>Back</span>
             </button>
 
-            <div className="rounded-full bg-[#fff7f2] px-4 py-2 text-[12px] font-extrabold uppercase tracking-[0.14em] text-[#ff6b00]">
+            <div className="rounded-full bg-[#fff7f2] px-3 py-2 text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#ff6b00] md:px-4 md:text-[12px] md:tracking-[0.14em]">
               Manage Payment
             </div>
           </div>
 
-          <div className="mt-5">
+          <div className="mt-4 md:mt-5">
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#ff6b00]">
               {type} • {section}
             </p>
-            <h1 className="mt-1 text-2xl font-bold text-[#111827]">
+            <h1 className="mt-1 text-[22px] font-bold leading-8 text-[#111827] md:text-2xl">
               Manage Booking Payment
             </h1>
-            <p className="mt-1 text-sm text-[#6b7280]">
+            <p className="mt-1 break-words text-sm text-[#6b7280]">
               Booking ID: {bookingId || "-"}
             </p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.1fr_0.9fr]">
-          <div className="space-y-5">
-            <div className="rounded-[28px] border border-black/5 bg-white p-6 shadow-[0_10px_40px_rgba(0,0,0,0.04)]">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.1fr_0.9fr] lg:gap-5">
+          <div className="space-y-4 lg:space-y-5">
+            <div className="rounded-[20px] border border-black/5 bg-white p-4 shadow-[0_10px_40px_rgba(0,0,0,0.04)] md:rounded-[28px] md:p-6">
               <h2 className="text-lg font-bold text-[#111827]">
                 Select Payment Option
               </h2>
@@ -432,7 +432,7 @@ const latestCalculation =
                       key={option.key}
                       type="button"
                       onClick={() => setSelectedPaymentMethod(option.key)}
-                      className={`rounded-[22px] border px-4 py-4 text-left transition ${
+                      className={`rounded-[18px] border px-4 py-4 text-left transition md:rounded-[22px] ${
                         isActive
                           ? "border-[#ff6b00]/30 bg-[#fff7f2]"
                           : "border-black/10 bg-white hover:bg-[#f8f9fb]"
@@ -460,7 +460,7 @@ const latestCalculation =
               </div>
             </div>
 
-            <div className="rounded-[28px] border border-black/5 bg-white p-6 shadow-[0_10px_40px_rgba(0,0,0,0.04)]">
+            <div className="rounded-[20px] border border-black/5 bg-white p-4 shadow-[0_10px_40px_rgba(0,0,0,0.04)] md:rounded-[28px] md:p-6">
               <h2 className="text-lg font-bold text-[#111827]">
                 Wallet Summary
               </h2>
@@ -495,8 +495,8 @@ const latestCalculation =
             </div>
           </div>
 
-          <div className="space-y-5">
-            <div className="rounded-[28px] border border-black/5 bg-white p-6 shadow-[0_10px_40px_rgba(0,0,0,0.04)]">
+          <div className="space-y-4 lg:space-y-5">
+            <div className="rounded-[20px] border border-black/5 bg-white p-4 shadow-[0_10px_40px_rgba(0,0,0,0.04)] md:rounded-[28px] md:p-6">
               <h2 className="text-lg font-bold text-[#111827]">
                 Final Payable
               </h2>
@@ -527,7 +527,7 @@ const latestCalculation =
                 )}
               </div>
 
-              <div className="mt-5 rounded-[22px] bg-[#111827] px-5 py-5 text-white">
+              <div className="mt-5 rounded-[20px] bg-[#111827] px-4 py-4 text-white md:rounded-[22px] md:px-5 md:py-5">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-white/70">
                   {calculation.settlementMode === "wallet_credit"
                     ? "Refund To Wallet"
@@ -535,7 +535,7 @@ const latestCalculation =
                     ? "No Payment Required"
                     : "Amount to Pay"}
                 </p>
-                <p className="mt-2 text-3xl font-bold">
+                <p className="mt-2 text-[28px] font-bold leading-9 md:text-3xl">
                   {calculation.settlementMode === "wallet_credit"
                     ? formatCurrency(calculation.refundCredit || 0)
                     : formatCurrency(calculation.finalPayable)}
@@ -589,7 +589,7 @@ function WalletRow({
   used: number;
 }) {
   return (
-    <div className="rounded-[22px] border border-black/10 bg-white px-4 py-4">
+    <div className="rounded-[18px] border border-black/10 bg-white px-4 py-4 md:rounded-[22px]">
       <p className="text-sm font-semibold text-[#111827]">{title}</p>
       <p className="mt-1 text-xs leading-5 text-[#6b7280]">{subtitle}</p>
       <p className="mt-2 text-sm font-bold text-[#111827]">
@@ -601,9 +601,9 @@ function WalletRow({
 
 function SummaryRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between gap-4">
+    <div className="flex items-center justify-between gap-3">
       <p className="text-sm text-[#6b7280]">{label}</p>
-      <p className="text-sm font-semibold text-[#111827]">{value}</p>
+      <p className="shrink-0 text-sm font-semibold text-[#111827]">{value}</p>
     </div>
   );
 }

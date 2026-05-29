@@ -127,6 +127,7 @@ export default function FlightJourneyCard({
   return (
     <>
       <div
+        className="max-md:rounded-xl"
         style={{
           border: "1px solid #d9e2ec",
           background: "#ffffff",
@@ -135,6 +136,7 @@ export default function FlightJourneyCard({
       >
         {/* TOP HEADER */}
         <div
+          className="max-md:p-3"
           style={{
             padding: "12px 14px 10px 14px",
             borderBottom: "1px solid #e9eef5",
@@ -142,6 +144,7 @@ export default function FlightJourneyCard({
           }}
         >
           <div
+            className="max-md:flex-col max-md:gap-3"
             style={{
               display: "flex",
               alignItems: "flex-start",
@@ -152,6 +155,7 @@ export default function FlightJourneyCard({
             {/* LEFT */}
             <div>
               <div
+                className="max-md:text-[15px] max-md:leading-[20px]"
                 style={{
                   fontSize: "16px",
                   fontWeight: 800,
@@ -200,7 +204,7 @@ export default function FlightJourneyCard({
             </div>
 
             {/* RIGHT */}
-            <div style={{ textAlign: "right" }}>
+            <div className="max-md:text-left" style={{ textAlign: "right" }}>
               <div
                 style={{
                   display: "inline-block",
@@ -251,6 +255,7 @@ export default function FlightJourneyCard({
 
         {/* SEGMENT BODY */}
         <div
+          className="max-md:mx-3"
           style={{
             background: "#edf4fb",
             margin: "0 14px",
@@ -264,6 +269,7 @@ export default function FlightJourneyCard({
 
         {/* BAGGAGE ROW */}
         <div
+          className="max-md:gap-2 max-md:px-3 max-md:text-[12px]"
           style={{
             padding: "10px 14px",
             display: "flex",
@@ -288,6 +294,7 @@ export default function FlightJourneyCard({
 
         {/* ACTION STRIP */}
         <div
+          className="max-md:mx-3 max-md:mb-3 max-md:flex-col max-md:items-start"
           style={{
             margin: "0 14px 14px 14px",
             background: actionStripBg,
@@ -312,6 +319,7 @@ export default function FlightJourneyCard({
           <button
             type="button"
             onClick={() => setShowBaggageModal(true)}
+            className="max-md:min-h-10"
             style={{
               border: "none",
               background: "transparent",
@@ -329,7 +337,7 @@ export default function FlightJourneyCard({
 
       {showFareRules && (
         <ModalOverlay onClose={() => setShowFareRules(false)}>
-          <div style={modalCardStyle}>
+          <div className="max-md:!max-h-[92vh] max-md:!w-full max-md:overflow-y-auto max-md:rounded-xl" style={modalCardStyle}>
             <div style={modalHeaderStyle}>
               <div
                 style={{
@@ -350,8 +358,8 @@ export default function FlightJourneyCard({
               </button>
             </div>
 
-            <div style={{ padding: "18px 22px 22px 22px" }}>
-              <div style={{ display: "flex", gap: "8px", marginBottom: "18px" }}>
+            <div className="max-md:p-4" style={{ padding: "18px 22px 22px 22px" }}>
+              <div className="max-md:flex-col" style={{ display: "flex", gap: "8px", marginBottom: "18px" }}>
                 <button
                   type="button"
                   onClick={() => setFareRuleTab("cancellation")}
@@ -384,12 +392,13 @@ export default function FlightJourneyCard({
 
                 <div style={{ padding: "14px 16px 18px 16px" }}>
                   <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "1fr 1fr",
-                      border: "1px solid #d9e2ec",
-                    }}
-                  >
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    border: "1px solid #d9e2ec",
+                    overflowX: "auto",
+                  }}
+                >
                     <div style={tableHeadStyle}>
                       Time frame
                       <div style={tableSubHeadStyle}>
@@ -477,7 +486,7 @@ export default function FlightJourneyCard({
 
       {showBaggageModal && (
         <ModalOverlay onClose={() => setShowBaggageModal(false)}>
-          <div style={modalCardStyle}>
+          <div className="max-md:!max-h-[92vh] max-md:!w-full max-md:overflow-y-auto max-md:rounded-xl" style={modalCardStyle}>
             <div style={modalHeaderStyle}>
               <div
                 style={{
@@ -498,7 +507,7 @@ export default function FlightJourneyCard({
               </button>
             </div>
 
-            <div style={{ padding: "18px 22px 22px 22px" }}>
+            <div className="max-md:p-4" style={{ padding: "18px 22px 22px 22px" }}>
               <div
                 style={{
                   display: "inline-block",
@@ -537,6 +546,7 @@ export default function FlightJourneyCard({
                 {baggageOptions.map((item, index) => (
                   <div
                     key={index}
+                    className="max-md:!grid-cols-1 max-md:gap-2"
                     style={{
                       display: "grid",
                       gridTemplateColumns: "1fr 140px 140px",
@@ -555,6 +565,7 @@ export default function FlightJourneyCard({
                     </div>
 
                     <div
+                      className="max-md:text-left"
                       style={{
                         textAlign: "right",
                         fontSize: "18px",
@@ -567,6 +578,7 @@ export default function FlightJourneyCard({
 
                     <button
                       type="button"
+                      className="max-md:w-full"
                       style={{
                         height: "44px",
                         border: "1px solid #d9e2ec",
@@ -615,6 +627,7 @@ function ModalOverlay({
   return (
     <div
       onClick={onClose}
+      className="max-md:p-3"
       style={{
         position: "fixed",
         inset: 0,

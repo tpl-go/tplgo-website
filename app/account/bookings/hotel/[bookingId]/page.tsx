@@ -216,13 +216,13 @@ export default function HotelBookingDetailPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#eef3f8] text-black">
-      <div className="h-[72px] bg-white border-b flex justify-between items-center px-6">
+    <main className="min-h-screen overflow-x-hidden bg-[#eef3f8] text-black">
+      <div className="min-h-[72px] bg-white border-b flex flex-col items-start justify-center gap-3 px-3 py-3 md:h-[72px] md:flex-row md:items-center md:justify-between md:px-6 md:py-0">
         <div className="text-2xl font-black">TPL</div>
 
         <button
           onClick={() => router.push("/account/bookings")}
-          className="inline-flex items-center gap-2 rounded-full border border-[#d9e2ec] bg-white px-5 py-2 text-[13px] font-extrabold text-[#111827] shadow-[0_6px_18px_rgba(15,23,42,0.06)] transition hover:bg-[#f8fbff] hover:border-[#bfd3ea]"
+          className="inline-flex min-h-10 items-center gap-2 rounded-full border border-[#d9e2ec] bg-white px-4 py-2 text-[12px] font-extrabold text-[#111827] shadow-[0_6px_18px_rgba(15,23,42,0.06)] transition hover:border-[#bfd3ea] hover:bg-[#f8fbff] md:px-5 md:text-[13px]"
         >
           <span style={{ fontSize: "14px", lineHeight: 1 }}>←</span>
           <span>Back to My Bookings</span>
@@ -230,20 +230,20 @@ export default function HotelBookingDetailPage() {
       </div>
 
       <div className="bg-white border-b border-gray-200 py-4">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="text-[22px] font-black text-slate-900">
+        <div className="max-w-7xl mx-auto px-3 md:px-4">
+          <div className="text-[19px] font-black leading-7 text-slate-900 md:text-[22px]">
             Hotel Booking Detail
           </div>
-          <div className="text-sm text-slate-600 mt-1">
+          <div className="mt-1 break-words text-[12px] text-slate-600 md:text-sm">
             Booking ID: {booking.id}
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-6">
+      <div className="max-w-7xl mx-auto px-3 py-4 md:px-4 md:py-6">
         <div className="w-full flex flex-col gap-4">
-          <div className="rounded-[24px] border border-[#d9e2ec] bg-white shadow-[0_8px_24px_rgba(15,23,42,0.05)] overflow-hidden">
-            <div className="min-h-[60px] px-5 border-b border-[#e5e7eb] bg-[linear-gradient(180deg,#f8fbff_0%,#ffffff_100%)] flex items-center justify-between">
+          <div className="overflow-hidden rounded-[18px] border border-[#d9e2ec] bg-white shadow-[0_8px_24px_rgba(15,23,42,0.05)] md:rounded-[24px]">
+            <div className="min-h-[60px] border-b border-[#e5e7eb] bg-[linear-gradient(180deg,#f8fbff_0%,#ffffff_100%)] flex flex-col items-start justify-center gap-3 px-4 py-3 md:flex-row md:items-center md:justify-between md:px-5 md:py-0">
               <h2 className="m-0 text-[18px] font-black text-[#111827]">
                 Booking Summary
               </h2>
@@ -258,7 +258,7 @@ export default function HotelBookingDetailPage() {
               </button>
             </div>
 
-            <div className="p-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 gap-3 p-4 md:grid-cols-2 md:gap-4 md:p-5 xl:grid-cols-4">
               <InfoCard label="Booking Status" value={capitalize(booking.status)} />
               <InfoCard label="Payment Status" value="Paid" />
               <InfoCard label="Booked On" value={formatDateTime(bookedAt)} />
@@ -269,7 +269,7 @@ export default function HotelBookingDetailPage() {
               <InfoCard label="Guests" value={booking.travellers || `${guestList.length || 1} Guest`} />
             </div>
 
-            <div className="px-5 pb-5">
+            <div className="px-4 pb-4 md:px-5 md:pb-5">
               <div className="rounded-2xl border border-[#e2e8f0] bg-[#f8fafc] px-4 py-4 text-[15px] font-bold text-[#0f172a]">
                 {hotelName} • {city}
               </div>

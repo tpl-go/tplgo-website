@@ -128,19 +128,119 @@ export default function OneWayCardMainRow({
   };
 
   return (
-    <div className="grid grid-cols-1 items-start gap-3 xl:grid-cols-[155px_minmax(360px,1fr)_360px]">
-      <div className="min-w-0 self-start">
-        <div className="text-[17px] font-bold leading-tight text-[#111827]">
-          {airline}
+    <>
+      <div className="md:hidden">
+        <div className="rounded-2xl border border-[#e5e7eb] bg-white shadow-[0_10px_28px_rgba(15,23,42,0.07)]">
+          <div className="flex items-start justify-between gap-3 border-b border-[#eef2f7] px-3.5 py-3">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#eef6ff] text-[12px] font-black text-[#0b66c3]">
+                {airline.slice(0, 2).toUpperCase()}
+              </div>
+              <div className="min-w-0">
+                <div className="truncate text-[14px] font-black leading-tight text-[#111827]">{airline}</div>
+                <div className="mt-0.5 text-[11px] font-semibold text-[#64748b]">{code}</div>
+              </div>
+            </div>
+            <div className="shrink-0 rounded-full bg-[#fff1f2] px-2.5 py-1 text-[10px] font-extrabold text-[#be123c]">9 seats left</div>
+          </div>
+
+          <div className="px-3.5 py-3">
+            <div className="grid grid-cols-[72px_minmax(0,1fr)_72px] items-start gap-2">
+              <div className="min-w-0">
+                <div className="text-[22px] font-black leading-none text-[#111827]">{depart}</div>
+                <div className="mt-1 truncate text-[12px] font-semibold text-[#475569]">{departCity}</div>
+              </div>
+              <div className="min-w-0 px-1 pt-1 text-center">
+                <div className="text-[11px] font-extrabold text-[#475569]">{duration}</div>
+                <div className="mt-1 flex items-center justify-center gap-1.5">
+                  <div className="h-[2px] flex-1 rounded-full bg-[#cbd5e1]" />
+                  <button type="button" className="group relative shrink-0 rounded-full bg-[#f8fafc] px-2 py-0.5 text-[10px] font-bold text-[#64748b]" onClick={() => stopDetails.length && setShowTooltip((prev) => !prev)}>
+                    {stop}
+                    {renderFlightStopTooltip()}
+                  </button>
+                  <div className="h-[2px] flex-1 rounded-full bg-[#cbd5e1]" />
+                </div>
+              </div>
+              <div className="min-w-0 text-right">
+                <div className="text-[22px] font-black leading-none text-[#111827]">{arrive}</div>
+                <div className="mt-1 truncate text-[12px] font-semibold text-[#475569]">{arriveCity}</div>
+              </div>
+            </div>
+
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              <span className="rounded-full bg-[#eff6ff] px-2.5 py-1 text-[10px] font-extrabold text-[#2563eb]">7kg cabin</span>
+              <span className="rounded-full bg-[#ecfdf5] px-2.5 py-1 text-[10px] font-extrabold text-[#047857]">15kg check-in</span>
+              <button type="button" onClick={onToggleCompare} className="rounded-full bg-[#f8fafc] px-2.5 py-1 text-[10px] font-extrabold text-[#2563eb]">Compare fares</button>
+            </div>
+          </div>
+
+          <div className="border-t border-[#eef2f7] bg-[#fbfdff] px-3.5 py-3">
+            {!showAllFares ? (
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-[11px] font-bold uppercase text-[#64748b]">{selectedFare.title}</div>
+                  {selectedOfferDiscount > 0 && selectedFareFinalPrice ? (
+                    <div className="mt-1 flex items-baseline gap-2">
+                      <span className="text-[12px] font-semibold text-[#94a3b8] line-through">{selectedFareOriginalPrice || selectedFare.price}</span>
+                      <span className="text-[22px] font-black leading-none text-[#111827]">{selectedFareFinalPrice}</span>
+                    </div>
+                  ) : (
+                    <div className="mt-1 text-[22px] font-black leading-none text-[#111827]">{selectedFare.price}</div>
+                  )}
+                  <div className="mt-1 truncate text-[11px] font-semibold text-[#64748b]">{selectedFare.baggage}</div>
+                </div>
+                <button type="button" onClick={() => setShowAllFares(true)} className="shrink-0 rounded-full border border-[#dbeafe] bg-white px-3 py-2 text-[12px] font-black text-[#2563eb]">Change</button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {compactVisibleFares.map((fare) => {
+                  const isSelected = selectedFareId === fare.id;
+                  return (
+                    <label key={fare.id} className={`flex cursor-pointer items-start gap-2.5 rounded-xl border px-3 py-2 ${isSelected ? "border-[#fb923c] bg-[#fff7ed]" : "border-[#e5e7eb] bg-white"}`}>
+                      <input type="radio" name={`mobile-fare-${code}`} checked={isSelected} onChange={() => setSelectedFareId(fare.id)} className="mt-1 h-3.5 w-3.5 shrink-0 accent-orange-500" />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <div className="text-[12px] font-black leading-4 text-[#111827]">{fare.title}</div>
+                            <div className="mt-0.5 truncate text-[11px] font-semibold leading-4 text-[#64748b]">{fare.baggage}</div>
+                          </div>
+                          <div className="shrink-0 text-[13px] font-black text-[#111827]">{fare.price}</div>
+                        </div>
+                      </div>
+                    </label>
+                  );
+                })}
+                <button type="button" onClick={() => setShowAllFares(false)} className="text-[12px] font-black text-[#2563eb]">Done</button>
+              </div>
+            )}
+
+            <div className="mt-3 grid grid-cols-[1fr_auto] gap-2">
+              <button type="button" onClick={onToggleDetails} className="h-11 rounded-xl border border-[#dbeafe] bg-white px-3 text-[12px] font-black text-[#2563eb]">View Details</button>
+              <button type="button" onClick={() => onBookNow({ airline, code, depart, departCity, duration, stop, arrive, arriveCity, stopDetails, selectedFare })} className="h-11 rounded-xl bg-[#f97316] px-5 text-[12px] font-black text-white shadow-[0_8px_18px_rgba(249,115,22,0.22)]">BOOK NOW</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    <div className="hidden grid-cols-1 items-start gap-3 md:grid xl:grid-cols-[155px_minmax(360px,1fr)_360px]">
+      <div className="flex min-w-0 items-start justify-between gap-3 self-start xl:block">
+        <div className="min-w-0">
+          <div className="text-[15px] font-bold leading-tight text-[#111827] sm:text-[17px]">
+            {airline}
+          </div>
+
+          <div className="mt-1 text-[11px] text-[#6b7280] sm:text-[12px]">
+            {code}
+          </div>
         </div>
 
-        <div className="mt-1 text-[12px] text-[#6b7280]">{code}</div>
-
-        <div className="mt-6 inline-flex rounded-full bg-[#fdecee] px-2.5 py-1 text-[12px] font-medium text-[#c2415d]">
-          Seats left: 9
+        <div className="shrink-0 xl:mt-6">
+          <div className="inline-flex rounded-full bg-[#fdecee] px-2.5 py-1 text-[11px] font-medium text-[#c2415d] sm:text-[12px]">
+            Seats left: 9
+          </div>
         </div>
 
-        <div className="mt-8">
+        <div className="hidden xl:mt-8 xl:block">
           <button
             type="button"
             onClick={onToggleDetails}
@@ -151,61 +251,63 @@ export default function OneWayCardMainRow({
         </div>
       </div>
 
-      <div className="grid grid-cols-[90px_minmax(150px,1fr)_90px] items-start gap-4 self-start">
+      <div className="grid grid-cols-[74px_minmax(110px,1fr)_74px] items-start gap-2 self-start sm:grid-cols-[90px_minmax(150px,1fr)_90px] sm:gap-4">
         <div className="min-w-0">
-          <div className="text-right text-[28px] font-bold leading-none text-[#111827]">
+          <div className="text-right text-[22px] font-bold leading-none text-[#111827] sm:text-[28px]">
             {depart}
           </div>
-          <div className="mt-1 text-center text-[14px] text-[#4b5563]">
+          <div className="mt-1 truncate text-center text-[12px] text-[#4b5563] sm:text-[14px]">
             {departCity}
           </div>
         </div>
 
         <div className="min-w-0 pt-1 text-center">
-          <div className="text-[13px] font-medium text-[#4b5563]">
+          <div className="text-[12px] font-medium text-[#4b5563] sm:text-[13px]">
             {duration}
           </div>
 
           <div className="mt-1 flex items-center justify-center gap-2">
             <div className="h-[2px] flex-1 bg-[#d1d5db]" />
 
-            <div
-              ref={stopRef}
-              className="group relative shrink-0 text-[12px] font-medium text-[#6b7280]"
+            <button
+              type="button"
+              ref={stopRef as any}
+              className="group relative shrink-0 text-[11px] font-medium text-[#6b7280] sm:text-[12px]"
               onMouseEnter={() => setShowTooltip(true)}
               onMouseLeave={() => setShowTooltip(false)}
+              onClick={() => stopDetails.length && setShowTooltip((prev) => !prev)}
             >
               {stop}
               {renderFlightStopTooltip()}
-            </div>
+            </button>
 
             <div className="h-[2px] flex-1 bg-[#d1d5db]" />
           </div>
 
-          <div className="mt-6 inline-flex rounded-full bg-[#e8f2ff] px-2.5 py-1 text-[11px] font-medium text-[#2563eb]">
+          <div className="mt-3 inline-flex rounded-full bg-[#e8f2ff] px-2 py-1 text-[10px] font-medium text-[#2563eb] sm:mt-6 sm:px-2.5 sm:text-[11px]">
             7kg Cabin • 15kg Check-in
           </div>
 
           <button
             type="button"
             onClick={onToggleCompare}
-            className="mt-8 block w-full text-center text-[15px] font-semibold text-[#2563eb] hover:text-[#1d4ed8]"
+            className="mt-3 block w-full text-center text-[13px] font-semibold text-[#2563eb] hover:text-[#1d4ed8] sm:mt-8 sm:text-[15px]"
           >
             Compare Fares
           </button>
         </div>
 
         <div className="min-w-0">
-          <div className="text-start text-[28px] font-bold leading-none text-[#111827]">
+          <div className="text-start text-[22px] font-bold leading-none text-[#111827] sm:text-[28px]">
             {arrive}
           </div>
-          <div className="mt-1 text-center text-[14px] text-[#4b5563]">
+          <div className="mt-1 truncate text-center text-[12px] text-[#4b5563] sm:text-[14px]">
             {arriveCity}
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-[1fr_125px] items-start gap-3 self-start">
+      <div className="grid grid-cols-1 items-start gap-3 self-start sm:grid-cols-[1fr_125px]">
         <div className="min-w-0">
           {compactVisibleFares.map((fare, index) => {
             const isSelected = selectedFareId === fare.id;
@@ -303,8 +405,17 @@ export default function OneWayCardMainRow({
           >
             BOOK NOW
           </button>
+
+          <button
+            type="button"
+            onClick={onToggleDetails}
+            className="rounded-xl border border-[#dbeafe] bg-[#f8fbff] px-4 py-2 text-[13px] font-semibold text-[#2563eb] transition hover:bg-[#eff6ff] xl:hidden"
+          >
+            View Details +
+          </button>
         </div>
       </div>
     </div>
+    </>
   );
 }

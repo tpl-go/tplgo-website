@@ -96,6 +96,7 @@ export default function FlightCabSection({
     <>
       <section id="cab">
         <div
+          className="max-md:px-3"
           style={sectionHeaderStyle}
           onClick={() => setIsOpen((prev) => !prev)}
         >
@@ -144,6 +145,7 @@ export default function FlightCabSection({
 
         {isOpen && (
           <div
+            className="max-md:p-3"
             style={{
               padding: "18px",
               background: "#ffffff",
@@ -184,6 +186,7 @@ export default function FlightCabSection({
                 </div>
 
                 <div
+                  className="max-md:!grid-cols-1"
                   style={{
                     marginTop: "14px",
                     display: "grid",
@@ -223,9 +226,9 @@ export default function FlightCabSection({
 
       {showCabModal && (
         <ModalOverlay onClose={() => setShowCabModal(false)}>
-          <div style={cabModalStyle}>
+          <div className="max-md:!w-full max-md:rounded-xl" style={cabModalStyle}>
             <div style={modalHeaderStyle}>
-              <div style={{ fontSize: "22px", fontWeight: 800, color: "#111827" }}>
+              <div className="max-md:text-[18px]" style={{ fontSize: "22px", fontWeight: 800, color: "#111827" }}>
                 Select Cab
               </div>
 
@@ -238,7 +241,7 @@ export default function FlightCabSection({
               </button>
             </div>
 
-            <div style={{ padding: "20px" }}>
+            <div className="max-md:p-4" style={{ padding: "20px" }}>
               <div style={{ display: "grid", gap: "14px" }}>
                 {CAB_OPTIONS.map((item) => {
                   const active = selectedCab === item.key && cabStatus === "selected";
@@ -258,6 +261,7 @@ export default function FlightCabSection({
                       }}
                     >
                       <div
+                        className="max-md:flex-col max-md:items-start"
                         style={{
                           display: "flex",
                           justifyContent: "space-between",
@@ -303,10 +307,11 @@ export default function FlightCabSection({
                 })}
               </div>
 
-              <div style={modalFooterStyle}>
+              <div className="max-md:flex-col" style={modalFooterStyle}>
                 <button
                   type="button"
                   onClick={() => handleSelectCab("none")}
+                  className="max-md:w-full"
                   style={secondaryBtnStyle}
                 >
                   Skip Cab
@@ -315,6 +320,7 @@ export default function FlightCabSection({
                 <button
                   type="button"
                   onClick={() => setShowCabModal(false)}
+                  className="max-md:w-full"
                   style={primaryBtnStyle}
                 >
                   Done
@@ -342,9 +348,7 @@ function CabCard({
   onClick: () => void;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
+    <label
       style={{
         textAlign: "left",
         border: active ? "2px solid #38bdf8" : "1px solid #d9e2ec",
@@ -352,10 +356,27 @@ function CabCard({
         padding: "16px",
         cursor: "pointer",
         minHeight: "150px",
+        display: "block",
       }}
     >
-      <div style={{ fontSize: "17px", fontWeight: 800, color: "#111827" }}>
-        {title}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          gap: "12px",
+        }}
+      >
+        <div style={{ fontSize: "17px", fontWeight: 800, color: "#111827" }}>
+          {title}
+        </div>
+        <input
+          type="checkbox"
+          checked={active}
+          onChange={onClick}
+          aria-label={`${title} selected`}
+          className="h-5 w-5 shrink-0 cursor-pointer accent-[#38bdf8]"
+        />
       </div>
       <div
         style={{
@@ -377,7 +398,7 @@ function CabCard({
       >
         {price > 0 ? `₹${price.toLocaleString("en-IN")}` : "Skip"}
       </div>
-    </button>
+    </label>
   );
 }
 
@@ -391,6 +412,7 @@ function ModalOverlay({
   return (
     <div
       onClick={onClose}
+      className="max-md:p-3"
       style={{
         position: "fixed",
         inset: 0,

@@ -119,6 +119,7 @@ export default function FlightAddonsSection({
   return (
     <section id="addons">
       <div
+        className="max-md:px-3"
         style={sectionHeaderStyle}
         onClick={() => setIsOpen((prev) => !prev)}
       >
@@ -167,6 +168,7 @@ export default function FlightAddonsSection({
 
       {isOpen && (
         <div
+          className="max-md:p-3"
           style={{
             padding: "18px",
             background: "#ffffff",
@@ -207,6 +209,7 @@ export default function FlightAddonsSection({
               </div>
 
               <div
+                className="max-md:!grid-cols-1"
                 style={{
                   marginTop: "14px",
                   display: "grid",
@@ -249,6 +252,7 @@ export default function FlightAddonsSection({
                 <button
                   type="button"
                   onClick={handleSkip}
+                  className="max-md:w-full"
                   style={skipBtnStyle(addonsStatus === "skipped")}
                 >
                   {addonsStatus === "skipped" ? "Add-ons Skipped ✓" : "Skip Add-ons"}

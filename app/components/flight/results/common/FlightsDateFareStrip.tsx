@@ -133,68 +133,148 @@ export default function FlightsDateFareStrip({
   };
 
   return (
-    <div className="grid grid-cols-[40px_repeat(8,minmax(0,1fr))_40px] overflow-hidden rounded-xl border border-[#d9e2ef] bg-white">
-      <button
-        type="button"
-        onClick={handlePrev}
-        disabled={!canGoLeft}
-        className={`flex items-center justify-center border-r border-[#eef2f7] text-xl ${
-          canGoLeft
-            ? "text-[#0b66c3] hover:bg-[#f8fbff]"
-            : "cursor-not-allowed text-[#cbd5e1]"
-        }`}
-      >
-        ‹
-      </button>
+    <>
+      <div className="sm:hidden">
+        <div className="overflow-hidden rounded-2xl border border-[#d9e2ef] bg-white shadow-sm">
+          <div className="flex items-center justify-between border-b border-[#eef2f7] px-3 py-2">
+            <div>
+              <div className="text-[12px] font-black text-[#111827]">
+                Date fares
+              </div>
+              <div className="text-[10px] font-semibold text-[#64748b]">
+                Swipe to compare nearby days
+              </div>
+            </div>
 
-      {fareData.map((item, index) => {
-        const selected = isSameDay(item.date, activeDate);
-        const isLast = index === fareData.length - 1;
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={handlePrev}
+                disabled={!canGoLeft}
+                className={`flex h-8 w-8 items-center justify-center rounded-full border text-[18px] font-bold ${
+                  canGoLeft
+                    ? "border-[#dbeafe] bg-[#eff6ff] text-[#2563eb]"
+                    : "cursor-not-allowed border-[#e5e7eb] bg-[#f8fafc] text-[#cbd5e1]"
+                }`}
+              >
+                ‹
+              </button>
 
-        return (
+              <button
+                type="button"
+                onClick={handleNext}
+                disabled={!canGoRight}
+                className={`flex h-8 w-8 items-center justify-center rounded-full border text-[18px] font-bold ${
+                  canGoRight
+                    ? "border-[#dbeafe] bg-[#eff6ff] text-[#2563eb]"
+                    : "cursor-not-allowed border-[#e5e7eb] bg-[#f8fafc] text-[#cbd5e1]"
+                }`}
+              >
+                ›
+              </button>
+            </div>
+          </div>
+
+          <div className="flex gap-2 overflow-x-auto overflow-y-hidden px-2.5 py-2.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {fareData.map((item) => {
+              const selected = isSameDay(item.date, activeDate);
+
+              return (
+                <button
+                  key={item.date.toISOString()}
+                  type="button"
+                  onClick={() => handleSelectDate(item.date)}
+                  className={`min-w-[78px] rounded-xl border px-2 py-2 text-left transition ${
+                    selected
+                      ? "border-[#22c55e] bg-[#ecfdf5] shadow-sm"
+                      : "border-[#e5e7eb] bg-white"
+                  }`}
+                >
+                  <div
+                    className={`text-[10px] font-black uppercase ${
+                      selected ? "text-[#047857]" : "text-[#64748b]"
+                    }`}
+                  >
+                    {format(item.date, "EEE")}
+                  </div>
+                  <div className="mt-0.5 text-[12px] font-black text-[#111827]">
+                    {format(item.date, "MMM d")}
+                  </div>
+                  <div className="mt-1 text-[12px] font-black text-[#16a34a]">
+                    ₹{item.price.toLocaleString("en-IN")}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      <div className="hidden w-full overflow-hidden rounded-xl border border-[#d9e2ef] bg-white sm:block">
+        <div className="grid grid-cols-[34px_repeat(8,96px)_34px] overflow-x-auto overflow-y-hidden sm:grid-cols-[40px_repeat(8,minmax(0,1fr))_40px] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <button
-            key={item.date.toISOString()}
             type="button"
-            onClick={() => handleSelectDate(item.date)}
-            className={`px-3 py-3 text-center transition ${
-              !isLast ? "border-r border-[#eef2f7]" : ""
-            } ${
-              selected
-                ? "bg-[#ecfdf5] ring-1 ring-inset ring-[#86efac]"
-                : "bg-white hover:bg-[#f8fafc]"
+            onClick={handlePrev}
+            disabled={!canGoLeft}
+            className={`sticky left-0 z-10 flex items-center justify-center border-r border-[#eef2f7] bg-white text-xl ${
+              canGoLeft
+                ? "text-[#0b66c3] hover:bg-[#f8fbff]"
+                : "cursor-not-allowed text-[#cbd5e1]"
             }`}
           >
-            <div
-              className={`text-[12px] font-medium ${
-                selected ? "text-[#111827]" : "text-[#374151]"
-              }`}
-            >
-              {format(item.date, "EEE, MMM d")}
-            </div>
-
-            <div className="mt-1 text-[28px] font-bold leading-none text-[#16a34a]">
-              ₹
-            </div>
-
-            <div className="mt-1 text-[18px] font-bold leading-none text-[#16a34a]">
-              {item.price.toLocaleString("en-IN")}
-            </div>
+            ‹
           </button>
-        );
-      })}
 
-      <button
-        type="button"
-        onClick={handleNext}
-        disabled={!canGoRight}
-        className={`flex items-center justify-center border-l border-[#eef2f7] text-xl ${
-          canGoRight
-            ? "text-[#0b66c3] hover:bg-[#f8fbff]"
-            : "cursor-not-allowed text-[#cbd5e1]"
-        }`}
-      >
-        ›
-      </button>
-    </div>
+          {fareData.map((item, index) => {
+            const selected = isSameDay(item.date, activeDate);
+            const isLast = index === fareData.length - 1;
+
+            return (
+              <button
+                key={item.date.toISOString()}
+                type="button"
+                onClick={() => handleSelectDate(item.date)}
+                className={`px-2 py-2 text-center transition sm:px-3 sm:py-3 ${
+                  !isLast ? "border-r border-[#eef2f7]" : ""
+                } ${
+                  selected
+                    ? "bg-[#ecfdf5] ring-1 ring-inset ring-[#86efac]"
+                    : "bg-white hover:bg-[#f8fafc]"
+                }`}
+              >
+                <div
+                  className={`text-[11px] font-medium sm:text-[12px] ${
+                    selected ? "text-[#111827]" : "text-[#374151]"
+                  }`}
+                >
+                  {format(item.date, "EEE, MMM d")}
+                </div>
+
+                <div className="mt-1 text-[20px] font-bold leading-none text-[#16a34a] sm:text-[28px]">
+                  ₹
+                </div>
+
+                <div className="mt-1 text-[14px] font-bold leading-none text-[#16a34a] sm:text-[18px]">
+                  {item.price.toLocaleString("en-IN")}
+                </div>
+              </button>
+            );
+          })}
+
+          <button
+            type="button"
+            onClick={handleNext}
+            disabled={!canGoRight}
+            className={`sticky right-0 z-10 flex items-center justify-center border-l border-[#eef2f7] bg-white text-xl ${
+              canGoRight
+                ? "text-[#0b66c3] hover:bg-[#f8fbff]"
+                : "cursor-not-allowed text-[#cbd5e1]"
+            }`}
+          >
+            ›
+          </button>
+        </div>
+      </div>
+    </>
   );
 }

@@ -22,7 +22,7 @@ type OneWayResultsLayoutProps = {
   state: FlightState;
   filters: FlightsFiltersState;
   onFiltersChange: (filters: FlightsFiltersState) => void;
-  isInternational?: boolean; // ✅ NEW
+  isInternational?: boolean;
 };
 
 type SimpleOption = {
@@ -31,12 +31,61 @@ type SimpleOption = {
   price?: string;
 };
 
+type AppliedChip = {
+  key: keyof FlightsFiltersState;
+  value: string;
+  label: string;
+};
+
+const popularFilterLabels: Record<string, string> = {
+  nonstop: "Non Stop",
+  nearby: "Hide Nearby Airports",
+  refundable: "Refundable Fares",
+  indigo: "IndiGo",
+  airindia: "Air India",
+  akasa: "Akasa Air",
+  spicejet: "SpiceJet",
+  morning: "Morning Departures",
+  afternoon: "Afternoon Departures",
+  early: "Early Morning Departures",
+};
+
+const stopLabels: Record<string, string> = {
+  nonstop: "Non Stop",
+  "1stop": "1 Stop",
+  "2stop": "2+ Stop",
+};
+
+const timeLabels: Record<string, string> = {
+  before6: "Before 6 AM",
+  "6to12": "6 AM to 12 PM",
+  "12to18": "12 PM to 6 PM",
+  after18: "After 6 PM",
+};
+
+const airlineLabels: Record<string, string> = {
+  airindia: "Air India",
+  aiexpress: "Air India Express",
+  akasa: "Akasa Air",
+  indigo: "IndiGo",
+  spicejet: "SpiceJet",
+};
+
+const aircraftLabels: Record<string, string> = {
+  smallmid: "Small / Mid-size aircraft",
+  widebody: "Large / Wide-body aircraft",
+};
+
 function normalizeAirlineId(value: string) {
   return value.toLowerCase().replace(/\s/g, "");
 }
 
 function normalizeId(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function ensureArray(value: any) {
+  return Array.isArray(value) ? value : [];
 }
 
 export default function OneWayResultsLayout({
@@ -50,6 +99,7 @@ export default function OneWayResultsLayout({
   const initialSelectedDate = state.segments[0]?.departure || new Date();
   const [selectedDate] = useState(initialSelectedDate);
   const [sortType, setSortType] = useState("cheapest");
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   const baseFlights = useMemo(() => {
     return generateDummyFlights(fromCity, toCity);
@@ -115,7 +165,9 @@ export default function OneWayResultsLayout({
       }
 
       const departAirportName =
-        flight.departAirportName || flight.departAirport || `${fromCity} Airport`;
+        flight.departAirportName ||
+        flight.departAirport ||
+        `${fromCity} Airport`;
       const departAirportId = normalizeId(departAirportName);
 
       if (!departureAirportMap.has(departAirportId)) {
@@ -172,11 +224,209 @@ export default function OneWayResultsLayout({
     safePriceRange[0] !== minPrice || safePriceRange[1] !== maxPrice;
 
   const isDurationFilterApplied =
-    safeDurationRange[0] !== minDuration || safeDurationRange[1] !== maxDuration;
+    safeDurationRange[0] !== minDuration ||
+    safeDurationRange[1] !== maxDuration;
 
   const isLayoverDurationFilterApplied =
     safeLayoverDurationRange[0] !== minLayoverDuration ||
     safeLayoverDurationRange[1] !== maxLayoverDuration;
+
+  const appliedChips: AppliedChip[] = useMemo(() => {
+    const chips: AppliedChip[] = [];
+
+    ensureArray(filters.popular)
+      .filter((item) => item !== "__show_all_popular__")
+      .forEach((item) => {
+        chips.push({
+          key: "popular",
+          value: item,
+          label: popularFilterLabels[item] || item,
+        });
+      });
+
+    ensureArray(filters.departureAirports).forEach((item) => {
+      chips.push({
+        key: "departureAirports",
+        value: item,
+        label:
+          departureAirportOptions.find((airport) => airport.id === item)
+            ?.label || item,
+      });
+    });
+
+    ensureArray(filters.stops).forEach((item) => {
+      chips.push({
+        key: "stops",
+        value: item,
+        label: stopLabels[item] || item,
+      });
+    });
+
+    ensureArray(filters.departureTime).forEach((item) => {
+      chips.push({
+        key: "departureTime",
+        value: item,
+        label: `Departure: ${timeLabels[item] || item}`,
+      });
+    });
+
+    ensureArray(filters.arrivalTime).forEach((item) => {
+      chips.push({
+        key: "arrivalTime",
+        value: item,
+        label: `Arrival: ${timeLabels[item] || item}`,
+      });
+    });
+
+    ensureArray(filters.airlines).forEach((item) => {
+      chips.push({
+        key: "airlines",
+        value: item,
+        label: airlineLabels[item] || item,
+      });
+    });
+
+    ensureArray(filters.aircraftSize).forEach((item) => {
+      chips.push({
+        key: "aircraftSize",
+        value: item,
+        label: aircraftLabels[item] || item,
+      });
+    });
+
+    if (isPriceFilterApplied) {
+      chips.push({
+        key: "priceRange",
+        value: "priceRange",
+        label: `₹${safePriceRange[0].toLocaleString(
+          "en-IN"
+        )} - ₹${safePriceRange[1].toLocaleString("en-IN")}`,
+      });
+    }
+
+    if (isInternational && filters.checkInBaggage) {
+      chips.push({
+        key: "checkInBaggage",
+        value: "checkInBaggage",
+        label: "Check-in baggage",
+      });
+    }
+
+    if (isInternational && isDurationFilterApplied) {
+      chips.push({
+        key: "durationRange",
+        value: "durationRange",
+        label: `Duration ${safeDurationRange[0]} - ${safeDurationRange[1]} min`,
+      });
+    }
+
+    ensureArray(filters.alliances).forEach((item) => {
+      chips.push({
+        key: "alliances",
+        value: item,
+        label:
+          allianceOptions.find((alliance) => alliance.id === item)?.label ||
+          item,
+      });
+    });
+
+    ensureArray(filters.layoverAirports).forEach((item) => {
+      chips.push({
+        key: "layoverAirports",
+        value: item,
+        label:
+          layoverAirportOptions.find((airport) => airport.id === item)?.label ||
+          item,
+      });
+    });
+
+    if (isInternational && isLayoverDurationFilterApplied) {
+      chips.push({
+        key: "layoverDurationRange",
+        value: "layoverDurationRange",
+        label: `Layover ${safeLayoverDurationRange[0]} - ${safeLayoverDurationRange[1]} min`,
+      });
+    }
+
+    return chips;
+  }, [
+    filters,
+    departureAirportOptions,
+    allianceOptions,
+    layoverAirportOptions,
+    isInternational,
+    isPriceFilterApplied,
+    isDurationFilterApplied,
+    isLayoverDurationFilterApplied,
+    safePriceRange,
+    safeDurationRange,
+    safeLayoverDurationRange,
+    minPrice,
+    maxPrice,
+    minDuration,
+    maxDuration,
+    minLayoverDuration,
+    maxLayoverDuration,
+  ]);
+
+  const removeMobileChip = (chip: AppliedChip) => {
+    if (chip.key === "priceRange") {
+      onFiltersChange({
+        ...filters,
+        priceRange: [minPrice, maxPrice],
+      });
+      return;
+    }
+
+    if (chip.key === "durationRange") {
+      onFiltersChange({
+        ...filters,
+        durationRange: [minDuration, maxDuration],
+      });
+      return;
+    }
+
+    if (chip.key === "layoverDurationRange") {
+      onFiltersChange({
+        ...filters,
+        layoverDurationRange: [minLayoverDuration, maxLayoverDuration],
+      });
+      return;
+    }
+
+    if (chip.key === "checkInBaggage") {
+      onFiltersChange({
+        ...filters,
+        checkInBaggage: false,
+      });
+      return;
+    }
+
+    const currentValues = ensureArray((filters as any)[chip.key]);
+
+    onFiltersChange({
+      ...filters,
+      [chip.key]: currentValues.filter((item) => item !== chip.value),
+    });
+  };
+
+  const clearAllMobileFilters = () => {
+    onFiltersChange({
+      popular: [],
+      departureAirports: [],
+      priceRange: [minPrice, maxPrice],
+      stops: [],
+      departureTime: [],
+      arrivalTime: [],
+      airlines: [],
+      aircraftSize: [],
+      checkInBaggage: false,
+      durationRange: [minDuration, maxDuration],
+      alliances: [],
+      layoverAirports: [],
+      layoverDurationRange: [minLayoverDuration, maxLayoverDuration],
+    });
+  };
 
   const finalFlights = useMemo(() => {
     let flights = [...baseFlights] as any[];
@@ -292,8 +542,7 @@ export default function OneWayResultsLayout({
 
     if (isInternational && isLayoverDurationFilterApplied) {
       flights = flights.filter((f) => {
-        const value =
-          f.layoverDurationMinutes || f.stopDurationMinutes || 0;
+        const value = f.layoverDurationMinutes || f.stopDurationMinutes || 0;
         return (
           value >= safeLayoverDurationRange[0] &&
           value <= safeLayoverDurationRange[1]
@@ -318,8 +567,7 @@ export default function OneWayResultsLayout({
 
           if (selected === "widebody") {
             return (
-              aircraftLabel.includes("wide") ||
-              aircraftLabel.includes("body")
+              aircraftLabel.includes("wide") || aircraftLabel.includes("body")
             );
           }
 
@@ -372,49 +620,127 @@ export default function OneWayResultsLayout({
     safePriceRange,
     safeDurationRange,
     safeLayoverDurationRange,
-    minPrice,
-    maxPrice,
-    minDuration,
-    maxDuration,
-    minLayoverDuration,
-    maxLayoverDuration,
   ]);
 
+  const filterPanel = (
+    <FlightsFiltersSidebar
+      tripType="oneway"
+      isInternational={isInternational}
+      filters={filters}
+      onFiltersChange={onFiltersChange}
+      fromCity={fromCity}
+      toCity={toCity}
+      minPrice={minPrice}
+      maxPrice={maxPrice}
+      departureAirportOptions={departureAirportOptions}
+      minDuration={minDuration}
+      maxDuration={maxDuration}
+      minLayoverDuration={minLayoverDuration}
+      maxLayoverDuration={maxLayoverDuration}
+      allianceOptions={allianceOptions}
+      layoverAirportOptions={layoverAirportOptions}
+    />
+  );
+
   return (
-    <div className="grid grid-cols-[310px_minmax(0,1fr)] gap-5">
-      <div className="sticky top-[82px] h-fit self-start">
-  <FlightsFiltersSidebar
-    tripType="oneway"
-    isInternational={isInternational}
-    filters={filters}
-    onFiltersChange={onFiltersChange}
-    fromCity={fromCity}
-    toCity={toCity}
-    minPrice={minPrice}
-    maxPrice={maxPrice}
-    departureAirportOptions={departureAirportOptions}
-    minDuration={minDuration}
-    maxDuration={maxDuration}
-    minLayoverDuration={minLayoverDuration}
-    maxLayoverDuration={maxLayoverDuration}
-    allianceOptions={allianceOptions}
-    layoverAirportOptions={layoverAirportOptions}
-  />
-</div>
+    <div className="grid w-full grid-cols-1 gap-2.5 overflow-x-hidden lg:grid-cols-[310px_minmax(0,1fr)] lg:gap-5 lg:overflow-visible">
+      <div className="hidden lg:sticky lg:top-[82px] lg:block lg:h-fit lg:self-start">
+        {filterPanel}
+      </div>
 
-      <section className="space-y-2">
-        <FlightsResultHeader
-          tripType="oneway"
-          segments={[
-            {
-              fromCity,
-              toCity,
-              departure: state.segments[0]?.departure,
-            },
-          ]}
-        />
+      <section className="min-w-0 max-w-full space-y-2.5 lg:space-y-2">
+        <div className="sticky top-0 z-30 -mx-3 border-b border-[#e5edf6] bg-[#eef3f8]/95 px-3 py-2 backdrop-blur lg:hidden">
+          <div className="flex items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => window.history.back()}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#d9e2ef] bg-white text-[22px] font-bold leading-none text-[#111827] shadow-sm"
+              aria-label="Go back"
+            >
+              ‹
+            </button>
 
-        
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-[14px] font-black leading-tight text-[#111827]">
+                {fromCity} to {toCity}
+              </div>
+              <div className="mt-0.5 text-[11px] font-semibold text-[#64748b]">
+                {finalFlights.length} flights available
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowMobileFilters(true)}
+              className="shrink-0 rounded-full bg-[#0f172a] px-3 py-2 text-[12px] font-black text-white shadow-sm"
+            >
+              Filters
+            </button>
+          </div>
+        </div>
+
+        <div className="hidden lg:block">
+          <FlightsResultHeader
+            tripType="oneway"
+            segments={[
+              {
+                fromCity,
+                toCity,
+                departure: state.segments[0]?.departure,
+              },
+            ]}
+          />
+        </div>
+
+        <div className="max-w-full space-y-2 lg:hidden">
+          <button
+            type="button"
+            onClick={() => setShowMobileFilters(true)}
+            className="flex h-10 w-full items-center justify-between rounded-xl border border-[#d9e2ef] bg-white px-3.5 text-[12px] font-black text-[#111827] shadow-sm"
+          >
+            <span>Filters</span>
+            <span className="rounded-full bg-[#eef7ff] px-3 py-1 text-[12px] font-extrabold text-[#0b66c3]">
+              {finalFlights.length} available
+            </span>
+          </button>
+
+          {appliedChips.length > 0 ? (
+            <div className="rounded-xl border border-[#d9e2ef] bg-white px-3 py-2.5 shadow-sm">
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <div className="text-[12px] font-extrabold uppercase tracking-[0.08em] text-[#64748b]">
+                  Applied Filters
+                </div>
+
+                <button
+                  type="button"
+                  onClick={clearAllMobileFilters}
+                  className="text-[12px] font-extrabold text-[#2563eb]"
+                >
+                  Clear All
+                </button>
+              </div>
+
+              <div className="flex gap-2 overflow-x-auto overflow-y-hidden pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {appliedChips.map((chip) => (
+                  <div
+                    key={`${chip.key}-${chip.value}`}
+                    className="flex shrink-0 items-center gap-2 rounded-full bg-[#e0f2fe] px-3 py-2 text-[12px] font-bold text-[#0f172a]"
+                  >
+                    <span>{chip.label}</span>
+
+                    <button
+                      type="button"
+                      onClick={() => removeMobileChip(chip)}
+                      className="flex h-5 w-5 items-center justify-center rounded-full bg-[#2563eb] text-[12px] leading-none text-white"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </div>
 
         <FlightsDateFareStrip
           selectedDate={selectedDate}
@@ -424,30 +750,78 @@ export default function OneWayResultsLayout({
 
         <FlightsSortBar sortType={sortType} onSortChange={setSortType} />
 
-        {finalFlights.length > 0 ? (
-          finalFlights.map((card: any) => (
-            <OneWayFlightResultCard
-              key={card.id}
-              airline={card.airline}
-              code={card.code}
-              depart={formatMinutesToTime(card.departMinutes)}
-              departCity={fromCity}
-              duration={formatDuration(card.durationMinutes)}
-              stop={card.stopLabel}
-              arrive={formatMinutesToTime(card.arriveMinutes)}
-              arriveCity={toCity}
-              price={`₹${card.basePrice.toLocaleString("en-IN")}`}
-              timing={card.timing}
-              promo={card.promo}
-              stopDetails={card.stopDetails}
-            />
-          ))
-        ) : (
-          <div className="rounded-2xl border border-[#e5e7eb] bg-white px-6 py-10 text-center text-[15px] text-[#6b7280]">
-            No flights found for the selected filters.
-          </div>
-        )}
+        <div className="max-w-full space-y-2.5 pb-1 lg:space-y-3 lg:pb-0">
+          {finalFlights.length > 0 ? (
+            finalFlights.map((card: any) => (
+              <OneWayFlightResultCard
+                key={card.id}
+                airline={card.airline}
+                code={card.code}
+                depart={formatMinutesToTime(card.departMinutes)}
+                departCity={fromCity}
+                duration={formatDuration(card.durationMinutes)}
+                stop={card.stopLabel}
+                arrive={formatMinutesToTime(card.arriveMinutes)}
+                arriveCity={toCity}
+                price={`₹${card.basePrice.toLocaleString("en-IN")}`}
+                timing={card.timing}
+                promo={card.promo}
+                stopDetails={card.stopDetails}
+              />
+            ))
+          ) : (
+            <div className="rounded-2xl border border-[#e5e7eb] bg-white px-4 py-8 text-center text-[14px] text-[#6b7280] sm:px-6 sm:py-10 sm:text-[15px]">
+              No flights found for the selected filters.
+            </div>
+          )}
+        </div>
       </section>
+
+      {showMobileFilters && (
+        <div className="fixed inset-0 z-[80] lg:hidden">
+          <button
+            type="button"
+            aria-label="Close filters"
+            onClick={() => setShowMobileFilters(false)}
+            className="absolute inset-0 bg-black/45"
+          />
+
+          <div className="absolute bottom-0 left-0 right-0 max-h-[86vh] overflow-hidden rounded-t-3xl bg-[#eef3f8] shadow-2xl">
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[#d9e2ef] bg-white px-4 py-3">
+              <div>
+                <div className="text-[15px] font-extrabold text-[#111827]">
+                  Filters
+                </div>
+                <div className="text-[12px] font-medium text-[#6b7280]">
+                  {fromCity} to {toCity}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowMobileFilters(false)}
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-[#f3f4f6] text-[20px] font-bold text-[#111827]"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="max-h-[calc(86vh-128px)] overflow-y-auto px-3 py-3">
+              {filterPanel}
+            </div>
+
+            <div className="sticky bottom-0 border-t border-[#d9e2ef] bg-white px-4 py-3">
+              <button
+                type="button"
+                onClick={() => setShowMobileFilters(false)}
+                className="h-11 w-full rounded-xl bg-[#f97316] text-[14px] font-extrabold text-white"
+              >
+                Show {finalFlights.length} Flights
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

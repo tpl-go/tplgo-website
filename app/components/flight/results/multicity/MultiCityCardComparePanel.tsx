@@ -36,10 +36,15 @@ export default function MultiCityCardComparePanel({
   const canGoRight = compareStartIndex + compareVisibleCount < fareOptions.length;
 
   return (
-    <div className="overflow-hidden rounded-b-2xl">
-      <div className="flex items-center justify-between border-b border-[#dbe4ef] bg-white px-4 py-3">
-        <div className="text-[14px] font-semibold text-[#111827]">
-          Services (Per Pax)
+    <div className="overflow-hidden rounded-b-2xl bg-slate-50">
+      <div className="flex items-center justify-between border-b border-slate-200 bg-white px-3 py-3 sm:px-5 sm:py-4">
+        <div>
+          <div className="text-[15px] font-black text-slate-950 sm:text-[17px]">
+            Compare fares
+          </div>
+          <div className="text-[11px] font-semibold text-slate-500">
+            {flight.fromCode} → {flight.toCode} · services per passenger
+          </div>
         </div>
 
         <div className="flex items-center gap-2">
@@ -49,10 +54,10 @@ export default function MultiCityCardComparePanel({
               canGoLeft &&
               setCompareStartIndex((prev) => Math.max(prev - 1, 0))
             }
-            className={`flex h-8 w-8 items-center justify-center rounded-full border text-[16px] ${
+            className={`flex h-8 w-8 items-center justify-center rounded-full border text-[16px] transition ${
               canGoLeft
-                ? "border-[#cbd5e1] bg-white text-[#111827]"
-                : "cursor-not-allowed border-[#e5e7eb] bg-[#f8fafc] text-[#cbd5e1]"
+                ? "border-slate-300 bg-white text-slate-900 hover:border-orange-300 hover:bg-orange-50"
+                : "cursor-not-allowed border-slate-200 bg-slate-50 text-slate-300"
             }`}
           >
             ‹
@@ -63,10 +68,10 @@ export default function MultiCityCardComparePanel({
             onClick={() =>
               canGoRight && setCompareStartIndex((prev) => prev + 1)
             }
-            className={`flex h-8 w-8 items-center justify-center rounded-full border text-[16px] ${
+            className={`flex h-8 w-8 items-center justify-center rounded-full border text-[16px] transition ${
               canGoRight
-                ? "border-[#cbd5e1] bg-white text-[#111827]"
-                : "cursor-not-allowed border-[#e5e7eb] bg-[#f8fafc] text-[#cbd5e1]"
+                ? "border-slate-300 bg-white text-slate-900 hover:border-orange-300 hover:bg-orange-50"
+                : "cursor-not-allowed border-slate-200 bg-slate-50 text-slate-300"
             }`}
           >
             ›
@@ -74,121 +79,121 @@ export default function MultiCityCardComparePanel({
         </div>
       </div>
 
-      <div className="flex">
+      <div className="flex overflow-x-auto overflow-y-hidden [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {/* Left label column */}
-        <div className="w-[220px] shrink-0 border-r border-[#dbe4ef] bg-[#f8fbff] p-4">
-          <div className="space-y-0 overflow-hidden rounded-2xl border border-[#dbe4ef] bg-white">
-            <div className="flex h-[72px] items-center rounded-t-2xl bg-[#eef4fb] px-4 text-[14px] font-semibold text-[#111827]">
+        <div className="sticky left-0 z-10 w-[132px] shrink-0 border-r border-slate-200 bg-slate-50 p-2 sm:static sm:w-[210px] sm:p-4">
+          <div className="space-y-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="flex h-[64px] items-center rounded-t-2xl bg-slate-100 px-3 text-[12px] font-black text-slate-900 sm:h-[72px] sm:px-4 sm:text-[14px]">
               Services (Per Pax)
             </div>
 
-            <div className="flex h-[108px] items-center border-t border-[#eceff3] bg-[#eef4fb] px-4 text-[14px] font-semibold text-[#111827]">
+            <div className="flex h-[92px] items-center border-t border-slate-100 bg-slate-50 px-3 text-[12px] font-black text-slate-900 sm:h-[108px] sm:px-4 sm:text-[14px]">
               Fares
             </div>
 
-            <div className="border-t border-[#eceff3] bg-[#eef4fb] px-4 py-4">
-              <div className="text-[14px] font-semibold text-[#111827]">
+            <div className="border-t border-slate-100 bg-slate-50 px-3 py-3 sm:px-4 sm:py-4">
+              <div className="text-[12px] font-black text-slate-900 sm:text-[14px]">
                 Baggage Info
               </div>
-              <div className="mt-2 text-[13px] text-[#374151]">
+              <div className="mt-2 text-[11px] font-semibold text-slate-500 sm:text-[13px]">
                 Adult (Age 12+)
               </div>
             </div>
 
-            <div className="flex h-[86px] items-center border-t border-[#eceff3] bg-[#eef4fb] px-4 text-[14px] font-semibold text-[#111827]">
+            <div className="flex h-[76px] items-center border-t border-slate-100 bg-slate-50 px-3 text-[12px] font-black text-slate-900 sm:h-[86px] sm:px-4 sm:text-[14px]">
               Stops
             </div>
 
-            <div className="flex h-[86px] items-center border-t border-[#eceff3] bg-[#eef4fb] px-4 text-[14px] font-semibold text-[#111827]">
+            <div className="flex h-[76px] items-center border-t border-slate-100 bg-slate-50 px-3 text-[12px] font-black text-slate-900 sm:h-[86px] sm:px-4 sm:text-[14px]">
               Duration
             </div>
 
-            <div className="flex h-[86px] items-center border-t border-[#eceff3] bg-[#eef4fb] px-4 text-[14px] font-semibold text-[#111827]">
+            <div className="flex h-[76px] items-center border-t border-slate-100 bg-slate-50 px-3 text-[12px] font-black text-slate-900 sm:h-[86px] sm:px-4 sm:text-[14px]">
               Sector
             </div>
 
-            <div className="flex h-[110px] items-center rounded-b-2xl border-t border-[#eceff3] bg-[#eef4fb] px-4 text-[14px] font-semibold text-[#111827]">
+            <div className="flex h-[100px] items-center rounded-b-2xl border-t border-slate-100 bg-slate-50 px-3 text-[12px] font-black text-slate-900 sm:h-[110px] sm:px-4 sm:text-[14px]">
               CTA
             </div>
           </div>
         </div>
 
         {/* Fare compare cards */}
-        <div className="flex flex-1 gap-4 overflow-x-auto p-4">
+        <div className="flex min-w-max flex-1 gap-3 p-2 sm:gap-4 sm:p-4">
           {compareVisibleFares.map((fare) => {
             const isSelected = selectedFareId === fare.id;
 
             return (
               <div
                 key={fare.id}
-                className={`flex min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border ${
-                  isSelected ? "border-[#d1a67a] shadow-sm" : "border-[#e5e7eb]"
-                } bg-white`}
+                className={`flex min-w-[196px] flex-1 flex-col overflow-hidden rounded-2xl border bg-white transition sm:min-w-[240px] ${
+                  isSelected ? "border-orange-400 shadow-[0_14px_36px_rgba(249,115,22,0.16)] ring-1 ring-orange-100" : "border-slate-200 shadow-sm"
+                }`}
               >
                 <div
-                  className={`flex h-[72px] items-center gap-2 border-b px-4 ${
-                    isSelected ? "bg-[#d8c2a6]" : "bg-[#f9fafb]"
+                  className={`flex h-[64px] items-center gap-2 border-b border-slate-100 px-3 sm:h-[72px] sm:px-4 ${
+                    isSelected ? "bg-orange-50" : "bg-white"
                   }`}
                 >
                   <input
                     type="radio"
                     checked={isSelected}
                     onChange={() => onChange(fare.id)}
-                    className="h-4 w-4"
+                    className="h-4 w-4 accent-orange-500"
                   />
                   <span
                     className={`text-[14px] font-semibold ${
-                      isSelected ? "text-[#111827]" : "text-[#b91c1c]"
+                      isSelected ? "text-slate-950" : "text-orange-700"
                     }`}
                   >
                     {fare.label}
                   </span>
                 </div>
 
-                <div className="flex h-[78px] items-center justify-center border-b px-4 text-[24px] font-semibold text-[#111827]">
+                <div className="flex h-[78px] items-center justify-center border-b border-slate-100 px-3 text-[20px] font-black text-slate-950 sm:px-4 sm:text-[24px]">
                   ₹{fare.price.toLocaleString("en-IN")}
                 </div>
 
-                <div className="grid h-[110px] grid-cols-2 border-b text-center">
-                  <div className="border-r px-3 py-4">
-                    <div className="text-[14px] font-medium text-[#111827]">
+                <div className="grid h-[110px] grid-cols-2 border-b border-slate-100 text-center">
+                  <div className="border-r border-slate-100 px-2 py-4 sm:px-3">
+                    <div className="text-[12px] font-bold text-slate-900 sm:text-[14px]">
                       Check In Bag
                     </div>
-                    <div className="mt-2 text-[13px] text-[#111827]">
+                    <div className="mt-2 text-[11px] font-semibold text-slate-500 sm:text-[13px]">
                       {flight.baggage}
                     </div>
                   </div>
-                  <div className="px-3 py-4">
-                    <div className="text-[14px] font-medium text-[#111827]">
+                  <div className="px-2 py-4 sm:px-3">
+                    <div className="text-[12px] font-bold text-slate-900 sm:text-[14px]">
                       Cabin / Fare Type
                     </div>
-                    <div className="mt-2 text-[13px] text-[#111827]">
+                    <div className="mt-2 text-[11px] font-semibold text-slate-500 sm:text-[13px]">
                       {fare.subtitle}
                     </div>
                   </div>
                 </div>
 
-                <div className="flex h-[86px] items-center justify-center border-b px-4 text-[14px] text-[#111827]">
+                <div className="flex h-[76px] items-center justify-center border-b border-slate-100 px-3 text-[12px] font-semibold text-slate-700 sm:h-[86px] sm:px-4 sm:text-[14px]">
                   {flight.stopsText}
                 </div>
 
-                <div className="flex h-[86px] items-center justify-center border-b px-4 text-[14px] text-[#111827]">
+                <div className="flex h-[76px] items-center justify-center border-b border-slate-100 px-3 text-[12px] font-semibold text-slate-700 sm:h-[86px] sm:px-4 sm:text-[14px]">
                   {flight.duration}
                 </div>
 
-                <div className="flex h-[86px] items-center justify-center border-b px-4 text-[14px] text-[#111827]">
+                <div className="flex h-[76px] items-center justify-center border-b border-slate-100 px-3 text-[12px] font-semibold text-slate-700 sm:h-[86px] sm:px-4 sm:text-[14px]">
                   {flight.fromCode} → {flight.toCode}
                 </div>
 
                 <div className="flex h-[110px] flex-col items-center justify-center px-4 text-center">
-                  <div className="mb-4 text-[14px] text-[#111827]">
+                  <div className="mb-3 rounded-full bg-slate-100 px-3 py-1 text-[12px] font-bold text-slate-700 sm:mb-4 sm:text-[14px]">
                     {fare.subtitle}
                   </div>
 
                   <button
                     type="button"
                     onClick={() => onSelectFare(fare.id)}
-                    className="rounded bg-orange-500 px-6 py-2 text-[13px] font-semibold text-white hover:bg-orange-600"
+                    className="rounded-full bg-orange-500 px-5 py-2 text-[12px] font-black text-white shadow-sm transition hover:bg-orange-600 sm:px-6 sm:text-[13px]"
                   >
                     SELECT
                   </button>
@@ -199,7 +204,7 @@ export default function MultiCityCardComparePanel({
         </div>
       </div>
 
-      <div className="bg-white px-4 pb-5 pt-1 text-[13px] leading-7 text-[#7c5a5a]">
+      <div className="border-t border-slate-200 bg-white px-3 pb-5 pt-3 text-[12px] leading-6 text-slate-500 sm:px-5 sm:text-[13px]">
         <div>
           The airline fare shown is indicative and may vary depending on the
           selected fare option for this leg.

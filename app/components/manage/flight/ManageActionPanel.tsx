@@ -20,7 +20,7 @@ export default function ManageActionPanel({
   onContinue,
 }: ManageActionPanelProps) {
   return (
-    <div className="rounded-[24px] border border-black/5 bg-white p-5 shadow-sm">
+    <div className="rounded-[20px] border border-black/5 bg-white p-4 shadow-sm md:rounded-[24px] md:p-5">
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#ff6b00]">
@@ -46,7 +46,7 @@ export default function ManageActionPanel({
 
       <div className="mt-5 rounded-2xl bg-[#fff7f2] p-4">
         {quote.settlementMode === "payment" && (
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b7280]">
                 Net Payable
@@ -58,7 +58,7 @@ export default function ManageActionPanel({
             <button
               type="button"
               onClick={onContinue}
-              className="rounded-full bg-[#ff6b00] px-5 py-3 text-sm font-semibold text-white"
+              className="min-h-11 w-full rounded-full bg-[#ff6b00] px-5 py-3 text-sm font-semibold text-white sm:w-auto"
             >
               Continue to Payment
             </button>
@@ -66,7 +66,7 @@ export default function ManageActionPanel({
         )}
 
         {quote.settlementMode === "wallet_credit" && (
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b7280]">
                 Refund Wallet Credit
@@ -78,7 +78,7 @@ export default function ManageActionPanel({
             <button
               type="button"
               onClick={onContinue}
-              className="rounded-full bg-[#111827] px-5 py-3 text-sm font-semibold text-white"
+              className="min-h-11 w-full rounded-full bg-[#111827] px-5 py-3 text-sm font-semibold text-white sm:w-auto"
             >
               Save Changes
             </button>
@@ -86,7 +86,7 @@ export default function ManageActionPanel({
         )}
 
         {quote.settlementMode === "save" && (
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
             <div>
               <p className="text-sm font-semibold text-[#111827]">
                 No payment required
@@ -98,7 +98,7 @@ export default function ManageActionPanel({
             <button
               type="button"
               onClick={onContinue}
-              className="rounded-full bg-[#111827] px-5 py-3 text-sm font-semibold text-white"
+              className="min-h-11 w-full rounded-full bg-[#111827] px-5 py-3 text-sm font-semibold text-white sm:w-auto"
             >
               Save Changes
             </button>
@@ -111,9 +111,9 @@ export default function ManageActionPanel({
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between gap-4 rounded-2xl bg-[#f8f9fb] px-4 py-3">
+    <div className="flex items-center justify-between gap-3 rounded-2xl bg-[#f8f9fb] px-4 py-3">
       <p className="text-sm text-[#4b5563]">{label}</p>
-      <p className="text-sm font-semibold text-[#111827]">{value}</p>
+      <p className="shrink-0 text-sm font-semibold text-[#111827]">{value}</p>
     </div>
   );
 }

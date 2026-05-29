@@ -37,20 +37,20 @@ export default function InsuranceManageLayout({
   children,
 }: Props) {
   return (
-    <main className="min-h-screen bg-[#f8f9fb] px-4 py-8 text-black">
+    <main className="min-h-screen overflow-x-hidden bg-[#f8f9fb] px-3 py-4 text-black md:px-4 md:py-8">
       <div className="mx-auto max-w-[1440px]">
-        <div className="mb-5 rounded-[30px] border border-black/5 bg-white p-6 shadow-sm">
+        <div className="mb-4 rounded-[20px] border border-black/5 bg-white p-4 shadow-sm md:mb-5 md:rounded-[30px] md:p-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
+            <div className="min-w-0">
               <p className="text-xs font-black uppercase tracking-wide text-orange-600">
                 Insurance Manage Booking
               </p>
 
-              <h1 className="mt-1 text-2xl font-black text-[#111827]">
+              <h1 className="mt-1 break-words text-[22px] font-black leading-8 text-[#111827] md:text-2xl">
                 {policyTitle || "Insurance Policy"}
               </h1>
 
-              <p className="mt-1 text-sm font-semibold text-[#6b7280]">
+              <p className="mt-1 break-words text-[13px] font-semibold leading-5 text-[#6b7280] md:text-sm">
                 Booking ID: {bookingId} • {destination || "Destination"} •{" "}
                 {startDateLabel || "Travel date"}
               </p>
@@ -66,27 +66,44 @@ export default function InsuranceManageLayout({
           </div>
         </div>
 
-        <div className="grid gap-5 lg:grid-cols-[280px_1fr]">
-          <aside className="h-fit rounded-[28px] border border-black/5 bg-white p-3 shadow-sm">
-            <div className="space-y-2">
+        <div className="grid gap-4 lg:grid-cols-[280px_1fr] lg:gap-5">
+          <aside className="h-fit rounded-[20px] border border-black/5 bg-white p-3 shadow-sm md:rounded-[28px]">
+            <div className="lg:hidden">
+              <select
+                value={activeTab}
+                onChange={(event) =>
+                  onTabChange(event.target.value as InsuranceManageTab)
+                }
+                className="h-12 w-full rounded-2xl border border-orange-200 bg-orange-50 px-4 text-sm font-black text-gray-900 outline-none shadow-sm"
+                aria-label="Select booking action"
+              >
+                {tabs.map((tab) => (
+                  <option key={tab.key} value={tab.key}>
+                    {tab.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="hidden space-y-2 lg:block lg:overflow-visible">
               {tabs.map((tab) => (
                 <button
                   key={tab.key}
                   type="button"
                   onClick={() => onTabChange(tab.key)}
-                  className={`flex h-11 w-full items-center rounded-2xl px-4 text-left text-sm font-black transition ${
+                  className={`flex h-11 min-w-[154px] items-center rounded-2xl px-4 text-left text-sm font-black transition lg:w-full lg:min-w-0 ${
                     activeTab === tab.key
                       ? "bg-orange-500 text-white shadow-sm"
                       : "text-gray-700 hover:bg-orange-50 hover:text-orange-700"
                   }`}
                 >
-                  {tab.label}
+                  <span className="truncate">{tab.label}</span>
                 </button>
               ))}
             </div>
           </aside>
 
-          <section>{children}</section>
+          <section className="min-w-0">{children}</section>
         </div>
       </div>
     </main>

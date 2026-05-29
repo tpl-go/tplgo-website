@@ -38,28 +38,33 @@ export default function MultiCityModal({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/45 px-4 py-6"
+      className="fixed inset-0 z-[100] flex items-end justify-center bg-slate-950/55 px-0 py-0 backdrop-blur-[2px] sm:items-center sm:px-4 sm:py-6"
       onClick={onClose}
     >
       <div
-        className={`relative max-h-[90vh] w-full ${maxWidthClass} overflow-hidden rounded-2xl bg-white shadow-2xl`}
+        className={`relative max-h-[92vh] w-full ${maxWidthClass} overflow-hidden rounded-t-[28px] border border-white/70 bg-white shadow-[0_-18px_60px_rgba(15,23,42,0.28)] sm:max-h-[90vh] sm:rounded-3xl sm:shadow-[0_24px_80px_rgba(15,23,42,0.24)]`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-[#e5e7eb] px-5 py-4">
-          <div className="text-[18px] font-semibold text-[#111827]">
-            {title || "Details"}
+        <div className="flex items-center justify-between border-b border-slate-100 bg-white px-4 py-3 sm:px-5 sm:py-4">
+          <div>
+            <div className="text-[16px] font-black text-slate-950 sm:text-[18px]">
+              {title || "Details"}
+            </div>
+            <div className="mt-0.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+              Multi City leg
+            </div>
           </div>
 
           <button
             type="button"
             onClick={onClose}
-            className="text-[30px] leading-none text-[#111827] hover:text-[#ef4444]"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-[24px] leading-none text-slate-700 transition hover:bg-orange-50 hover:text-orange-600"
           >
             ×
           </button>
         </div>
 
-        <div className="max-h-[calc(90vh-72px)] overflow-y-auto bg-[#f8fbff]">
+        <div className="max-h-[calc(92vh-68px)] overflow-y-auto bg-slate-50 sm:max-h-[calc(90vh-78px)]">
           {children}
         </div>
       </div>

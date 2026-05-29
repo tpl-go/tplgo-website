@@ -476,17 +476,17 @@ export default function FlightConfirmationPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#eef3f8] text-black">
-      <div className="bg-green-50 border-b border-green-200 text-center py-4">
-        <div className="font-black text-green-700 text-lg">
+    <main className="min-h-screen overflow-x-hidden bg-[#eef3f8] text-black">
+      <div className="border-b border-green-200 bg-green-50 px-3 py-3 text-center md:px-0 md:py-4">
+        <div className="text-[16px] font-black text-green-700 md:text-lg">
           🎉 Flight Booking Confirmed
         </div>
-        <div className="text-sm text-green-600">
+        <div className="text-[12px] font-semibold text-green-600 md:text-sm md:font-normal">
           Your ticket is successfully generated
         </div>
 
         {finalEarnedCreditAmount > 0 ? (
-          <div className="mt-2 text-sm font-bold text-green-700">
+          <div className="mt-2 text-[12px] font-bold text-green-700 md:text-sm">
             🎁 You earned ₹
             {Number(finalEarnedCreditAmount).toLocaleString("en-IN")} TPL
             Earned Credit on this booking.
@@ -494,8 +494,8 @@ export default function FlightConfirmationPage() {
         ) : null}
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-6 flex gap-4">
-        <div className="w-[72%] flex flex-col gap-4">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-3 overflow-x-hidden px-3 py-3 md:flex-row md:gap-4 md:overflow-visible md:px-4 md:py-6">
+        <div className="flex min-w-0 flex-col gap-4 md:w-[72%]">
           <FlightConfirmationSuccessHeader
             bookingId={bookingId}
             bookingStatus="confirmed"
@@ -514,7 +514,7 @@ export default function FlightConfirmationPage() {
           ) : null}
 
           {finalEarnedCreditAmount > 0 ? (
-            <div className="rounded-2xl border border-green-200 bg-green-50 px-5 py-4 text-[14px] font-bold text-green-700">
+            <div className="rounded-2xl border border-green-200 bg-green-50 px-3 py-3 text-[12px] font-bold leading-5 text-green-700 md:px-5 md:py-4 md:text-[14px]">
               🎉 You earned ₹
               {Number(finalEarnedCreditAmount).toLocaleString("en-IN")} TPL
               Earned Credit. This has been added to your wallet.
@@ -543,7 +543,7 @@ export default function FlightConfirmationPage() {
           />
         </div>
 
-        <div className="w-[28%]">
+        <div className="min-w-0 md:w-[28%]">
           <FlightConfirmationActionsCard
             bookingId={bookingId}
             email={contact?.email}
@@ -591,13 +591,13 @@ export default function FlightConfirmationPage() {
 
 function DigiYatraInlineBanner({ onClick }: { onClick: () => void }) {
   return (
-    <div className="rounded-2xl border border-[#fdba74] bg-[linear-gradient(135deg,#fff7ed,#ffffff)] px-5 py-4 shadow-[0_8px_22px_rgba(249,115,22,0.10)]">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <div className="text-[15px] font-black text-[#9a3412]">
+    <div className="rounded-[18px] border border-[#fdba74] bg-[linear-gradient(135deg,#fff7ed,#ffffff)] px-4 py-3 shadow-[0_8px_22px_rgba(249,115,22,0.10)] md:rounded-2xl md:px-5 md:py-4">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-4">
+        <div className="min-w-0">
+          <div className="text-[14px] font-black text-[#9a3412] md:text-[15px]">
             🛂 Digi Yatra Fast Airport Entry
           </div>
-          <div className="mt-1 text-[13px] font-semibold leading-[20px] text-[#475569]">
+          <div className="mt-1 text-[12px] font-semibold leading-[19px] text-[#475569] md:text-[13px] md:leading-[20px]">
             Avoid long airport entry queues. Set up Digi Yatra before your
 domestic flight for a faster airport experience.
 <br />
@@ -610,7 +610,7 @@ domestic flight for a faster airport experience.
         <button
           type="button"
           onClick={onClick}
-          className="shrink-0 rounded-full bg-[#f97316] px-5 py-2 text-[13px] font-black text-white shadow-[0_8px_18px_rgba(249,115,22,0.25)]"
+          className="min-h-10 w-full shrink-0 rounded-full bg-[#f97316] px-5 py-2 text-[13px] font-black text-white shadow-[0_8px_18px_rgba(249,115,22,0.25)] md:w-auto"
         >
           Continue
         </button>
@@ -627,19 +627,19 @@ function DigiYatraPromptModal({
   onContinue: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/45 px-4">
-      <div className="w-full max-w-[520px] overflow-hidden rounded-3xl bg-white shadow-2xl">
-        <div className="bg-[linear-gradient(135deg,#fff7ed,#ffffff)] px-6 py-6">
-          <div className="flex items-start gap-4">
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#f97316] text-[26px] shadow-[0_10px_24px_rgba(249,115,22,0.25)]">
+    <div className="fixed inset-0 z-[120] flex items-end justify-center overflow-x-hidden bg-black/45 px-3 py-3 md:items-center md:px-4 md:py-6">
+      <div className="relative flex max-h-[calc(100dvh-24px)] w-full max-w-[520px] flex-col overflow-hidden rounded-[22px] bg-white shadow-2xl md:max-h-[min(680px,calc(100vh-48px))] md:rounded-3xl">
+        <div className="shrink-0 bg-[linear-gradient(135deg,#fff7ed,#ffffff)] px-4 py-4 md:px-6 md:py-6">
+          <div className="flex items-start gap-3 md:gap-4">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#f97316] text-[21px] shadow-[0_10px_24px_rgba(249,115,22,0.25)] md:h-14 md:w-14 md:text-[26px]">
               🛂
             </div>
 
-            <div>
-              <div className="text-[21px] font-black text-[#111827]">
+            <div className="min-w-0 flex-1">
+              <div className="pr-8 text-[18px] font-black leading-6 text-[#111827] md:pr-0 md:text-[21px] md:leading-normal">
                 Skip Airport Entry Queues
               </div>
-              <div className="mt-2 text-[14px] font-semibold leading-[22px] text-[#475569]">
+              <div className="mt-2 text-[13px] font-semibold leading-[20px] text-[#475569] md:text-[14px] md:leading-[22px]">
                 Your domestic flight is eligible for Digi Yatra. Complete the
 fast-entry setup and enjoy a smoother airport experience.
 <br />
@@ -648,11 +648,20 @@ fast-entry setup and enjoy a smoother airport experience.
 </span>
               </div>
             </div>
+
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close Digi Yatra prompt"
+              className="absolute right-4 top-4 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#fed7aa] bg-white text-[18px] font-black leading-none text-[#9a3412] shadow-[0_8px_18px_rgba(15,23,42,0.10)] md:hidden"
+            >
+              ×
+            </button>
           </div>
         </div>
 
-        <div className="px-6 pb-6">
-          <div className="rounded-2xl border border-[#fed7aa] bg-[#fff7ed] p-4 text-[13px] font-bold leading-[21px] text-[#9a3412]">
+        <div className="min-h-0 overflow-y-auto overflow-x-hidden px-4 pb-4 md:px-6 md:pb-6">
+          <div className="rounded-2xl border border-[#fed7aa] bg-[#fff7ed] p-3 text-[12px] font-bold leading-[19px] text-[#9a3412] md:p-4 md:text-[13px] md:leading-[21px]">
             Save time at the airport with face-based entry where available.
 <br />
 <span>
@@ -660,11 +669,11 @@ fast-entry setup and enjoy a smoother airport experience.
 </span>
           </div>
 
-          <div className="mt-5 flex gap-3">
+          <div className="mt-4 grid gap-2 md:mt-5 md:grid-cols-2 md:gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="h-11 flex-1 rounded-full border border-[#d9e2ec] bg-white text-[14px] font-black text-[#374151]"
+              className="h-11 rounded-full border border-[#d9e2ec] bg-white text-[14px] font-black text-[#374151]"
             >
               Do Later
             </button>
@@ -672,7 +681,7 @@ fast-entry setup and enjoy a smoother airport experience.
             <button
               type="button"
               onClick={onContinue}
-              className="h-11 flex-1 rounded-full bg-[#f97316] text-[14px] font-black text-white shadow-[0_10px_22px_rgba(249,115,22,0.25)]"
+              className="h-11 rounded-full bg-[#f97316] px-4 text-[14px] font-black text-white shadow-[0_10px_22px_rgba(249,115,22,0.25)]"
             >
               Continue to Digi Yatra
             </button>

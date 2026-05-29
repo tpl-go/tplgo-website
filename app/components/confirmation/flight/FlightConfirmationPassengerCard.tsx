@@ -158,6 +158,7 @@ export default function FlightConfirmationPassengerCard({
 
   return (
     <section
+      className="flight-passenger-card"
       style={{
         border: "1px solid #d9e2ec",
         borderRadius: "22px",
@@ -189,7 +190,7 @@ export default function FlightConfirmationPassengerCard({
         </h3>
       </div>
 
-      <div style={{ padding: "22px" }}>
+      <div className="passenger-card-body" style={{ padding: "22px" }}>
         {leadTraveller ? (
           <div
             style={{
@@ -251,6 +252,7 @@ export default function FlightConfirmationPassengerCard({
         ) : null}
 
         <div
+          className="passenger-layout-grid"
           style={{
             display: "grid",
             gridTemplateColumns: "1.15fr 0.85fr",
@@ -281,6 +283,7 @@ export default function FlightConfirmationPassengerCard({
               {travellers.length > 0 ? (
                 travellers.map((traveller, index) => (
                   <div
+                    className="traveller-row"
                     key={traveller.id || index}
                     style={{
                       border: "1px solid #e5e7eb",
@@ -297,6 +300,7 @@ export default function FlightConfirmationPassengerCard({
                     }}
                   >
                     <div
+                      className="traveller-main"
                       style={{
                         display: "flex",
                         alignItems: "center",
@@ -368,6 +372,7 @@ export default function FlightConfirmationPassengerCard({
                     </div>
 
                     <div
+                      className="traveller-status"
                       style={{
                         fontSize: "11px",
                         fontWeight: 900,
@@ -448,6 +453,37 @@ export default function FlightConfirmationPassengerCard({
           </div>
         </div>
       </div>
+      <style>{`
+        @media (max-width: 767px) {
+          .flight-passenger-card {
+            border-radius: 18px !important;
+          }
+
+          .flight-passenger-card .passenger-card-body {
+            padding: 14px !important;
+          }
+
+          .flight-passenger-card .passenger-layout-grid {
+            grid-template-columns: minmax(0, 1fr) !important;
+            gap: 14px !important;
+          }
+
+          .flight-passenger-card .traveller-row {
+            align-items: flex-start !important;
+            flex-direction: column !important;
+            gap: 10px !important;
+          }
+
+          .flight-passenger-card .traveller-main {
+            width: 100%;
+          }
+
+          .flight-passenger-card .traveller-status {
+            white-space: normal !important;
+            align-self: flex-start;
+          }
+        }
+      `}</style>
     </section>
   );
 }
@@ -461,6 +497,7 @@ function InfoCard({
 }) {
   return (
     <div
+      className="flight-info-card"
       style={{
         border: "1px solid #e5e7eb",
         borderRadius: "18px",
@@ -482,8 +519,9 @@ function InfoCard({
 
       <div style={{ display: "grid", gap: "12px" }}>
         {rows.map((row, index) => (
-          <div
-            key={`${row.label}-${index}`}
+    <div
+      className="info-card-row"
+      key={`${row.label}-${index}`}
             style={{
               display: "flex",
               justifyContent: "space-between",
@@ -494,6 +532,7 @@ function InfoCard({
             }}
           >
             <div
+              className="info-card-label"
               style={{
                 fontSize: "13px",
                 fontWeight: 800,
@@ -505,6 +544,7 @@ function InfoCard({
             </div>
 
             <div
+              className="info-card-value"
               style={{
                 fontSize: "13px",
                 fontWeight: 700,
@@ -519,6 +559,24 @@ function InfoCard({
           </div>
         ))}
       </div>
+      <style>{`
+        @media (max-width: 767px) {
+          .flight-info-card .info-card-row {
+            display: grid !important;
+            grid-template-columns: minmax(0, 1fr) !important;
+            gap: 4px !important;
+          }
+
+          .flight-info-card .info-card-label {
+            min-width: 0 !important;
+          }
+
+          .flight-info-card .info-card-value {
+            text-align: left !important;
+            min-width: 0 !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }

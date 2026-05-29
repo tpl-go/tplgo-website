@@ -196,6 +196,7 @@ export default function FlightOffersSection({
 
   return (
     <div
+      className="max-md:rounded-xl"
       style={{
         marginTop: "16px",
         border: "1px solid #d9e2ec",
@@ -206,6 +207,7 @@ export default function FlightOffersSection({
       }}
     >
       <div
+        className="max-md:px-3 max-md:py-3"
         style={{
           padding: "16px 18px",
           borderBottom: "1px solid #e5e7eb",
@@ -213,6 +215,7 @@ export default function FlightOffersSection({
         }}
       >
         <div
+          className="max-md:text-[18px]"
           style={{
             fontSize: "20px",
             fontWeight: 800,
@@ -223,7 +226,7 @@ export default function FlightOffersSection({
         </div>
       </div>
 
-      <div style={{ padding: "16px 18px" }}>
+      <div className="max-md:p-3" style={{ padding: "16px 18px" }}>
         {appliedOffer ? (
           <div
             style={{
@@ -294,6 +297,7 @@ export default function FlightOffersSection({
             }}
           >
             <div
+              className="max-md:flex-col"
               style={{
                 display: "flex",
                 justifyContent:
@@ -380,6 +384,7 @@ export default function FlightOffersSection({
                   onClick={() =>
                     onApplyOffer(smartOfferCard)
                   }
+                  className="max-md:w-full"
                   style={{
                     minWidth: "96px",
                     height: "40px",
@@ -399,6 +404,7 @@ export default function FlightOffersSection({
                 <button
                   type="button"
                   disabled
+                  className="max-md:w-full"
                   style={{
                     minWidth: "96px",
                     height: "40px",
@@ -459,6 +465,7 @@ export default function FlightOffersSection({
                 }}
               >
                 <div
+                  className="max-md:flex-col"
                   style={{
                     display: "flex",
                     justifyContent:
@@ -521,6 +528,7 @@ export default function FlightOffersSection({
                     onClick={() =>
                       onApplyOffer(offer)
                     }
+                    className="max-md:w-full"
                     style={{
                       minWidth: "92px",
                       height: "40px",

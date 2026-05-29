@@ -20,8 +20,8 @@ export default function MultiCityRouteHeader({ legs }: Props) {
   ].filter(Boolean);
 
   return (
-    <div className="rounded-2xl bg-sky-50 px-4 py-2">
-      <h2 className="text-[18px] font-bold leading-snug text-[#111827]">
+    <div className="rounded-2xl bg-sky-50 px-3 py-2 md:px-4">
+      <h2 className="overflow-x-auto whitespace-nowrap text-[13px] font-black leading-snug text-[#111827] [-ms-overflow-style:none] [scrollbar-width:none] md:whitespace-normal md:text-[18px] md:font-bold [&::-webkit-scrollbar]:hidden">
         {routeCities.map((city, index) => (
           <span key={`${city}-${index}`}>
             {city} ({routeCodes[index]})
@@ -30,8 +30,8 @@ export default function MultiCityRouteHeader({ legs }: Props) {
         ))}
       </h2>
 
-      <p className="mt-1 text-[13px] text-[#6b7280]">
-        
+      <p className="mt-1 text-[11px] text-[#6b7280] md:text-[13px]">
+
       </p>
     </div>
   );

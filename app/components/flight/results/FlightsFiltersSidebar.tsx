@@ -5,9 +5,7 @@ import OneWayInternationalFilters from "./oneway/filters/OneWayInternationalFilt
 import MultiCityDomesticFilters from "./multicity/filters/MultiCityDomesticFilters";
 import MultiCityInternationalFilters from "./multicity/filters/MultiCityInternationalFilters";
 import MultiCityCombinedFilters from "./multicity/filters/MultiCityCombinedFilters";
-import {
-  MultiCityCombinedFiltersState,
-} from "./multicity/filters/filterTypes";
+import { MultiCityCombinedFiltersState } from "./multicity/filters/filterTypes";
 import { MultiCityLeg } from "../data/multicityFlights";
 
 export type FlightsFiltersState = {
@@ -19,8 +17,6 @@ export type FlightsFiltersState = {
   arrivalTime: string[];
   airlines: string[];
   aircraftSize: string[];
-
-  // International
   checkInBaggage: boolean;
   durationRange: [number, number];
   alliances: string[];
@@ -44,28 +40,20 @@ type Props = {
   tripType?: "oneway" | "roundtrip" | "multicity";
   viewMode?: "individual" | "combined";
   isInternational?: boolean;
-
   filters?: FlightsFiltersState;
   onFiltersChange: (filters: FlightsFiltersState) => void;
-
   combinedFilters?: MultiCityCombinedFiltersState;
   onCombinedFiltersChange?: (filters: MultiCityCombinedFiltersState) => void;
   legs?: MultiCityLeg[];
-
   fromCity?: string;
   toCity?: string;
-
   minPrice?: number;
   maxPrice?: number;
-
   departureAirportOptions?: AirportOption[];
-
   minDuration?: number;
   maxDuration?: number;
-
   minLayoverDuration?: number;
   maxLayoverDuration?: number;
-
   allianceOptions?: SimpleOption[];
   layoverAirportOptions?: SimpleOption[];
   airlineOptions?: SimpleOption[];
@@ -80,7 +68,6 @@ export const DEFAULT_DOMESTIC_FILTERS: FlightsFiltersState = {
   arrivalTime: [],
   airlines: [],
   aircraftSize: [],
-
   checkInBaggage: false,
   durationRange: [0, 0],
   alliances: [],
@@ -97,7 +84,6 @@ export const DEFAULT_INTERNATIONAL_FILTERS: FlightsFiltersState = {
   arrivalTime: [],
   airlines: [],
   aircraftSize: [],
-
   checkInBaggage: false,
   durationRange: [0, 0],
   alliances: [],
@@ -143,10 +129,13 @@ export default function FlightsFiltersSidebar({
     });
   };
 
+  const shellClass =
+    "rounded-xl bg-white p-3 shadow-sm sm:p-4";
+
   if (tripType === "oneway") {
     if (isInternational) {
       return (
-        <div className="rounded-xl bg-white p-4 shadow-sm">
+        <div className={shellClass}>
           <OneWayInternationalFilters
             filters={safeFilters}
             updateFilter={updateFilter}
@@ -167,7 +156,7 @@ export default function FlightsFiltersSidebar({
     }
 
     return (
-      <div className="rounded-xl bg-white p-4 shadow-sm">
+      <div className={shellClass}>
         <OneWayDomesticFilters
           filters={safeFilters}
           updateFilter={updateFilter}
@@ -184,11 +173,11 @@ export default function FlightsFiltersSidebar({
 
   if (tripType === "roundtrip") {
     return (
-      <div className="rounded-xl bg-white p-4 shadow-sm">
-        <div className="text-[16px] font-semibold text-[#111827]">
+      <div className={shellClass}>
+        <div className="text-[15px] font-semibold text-[#111827] sm:text-[16px]">
           Round Trip Filters
         </div>
-        <div className="mt-2 text-[13px] text-[#6b7280]">
+        <div className="mt-2 text-[12px] text-[#6b7280] sm:text-[13px]">
           Round Trip filter system will be added in Day 23 next phase.
         </div>
       </div>
@@ -202,7 +191,7 @@ export default function FlightsFiltersSidebar({
       }
 
       return (
-        <div className="rounded-xl bg-white p-4 shadow-sm">
+        <div className={shellClass}>
           <MultiCityCombinedFilters
             filters={combinedFilters}
             onFiltersChange={onCombinedFiltersChange}
@@ -222,7 +211,7 @@ export default function FlightsFiltersSidebar({
 
     if (isInternational) {
       return (
-        <div className="rounded-xl bg-white p-4 shadow-sm">
+        <div className={shellClass}>
           <MultiCityInternationalFilters
             filters={safeFilters}
             updateFilter={updateFilter}
@@ -243,7 +232,7 @@ export default function FlightsFiltersSidebar({
     }
 
     return (
-      <div className="rounded-xl bg-white p-4 shadow-sm">
+      <div className={shellClass}>
         <MultiCityDomesticFilters
           filters={safeFilters}
           updateFilter={updateFilter}

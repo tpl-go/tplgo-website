@@ -357,9 +357,30 @@ const isInternationalFlight =
   const isCabUnlocked = isSeatMealDone;
   const isInsuranceUnlocked = isCabDone;
   const isAddonsUnlocked = isInsuranceDone;
+  const bookingTypeLabel =
+    reviewData.bookingType === "multiCity"
+      ? "Multi City"
+      : reviewData.bookingType === "roundTrip"
+      ? "Round Trip"
+      : "One Way";
+  const tripModeLabel =
+    reviewData.tripMode === "international" ? "International" : "Domestic";
+  const firstSegment = reviewData.journeys?.[0]?.segments?.[0] || null;
+  const lastJourney =
+    reviewData.journeys?.[Math.max(reviewData.journeys.length - 1, 0)] || null;
+  const lastSegment =
+    lastJourney?.segments?.[
+      Math.max((lastJourney?.segments?.length || 1) - 1, 0)
+    ] || null;
+  const routeSummary =
+    firstSegment && lastSegment
+      ? `${firstSegment.from || ""} to ${lastSegment.to || ""}`
+      : `${bookingTypeLabel} flight`;
+  const mobileReviewSubtitle = `${bookingTypeLabel} · ${tripModeLabel} flight`;
 
   return (
     <main
+      className="max-md:overflow-x-hidden"
       style={{
         minHeight: "100vh",
         background: "#f5f7fb",
@@ -367,14 +388,18 @@ const isInternationalFlight =
       }}
     >
       <div
+        className="max-md:sticky max-md:top-0 max-md:z-50 max-md:shadow-[0_8px_24px_rgba(15,23,42,0.12)]"
         style={{
           
           background: "#f5f7fb",
         }}
       >
-        <FlightReviewTopNav />
+        <FlightReviewTopNav
+          subtitle={mobileReviewSubtitle}
+        />
 
         <div
+          className="max-md:hidden"
           style={{
             padding: "8px 16px 12px 16px",
             display: "flex",
@@ -385,6 +410,7 @@ const isInternationalFlight =
           }}
         >
           <div
+            className="max-md:text-[12px] max-md:leading-[18px]"
             style={{
               fontSize: "13px",
               fontWeight: 700,
@@ -397,6 +423,7 @@ const isInternationalFlight =
           </div>
 
           <span
+            className="max-md:min-w-[70px] max-md:px-3 max-md:py-1.5 max-md:text-[13px]"
             style={{
               padding: "6px 12px",
               borderRadius: "999px",
@@ -411,9 +438,44 @@ const isInternationalFlight =
             {formattedTime}
           </span>
         </div>
+
+        <div className="hidden max-md:block max-md:px-3 max-md:pb-3">
+          <div className="rounded-2xl border border-[#d9e2ec] bg-white px-3 py-2.5 shadow-sm">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="truncate text-[11px] font-black uppercase tracking-[0.06em] text-[#64748b]">
+                  {routeSummary}
+                </div>
+                <div
+                  className={`mt-0.5 text-[13px] font-black leading-[18px] ${
+                    isExpired ? "text-[#dc2626]" : "text-[#111827]"
+                  }`}
+                >
+                  {isExpired
+                    ? "Session expired. Refresh fare."
+                    : "Fare held for a limited time"}
+                </div>
+                <div className="mt-1 text-[11px] font-semibold text-[#64748b]">
+                  {mobileReviewSubtitle}
+                </div>
+              </div>
+
+              <span
+                className={`shrink-0 rounded-full border px-3 py-1.5 text-[13px] font-black ${
+                  timeLeft < 120
+                    ? "border-[#fecaca] bg-[#fff1f2] text-[#dc2626]"
+                    : "border-[#d9e2ec] bg-[#f8fafc] text-[#111827]"
+                }`}
+              >
+                {formattedTime}
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div
+        className="max-md:px-3 max-md:py-3"
         style={{
           maxWidth: "1280px",
           margin: "0 auto",
@@ -422,6 +484,7 @@ const isInternationalFlight =
       >
         {showRefreshNotice && (
           <div
+            className="max-md:flex-col max-md:items-stretch max-md:rounded-xl max-md:p-3"
             style={{
               marginBottom: "16px",
               border: "1px solid #fcd34d",
@@ -463,6 +526,7 @@ const isInternationalFlight =
             <button
               type="button"
               onClick={handleRefreshPrice}
+              className="max-md:w-full"
               style={{
                 minWidth: "140px",
                 height: "40px",
@@ -482,6 +546,7 @@ const isInternationalFlight =
         )}
 
         <div
+          className="max-md:flex-col"
           style={{
             display: "flex",
             alignItems: "flex-start",
@@ -489,12 +554,14 @@ const isInternationalFlight =
           }}
         >
           <div
+            className="max-md:!w-full"
             style={{
               width: "76%",
               minWidth: 0,
             }}
           >
             <div
+              className="max-md:rounded-xl"
               style={{
                 background: "#ffffff",
                 border: "1px solid #d9e2ec",
@@ -535,6 +602,7 @@ const isInternationalFlight =
           </div>
 
           <div
+            className="max-md:!w-full"
             style={{
               width: "24%",
               minWidth: 0,

@@ -527,36 +527,31 @@ leadTraveller: {
 
   return (
     <main className="min-h-screen bg-[#eef3f8] text-black">
-      <div
-        style={{
-          height: "72px",
-          background: "#ffffff",
-          borderBottom: "1px solid #d9e2ec",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "0 28px",
-        }}
-      >
-        <div
-          style={{
-            fontSize: "26px",
-            fontWeight: 900,
-            color: "#111827",
-            letterSpacing: "-0.4px",
-          }}
-        >
-          TPL
+      <div className="sticky top-0 z-40 flex min-h-[64px] items-center justify-between gap-3 border-b border-[#d9e2ec] bg-white px-4 py-3 md:static md:min-h-[72px] md:px-7 md:py-0">
+        <div className="flex min-w-0 items-center gap-3">
+          <button
+            type="button"
+            onClick={() => window.history.back()}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#d9e2ec] bg-white text-[20px] font-black leading-none text-[#111827] shadow-sm md:hidden"
+            aria-label="Go back"
+          >
+            ‹
+          </button>
+
+          <div
+            style={{
+              fontSize: "26px",
+              fontWeight: 900,
+              color: "#111827",
+              letterSpacing: "-0.4px",
+            }}
+          >
+            TPL
+          </div>
         </div>
 
         <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "10px",
-            fontSize: "13px",
-            fontWeight: 800,
-          }}
+          className="flex shrink-0 items-center gap-2 text-[11px] font-extrabold md:gap-2.5 md:text-[13px]"
         >
           <span
             style={{
@@ -595,23 +590,9 @@ leadTraveller: {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        <div
-          style={{
-            display: "flex",
-            alignItems: "stretch",
-            gap: "18px",
-          }}
-        >
-          <div
-            style={{
-              width: "72%",
-              minWidth: 0,
-              display: "flex",
-              flexDirection: "column",
-              gap: "16px",
-            }}
-          >
+      <div className="mx-auto max-w-7xl px-3 py-4 pb-28 md:px-4 md:py-6 md:pb-6">
+        <div className="flex flex-col items-stretch gap-4 lg:flex-row lg:gap-[18px]">
+          <div className="flex min-w-0 flex-col gap-4 lg:w-[72%]">
             <FlightPaymentTopSummary
               reviewData={reviewData}
               travellerValidation={travellerValidation}
@@ -710,6 +691,7 @@ leadTraveller: {
             />
 
             <FlightPaymentOptionSection
+              payableAmount={priceBreakup.totalAmount}
               onPaymentMethodChange={(method) => {
                 setSelectedPaymentMethod(method);
                 applyPaymentMethod(method);
@@ -717,13 +699,7 @@ leadTraveller: {
             />
           </div>
 
-          <div
-            style={{
-              width: "28%",
-              minWidth: 0,
-              alignSelf: "stretch",
-            }}
-          >
+          <div className="min-w-0 self-stretch lg:w-[28%]">
             <FlightPaymentPriceCard
               priceBreakup={priceBreakup}
               earnedOnThisBooking={earnedOnThisBooking}

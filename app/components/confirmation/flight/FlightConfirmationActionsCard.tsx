@@ -48,15 +48,16 @@ export default function FlightConfirmationActionsCard({
 
   return (
     <aside
+      className="flight-actions-card"
       style={{
         width: "100%",
         display: "flex",
       }}
     >
       <div
+        className="md:sticky"
         style={{
           width: "100%",
-          position: "sticky",
           top: "96px",
           display: "flex",
           flexDirection: "column",
@@ -73,6 +74,7 @@ export default function FlightConfirmationActionsCard({
           }}
         >
           <div
+            className="actions-grid"
             style={{
               minHeight: "56px",
               padding: "0 18px",
@@ -261,6 +263,16 @@ export default function FlightConfirmationActionsCard({
           </div>
         </div>
       </div>
+      <style>{`
+        @media (max-width: 767px) {
+          .flight-actions-card .action-button-label {
+            min-width: 0;
+            overflow-wrap: anywhere;
+            text-align: center;
+            line-height: 18px;
+          }
+        }
+      `}</style>
     </aside>
   );
 }
@@ -288,8 +300,8 @@ function DigiYatraActionButton({ onClick }: { onClick?: () => void }) {
         boxShadow: "0 8px 22px rgba(249,115,22,0.12)",
       }}
     >
-      <span style={{ fontSize: "18px" }}>🛂</span>
-      <span>Digi Yatra Fast Airport Entry</span>
+      <span style={{ fontSize: "18px", flexShrink: 0 }}>🛂</span>
+      <span className="action-button-label">Digi Yatra Fast Airport Entry</span>
     </button>
   );
 }
@@ -325,8 +337,8 @@ function PrimaryActionButton({
         boxShadow: "0 10px 24px rgba(17,24,39,0.16)",
       }}
     >
-      <span style={{ fontSize: "16px" }}>{icon}</span>
-      <span>{label}</span>
+      <span style={{ fontSize: "16px", flexShrink: 0 }}>{icon}</span>
+      <span className="action-button-label">{label}</span>
     </button>
   );
 }
@@ -361,8 +373,8 @@ function SecondaryActionButton({
         gap: "10px",
       }}
     >
-      <span style={{ fontSize: "15px" }}>{icon}</span>
-      <span>{label}</span>
+      <span style={{ fontSize: "15px", flexShrink: 0 }}>{icon}</span>
+      <span className="action-button-label">{label}</span>
     </button>
   );
 }

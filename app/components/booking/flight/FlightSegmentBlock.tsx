@@ -128,6 +128,7 @@ const showCompactLayover =
 
               {/* MAIN ROW */}
               <div
+                className="max-md:!grid-cols-[64px_1fr_64px] max-md:gap-2"
                 style={{
                   display: "grid",
                   gridTemplateColumns: "80px 1fr 80px",
@@ -138,6 +139,7 @@ const showCompactLayover =
                 {/* LEFT */}
                 <div>
                   <div
+                    className="max-md:text-[17px]"
                     style={{
                       fontSize: "20px",
                       fontWeight: 800,
@@ -147,6 +149,7 @@ const showCompactLayover =
                     {seg.departureTime}
                   </div>
                   <div
+                    className="max-md:break-words max-md:text-[11px]"
                     style={{
                       fontSize: "12px",
                       color: "#4b5563",
@@ -209,6 +212,7 @@ const showCompactLayover =
                   </div>
 
                   <div
+                    className="max-md:text-[11px] max-md:leading-[15px]"
                     style={{
                       fontSize: "11px",
                       color: "#6b7280",
@@ -230,6 +234,7 @@ const showCompactLayover =
                 {/* RIGHT */}
                 <div style={{ textAlign: "right" }}>
                   <div
+                    className="max-md:text-[17px]"
                     style={{
                       fontSize: "20px",
                       fontWeight: 800,
@@ -239,6 +244,7 @@ const showCompactLayover =
                     {seg.arrivalTime}
                   </div>
                   <div
+                    className="max-md:break-words max-md:text-[11px]"
                     style={{
                       fontSize: "12px",
                       color: "#4b5563",

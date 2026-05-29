@@ -304,14 +304,14 @@ export default function InsuranceBookingDetailPage() {
   const handlePrint = () => window.print();
 
   return (
-    <main className="min-h-screen bg-[#eef3f8] text-black">
-      <div className="flex h-[72px] items-center justify-between border-b bg-white px-6">
+    <main className="min-h-screen overflow-x-hidden bg-[#eef3f8] text-black">
+      <div className="flex min-h-[72px] flex-col items-start justify-center gap-3 border-b bg-white px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-0">
         <div className="text-2xl font-black">TPL</div>
 
         <button
           type="button"
           onClick={() => router.push("/account/bookings")}
-          className="rounded-full border px-4 py-1 text-sm font-bold"
+          className="rounded-full border px-4 py-2 text-sm font-bold sm:py-1"
         >
           Back to My Bookings
         </button>
@@ -327,8 +327,8 @@ export default function InsuranceBookingDetailPage() {
         </div>
       </div>
 
-      <div className="mx-auto flex max-w-7xl gap-4 px-4 py-6">
-        <div className="flex w-[72%] flex-col gap-4">
+      <div className="mx-auto flex max-w-7xl flex-col gap-4 px-3 py-4 sm:px-4 sm:py-6 lg:flex-row">
+        <div className="flex w-full flex-col gap-4 lg:w-[72%]">
           <InsuranceConfirmationHero
             policyNumber={policyNumber}
             bookingId={data?.bookingId || booking.id}
@@ -351,7 +351,7 @@ export default function InsuranceBookingDetailPage() {
           <InsuranceConfirmationFareCard data={data} paymentId={paymentId} />
         </div>
 
-        <div className="w-[28%]">
+        <div className="w-full lg:w-[28%]">
           <InsuranceConfirmationActionsCard
             policyNumber={policyNumber}
             email={email || undefined}

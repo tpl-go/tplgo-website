@@ -94,6 +94,7 @@ export default function FlightTripSummarySection({ reviewData }: Props) {
     <section id="trip-summary">
       {/* HEADER */}
       <div
+        className="max-md:px-3"
         style={{
           minHeight: "50px",
           padding: "0 16px",
@@ -117,6 +118,7 @@ export default function FlightTripSummarySection({ reviewData }: Props) {
 
       {/* BODY */}
       <div
+        className="max-md:p-3"
         style={{
           padding: "16px",
           background: "#ffffff",

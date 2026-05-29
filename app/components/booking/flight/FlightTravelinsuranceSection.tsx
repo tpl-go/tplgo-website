@@ -67,6 +67,7 @@ export default function FlightTravelinsuranceSection({
   return (
     <section id="travel-insurance">
       <div
+        className="max-md:px-3"
         style={sectionHeaderStyle}
         onClick={() => setIsOpen((prev) => !prev)}
       >
@@ -115,6 +116,7 @@ export default function FlightTravelinsuranceSection({
 
       {isOpen && (
         <div
+          className="max-md:p-3"
           style={{
             padding: "18px",
             background: "#ffffff",
@@ -139,6 +141,7 @@ export default function FlightTravelinsuranceSection({
             </div>
           ) : (
             <div
+              className="max-md:p-3"
               style={{
                 border: "1px solid #d9e2ec",
                 background: "#eef8ff",
@@ -150,6 +153,7 @@ export default function FlightTravelinsuranceSection({
               </div>
 
               <div
+                className="max-md:text-[16px]"
                 style={{
                   marginTop: "8px",
                   fontSize: "18px",
@@ -172,6 +176,7 @@ export default function FlightTravelinsuranceSection({
               </div>
 
               <div
+                className="max-md:!grid-cols-1"
                 style={{
                   marginTop: "16px",
                   display: "grid",

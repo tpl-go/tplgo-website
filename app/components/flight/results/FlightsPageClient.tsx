@@ -107,55 +107,61 @@ export default function FlightsPageClient({
   const estimatedBookingValue = isInternational ? 42000 : 12000;
 
   return (
-    <main className="min-h-screen bg-[#eef3f8]">
+    <main className="min-h-screen w-full overflow-x-hidden bg-[#eef3f8]">
       <div
         className={`w-full border-b border-[#e5e7eb] bg-white ${
           draftState.tripType === "multicity" && isMultiCityExpanded
-            ? "relative z-40"
+            ? "relative z-[120]"
             : "relative z-40"
         }`}
       >
-        <div className="mx-auto max-w-7xl px-4 py-3">
-          <FlightsModifySearchBar
-            state={draftState}
-            dispatch={draftDispatch}
-            onExpandedChange={setIsMultiCityExpanded}
-          />
+        <div className="mx-auto w-full max-w-7xl px-3 py-3 sm:px-4">
+          <div className="w-full overflow-visible">
+            <FlightsModifySearchBar
+              state={draftState}
+              dispatch={draftDispatch}
+              onExpandedChange={setIsMultiCityExpanded}
+            />
+          </div>
         </div>
       </div>
 
       <div className="border-b border-[#dbeafe] bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-3">
-          <SmartResultsOfferStrip
-            service="flight"
-            destination={toCity}
-            bookingValue={estimatedBookingValue}
-            isInternational={isInternational}
-          />
+        <div className="mx-auto w-full max-w-7xl px-3 py-3 sm:px-4">
+          <div className="w-full overflow-x-auto overflow-y-hidden [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <SmartResultsOfferStrip
+              service="flight"
+              destination={toCity}
+              bookingValue={estimatedBookingValue}
+              isInternational={isInternational}
+            />
+          </div>
         </div>
       </div>
 
-      <div className="mx-auto max-w-8xl px-4 py-6">
-        {tripType === "oneway" ? (
-          <OneWayResultsLayout
-            fromCity={fromCity}
-            toCity={toCity}
-            state={draftState}
-            filters={filters}
-            onFiltersChange={setFilters}
-            isInternational={isInternational}
-          />
-        ) : tripType === "roundtrip" ? (
-          <RoundTripResults
-            fromCity={fromCity}
-            toCity={toCity}
-            departureDate={initialParams.departure}
-            returnDate={initialParams.returnDate}
-            isInternational={isInternational}
-          />
-        ) : (
-          <MultiCityResults state={draftState} />
-        )}
+      <div className="mx-auto w-full max-w-8xl px-3 py-4 sm:px-4 sm:py-6">
+        <div className="w-full min-w-0">
+          {tripType === "oneway" ? (
+            <OneWayResultsLayout
+              fromCity={fromCity}
+              toCity={toCity}
+              state={draftState}
+              filters={filters}
+              onFiltersChange={setFilters}
+              isInternational={isInternational}
+            />
+          ) : tripType === "roundtrip" ? (
+            <RoundTripResults
+              fromCity={fromCity}
+              toCity={toCity}
+              departureDate={initialParams.departure}
+              returnDate={initialParams.returnDate}
+              isInternational={isInternational}
+            />
+          ) : (
+            <MultiCityResults state={draftState} />
+          )}
+        </div>
       </div>
     </main>
   );

@@ -12,6 +12,7 @@ import MultiCityCardDetailsPanel from "./MultiCityCardDetailsPanel";
 import FlightStopInfo from "../common/FlightStopInfo";
 import { MultiCityCombinedFiltersState } from "./filters/filterTypes";
 import { saveFlightReviewPayload } from "@/app/lib/flights/review/buildFlightReviewData";
+import { SMART_OFFERS_DATA } from "@/app/lib/smartOffers/smartOffersData";
 
 type Props = {
   legs: MultiCityLeg[];
@@ -211,6 +212,97 @@ type ActiveOfferSnapshot = {
   minBookingValue: number;
 };
 
+const INDIAN_AIRPORT_CODES = new Set([
+  "DEL",
+  "BOM",
+  "BLR",
+  "HYD",
+  "MAA",
+  "CCU",
+  "AMD",
+  "PNQ",
+  "GOI",
+  "COK",
+  "JAI",
+  "LKO",
+  "IXC",
+  "PAT",
+  "SXR",
+  "GAU",
+  "BBI",
+  "NAG",
+  "IDR",
+  "VTZ",
+  "TRV",
+  "IXB",
+  "VNS",
+  "RPR",
+  "UDR",
+  "JDH",
+  "ATQ",
+  "BHO",
+]);
+
+const INTERNATIONAL_LOCATION_HINTS = [
+  "dubai",
+  "uae",
+  "united arab emirates",
+  "singapore",
+  "bangkok",
+  "thailand",
+  "london",
+  "united kingdom",
+  "paris",
+  "france",
+  "doha",
+  "qatar",
+  "abu dhabi",
+  "hong kong",
+  "kuala lumpur",
+  "malaysia",
+  "new york",
+  "usa",
+  "united states",
+];
+
+function hasInternationalLocationHint(...values: Array<string | undefined>) {
+  return values.some((value) => {
+    const normalized = (value || "").trim().toLowerCase();
+    return (
+      normalized.length > 0 &&
+      INTERNATIONAL_LOCATION_HINTS.some((hint) => normalized.includes(hint))
+    );
+  });
+}
+
+function isInternationalLeg(leg: MultiCityLeg) {
+  const fromCountry = leg.fromCountry?.trim().toLowerCase() || "";
+  const toCountry = leg.toCountry?.trim().toLowerCase() || "";
+
+  if (fromCountry && fromCountry !== "india") return true;
+  if (toCountry && toCountry !== "india") return true;
+  if (
+    hasInternationalLocationHint(
+      leg.fromCity,
+      leg.toCity,
+      leg.fromCountry,
+      leg.toCountry,
+      leg.fromCode,
+      leg.toCode
+    )
+  ) {
+    return true;
+  }
+
+  const fromCode = leg.fromCode?.trim().toUpperCase() || "";
+  const toCode = leg.toCode?.trim().toUpperCase() || "";
+
+  if (fromCode && !INDIAN_AIRPORT_CODES.has(fromCode)) return true;
+  if (toCode && !INDIAN_AIRPORT_CODES.has(toCode)) return true;
+
+  return false;
+}
+
 function readJsonStorage(key: string) {
   if (typeof window === "undefined") return null;
 
@@ -231,38 +323,66 @@ function resolveOfferFromRaw(raw: any): ActiveOfferSnapshot | null {
   if (!raw) return null;
 
   const offer = raw.offer || raw.offerData || raw.appliedOffer || raw;
+  const code =
+    offer.couponCode ||
+    offer.code ||
+    offer.offerCode ||
+    offer.slug ||
+    offer.id ||
+    "";
+  const title = offer.title || offer.name || offer.offerTitle || "Offer applied";
+  const minBookingValue = Number(
+    offer.minBookingValue ||
+      offer.minimumBookingValue ||
+      offer.minAmount ||
+      offer.minValue ||
+      offer.rule?.minBookingValue ||
+      0
+  );
 
   const discountMode = String(
     offer.discountMode || offer.discountType || offer.type || offer.offerType || ""
   ).toLowerCase();
 
   const discountValue = Number(
-    offer.discountValue || offer.value || offer.discountPercent || offer.percent || 0
+    offer.discountValue ||
+      offer.value ||
+      offer.discountPercent ||
+      offer.percent ||
+      offer.percentage ||
+      0
   );
 
   const discountAmount = Number(
     offer.discountAmount || offer.appliedOfferAmount || offer.flatDiscount || offer.amount || 0
   );
+  const maxDiscount = Number(
+    offer.maxDiscount ||
+      offer.maximumDiscount ||
+      offer.capAmount ||
+      offer.discountCap ||
+      0
+  );
 
-  if (discountMode.includes("percent")) {
+  if (discountMode.includes("percent") || discountMode.includes("percentage")) {
     return {
-      code: offer.couponCode || offer.code || offer.slug || "",
-      title: offer.title || "Offer applied",
+      code,
+      title,
       discountType: "percent",
       discountValue,
-      maxDiscount: Number(offer.maxDiscount || 0),
-      minBookingValue: Number(offer.minBookingValue || 0),
+      maxDiscount,
+      minBookingValue,
     };
   }
 
   if (discountMode.includes("flat") || discountAmount > 0 || discountValue > 0) {
     return {
-      code: offer.couponCode || offer.code || offer.slug || "",
-      title: offer.title || "Offer applied",
+      code,
+      title,
       discountType: "flat",
       discountValue: discountAmount || discountValue,
-      maxDiscount: Number(offer.maxDiscount || 0),
-      minBookingValue: Number(offer.minBookingValue || 0),
+      maxDiscount,
+      minBookingValue,
     };
   }
 
@@ -275,6 +395,20 @@ function getActiveFlightOffer(): ActiveOfferSnapshot | null {
       readJsonStorage("tplActiveOfferPayload") ||
       readJsonStorage("tplActiveOfferActivation")
   );
+}
+
+function getMultiCityFlightOffer(isInternational: boolean): ActiveOfferSnapshot | null {
+  const routeOffer =
+    SMART_OFFERS_DATA.find(
+      (offer) =>
+        offer.service === "flight" &&
+        offer.active &&
+        (isInternational
+          ? offer.rule?.internationalOnly
+          : offer.rule?.domesticOnly)
+    ) || null;
+
+  return resolveOfferFromRaw(routeOffer) || getActiveFlightOffer();
 }
 
 function calculateOfferDiscount(baseAmount: number, offer: ActiveOfferSnapshot | null) {
@@ -300,13 +434,20 @@ export default function MultiCityCombinedResults({
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const routeIsInternational = useMemo(
+    () => legs.some((leg) => isInternationalLeg(leg)),
+    [legs]
+  );
 
-  const [activeOffer, setActiveOffer] = useState<ActiveOfferSnapshot | null>(null);
+  const [activeOffer, setActiveOffer] = useState<ActiveOfferSnapshot | null>(
+    () => getMultiCityFlightOffer(routeIsInternational)
+  );
 
 useEffect(() => {
-  setActiveOffer(getActiveFlightOffer());
+  setActiveOffer(getMultiCityFlightOffer(routeIsInternational));
 
-  const syncOffer = () => setActiveOffer(getActiveFlightOffer());
+  const syncOffer = () =>
+    setActiveOffer(getMultiCityFlightOffer(routeIsInternational));
 
   window.addEventListener("storage", syncOffer);
   window.addEventListener("TPL_SMART_OFFER_UPDATED", syncOffer as EventListener);
@@ -317,7 +458,7 @@ useEffect(() => {
     window.removeEventListener("TPL_SMART_OFFER_UPDATED", syncOffer as EventListener);
     window.removeEventListener("TPL_ACTIVE_OFFER_UPDATED", syncOffer as EventListener);
   };
-}, []);
+}, [routeIsInternational]);
 
   const [packages, setPackages] = useState<CombinedPackage[]>(() =>
     buildCombinedPackages(legs)
@@ -327,6 +468,7 @@ useEffect(() => {
   const [detailsTab, setDetailsTab] = useState<DetailTab>("flight");
   const [activeDetailSelection, setActiveDetailSelection] =
     useState<CombinedSelection | null>(null);
+  const [activeDetailBaseAmount, setActiveDetailBaseAmount] = useState(0);
 
   const [showChangeModal, setShowChangeModal] = useState(false);
   const [activeChangePackageId, setActiveChangePackageId] = useState<
@@ -344,9 +486,13 @@ useEffect(() => {
     setPackages(buildCombinedPackages(legs));
   }, [legs]);
 
-  const handleOpenDetails = (selection: CombinedSelection) => {
+  const handleOpenDetails = (
+    selection: CombinedSelection,
+    baseAmount: number
+  ) => {
     setDetailsTab("flight");
     setActiveDetailSelection(selection);
+    setActiveDetailBaseAmount(baseAmount);
     setShowDetails(true);
   };
 
@@ -445,16 +591,14 @@ const appliedOffer = calculateOfferDiscount(baseFareTotal, activeOffer);
 const baseAfterOffer = Math.max(baseFareTotal - appliedOffer, 0);
 const earnedOnThisBooking = Math.round(baseAfterOffer * 0.02);
 
-const tax = 0;
+const tax = Math.round(baseFareTotal * 0.18);
 const surcharge = 0;
 const discount = 0;
 const tplCredit = 0;
 
-    const isInternational = pkg.selections.some((item) => {
-      const fromCountry = item.leg.fromCountry?.trim().toLowerCase() || "";
-      const toCountry = item.leg.toCountry?.trim().toLowerCase() || "";
-      return fromCountry !== "india" || toCountry !== "india";
-    });
+    const isInternational = pkg.selections.some((item) =>
+      isInternationalLeg(item.leg)
+    );
 
     saveFlightReviewPayload({
       bookingType: "multiCity",
@@ -706,16 +850,143 @@ arrivalDate: normalizePayloadDate(item.leg.departureDate),
     pkg.totalAmount - appliedOffer,
     0
   );
-
-  const earnedOnThisBooking = Math.round(
-    finalAmount * 0.02
-  );
+  const offerBadgeText =
+    appliedOffer > 0
+      ? `${activeOffer?.code || "OFFER"} applied · Save ${formatRupee(
+          appliedOffer
+        )}`
+      : "Offer Discount ₹0";
 
   return (
+            <div key={pkg.id} className="contents">
+            <div
+              className="overflow-hidden rounded-2xl border border-[#d9e2ef] bg-white shadow-sm md:hidden"
+            >
+              <div className="border-b border-[#eef2f7] bg-[#fbfdff] px-3 py-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-[12px] font-black text-[#0284c7]">
+                      Combined Option {packageIndex + 1}
+                    </div>
+                    <div className="mt-0.5 truncate text-[11px] font-semibold text-[#64748b]">
+                      {pkg.selections.length} segment package
+                    </div>
+                  </div>
+
+                  <div className="shrink-0 text-right">
+                    <div className="text-[10px] font-semibold text-[#64748b]">
+                      Flight Price after offer
+                    </div>
+                    <div className="text-[11px] font-semibold leading-tight text-[#94a3b8] line-through">
+                      {formatRupee(pkg.totalAmount)}
+                    </div>
+                    <div className="text-[18px] font-black leading-tight text-[#111827]">
+                      {formatRupee(finalAmount)}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-2 inline-flex rounded-full bg-[#ff7a00] px-3 py-1 text-[10px] font-black text-white">
+                  {offerBadgeText}
+                </div>
+
+                <div className="mt-2 text-[10px] font-semibold text-[#64748b]">
+                  Taxes & fees shown on booking page.
+                </div>
+              </div>
+
+              <div className="divide-y divide-[#eef2f7]">
+                {pkg.selections.map((selection) => (
+                  <div key={`${pkg.id}-mobile-${selection.leg.id}`} className="px-3 py-3">
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="truncate text-[13px] font-black text-[#111827]">
+                          {selection.flight.airline}
+                        </div>
+                        <div className="text-[11px] font-semibold text-[#64748b]">
+                          {selection.leg.fromCode}-{selection.leg.toCode} · {selection.flight.flightNumber}
+                        </div>
+                      </div>
+
+                      <div className="shrink-0 text-right text-[12px] font-black text-[#111827]">
+                        ₹{selection.fare.price.toLocaleString("en-IN")}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-[74px_minmax(0,1fr)_74px] items-center gap-2">
+                      <div>
+                        <div className="text-[20px] font-black leading-none text-[#111827]">
+                          {selection.flight.departureTime}
+                        </div>
+                        <div className="mt-1 truncate text-[11px] font-bold text-[#475569]">
+                          {selection.flight.fromCity}
+                        </div>
+                      </div>
+
+                      <div className="text-center">
+                        <div className="text-[11px] font-bold text-[#334155]">
+                          {selection.flight.duration}
+                        </div>
+                        <div className="my-1 flex items-center gap-1">
+                          <div className="h-px flex-1 bg-[#cbd5e1]" />
+                          <span className="shrink-0 rounded-full bg-[#f1f5f9] px-2 py-0.5 text-[9px] font-black text-[#475569]">
+                            {selection.flight.stopsText}
+                          </span>
+                          <div className="h-px flex-1 bg-[#cbd5e1]" />
+                        </div>
+                        <div className="truncate text-[10px] font-semibold text-[#0f766e]">
+                          {selection.flight.baggage}
+                        </div>
+                      </div>
+
+                      <div className="text-right">
+                        <div className="text-[20px] font-black leading-none text-[#111827]">
+                          {selection.flight.arrivalTime}
+                        </div>
+                        <div className="mt-1 truncate text-[11px] font-bold text-[#475569]">
+                          {selection.flight.toCity}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleOpenDetails(selection, pkg.totalAmount)
+                        }
+                        className="h-9 rounded-xl border border-[#d9e2ef] bg-white text-[11px] font-black text-[#334155]"
+                      >
+                        Details
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleOpenChangeModal(pkg.id, selection.legIndex)
+                        }
+                        className="h-9 rounded-xl border border-[#0ea5e9] bg-[#eef9ff] text-[11px] font-black text-[#0284c7]"
+                      >
+                        Change
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="border-t border-[#eef2f7] bg-[#fbfdff] px-3 py-3">
+                <button
+                  type="button"
+                  onClick={() => handleBookCombinedPackage(pkg)}
+                  className="h-10 w-full rounded-xl bg-[#f97316] px-4 text-[12px] font-black text-white"
+                >
+                  BOOK NOW
+                </button>
+              </div>
+            </div>
 
             <div
-              key={pkg.id}
-              className="overflow-hidden rounded-2xl border border-[#dbe4ef] bg-white shadow-sm"
+              className="hidden overflow-hidden rounded-2xl border border-[#dbe4ef] bg-white shadow-sm md:block"
             >
               <div className="flex items-start justify-between border-b border-[#e5e7eb] bg-[#f8fbff] px-5 py-4">
                 <div>
@@ -730,27 +1001,25 @@ arrivalDate: normalizePayloadDate(item.leg.departureDate),
                 <div className="flex items-center gap-4 text-right">
                   <div>
                     <div className="text-[11px] leading-none text-[#6b7280]">
-                      Package Total / adult
+                      Flight Price after offer / adult
                     </div>
-                    {appliedOffer > 0 ? (
-  <div className="mt-1">
-    <div className="text-[12px] font-semibold leading-none text-[#9ca3af] line-through">
-      {formatRupee(pkg.totalAmount)}
-    </div>
+                    <div className="mt-2 min-w-[220px] rounded-2xl bg-white px-3 py-2 shadow-sm">
+                      <div className="text-[12px] font-semibold leading-tight text-[#9ca3af] line-through">
+                        {formatRupee(pkg.totalAmount)}
+                      </div>
 
-    <div className="mt-1 text-[22px] font-bold leading-none text-[#111827]">
-      {formatRupee(finalAmount)}
-    </div>
+                      <div className="mt-1 text-[22px] font-black leading-none text-[#111827]">
+                        {formatRupee(finalAmount)}
+                      </div>
 
-    <div className="mt-2 inline-flex rounded-full bg-[#ff7a00] px-3 py-1 text-[11px] font-bold text-white">
-      {activeOffer?.code || "OFFER"} applied · Save {formatRupee(appliedOffer)}
-    </div>
-  </div>
-) : (
-  <div className="mt-1 text-[22px] font-bold leading-none text-[#111827]">
-    {formatRupee(pkg.totalAmount)}
-  </div>
-)}
+                      <div className="mt-2 inline-flex rounded-full bg-[#ff7a00] px-3 py-1 text-[11px] font-bold text-white">
+                        {offerBadgeText}
+                      </div>
+
+                      <div className="mt-1 text-[11px] font-semibold text-[#64748b]">
+                        Taxes & fees shown on booking page.
+                      </div>
+                    </div>
                   </div>
 
                   <button
@@ -812,7 +1081,9 @@ arrivalDate: normalizePayloadDate(item.leg.departureDate),
 
                       <button
                         type="button"
-                        onClick={() => handleOpenDetails(selection)}
+                        onClick={() =>
+                          handleOpenDetails(selection, pkg.totalAmount)
+                        }
                         className="mt-2 text-[12px] font-semibold text-[#2563eb] hover:text-[#1d4ed8]"
                       >
                         View Details +
@@ -853,6 +1124,7 @@ arrivalDate: normalizePayloadDate(item.leg.departureDate),
                 ))}
               </div>
             </div>
+            </div>
           );
 })
         )}
@@ -868,6 +1140,8 @@ arrivalDate: normalizePayloadDate(item.leg.departureDate),
           <MultiCityCardDetailsPanel
             flight={activeDetailSelection.flight}
             selectedFare={activeDetailSelection.fare}
+            activeOffer={activeOffer}
+            offerBaseAmount={activeDetailBaseAmount}
             activeTab={detailsTab}
             setActiveTab={setDetailsTab}
           />

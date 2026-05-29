@@ -136,18 +136,8 @@ export default function SearchButton({
       <button
         onClick={handleSearch}
         type="button"
+        className="flex h-[52px] w-full items-center justify-center rounded-lg border-none bg-[#f97316] text-[14px] font-bold text-white shadow-sm transition active:scale-[0.99] sm:h-[74px] sm:w-[140px]"
         style={{
-          width: "140px",
-          height: "74px",
-          backgroundColor: "#f97316",
-          color: "#ffffff",
-          borderRadius: "8px",
-          fontSize: "14px",
-          fontWeight: 700,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          border: "none",
           cursor: "pointer",
           alignSelf: "stretch",
         }}
@@ -158,10 +148,10 @@ export default function SearchButton({
   }
 
   return (
-    <div className="mt-4 md:mt-8 flex justify-center">
+    <div className="mt-4 flex justify-center md:mt-8">
       <button
         onClick={handleSearch}
-        className="h-11 md:h-auto w-full md:w-auto rounded-xl md:rounded-lg bg-gradient-to-r from-orange-500 to-lime-500 px-8 py-0 md:py-3 text-sm md:text-base font-semibold text-white"
+        className="h-11 w-full rounded-xl bg-gradient-to-r from-orange-500 to-lime-500 px-8 py-0 text-sm font-semibold text-white md:h-auto md:w-auto md:rounded-lg md:py-3 md:text-base"
       >
         SEARCH
       </button>

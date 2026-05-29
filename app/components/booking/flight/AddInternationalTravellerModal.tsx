@@ -279,6 +279,7 @@ export default function AddInternationalTravellerModal({
   return (
     <div
       onClick={onClose}
+      className="max-md:!items-stretch max-md:!overflow-hidden max-md:!p-3"
       style={{
         position: "fixed",
         inset: 0,
@@ -293,6 +294,7 @@ export default function AddInternationalTravellerModal({
     >
       <div
         onClick={(e) => e.stopPropagation()}
+        className="max-md:flex max-md:!max-h-[94vh] max-md:flex-col max-md:overflow-hidden max-md:rounded-xl"
         style={{
           width: "1160px",
           maxWidth: "100%",
@@ -303,6 +305,7 @@ export default function AddInternationalTravellerModal({
         }}
       >
         <div
+          className="max-md:sticky max-md:top-0 max-md:z-10 max-md:shrink-0 max-md:bg-white max-md:px-4 max-md:py-3"
           style={{
             padding: "16px 20px",
             borderBottom: "1px solid #e5e7eb",
@@ -313,6 +316,7 @@ export default function AddInternationalTravellerModal({
         >
           <div>
             <div
+              className="max-md:text-[19px]"
               style={{
                 fontSize: "24px",
                 fontWeight: 800,
@@ -348,7 +352,7 @@ export default function AddInternationalTravellerModal({
           </button>
         </div>
 
-        <div style={{ padding: "18px 20px 22px 20px" }}>
+        <div className="max-md:min-h-0 max-md:flex-1 max-md:overflow-y-auto max-md:p-4" style={{ padding: "18px 20px 22px 20px" }}>
           <div
             style={{
               background: "#f7d7cf",
@@ -378,6 +382,7 @@ export default function AddInternationalTravellerModal({
                   }}
                 >
                   <div
+                    className="max-md:flex-col max-md:items-start max-md:gap-1"
                     style={{
                       padding: "12px 14px",
                       borderBottom: "1px solid #e5e7eb",
@@ -411,6 +416,7 @@ export default function AddInternationalTravellerModal({
                   <div style={{ padding: "16px 14px 18px 14px" }}>
                     {/* row 1 */}
                     <div
+                      className="max-md:!grid-cols-1"
                       style={{
                         display: "grid",
                         gridTemplateColumns: "1fr 1fr 280px",
@@ -468,6 +474,7 @@ export default function AddInternationalTravellerModal({
 
                     {/* row 2 */}
                     <div
+                      className="max-md:!grid-cols-1"
                       style={{
                         marginTop: "14px",
                         display: "grid",
@@ -526,6 +533,7 @@ export default function AddInternationalTravellerModal({
 
                     {/* row 3 */}
                     <div
+                      className="max-md:!grid-cols-1"
                       style={{
                         marginTop: "14px",
                         display: "grid",
@@ -537,6 +545,7 @@ export default function AddInternationalTravellerModal({
                       <div>
                         <div style={labelStyle}>Date of Birth</div>
                         <div
+                          className="max-md:!grid-cols-3"
                           style={{
                             display: "grid",
                             gridTemplateColumns: "1fr 1fr 1fr",
@@ -643,6 +652,7 @@ export default function AddInternationalTravellerModal({
 
                     {/* row 4 */}
                     <div
+                      className="max-md:!grid-cols-1"
                       style={{
                         marginTop: "14px",
                         display: "grid",
@@ -654,6 +664,7 @@ export default function AddInternationalTravellerModal({
                       <div>
                         <div style={labelStyle}>Passport Expiry</div>
                         <div
+                          className="max-md:!grid-cols-3"
                           style={{
                             display: "grid",
                             gridTemplateColumns: "1fr 1fr 1fr",
@@ -769,6 +780,7 @@ export default function AddInternationalTravellerModal({
                       </div>
 
                       <div
+                        className="max-md:!grid-cols-1"
                         style={{
                           display: "grid",
                           gridTemplateColumns: "1fr 1fr",
@@ -821,6 +833,7 @@ export default function AddInternationalTravellerModal({
           </div>
 
           <div
+            className="max-md:sticky max-md:bottom-0 max-md:flex-col max-md:border-t max-md:border-[#e5e7eb] max-md:bg-white max-md:py-3"
             style={{
               marginTop: "18px",
               display: "flex",
@@ -832,6 +845,7 @@ export default function AddInternationalTravellerModal({
             <button
               type="button"
               onClick={onClose}
+              className="max-md:w-full"
               style={{
                 height: "46px",
                 padding: "0 18px",
@@ -850,6 +864,7 @@ export default function AddInternationalTravellerModal({
               type="button"
               disabled={!allCompleted}
               onClick={() => onSave(travellers)}
+              className="max-md:w-full"
               style={{
                 height: "46px",
                 padding: "0 22px",

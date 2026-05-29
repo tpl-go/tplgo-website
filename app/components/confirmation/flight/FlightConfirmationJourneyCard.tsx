@@ -55,6 +55,7 @@ export default function FlightConfirmationJourneyCard({
 }: Props) {
   return (
     <section
+      className="flight-journey-card"
       style={{
         border: "1px solid #d9e2ec",
         borderRadius: "22px",
@@ -86,7 +87,7 @@ export default function FlightConfirmationJourneyCard({
         </h3>
       </div>
 
-      <div style={{ padding: "22px" }}>
+      <div className="journey-card-body" style={{ padding: "22px" }}>
         <div style={{ display: "grid", gap: "16px" }}>
           {journeys.length > 0 ? (
             journeys.map((journey, journeyIndex) => (
@@ -203,6 +204,7 @@ export default function FlightConfirmationJourneyCard({
 
                         {/* Route strip */}
                         <div
+                          className="route-strip"
                           style={{
                             marginTop: "16px",
                             border: "1px solid #e5e7eb",
@@ -213,6 +215,7 @@ export default function FlightConfirmationJourneyCard({
                           }}
                         >
                           <div
+                            className="route-grid"
                             style={{
                               display: "grid",
                               gridTemplateColumns: "1fr auto 1fr",
@@ -220,7 +223,7 @@ export default function FlightConfirmationJourneyCard({
                               alignItems: "center",
                             }}
                           >
-                            <div>
+                            <div className="route-point">
                               <div
                                 style={{
                                   fontSize: "13px",
@@ -295,6 +298,7 @@ export default function FlightConfirmationJourneyCard({
                             </div>
 
                             <div
+                              className="route-middle"
                               style={{
                                 display: "flex",
                                 flexDirection: "column",
@@ -344,7 +348,7 @@ export default function FlightConfirmationJourneyCard({
                               />
                             </div>
 
-                            <div style={{ textAlign: "right" }}>
+                            <div className="route-point route-point-arrival" style={{ textAlign: "right" }}>
                               <div
                                 style={{
                                   fontSize: "13px",
@@ -499,6 +503,45 @@ export default function FlightConfirmationJourneyCard({
           )}
         </div>
       </div>
+      <style>{`
+        @media (max-width: 767px) {
+          .flight-journey-card {
+            border-radius: 18px !important;
+          }
+
+          .flight-journey-card .journey-card-body {
+            padding: 14px !important;
+          }
+
+          .flight-journey-card .route-strip {
+            padding: 12px !important;
+            border-radius: 16px !important;
+          }
+
+          .flight-journey-card .route-grid {
+            grid-template-columns: minmax(0, 1fr) !important;
+            gap: 12px !important;
+            align-items: stretch !important;
+          }
+
+          .flight-journey-card .route-point {
+            min-width: 0 !important;
+            text-align: left !important;
+          }
+
+          .flight-journey-card .route-point-arrival {
+            border-top: 1px dashed #dbe4ee;
+            padding-top: 12px;
+          }
+
+          .flight-journey-card .route-middle {
+            min-width: 0 !important;
+            width: 100% !important;
+            gap: 6px !important;
+            padding: 8px 0;
+          }
+        }
+      `}</style>
     </section>
   );
 }

@@ -371,6 +371,7 @@ export default function FlightTravellerSection({
     <>
       <section id="traveller-detail">
         <div
+          className="max-md:flex-col max-md:items-stretch max-md:px-3 max-md:py-3"
           style={sectionHeaderStyle}
           onClick={() => setIsOpen((prev) => !prev)}
         >
@@ -419,6 +420,7 @@ export default function FlightTravellerSection({
             }}
           >
             <span
+              className="max-md:text-[11px]"
               style={{
                 fontSize: "13px",
                 fontWeight: 700,
@@ -445,8 +447,9 @@ export default function FlightTravellerSection({
 
         {isOpen && (
           <>
-            <div style={loginStripStyle}>
+            <div className="max-md:px-3 max-md:py-3" style={loginStripStyle}>
               <p
+                className="max-md:text-[13px] max-md:leading-[20px]"
                 style={{
                   margin: 0,
                   fontSize: "14px",
@@ -486,7 +489,7 @@ export default function FlightTravellerSection({
               ) : null}
             </div>
 
-            <div style={{ padding: "18px", background: "#ffffff" }}>
+            <div className="max-md:p-3" style={{ padding: "18px", background: "#ffffff" }}>
               <div style={{ display: "grid", gap: "14px" }}>
                 {travellerCards.map((traveller) => {
                   const completed = isTravellerComplete(traveller);
@@ -494,6 +497,7 @@ export default function FlightTravellerSection({
                   return (
                     <div
                       key={traveller.id}
+                      className="max-md:flex-col max-md:items-start max-md:gap-3"
                       style={{
                         display: "flex",
                         alignItems: "center",
@@ -542,6 +546,7 @@ export default function FlightTravellerSection({
 
                           <button
                             onClick={openTravellerModal}
+                            className="max-md:text-[15px] max-md:leading-[20px]"
                             style={{
                               marginTop: "4px",
                               border: "none",
@@ -581,7 +586,7 @@ export default function FlightTravellerSection({
               <div style={{ marginTop: "28px" }}>
                 <h3 style={subHeadingStyle}>Booking details will be sent to</h3>
 
-                <div style={grid3Style}>
+                <div className="max-md:!grid-cols-1" style={grid3Style}>
                   <Field label="Country Code">
                     <select
                       style={inputStyle}
@@ -654,10 +659,11 @@ export default function FlightTravellerSection({
               </div>
 
               {gstDetails.hasGst && (
-                <div
-                  style={{
-                    marginTop: "18px",
-                    padding: "18px",
+                  <div
+                    className="max-md:p-3"
+                    style={{
+                      marginTop: "18px",
+                      padding: "18px",
                     background: "#f8fbff",
                     border: "1px solid #d9e2ec",
                   }}
@@ -665,6 +671,7 @@ export default function FlightTravellerSection({
                   <h3 style={subHeadingStyle}>Your State</h3>
 
                   <div
+                    className="max-md:!grid-cols-1"
                     style={{
                       ...grid3Style,
                       gridTemplateColumns: "1fr 1fr",

@@ -37,7 +37,7 @@ export default function FlightsResultHeader({
 
   if (tripType === "oneway") {
     return (
-      <h1 className="text-[24px] font-bold leading-tight text-[#111827]">
+      <h1 className="text-[18px] font-bold leading-tight text-[#111827] sm:text-[24px]">
         Flights from {firstSegment.fromCity} to {firstSegment.toCity}
       </h1>
     );
@@ -48,10 +48,10 @@ export default function FlightsResultHeader({
     const returnDate = formatHeaderDate(secondSegment?.departure);
 
     return (
-      <h1 className="text-[24px] font-bold leading-tight text-[#111827]">
+      <h1 className="text-[18px] font-bold leading-tight text-[#111827] sm:text-[24px]">
         Flights from {firstSegment.fromCity} to {firstSegment.toCity}, and back
         {(onwardDate || returnDate) && (
-          <span className="ml-2 text-[22px] font-semibold text-[#374151]">
+          <span className="mt-1 block text-[14px] font-semibold text-[#374151] sm:ml-2 sm:inline sm:text-[22px]">
             {onwardDate}
             {returnDate ? ` - ${returnDate}` : ""}
           </span>
@@ -61,22 +61,22 @@ export default function FlightsResultHeader({
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap overflow-hidden rounded-xl border border-[#d9e2ef] bg-white">
+    <div className="space-y-3 sm:space-y-4">
+      <div className="flex overflow-x-auto overflow-y-hidden rounded-xl border border-[#d9e2ef] bg-white [-ms-overflow-style:none] [scrollbar-width:none] sm:flex-wrap [&::-webkit-scrollbar]:hidden">
         {segments.slice(0, 5).map((segment, index) => {
           const isActive = index === activeSegmentIndex;
 
           return (
             <div
               key={`${segment.fromCity}-${segment.toCity}-${index}`}
-              className={`min-w-[220px] flex-1 border-r border-[#e5e7eb] px-5 py-4 last:border-r-0 ${
+              className={`min-w-[180px] flex-1 border-r border-[#e5e7eb] px-3 py-3 last:border-r-0 sm:min-w-[220px] sm:px-5 sm:py-4 ${
                 isActive ? "bg-[#eef7ff]" : "bg-white"
               }`}
             >
-              <div className="text-[22px] font-semibold leading-tight text-[#111827]">
+              <div className="text-[16px] font-semibold leading-tight text-[#111827] sm:text-[22px]">
                 {segment.fromCity} → {segment.toCity}
               </div>
-              <div className="mt-1 text-[18px] font-medium text-[#6b7280]">
+              <div className="mt-1 text-[13px] font-medium text-[#6b7280] sm:text-[18px]">
                 {formatHeaderDate(segment.departure)}
               </div>
             </div>
@@ -84,7 +84,7 @@ export default function FlightsResultHeader({
         })}
       </div>
 
-      <h1 className="text-[24px] font-bold leading-tight text-[#111827]">
+      <h1 className="text-[18px] font-bold leading-tight text-[#111827] sm:text-[24px]">
         Select flight from {activeSegment.fromCity} to {activeSegment.toCity}
       </h1>
     </div>

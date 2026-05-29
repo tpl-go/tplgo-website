@@ -59,12 +59,13 @@ export default function FlightPaymentPriceCard({
   const walletUsed = promoUsed + earnedUsed + refundUsed;
 
   const finalAppliedOffer = Number(priceBreakup.appliedOffer || 0);
+  const taxesAndFees =
+    Number(priceBreakup.tax || 0) + Number(priceBreakup.surcharge || 0);
 
   const totalBeforeWallet =
     Number(priceBreakup.totalBeforeWallet || 0) ||
     priceBreakup.baseFare +
-      priceBreakup.tax +
-      priceBreakup.surcharge +
+      taxesAndFees +
       priceBreakup.seatTotal +
       priceBreakup.mealTotal +
       priceBreakup.cabTotal +
@@ -75,7 +76,7 @@ export default function FlightPaymentPriceCard({
 
   return (
     <aside className="w-full">
-      <div className="sticky top-[110px] z-20">
+      <div className="md:sticky md:top-[110px] md:z-20">
         <div className="overflow-hidden rounded-[24px] border border-[#d9e2ec] bg-white shadow-[0_12px_34px_rgba(15,23,42,0.08)]">
           {/* HEADER */}
           <div className="border-b border-[#e5e7eb] bg-white px-4 py-4">
@@ -144,11 +145,7 @@ export default function FlightPaymentPriceCard({
               </>
             ) : null}
 
-            <FareRow label="Tax" value={priceBreakup.tax} />
-
-            {priceBreakup.surcharge > 0 ? (
-              <FareRow label="Surcharge" value={priceBreakup.surcharge} />
-            ) : null}
+            <FareRow label="Taxes & Fees" value={taxesAndFees} />
 
             {priceBreakup.seatTotal > 0 ? (
               <FareRow label="Seat Selection" value={priceBreakup.seatTotal} />
@@ -267,6 +264,8 @@ export default function FlightPaymentPriceCard({
                 ? "Payment Success ✅"
                 : paymentActionState === "failure"
                 ? "Retry Payment"
+                : selectedPaymentMethod === "qr"
+                ? "Confirm Payment"
                 : "Proceed to Payment"}
             </button>
 

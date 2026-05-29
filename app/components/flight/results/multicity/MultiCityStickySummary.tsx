@@ -6,6 +6,7 @@ import {
   MultiCityFlight,
   MultiCityLeg,
 } from "../../data/multicityFlights";
+import { SMART_OFFERS_DATA } from "@/app/lib/smartOffers/smartOffersData";
 
 export type SelectedMultiCityFlight = {
   legIndex: number;
@@ -18,6 +19,7 @@ type Props = {
   legs: MultiCityLeg[];
   activeLegIndex: number;
   selections: SelectedMultiCityFlight[];
+  activeOffer?: ActiveOfferSnapshot | null;
   onBack: () => void;
   onNext: () => void;
 };
@@ -30,6 +32,97 @@ type ActiveOfferSnapshot = {
   maxDiscount: number;
   minBookingValue: number;
 };
+
+const INDIAN_AIRPORT_CODES = new Set([
+  "DEL",
+  "BOM",
+  "BLR",
+  "HYD",
+  "MAA",
+  "CCU",
+  "AMD",
+  "PNQ",
+  "GOI",
+  "COK",
+  "JAI",
+  "LKO",
+  "IXC",
+  "PAT",
+  "SXR",
+  "GAU",
+  "BBI",
+  "NAG",
+  "IDR",
+  "VTZ",
+  "TRV",
+  "IXB",
+  "VNS",
+  "RPR",
+  "UDR",
+  "JDH",
+  "ATQ",
+  "BHO",
+]);
+
+const INTERNATIONAL_LOCATION_HINTS = [
+  "dubai",
+  "uae",
+  "united arab emirates",
+  "singapore",
+  "bangkok",
+  "thailand",
+  "london",
+  "united kingdom",
+  "paris",
+  "france",
+  "doha",
+  "qatar",
+  "abu dhabi",
+  "hong kong",
+  "kuala lumpur",
+  "malaysia",
+  "new york",
+  "usa",
+  "united states",
+];
+
+function hasInternationalLocationHint(...values: Array<string | undefined>) {
+  return values.some((value) => {
+    const normalized = (value || "").trim().toLowerCase();
+    return (
+      normalized.length > 0 &&
+      INTERNATIONAL_LOCATION_HINTS.some((hint) => normalized.includes(hint))
+    );
+  });
+}
+
+function isInternationalLeg(leg: MultiCityLeg) {
+  const fromCountry = leg.fromCountry?.trim().toLowerCase() || "";
+  const toCountry = leg.toCountry?.trim().toLowerCase() || "";
+
+  if (fromCountry && fromCountry !== "india") return true;
+  if (toCountry && toCountry !== "india") return true;
+  if (
+    hasInternationalLocationHint(
+      leg.fromCity,
+      leg.toCity,
+      leg.fromCountry,
+      leg.toCountry,
+      leg.fromCode,
+      leg.toCode
+    )
+  ) {
+    return true;
+  }
+
+  const fromCode = leg.fromCode?.trim().toUpperCase() || "";
+  const toCode = leg.toCode?.trim().toUpperCase() || "";
+
+  if (fromCode && !INDIAN_AIRPORT_CODES.has(fromCode)) return true;
+  if (toCode && !INDIAN_AIRPORT_CODES.has(toCode)) return true;
+
+  return false;
+}
 
 function formatRupee(value: number) {
   return `₹${Math.max(0, Math.round(value)).toLocaleString("en-IN")}`;
@@ -118,7 +211,7 @@ function resolveOfferFromRaw(raw: any): ActiveOfferSnapshot | null {
       discountType: "percent",
       discountValue,
       maxDiscount,
-      minBookingValue,
+      minBookingValue: Number(offer.rule?.minBookingValue || minBookingValue),
     };
   }
 
@@ -129,7 +222,7 @@ function resolveOfferFromRaw(raw: any): ActiveOfferSnapshot | null {
       discountType: "flat",
       discountValue: discountAmount || discountValue,
       maxDiscount,
-      minBookingValue,
+      minBookingValue: Number(offer.rule?.minBookingValue || minBookingValue),
     };
   }
 
@@ -143,6 +236,20 @@ function getActiveFlightOffer(): ActiveOfferSnapshot | null {
     readJsonStorage("tplActiveOfferActivation");
 
   return resolveOfferFromRaw(smartOffer);
+}
+
+function getMultiCityFlightOffer(isInternational: boolean): ActiveOfferSnapshot | null {
+  const routeOffer =
+    SMART_OFFERS_DATA.find(
+      (offer) =>
+        offer.service === "flight" &&
+        offer.active &&
+        (isInternational
+          ? offer.rule?.internationalOnly
+          : offer.rule?.domesticOnly)
+    ) || null;
+
+  return resolveOfferFromRaw(routeOffer) || getActiveFlightOffer();
 }
 
 function calculateOfferDiscount(
@@ -169,20 +276,26 @@ export default function MultiCityStickySummary({
   legs,
   activeLegIndex,
   selections,
+  activeOffer: activeOfferFromParent,
   onBack,
   onNext,
 }: Props) {
   const [showFareDetails, setShowFareDetails] = useState(false);
-  const [activeOffer, setActiveOffer] = useState<ActiveOfferSnapshot | null>(
+  const [localActiveOffer, setLocalActiveOffer] = useState<ActiveOfferSnapshot | null>(
     null
+  );
+  const routeIsInternational = useMemo(
+    () => legs.some((leg) => isInternationalLeg(leg)),
+    [legs]
   );
 
   const fareDetailsRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    setActiveOffer(getActiveFlightOffer());
+    setLocalActiveOffer(getMultiCityFlightOffer(routeIsInternational));
 
-    const syncOffer = () => setActiveOffer(getActiveFlightOffer());
+    const syncOffer = () =>
+      setLocalActiveOffer(getMultiCityFlightOffer(routeIsInternational));
 
     window.addEventListener("storage", syncOffer);
     window.addEventListener("TPL_SMART_OFFER_UPDATED", syncOffer as EventListener);
@@ -204,7 +317,7 @@ export default function MultiCityStickySummary({
         syncOffer as EventListener
       );
     };
-  }, []);
+  }, [routeIsInternational]);
 
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
@@ -228,7 +341,10 @@ export default function MultiCityStickySummary({
       0
     );
 
-    const appliedOffer = calculateOfferDiscount(totalBaseFare, activeOffer);
+    const appliedOffer = calculateOfferDiscount(
+      totalBaseFare,
+      activeOfferFromParent ?? localActiveOffer
+    );
     const baseAfterOffer = Math.max(totalBaseFare - appliedOffer, 0);
     const earnedOnThisBooking = Math.round(baseAfterOffer * 0.02);
 
@@ -239,7 +355,7 @@ export default function MultiCityStickySummary({
       earnedOnThisBooking,
       totalAmount: baseAfterOffer,
     };
-  }, [selections, activeOffer]);
+  }, [selections, activeOfferFromParent, localActiveOffer]);
 
   if (!selections.length) return null;
 
@@ -249,40 +365,11 @@ export default function MultiCityStickySummary({
   );
 
   return (
-    <div className="sticky bottom-4 z-40 mt-6">
-      <div className="relative overflow-visible rounded-2xl bg-[#062b68] shadow-2xl">
-        {fareSummary.appliedOffer > 0 && activeOffer ? (
-          <div className="flex items-center justify-between gap-3 border-b border-[#0f4aa3] bg-[#1ec7ff] px-5 py-2">
-            <div className="flex flex-wrap items-center gap-2 text-[12px]">
-              <span className="font-bold text-black">
-  Offer applied on base fare only:
-</span>
-
-              <span className="text-black">
-                {formatRupee(fareSummary.totalBaseFare)} -{" "}
-                {formatRupee(fareSummary.appliedOffer)} =
-              </span>
-
-              <span className="font-bold text-black">
-                {formatRupee(fareSummary.baseAfterOffer)}
-              </span>
-
-              <span className="text-black font-bold">
-                · Earn {formatRupee(fareSummary.earnedOnThisBooking)} TPL Earned
-                Credit
-              </span>
-            </div>
-
-            <span className="shrink-0 rounded-full bg-[#ff7a00] px-3 py-1 text-[11px] font-bold text-white shadow-sm">
-  {activeOffer.code || "OFFER"} applied · Save{" "}
-  {formatRupee(fareSummary.appliedOffer)}
-</span>
-          </div>
-        ) : null}
-
-        <div className="flex flex-col gap-4 p-4 xl:flex-row xl:items-center xl:justify-between">
+    <div className="fixed bottom-3 left-0 right-0 z-40 px-3 md:bottom-4 md:px-4">
+      <div className="relative mx-auto max-w-8xl overflow-visible rounded-2xl bg-[#062b68] shadow-2xl">
+        <div className="flex flex-col gap-3 p-3 md:gap-4 md:p-4 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex-1">
-            <div className="flex flex-wrap gap-3">
+            <div className="flex gap-2 overflow-x-auto overflow-y-hidden pb-1 [-ms-overflow-style:none] [scrollbar-width:none] md:flex-wrap md:gap-3 md:overflow-visible md:pb-0 [&::-webkit-scrollbar]:hidden">
               {legs.map((leg, index) => {
                 const selection = selections.find(
                   (item) => item.legIndex === index
@@ -291,29 +378,29 @@ export default function MultiCityStickySummary({
                 return (
                   <div
                     key={leg.id}
-                    className={`rounded-xl border px-4 py-3 ${
+                    className={`min-w-[148px] rounded-xl border px-3 py-2 md:min-w-0 md:px-4 md:py-3 ${
                       selection
                         ? "border-[#1f4588] bg-[#0d3b82]"
                         : "border-[#1f4588] bg-[#0a3475]"
                     }`}
                   >
-                    <p className="text-xs font-semibold uppercase text-[#8ec5ff]">
+                    <p className="text-[10px] font-black uppercase text-[#8ec5ff] md:text-xs md:font-semibold">
                       Flight {index + 1}
                     </p>
 
-                    <p className="mt-1 text-sm font-semibold text-white">
+                    <p className="mt-1 text-[12px] font-black text-white md:text-sm md:font-semibold">
                       {leg.fromCode} → {leg.toCode}
                     </p>
 
                     {selection ? (
-                      <p className="mt-1 text-xs text-[#d7e6ff]">
+                      <p className="mt-1 truncate text-[10px] text-[#d7e6ff] md:text-xs">
                         {selection.flight.airline} •{" "}
                         {selection.flight.departureTime} -{" "}
                         {selection.flight.arrivalTime} • ₹
                         {selection.fare.price.toLocaleString("en-IN")}
                       </p>
                     ) : (
-                      <p className="mt-1 text-xs text-[#8fb0de]">
+                      <p className="mt-1 text-[10px] text-[#8fb0de] md:text-xs">
                         Not selected
                       </p>
                     )}
@@ -323,25 +410,28 @@ export default function MultiCityStickySummary({
             </div>
           </div>
 
-          <div className="flex min-w-[280px] flex-col gap-3 xl:items-end">
-            <div className="text-right">
-              <p className="text-sm text-[#8ec5ff]">Total Selected Fare</p>
-
-              {fareSummary.appliedOffer > 0 ? (
-                <div>
-                  <p className="text-sm font-semibold text-white/55 line-through">
-                    {formatRupee(fareSummary.totalBaseFare)}
-                  </p>
-
-                  <p className="text-2xl font-bold text-white">
-                    {formatRupee(fareSummary.totalAmount)}
-                  </p>
+          <div className="flex min-w-0 flex-col gap-3 md:min-w-[280px] xl:items-end">
+            <div className="text-left xl:text-right">
+              <div className="space-y-1">
+                <div className="flex items-center justify-between gap-4 text-[11px] font-semibold text-white/75">
+                  <span>Base Fare</span>
+                  <span>{formatRupee(fareSummary.totalBaseFare)}</span>
                 </div>
-              ) : (
-                <p className="text-2xl font-bold text-white">
-                  {formatRupee(fareSummary.totalAmount)}
+
+                <div className="flex items-center justify-between gap-4 text-[11px] font-bold text-emerald-300">
+                  <span>Offer Discount</span>
+                  <span>-{formatRupee(fareSummary.appliedOffer)}</span>
+                </div>
+
+                <div className="flex items-center justify-between gap-4 text-[15px] font-black text-white md:text-[16px]">
+                  <span>Flight Price after offer</span>
+                  <span>{formatRupee(fareSummary.baseAfterOffer)}</span>
+                </div>
+
+                <p className="text-[10px] font-medium text-white/60 md:text-[11px]">
+                  Taxes & fees shown on booking page.
                 </p>
-              )}
+              </div>
 
               <div className="relative inline-block">
                 <button
@@ -355,13 +445,30 @@ export default function MultiCityStickySummary({
                 {showFareDetails && (
                   <div
                     ref={fareDetailsRef}
-                    className="absolute right-full bottom-0 z-50 mr-4 max-h-[420px] w-[520px] overflow-y-auto rounded-2xl border border-[#dbe4ef] bg-white p-5 shadow-2xl"
+                    className="fixed inset-0 z-[120] flex items-end bg-black/45 px-3 pb-3 md:absolute md:bottom-0 md:right-full md:inset-auto md:mr-4 md:block md:max-h-[420px] md:w-[520px] md:overflow-y-auto md:rounded-2xl md:border md:border-[#dbe4ef] md:bg-white md:p-5 md:shadow-2xl"
                   >
-                    <div className="mb-3 text-[20px] font-bold text-[#111827]">
-                      Fare Details
-                    </div>
+                    <div className="relative w-full overflow-hidden rounded-3xl bg-white md:overflow-visible md:rounded-none">
+                      <div className="mb-0 flex items-center justify-between border-b border-[#eef2f7] px-4 py-3 md:mb-3 md:block md:border-b-0 md:px-0 md:py-0">
+                        <div>
+                          <div className="text-[15px] font-black text-[#111827] md:text-[20px] md:font-bold">
+                            Fare Details
+                          </div>
+                          <div className="text-[11px] font-semibold text-[#64748b] md:hidden">
+                            Base Fare and Offer Discount
+                          </div>
+                        </div>
 
-                    <div className="space-y-3">
+                        <button
+                          type="button"
+                          onClick={() => setShowFareDetails(false)}
+                          className="flex h-9 w-9 items-center justify-center rounded-full bg-[#f1f5f9] text-[22px] font-bold text-[#111827] md:hidden"
+                        >
+                          ×
+                        </button>
+                      </div>
+
+                    <div className="max-h-[72vh] overflow-y-auto px-4 pb-4 md:max-h-none md:overflow-visible md:px-0 md:pb-0">
+                    <div className="space-y-2 md:space-y-3">
                       {selections.map((item) => (
                         <div
                           key={`${item.leg.id}-${item.flight.id}-${item.fare.id}`}
@@ -389,49 +496,42 @@ export default function MultiCityStickySummary({
                       ))}
                     </div>
 
-                    {fareSummary.appliedOffer > 0 && activeOffer ? (
                       <div className="mt-4 space-y-2 border-t border-[#e5e7eb] pt-4">
                         <div className="flex items-center justify-between text-[13px]">
-                          <span className="text-[#6b7280]">Base fare</span>
+                          <span className="text-[#6b7280]">Base Fare</span>
                           <span className="font-semibold text-[#111827]">
                             {formatRupee(fareSummary.totalBaseFare)}
                           </span>
                         </div>
 
                         <div className="flex items-center justify-between text-[13px]">
-                          <span className="text-[#15803d]">
-                            Offer ({activeOffer.code || "OFFER"})
-                          </span>
+                          <span className="text-[#15803d]">Offer Discount</span>
                           <span className="font-semibold text-[#15803d]">
                             - {formatRupee(fareSummary.appliedOffer)}
                           </span>
                         </div>
 
                         <div className="flex items-center justify-between text-[13px]">
-                          <span className="text-[#6b7280]">
-                            TPL Earned Credit
+                          <span className="text-[#111827] font-semibold">
+                            Flight Price after offer
                           </span>
                           <span className="font-semibold text-[#111827]">
-                            {formatRupee(fareSummary.earnedOnThisBooking)}
+                            {formatRupee(fareSummary.baseAfterOffer)}
                           </span>
                         </div>
-                      </div>
-                    ) : null}
 
-                    <div className="mt-4 flex items-center justify-between border-t border-[#e5e7eb] pt-4">
-                      <div className="text-[15px] font-semibold text-[#111827]">
-                        Total Amount
+                        <div className="rounded-xl bg-[#f8fafc] px-3 py-2 text-[11px] font-semibold text-[#64748b] md:text-[12px]">
+                          Taxes & fees shown on booking page.
+                        </div>
                       </div>
-                      <div className="text-[22px] font-bold text-[#111827]">
-                        {formatRupee(fareSummary.totalAmount)}
-                      </div>
+                    </div>
                     </div>
                   </div>
                 )}
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-2">
+            <div className="grid grid-cols-2 gap-2 md:flex md:flex-wrap">
               <button
                 type="button"
                 onClick={onBack}

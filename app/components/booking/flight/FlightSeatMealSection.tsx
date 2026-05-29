@@ -326,7 +326,7 @@ export default function FlightSeatMealSection({
   return (
     <>
       <section id="seat-meal">
-        <div style={sectionHeaderStyle} onClick={() => setIsOpen((prev) => !prev)}>
+        <div className="max-md:px-3" style={sectionHeaderStyle} onClick={() => setIsOpen((prev) => !prev)}>
           <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
             <span
               style={{
@@ -364,7 +364,7 @@ export default function FlightSeatMealSection({
         </div>
 
         {isOpen && (
-          <div style={{ padding: "18px", background: "#ffffff", borderTop: "1px solid #e5e7eb" }}>
+          <div className="max-md:p-3" style={{ padding: "18px", background: "#ffffff", borderTop: "1px solid #e5e7eb" }}>
             {!isTravellerComplete ? (
               <div style={lockedBoxStyle}>
                 <div style={{ fontSize: "18px", fontWeight: 800, color: "#111827" }}>
@@ -388,6 +388,7 @@ export default function FlightSeatMealSection({
                 </div>
 
                 <div
+                  className="max-md:!grid-cols-1"
                   style={{
                     marginTop: "14px",
                     display: "grid",
@@ -399,12 +400,14 @@ export default function FlightSeatMealSection({
                     title="Seat Selection"
                     subtitle={seatSummaryText}
                     cta={seatStatus === "pending" ? "Add Seats" : "Edit Seats"}
+                    checked={seatStatus === "selected"}
                     onClick={() => setShowSeatModal(true)}
                   />
                   <OptionCard
                     title="Meal Selection"
                     subtitle={mealSummaryText}
                     cta={mealStatus === "pending" ? "Add Meals" : "Edit Meals"}
+                    checked={mealStatus === "selected"}
                     onClick={() => setShowMealModal(true)}
                   />
                   <OptionCard
@@ -422,9 +425,9 @@ export default function FlightSeatMealSection({
 
       {showSeatModal && (
         <ModalOverlay onClose={() => setShowSeatModal(false)}>
-          <div style={seatModalStyle}>
+          <div className="max-md:!w-full max-md:rounded-xl" style={seatModalStyle}>
             <div style={modalHeaderStyle}>
-              <div style={{ fontSize: "22px", fontWeight: 800, color: "#111827" }}>
+              <div className="max-md:text-[18px]" style={{ fontSize: "22px", fontWeight: 800, color: "#111827" }}>
                 Seat Selection
               </div>
 
@@ -433,7 +436,7 @@ export default function FlightSeatMealSection({
               </button>
             </div>
 
-            <div style={{ padding: "20px" }}>
+            <div className="max-md:p-4" style={{ padding: "20px" }}>
               <div
                 style={{
                   marginBottom: "14px",
@@ -467,7 +470,7 @@ export default function FlightSeatMealSection({
                 <LegendItem label="₹ 651-4625" color="#c4b5fd" />
               </div>
 
-              <div style={seatGridWrapStyle}>
+              <div className="max-md:!grid-cols-4 max-md:gap-2 max-md:p-3" style={seatGridWrapStyle}>
                 {SEAT_MAP.map((seat) => {
                   const usedByOtherTraveller = seatSelections.some(
                     (item) =>
@@ -515,7 +518,7 @@ export default function FlightSeatMealSection({
                     const decision = seatSelections.find((item) => item.travellerId === travellerId);
 
                     return (
-                      <div key={travellerId} style={selectedItemRowStyle}>
+                      <div key={travellerId} className="max-md:flex-col max-md:items-start" style={selectedItemRowStyle}>
                         <span>
                           Traveller {index + 1} -{" "}
                           {!decision
@@ -561,10 +564,11 @@ export default function FlightSeatMealSection({
                 Seat Total: ₹{seatTotal.toLocaleString("en-IN")}
               </div>
 
-              <div style={modalFooterStyle}>
+              <div className="max-md:flex-col" style={modalFooterStyle}>
                 <button
                   type="button"
                   onClick={() => setShowSeatSkipPopup(true)}
+                  className="max-md:w-full"
                   style={secondaryBtnStyle}
                 >
                   Skip This Traveller
@@ -573,6 +577,7 @@ export default function FlightSeatMealSection({
                 <button
                   type="button"
                   onClick={() => setShowSeatModal(false)}
+                  className="max-md:w-full"
                   style={primaryBtnStyle}
                 >
                   Confirm Seats
@@ -585,9 +590,9 @@ export default function FlightSeatMealSection({
 
       {showMealModal && (
         <ModalOverlay onClose={() => setShowMealModal(false)}>
-          <div style={mealModalStyle}>
+          <div className="max-md:!w-full max-md:rounded-xl" style={mealModalStyle}>
             <div style={modalHeaderStyle}>
-              <div style={{ fontSize: "22px", fontWeight: 800, color: "#111827" }}>
+              <div className="max-md:text-[18px]" style={{ fontSize: "22px", fontWeight: 800, color: "#111827" }}>
                 Meal Selection
               </div>
 
@@ -596,7 +601,7 @@ export default function FlightSeatMealSection({
               </button>
             </div>
 
-            <div style={{ padding: "20px" }}>
+            <div className="max-md:p-4" style={{ padding: "20px" }}>
               <div
                 style={{
                   marginBottom: "10px",
@@ -608,7 +613,7 @@ export default function FlightSeatMealSection({
                 Select meals for all travellers. Total required: {travellerCount}
               </div>
 
-              <div style={{ display: "flex", gap: "10px", marginBottom: "16px" }}>
+              <div className="max-md:overflow-x-auto max-md:pb-1" style={{ display: "flex", gap: "10px", marginBottom: "16px" }}>
                 <FilterBtn active={mealFilter === "all"} onClick={() => setMealFilter("all")}>
                   All
                 </FilterBtn>
@@ -620,17 +625,17 @@ export default function FlightSeatMealSection({
                 </FilterBtn>
               </div>
 
-              <div style={mealGridStyle}>
+              <div className="max-md:!grid-cols-1" style={mealGridStyle}>
                 {filteredMeals.map((meal) => {
                   const qty = mealQuantities[meal.name] || 0;
 
                   return (
                     <div key={meal.id} style={mealCardStyle}>
                       <div>
-                        <div style={{ fontSize: "16px", fontWeight: 700, color: "#111827" }}>
+                        <div className="max-md:text-[15px]" style={{ fontSize: "16px", fontWeight: 700, color: "#111827" }}>
                           {meal.name}
                         </div>
-                        <div style={{ marginTop: "10px", fontSize: "15px", fontWeight: 700 }}>
+                        <div className="max-md:text-[14px]" style={{ marginTop: "10px", fontSize: "15px", fontWeight: 700 }}>
                           ₹ {meal.price.toLocaleString("en-IN")}
                         </div>
                       </div>
@@ -678,7 +683,7 @@ export default function FlightSeatMealSection({
                       const total = (meal?.price || 0) * qty;
 
                       return (
-                        <div key={mealName} style={selectedItemRowStyle}>
+                        <div key={mealName} className="max-md:flex-col max-md:items-start" style={selectedItemRowStyle}>
                           <span>
                             {mealName} x{qty} - ₹{total.toLocaleString("en-IN")}
                           </span>
@@ -707,14 +712,15 @@ export default function FlightSeatMealSection({
                 Meal Total: ₹{mealTotal.toLocaleString("en-IN")}
               </div>
 
-              <div style={modalFooterStyle}>
-                <button type="button" onClick={handleSkipMeals} style={secondaryBtnStyle}>
+              <div className="max-md:flex-col" style={modalFooterStyle}>
+                <button type="button" onClick={handleSkipMeals} className="max-md:w-full" style={secondaryBtnStyle}>
                   Skip Meals
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setShowMealModal(false)}
+                  className="max-md:w-full"
                   style={primaryBtnStyle}
                 >
                   Confirm Meals
@@ -727,8 +733,8 @@ export default function FlightSeatMealSection({
 
       {showSeatSkipPopup && (
         <ModalOverlay onClose={() => setShowSeatSkipPopup(false)}>
-          <div style={skipPopupStyle}>
-            <div style={{ fontSize: "20px", fontWeight: 800, color: "#111827" }}>
+          <div className="max-md:!w-full max-md:p-4" style={skipPopupStyle}>
+            <div className="max-md:text-[18px]" style={{ fontSize: "20px", fontWeight: 800, color: "#111827" }}>
               Skip seat selection?
             </div>
 
@@ -744,10 +750,11 @@ export default function FlightSeatMealSection({
               assigned during check-in.
             </div>
 
-            <div style={modalFooterStyle}>
+            <div className="max-md:flex-col" style={modalFooterStyle}>
               <button
                 type="button"
                 onClick={() => setShowSeatSkipPopup(false)}
+                className="max-md:w-full"
                 style={secondaryBtnStyle}
               >
                 Go Back
@@ -756,6 +763,7 @@ export default function FlightSeatMealSection({
               <button
                 type="button"
                 onClick={handleTravellerSeatSkip}
+                className="max-md:w-full"
                 style={primaryBtnStyle}
               >
                 Continue Without Seat
@@ -772,11 +780,13 @@ function OptionCard({
   title,
   subtitle,
   cta,
+  checked,
   onClick,
 }: {
   title: string;
   subtitle: string;
   cta: string;
+  checked?: boolean;
   onClick: () => void;
 }) {
   return (
@@ -792,7 +802,25 @@ function OptionCard({
       }}
     >
       <div>
-        <div style={{ fontSize: "17px", fontWeight: 800, color: "#111827" }}>{title}</div>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+            gap: "12px",
+          }}
+        >
+          <div style={{ fontSize: "17px", fontWeight: 800, color: "#111827" }}>{title}</div>
+          {typeof checked === "boolean" ? (
+            <input
+              type="checkbox"
+              checked={checked}
+              onChange={onClick}
+              aria-label={`${title} selected`}
+              className="h-5 w-5 shrink-0 cursor-pointer accent-[#38bdf8]"
+            />
+          ) : null}
+        </div>
         <div style={{ marginTop: "8px", fontSize: "14px", color: "#4b5563", lineHeight: "22px" }}>
           {subtitle}
         </div>
@@ -866,6 +894,7 @@ function ModalOverlay({
   return (
     <div
       onClick={onClose}
+      className="max-md:p-3"
       style={{
         position: "fixed",
         inset: 0,

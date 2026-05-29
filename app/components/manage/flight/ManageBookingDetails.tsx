@@ -11,17 +11,17 @@ export default function ManageBookingDetails({
   booking,
 }: ManageBookingDetailsProps) {
   return (
-    <div className="space-y-5">
-      <div className="rounded-[24px] border border-black/5 bg-white p-5 shadow-sm">
+    <div className="space-y-4 md:space-y-5">
+      <div className="rounded-[20px] border border-black/5 bg-white p-4 shadow-sm md:rounded-[24px] md:p-5">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-          <div>
+          <div className="min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#ff6b00]">
               Flight Booking
             </p>
-            <h2 className="mt-1 text-xl font-bold text-[#111827]">
+            <h2 className="mt-1 break-words text-[20px] font-bold leading-7 text-[#111827] md:text-xl">
               {booking.origin} → {booking.destination}
             </h2>
-            <p className="mt-1 text-sm text-[#6b7280]">
+            <p className="mt-1 break-words text-sm text-[#6b7280]">
               {booking.airlineName} • {booking.flightNumber}
             </p>
           </div>
@@ -38,7 +38,7 @@ export default function ManageBookingDetails({
       </div>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <div className="rounded-[24px] border border-black/5 bg-white p-5 shadow-sm">
+        <div className="rounded-[20px] border border-black/5 bg-white p-4 shadow-sm md:rounded-[24px] md:p-5">
           <h3 className="text-base font-bold text-[#111827]">Traveller Details</h3>
           <div className="mt-4 space-y-3">
             {booking.travellers.map((traveller) => (
@@ -46,7 +46,7 @@ export default function ManageBookingDetails({
                 key={traveller.id}
                 className="rounded-2xl bg-[#f8f9fb] px-4 py-3"
               >
-                <p className="text-sm font-semibold text-[#111827]">
+                <p className="break-words text-sm font-semibold text-[#111827]">
                   {traveller.title} {traveller.firstName} {traveller.lastName}
                 </p>
                 <p className="mt-1 text-xs uppercase tracking-[0.14em] text-[#6b7280]">
@@ -57,14 +57,14 @@ export default function ManageBookingDetails({
           </div>
         </div>
 
-        <div className="rounded-[24px] border border-black/5 bg-white p-5 shadow-sm">
+        <div className="rounded-[20px] border border-black/5 bg-white p-4 shadow-sm md:rounded-[24px] md:p-5">
           <h3 className="text-base font-bold text-[#111827]">Contact Details</h3>
           <div className="mt-4 space-y-3">
             <div className="rounded-2xl bg-[#f8f9fb] px-4 py-3">
               <p className="text-xs uppercase tracking-[0.14em] text-[#6b7280]">
                 Email
               </p>
-              <p className="mt-1 text-sm font-semibold text-[#111827]">
+              <p className="mt-1 break-words text-sm font-semibold text-[#111827]">
                 {booking.contact.email}
               </p>
             </div>
@@ -73,7 +73,7 @@ export default function ManageBookingDetails({
               <p className="text-xs uppercase tracking-[0.14em] text-[#6b7280]">
                 Phone
               </p>
-              <p className="mt-1 text-sm font-semibold text-[#111827]">
+              <p className="mt-1 break-words text-sm font-semibold text-[#111827]">
                 {booking.contact.phone}
               </p>
             </div>
@@ -90,7 +90,7 @@ export default function ManageBookingDetails({
         </div>
       </div>
 
-      <div className="rounded-[24px] border border-black/5 bg-white p-5 shadow-sm">
+      <div className="rounded-[20px] border border-black/5 bg-white p-4 shadow-sm md:rounded-[24px] md:p-5">
         <h3 className="text-base font-bold text-[#111827]">Fare Snapshot</h3>
         <div className="mt-4 rounded-2xl bg-[#f8f9fb] px-4 py-3">
           <p className="text-xs uppercase tracking-[0.14em] text-[#6b7280]">

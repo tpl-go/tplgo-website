@@ -33,11 +33,11 @@ export default function CancelBookingModal({
     <>
       <div
         onClick={onClose}
-        className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 px-4"
+        className="fixed inset-0 z-[9999] flex items-end justify-center overflow-x-hidden bg-black/40 px-3 py-3 md:items-center md:px-4 md:py-6"
       >
         <div
           onClick={(e) => e.stopPropagation()}
-          className="relative w-full max-w-xl rounded-[24px] border border-gray-200 bg-white shadow-[0_20px_60px_rgba(15,23,42,0.18)] overflow-hidden"
+          className="relative flex max-h-[calc(100dvh-24px)] w-full max-w-xl flex-col overflow-hidden rounded-[22px] border border-gray-200 bg-white shadow-[0_20px_60px_rgba(15,23,42,0.18)] md:max-h-[min(720px,calc(100vh-48px))] md:rounded-[24px]"
         >
           {/* Cross */}
           <button
@@ -49,8 +49,8 @@ export default function CancelBookingModal({
             ×
           </button>
 
-          <div className="border-b border-gray-200 bg-[linear-gradient(180deg,#fff7ed_0%,#ffffff_100%)] px-6 py-5 pr-16">
-            <h3 className="text-[20px] font-black text-slate-900">
+          <div className="shrink-0 border-b border-gray-200 bg-[linear-gradient(180deg,#fff7ed_0%,#ffffff_100%)] px-4 py-4 pr-16 md:px-6 md:py-5">
+            <h3 className="text-[18px] font-black text-slate-900 md:text-[20px]">
               Cancel Booking
             </h3>
             <p className="mt-1 text-[13px] text-slate-600">
@@ -58,18 +58,18 @@ export default function CancelBookingModal({
             </p>
           </div>
 
-          <div className="space-y-5 px-6 py-6">
+          <div className="min-h-0 space-y-4 overflow-y-auto overflow-x-hidden px-4 py-4 md:space-y-5 md:px-6 md:py-6">
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <div className="text-[11px] font-black uppercase tracking-[0.7px] text-slate-500">
                 Booking
               </div>
 
-              <div className="mt-2 text-[16px] font-bold text-slate-900">
+              <div className="mt-2 break-words text-[16px] font-bold text-slate-900">
                 {bookingTitle || "Booking"}
               </div>
 
               <div className="mt-3 grid grid-cols-1 gap-2 text-[12px] text-slate-600 sm:grid-cols-2">
-                <p>
+                <p className="min-w-0 break-words">
                   <span className="font-semibold text-slate-800">Booking ID:</span>{" "}
                   {bookingId || "-"}
                 </p>
@@ -80,12 +80,12 @@ export default function CancelBookingModal({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
               <div className="rounded-2xl border border-red-100 bg-red-50 p-4">
                 <div className="text-[11px] font-black uppercase tracking-[0.7px] text-red-500">
                   Cancellation Charge
                 </div>
-                <div className="mt-2 text-[22px] font-black text-red-700">
+                <div className="mt-2 text-[21px] font-black text-red-700 md:text-[22px]">
                   ₹{cancellationCharge.toLocaleString("en-IN")}
                 </div>
               </div>
@@ -94,27 +94,27 @@ export default function CancelBookingModal({
                 <div className="text-[11px] font-black uppercase tracking-[0.7px] text-green-600">
                   Refundable Amount
                 </div>
-                <div className="mt-2 text-[22px] font-black text-green-700">
+                <div className="mt-2 text-[21px] font-black text-green-700 md:text-[22px]">
                   ₹{refundableAmount.toLocaleString("en-IN")}
                 </div>
               </div>
             </div>
 
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-4 text-[13px] font-medium leading-6 text-slate-600">
+            <div className="break-words rounded-2xl border border-dashed border-slate-300 bg-white p-4 text-[13px] font-medium leading-6 text-slate-600">
               {policyText || "Refund will be processed as per current policy."}
             </div>
           </div>
 
-          <div className="flex items-center justify-between gap-4 border-t border-gray-200 px-6 py-5">
+          <div className="shrink-0 border-t border-gray-200 px-4 py-4 md:flex md:items-center md:justify-between md:gap-4 md:px-6 md:py-5">
             <button
               type="button"
               onClick={() => setShowPolicyPopup(true)}
-              className="text-[13px] font-semibold text-[#0b5fff] transition hover:underline"
+              className="w-full text-left text-[13px] font-semibold text-[#0b5fff] transition hover:underline md:w-auto"
             >
               Cancellation Policy
             </button>
 
-            <div className="flex items-center gap-3">
+            <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 md:mt-0 md:flex md:items-center md:justify-end md:gap-3">
               <button
                 type="button"
                 onClick={onClose}
@@ -138,11 +138,11 @@ export default function CancelBookingModal({
       {showPolicyPopup && (
         <div
           onClick={() => setShowPolicyPopup(false)}
-          className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/45 px-4"
+          className="fixed inset-0 z-[10000] flex items-end justify-center overflow-x-hidden bg-black/45 px-3 py-3 md:items-center md:px-4 md:py-6"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-2xl rounded-[24px] border border-gray-200 bg-white shadow-[0_20px_60px_rgba(15,23,42,0.18)] overflow-hidden"
+            className="relative flex max-h-[calc(100dvh-24px)] w-full max-w-2xl flex-col overflow-hidden rounded-[22px] border border-gray-200 bg-white shadow-[0_20px_60px_rgba(15,23,42,0.18)] md:max-h-[min(760px,calc(100vh-48px))] md:rounded-[24px]"
           >
             <button
               type="button"
@@ -153,8 +153,8 @@ export default function CancelBookingModal({
               ×
             </button>
 
-            <div className="border-b border-gray-200 bg-[linear-gradient(180deg,#f8fbff_0%,#ffffff_100%)] px-6 py-5 pr-16">
-              <h4 className="text-[19px] font-black text-slate-900">
+            <div className="shrink-0 border-b border-gray-200 bg-[linear-gradient(180deg,#f8fbff_0%,#ffffff_100%)] px-4 py-4 pr-16 md:px-6 md:py-5">
+              <h4 className="text-[18px] font-black text-slate-900 md:text-[19px]">
                 Cancellation Policy
               </h4>
               <p className="mt-1 text-[13px] text-slate-600">
@@ -162,9 +162,9 @@ export default function CancelBookingModal({
               </p>
             </div>
 
-            <div className="max-h-[380px] overflow-y-auto px-6 py-6">
+            <div className="min-h-0 overflow-y-auto overflow-x-hidden px-4 py-4 md:px-6 md:py-6">
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p className="whitespace-pre-line text-[14px] leading-7 text-slate-700">
+                <p className="whitespace-pre-line break-words text-[13px] leading-6 text-slate-700 md:text-[14px] md:leading-7">
   {`1. Cancellation request once submitted and confirmed may not be reversible automatically.
 
 2. Refund amount is calculated according to the active fare rule, supplier policy, travel date proximity, and any non-refundable service component.
@@ -180,11 +180,11 @@ export default function CancelBookingModal({
               </div>
             </div>
 
-            <div className="flex justify-end border-t border-gray-200 px-6 py-4">
+            <div className="shrink-0 border-t border-gray-200 px-4 py-4 md:flex md:justify-end md:px-6">
               <button
                 type="button"
                 onClick={() => setShowPolicyPopup(false)}
-                className="h-11 rounded-xl border border-gray-300 px-5 text-[12px] font-bold text-slate-700 transition hover:bg-slate-50"
+                className="h-11 w-full rounded-xl border border-gray-300 px-5 text-[12px] font-bold text-slate-700 transition hover:bg-slate-50 md:w-auto"
               >
                 Close
               </button>
