@@ -46,12 +46,14 @@ export default function CruiseConfirmationActionsCard({
 
   return (
     <aside
+      className="cruise-confirm-actions"
       style={{
         width: "100%",
         display: "flex",
       }}
     >
       <div
+        className="cruise-confirm-actions-inner"
         style={{
           width: "100%",
           position: "sticky",
@@ -258,6 +260,18 @@ export default function CruiseConfirmationActionsCard({
           </div>
         </div>
       </div>
+      <style jsx>{`
+        @media (max-width: 767px) {
+          .cruise-confirm-actions {
+            display: block !important;
+          }
+
+          .cruise-confirm-actions-inner {
+            position: static !important;
+            top: auto !important;
+          }
+        }
+      `}</style>
     </aside>
   );
 }

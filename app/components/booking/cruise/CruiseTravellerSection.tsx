@@ -500,12 +500,13 @@ export default function CruiseTravellerSection({
                 </span>
               </div>
 
-              <div style={{ display: "grid", gap: "14px" }}>
+              <div className="cruise-traveller-list" style={{ display: "grid", gap: "14px" }}>
                 {travellerCards.map((traveller) => {
                   const completed = isTravellerComplete(traveller);
 
                   return (
                     <div
+                      className="cruise-traveller-row"
                       key={traveller.id}
                       style={{
                         display: "flex",
@@ -595,7 +596,7 @@ export default function CruiseTravellerSection({
               <div style={{ marginTop: "28px" }}>
                 <h3 style={subHeadingStyle}>Booking details will be sent to</h3>
 
-                <div style={grid3Style}>
+                <div className="cruise-contact-grid" style={grid3Style}>
                   <Field label="Country Code">
                     <select
                       style={inputStyle}
@@ -666,6 +667,24 @@ export default function CruiseTravellerSection({
         initialTravellers={savedInternationalTravellers}
         onSave={handleInternationalSave}
       />
+
+      <style jsx>{`
+        @media (max-width: 767px) {
+          .cruise-traveller-row {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 12px !important;
+            border: 1px solid #e5e7eb !important;
+            border-radius: 16px !important;
+            padding: 14px !important;
+            box-shadow: 0 8px 22px rgba(15, 23, 42, 0.06) !important;
+          }
+
+          .cruise-contact-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
     </>
   );
 }

@@ -123,14 +123,14 @@ export default function CruiseManageCabinAddons({
                   onClick={() =>
                     onVariantChange(variant)
                   }
-                  className={`rounded-2xl border p-4 text-left transition ${
+                  className={`min-w-0 rounded-2xl border p-4 text-left transition ${
                     isSelected
                       ? "border-[#ff6b00] bg-[#fff7f2] shadow-[0_8px_24px_rgba(255,107,0,0.08)]"
                       : "border-black/5 bg-[#f8f9fb] hover:border-[#ff6b00]/30"
                   }`}
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0">
                       <p className="text-sm font-bold text-[#111827]">
                         {variant.name || "Cabin"}
                       </p>
@@ -142,7 +142,7 @@ export default function CruiseManageCabinAddons({
                     </div>
 
                     {isCurrent ? (
-                      <span className="rounded-full bg-green-50 px-3 py-1 text-[11px] font-bold text-green-700">
+                      <span className="w-fit shrink-0 rounded-full bg-green-50 px-3 py-1 text-[11px] font-bold text-green-700">
                         Current
                       </span>
                     ) : null}
@@ -166,7 +166,7 @@ export default function CruiseManageCabinAddons({
                   </div>
 
                   {!!variant.amenities?.length && (
-                    <p className="mt-3 text-xs font-semibold text-[#6b7280]">
+                    <p className="mt-3 break-words text-xs font-semibold text-[#6b7280]">
                       {variant.amenities
                         .slice(0, 4)
                         .join(" • ")}
@@ -240,7 +240,7 @@ export default function CruiseManageCabinAddons({
         <div className="mt-5 rounded-2xl bg-[#fff7f2] p-4">
           {quote.settlementMode ===
             "payment" && (
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b7280]">
                   Net Payable
@@ -256,7 +256,7 @@ export default function CruiseManageCabinAddons({
               <button
                 type="button"
                 onClick={onContinue}
-                className="rounded-full bg-[#ff6b00] px-5 py-3 text-sm font-semibold text-white"
+                className="w-full rounded-full bg-[#ff6b00] px-5 py-3 text-sm font-semibold text-white sm:w-auto"
               >
                 Continue to Payment
               </button>
@@ -265,7 +265,7 @@ export default function CruiseManageCabinAddons({
 
           {quote.settlementMode ===
             "wallet_credit" && (
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b7280]">
                   Refund Wallet Credit
@@ -283,7 +283,7 @@ export default function CruiseManageCabinAddons({
               <button
                 type="button"
                 onClick={onContinue}
-                className="rounded-full bg-[#111827] px-5 py-3 text-sm font-semibold text-white"
+                className="w-full rounded-full bg-[#111827] px-5 py-3 text-sm font-semibold text-white sm:w-auto"
               >
                 Save Changes
               </button>
@@ -292,7 +292,7 @@ export default function CruiseManageCabinAddons({
 
           {quote.settlementMode ===
             "save" && (
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm font-semibold text-[#111827]">
                   No payment required
@@ -308,7 +308,7 @@ export default function CruiseManageCabinAddons({
               <button
                 type="button"
                 onClick={onContinue}
-                className="rounded-full bg-[#111827] px-5 py-3 text-sm font-semibold text-white"
+                className="w-full rounded-full bg-[#111827] px-5 py-3 text-sm font-semibold text-white sm:w-auto"
               >
                 Save Changes
               </button>
@@ -340,7 +340,7 @@ function Row({
   value: string;
 }) {
   return (
-    <div className="flex items-center justify-between gap-4 rounded-2xl bg-[#f8f9fb] px-4 py-3">
+    <div className="flex flex-col gap-1 rounded-2xl bg-[#f8f9fb] px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
       <p className="text-sm text-[#4b5563]">
         {label}
       </p>

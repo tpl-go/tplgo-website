@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams, useRouter, useParams } from "next/navigation";
 import { UserRound, Wallet } from "lucide-react";
 import LoginModal from "@/app/components/common/LoginModal";
+import MobileInnerBack from "@/app/components/common/mobile/MobileInnerBack";
 import { AUTH_UPDATED_EVENT } from "@/app/lib/booking/guestAuth";
 import { getWallet } from "@/app/lib/wallet/walletStorage";
 import { getSavedProfile } from "@/app/lib/account/profileStorage";
@@ -381,10 +382,7 @@ useEffect(() => {
 
   const cruiseBaseAmount = pricingSummary?.cabinsTotal || startingSidebarPrice || 0;
 
-  const cruiseTaxesAmount =
-    bookingEnabled && pricingSummary?.taxesAndFees
-      ? pricingSummary.taxesAndFees
-      : 0;
+  const cruiseTaxesAmount = pricingSummary?.taxesAndFees || 0;
 
   const smartActiveOffer = useMemo(() => {
   if (appliedCruiseOffer) return appliedCruiseOffer;
@@ -528,9 +526,13 @@ useEffect(() => {
   }
 
   return (
-    <div className="bg-white">
-      <div className="sticky top-0 z-40 border-b bg-white">
-        <div className="mx-auto max-w-7xl px-2 py-1">
+    <div className="overflow-x-hidden bg-white pb-[calc(env(safe-area-inset-bottom)+128px)] lg:pb-0">
+      <div className="border-b bg-white lg:sticky lg:top-0 lg:z-40">
+        <div className="mx-auto max-w-7xl px-3 pb-0 pt-3 lg:px-2 lg:py-1">
+          <div className="mb-3 lg:hidden">
+            <MobileInnerBack title="Cruise Details" />
+          </div>
+
           <CruiseDetailHeader
             title={detail.title}
             tripLabel={detail.tripLabel}
@@ -545,7 +547,7 @@ useEffect(() => {
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-4">
+      <div className="mx-auto max-w-7xl px-3 lg:px-4">
         <div className="pt-0">
           <CruiseDetailMediaGrid
             cruiseId={detail.cruiseId}
@@ -568,7 +570,7 @@ useEffect(() => {
             />
           </div>
 <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-[2fr_1fr]">
-  <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4">
+  <div className="rounded-2xl border border-blue-100 bg-blue-50 p-3 lg:p-4">
     {activeUser?.mobile ? (
       <div className="flex items-start gap-3">
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-white">
@@ -590,7 +592,7 @@ useEffect(() => {
         </div>
       </div>
     ) : (
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div className="flex items-start gap-3">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-orange-500 text-white">
             <Wallet className="h-5 w-5" />
@@ -610,7 +612,7 @@ useEffect(() => {
         <button
           type="button"
           onClick={() => setShowLoginModal(true)}
-          className="shrink-0 rounded-xl bg-orange-500 px-4 py-2 text-[12px] font-bold text-white hover:bg-orange-600"
+          className="h-11 w-full shrink-0 rounded-xl bg-orange-500 px-4 py-2 text-[12px] font-bold text-white hover:bg-orange-600 sm:w-auto"
         >
           Login / Signup
         </button>
@@ -618,7 +620,7 @@ useEffect(() => {
     )}
   </div>
 
-  <div className="rounded-2xl border border-[#d9e2ec] bg-white p-4">
+  <div className="rounded-2xl border border-[#d9e2ec] bg-white p-3 lg:p-4">
     <div className="text-[12px] font-black uppercase tracking-wide text-[#6b7280]">
       Wallet Available
     </div>
@@ -656,11 +658,11 @@ useEffect(() => {
 
         </div>
 
-        <div className="mt-2 grid grid-cols-12 gap-8">
+        <div className="mt-3 grid grid-cols-12 gap-4 lg:mt-2 lg:gap-8">
           <div className="col-span-12 lg:col-span-9">
             <div className="overflow-visible rounded-2xl border bg-white">
-              <div className="sticky top-[90px] z-30 mt-2 bg-white">
-                <div className="border-b px-4 pt-0">
+              <div className="sticky top-0 z-30 mt-0 bg-white lg:top-[90px] lg:mt-2">
+                <div className="border-b px-3 pt-2 lg:px-4 lg:pt-0">
                   <CruiseDetailTabs
                     activeTab={activeTab}
                     onChange={setActiveTab}
@@ -670,13 +672,14 @@ useEffect(() => {
 
               <div className="px-0 py-0">
                 {activeTab === "cabin" ? (
-                  <div className="p-4">
+                  <div className="p-3 lg:p-4">
                     <CruiseCabinTab
                       data={cabinTabData}
                       onCabinSelectionChange={setSelectedCabins}
                       onPricingSummaryChange={setPricingSummary}
                       onTimerStateChange={setTimerSecondsLeft}
                       onCabinAssignmentMetaChange={setCabinAssignmentMeta}
+                      offerDiscount={cruisePricingRuleSummary.offerDiscount}
                     />
                   </div>
                 ) : null}
@@ -694,7 +697,7 @@ useEffect(() => {
                 ) : null}
 
                 {activeTab === "cruiseDeckPlan" ? (
-                  <div className="p-4">
+                  <div className="p-3 lg:p-4">
                     <CruiseDeckPlanTab
                       deckPlans={cabinTabData.deckPlans}
                       mode="view"

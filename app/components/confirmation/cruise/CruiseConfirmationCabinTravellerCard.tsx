@@ -161,6 +161,7 @@ export default function CruiseConfirmationCabinTravellerCard({
           </div>
 
           <div
+            className="cruise-confirm-cabin-grid"
             style={{
               display: "grid",
               gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
@@ -176,6 +177,7 @@ export default function CruiseConfirmationCabinTravellerCard({
 
                 return (
                   <div
+                    className="cruise-confirm-cabin-card"
                     key={cabin.cabinKey || index}
                     style={{
                       border: "1px solid #e5e7eb",
@@ -186,6 +188,7 @@ export default function CruiseConfirmationCabinTravellerCard({
                     }}
                   >
                     <div
+                      className="cruise-confirm-cabin-head"
                       style={{
                         display: "flex",
                         justifyContent: "space-between",
@@ -195,6 +198,7 @@ export default function CruiseConfirmationCabinTravellerCard({
                     >
                       <div>
                         <div
+                          className="cruise-confirm-cabin-price"
                           style={{
                             fontSize: "12px",
                             fontWeight: 800,
@@ -234,6 +238,7 @@ export default function CruiseConfirmationCabinTravellerCard({
                     </div>
 
                     <div
+                      className="cruise-confirm-cabin-chip-wrap"
                       style={{
                         marginTop: "14px",
                         display: "flex",
@@ -280,6 +285,7 @@ export default function CruiseConfirmationCabinTravellerCard({
             {travellers.length > 0 ? (
               travellers.map((traveller, index) => (
                 <div
+                  className="cruise-confirm-traveller-row"
                   key={traveller.id || index}
                   style={{
                     border: "1px solid #e5e7eb",
@@ -331,6 +337,7 @@ export default function CruiseConfirmationCabinTravellerCard({
 
                     <div style={{ minWidth: 0 }}>
                       <div
+                        className="cruise-confirm-traveller-main"
                         style={{
                           fontSize: "15px",
                           fontWeight: 900,
@@ -342,6 +349,7 @@ export default function CruiseConfirmationCabinTravellerCard({
                       </div>
 
                       <div
+                        className="cruise-confirm-traveller-chip-wrap"
                         style={{
                           marginTop: "6px",
                           display: "flex",
@@ -382,6 +390,62 @@ export default function CruiseConfirmationCabinTravellerCard({
           </div>
         </div>
       </div>
+      <style jsx>{`
+        @media (max-width: 767px) {
+          .cruise-confirm-cabin-grid {
+            grid-template-columns: 1fr !important;
+          }
+
+          .cruise-confirm-cabin-card {
+            padding: 14px !important;
+          }
+
+          .cruise-confirm-cabin-head {
+            align-items: flex-start !important;
+            flex-direction: column !important;
+            gap: 10px !important;
+          }
+
+          .cruise-confirm-cabin-price {
+            white-space: normal !important;
+            align-self: flex-start !important;
+            border-radius: 999px !important;
+            background: #f8fafc !important;
+            padding: 6px 10px !important;
+            font-size: 14px !important;
+          }
+
+          .cruise-confirm-cabin-chip-wrap,
+          .cruise-confirm-traveller-chip-wrap {
+            width: 100% !important;
+            gap: 7px !important;
+          }
+
+          .cruise-confirm-traveller-row {
+            align-items: flex-start !important;
+            flex-direction: column !important;
+            gap: 12px !important;
+            padding: 14px !important;
+          }
+
+          .cruise-confirm-traveller-main {
+            align-items: flex-start !important;
+            width: 100% !important;
+          }
+
+          .cruise-confirm-traveller-main > div:last-child {
+            min-width: 0 !important;
+            width: 100% !important;
+          }
+
+          .cruise-confirm-traveller-row > div:last-child {
+            align-self: flex-start !important;
+            border-radius: 999px !important;
+            background: #dcfce7 !important;
+            padding: 5px 9px !important;
+          }
+        }
+      `}</style>
     </section>
   );
 }

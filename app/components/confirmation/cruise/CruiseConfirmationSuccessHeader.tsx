@@ -112,6 +112,7 @@ export default function CruiseConfirmationSuccessHeader({
       }}
     >
       <div
+        className="cruise-confirm-success-body"
         style={{
           padding: "28px 26px 24px 26px",
           position: "relative",
@@ -119,6 +120,7 @@ export default function CruiseConfirmationSuccessHeader({
         }}
       >
         <div
+          className="cruise-confirm-success-layout"
           style={{
             position: "absolute",
             top: "-40px",
@@ -252,6 +254,7 @@ export default function CruiseConfirmationSuccessHeader({
           </div>
 
           <div
+            className="cruise-confirm-booking-id-card"
             style={{
               minWidth: "320px",
               maxWidth: "100%",
@@ -348,6 +351,30 @@ export default function CruiseConfirmationSuccessHeader({
           </div>
         </div>
       </div>
+      <style jsx>{`
+        @media (max-width: 767px) {
+          .cruise-confirm-success-body {
+            padding: 18px 16px !important;
+          }
+
+          .cruise-confirm-success-layout {
+            flex-direction: column !important;
+            gap: 16px !important;
+          }
+
+          .cruise-confirm-success-layout h1 {
+            font-size: 26px !important;
+            line-height: 32px !important;
+            letter-spacing: 0 !important;
+          }
+
+          .cruise-confirm-booking-id-card {
+            min-width: 0 !important;
+            width: 100% !important;
+            border-radius: 18px !important;
+          }
+        }
+      `}</style>
     </section>
   );
 }

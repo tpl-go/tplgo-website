@@ -220,9 +220,9 @@ const hasOffer =
     >
       <div className="grid grid-cols-12 gap-0">
         <div className="col-span-12 md:col-span-4">
-          <div className="relative m-4 overflow-hidden rounded-[14px] bg-slate-100">
+          <div className="relative m-3 overflow-hidden rounded-[14px] bg-slate-100 md:m-4">
             <div
-              className="relative h-[220px] cursor-pointer"
+              className="relative h-[190px] cursor-pointer sm:h-[230px] md:h-[220px]"
               onClick={() => onOpenDetail(cabin)}
             >
               {currentImage ? (
@@ -283,14 +283,14 @@ const hasOffer =
         </div>
 
         <div className="col-span-12 md:col-span-8">
-          <div className="flex h-full flex-col justify-between px-4 pb-4 pt-5 md:pl-2 md:pr-5">
+          <div className="flex h-full flex-col justify-between px-3 pb-4 pt-1 md:px-4 md:pt-5 md:pl-2 md:pr-5">
             <div className="grid grid-cols-12 gap-4">
               <div className="col-span-12 lg:col-span-7">
-                <h3 className="text-[24px] font-bold leading-tight text-slate-900">
+                <h3 className="text-[20px] font-black leading-tight text-slate-900 md:text-[24px] md:font-bold">
                   {cabin.name}
                 </h3>
 
-                <p className="mt-3 max-w-[420px] text-[14px] leading-8 text-slate-800">
+                <p className="mt-2 max-w-[420px] text-[13px] font-medium leading-6 text-slate-700 md:mt-3 md:text-[14px] md:leading-8 md:text-slate-800">
                   {cabin.shortDescription}{" "}
                   <button
                     type="button"
@@ -301,7 +301,7 @@ const hasOffer =
                   </button>
                 </p>
 
-                <div className="mt-4 flex items-center gap-3 text-[15px] font-semibold text-slate-900">
+                <div className="mt-3 flex items-center gap-2 rounded-2xl border border-slate-100 bg-slate-50 px-3 py-2 text-[13px] font-bold text-slate-900 md:mt-4 md:border-0 md:bg-transparent md:px-0 md:py-0 md:text-[15px] md:font-semibold">
                   <Users size={18} className="text-rose-400" />
                   <span>
                     Max Capacity: {String(cabin.maxGuests).padStart(2, "0")} Guests
@@ -330,11 +330,11 @@ const hasOffer =
                   </div>
                 ) : null}
 
-                <div className="mt-8">
+                <div className="mt-4 md:mt-8">
                   <button
                     type="button"
                     onClick={() => onOpenAmenities(cabin)}
-                    className="inline-flex items-center gap-2 text-[16px] font-medium text-blue-700 underline underline-offset-2"
+                    className="inline-flex h-10 items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 text-[13px] font-extrabold text-blue-700 md:h-auto md:rounded-none md:border-0 md:bg-transparent md:px-0 md:text-[16px] md:font-medium md:underline md:underline-offset-2"
                   >
                     <Sparkles size={16} />
                     View Amenities
@@ -343,16 +343,16 @@ const hasOffer =
               </div>
 
               <div className="col-span-12 lg:col-span-5">
-                <div className="flex h-full flex-col items-end justify-between">
-                  <div className="text-right">
+                <div className="flex h-full flex-col justify-between rounded-2xl border border-orange-100 bg-orange-50/40 p-3 lg:items-end lg:border-0 lg:bg-transparent lg:p-0">
+                  <div className="text-left lg:text-right">
                     <div>
   {hasOffer ? (
-    <div className="text-[14px] font-bold text-black line-through">
+    <div className="text-[13px] font-bold text-black line-through lg:text-[14px]">
       ₹ {pricingPreview.baseAmount.toLocaleString("en-IN")}
     </div>
   ) : null}
 
-  <div className="text-[20px] font-bold text-slate-900">
+  <div className="text-[24px] font-black leading-none text-slate-900 lg:text-[20px] lg:font-bold">
     ₹{" "}
     {(
       hasOffer
@@ -368,18 +368,18 @@ const hasOffer =
     </div>
   ) : null}
 </div>
-                    <div className="mt-3 text-[14px] font-medium leading-7 text-slate-700">
+                    <div className="mt-2 text-[12px] font-bold leading-5 text-slate-600 lg:mt-3 lg:text-[14px] lg:font-medium lg:leading-7 lg:text-slate-700">
                       <div>Per Person in</div>
                       <div>Double Occupancy</div>
                       <div>Excl. GST charges</div>
                     </div>
                   </div>
 
-                  <div className="mt-12 flex flex-col items-end">
+                  <div className="mt-4 flex flex-col lg:mt-12 lg:items-end">
                     <button
                       type="button"
                       onClick={handleChoose}
-                      className={`min-w-[200px] rounded-full border px-4 py-2 text-[16px] font-semibold transition ${
+                      className={`h-11 w-full rounded-full border px-4 py-2 text-[14px] font-extrabold transition lg:min-w-[200px] lg:text-[16px] lg:font-semibold ${
   expanded
     ? hasValidSelection
       ? "border-orange-500 bg-gradient-to-r from-orange-500 via-orange-600 to-amber-500 text-white shadow-md hover:opacity-95"
@@ -406,8 +406,8 @@ const hasOffer =
       </div>
 
       {expanded ? (
-        <div className="border-t border-slate-200 bg-white px-5 pb-5 pt-4">
-          <div className="mb-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <div className="border-t border-slate-200 bg-white px-3 pb-4 pt-3 lg:px-5 lg:pb-5 lg:pt-4">
+          <div className="mb-4 rounded-2xl border border-slate-200 bg-slate-50 p-3 lg:p-4">
             <div className="text-sm font-semibold text-slate-900">
               Cabin Assignment Preference
             </div>
@@ -451,7 +451,7 @@ const hasOffer =
             {cabinSelectionMode === "select" ? (
               <div className="mt-4">
                 {deckPlanSelectionAvailable ? (
-                  <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-purple-200 bg-purple-50 px-4 py-3">
+                  <div className="flex flex-col gap-3 rounded-xl border border-purple-200 bg-purple-50 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4">
                     <div>
                       <div className="text-sm font-semibold text-purple-800">
                         Specific cabin selection available
@@ -466,7 +466,7 @@ const hasOffer =
                     <button
                       type="button"
                       onClick={() => onOpenDeckPlanSelector?.(cabin)}
-                      className="rounded-full bg-purple-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-purple-700"
+                      className="h-10 w-full rounded-full bg-purple-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-purple-700 sm:w-auto"
                     >
                       {selectedDeckCabinNumber
                         ? "Change Cabin Number"

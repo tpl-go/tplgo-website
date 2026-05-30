@@ -200,14 +200,14 @@ export default function CruiseDetailOfferSection({
 
   return (
     <div className="overflow-hidden rounded-[24px] border border-[#d9e2ec] bg-white shadow-[0_12px_34px_rgba(15,23,42,0.08)]">
-      <div className="border-b border-[#e5e7eb] bg-[linear-gradient(135deg,#fff7ed_0%,#ffffff_50%,#fff1e6_100%)] px-4 py-4">
+      <div className="border-b border-[#e5e7eb] bg-[linear-gradient(135deg,#fff7ed_0%,#ffffff_50%,#fff1e6_100%)] px-3 py-4 lg:px-4">
         <div className="flex items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#f97316,#ea580c)] shadow-[0_10px_24px_rgba(249,115,22,0.35)]">
             <Sparkles className="h-5 w-5 text-white" />
           </div>
 
           <div>
-            <div className="text-[20px] font-extrabold text-[#111827]">
+            <div className="text-[17px] font-black text-[#111827] lg:text-[20px] lg:font-extrabold">
               Smart Coupons & Offers
             </div>
 
@@ -218,12 +218,12 @@ export default function CruiseDetailOfferSection({
         </div>
       </div>
 
-      <div className="px-4 py-4">
+      <div className="px-3 py-4 lg:px-4">
         {appliedOffer ? (
           <div className="relative mb-4 overflow-hidden rounded-[18px] border border-[#fed7aa] bg-[linear-gradient(135deg,#fff7ed,#ffffff)] p-4">
             <div className="absolute right-0 top-0 h-20 w-20 rounded-full bg-[#fb923c]/10 blur-3xl" />
 
-            <div className="relative flex items-start justify-between gap-3">
+            <div className="relative flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <div className="flex items-center gap-1 rounded-full bg-[linear-gradient(135deg,#f97316,#ea580c)] px-3 py-1 shadow-[0_6px_18px_rgba(249,115,22,0.3)]">
@@ -251,7 +251,7 @@ export default function CruiseDetailOfferSection({
               <button
                 type="button"
                 onClick={onRemoveOffer}
-                className="h-[38px] shrink-0 rounded-full border border-[#fed7aa] bg-white px-4 text-[12px] font-black text-[#ea580c]"
+                className="h-[38px] w-full shrink-0 rounded-full border border-[#fed7aa] bg-white px-4 text-[12px] font-black text-[#ea580c] sm:w-auto"
               >
                 Remove
               </button>
@@ -278,7 +278,7 @@ export default function CruiseDetailOfferSection({
               >
                 <div className="absolute right-0 top-0 h-16 w-16 rounded-full bg-[#fb923c]/5 blur-2xl" />
 
-                <div className="relative flex items-start justify-between gap-3">
+                <div className="relative flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <div className="rounded-full bg-[#111827] px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-white">
@@ -312,7 +312,7 @@ export default function CruiseDetailOfferSection({
                     type="button"
                     disabled={active}
                     onClick={() => onApplyOffer(offer)}
-                    className={`min-w-[100px] rounded-full px-4 py-2 text-[12px] font-black transition-all ${
+                    className={`h-10 w-full rounded-full px-4 py-2 text-[12px] font-black transition-all sm:min-w-[100px] sm:w-auto ${
                       active
                         ? "cursor-not-allowed bg-[linear-gradient(135deg,#f97316,#ea580c)] text-white shadow-[0_8px_18px_rgba(249,115,22,0.3)]"
                         : "border border-[#fdba74] bg-white text-[#ea580c] hover:bg-[#fff7ed]"

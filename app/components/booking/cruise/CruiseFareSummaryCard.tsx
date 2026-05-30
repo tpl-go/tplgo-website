@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { createPortal } from "react-dom";
 import { Sparkles, BadgeCheck, Tag } from "lucide-react";
 
 type StatusType = "pending" | "selected" | "skipped";
@@ -8,6 +10,22 @@ type WalletBreakdown = {
   promoUsed: number;
   earnedUsed: number;
   refundUsed: number;
+};
+
+type CabinBreakupItem = {
+  adults?: number;
+  children?: number;
+  infants?: number;
+  subtotal?: number;
+};
+
+type PricingSummary = {
+  cabins?: CabinBreakupItem[];
+} | null;
+
+type PricingRuleSummary = {
+  baseAfterOffer?: number;
+  payableBeforeRefundWallet?: number;
 };
 
 type Props = {
@@ -35,7 +53,7 @@ type Props = {
 
   baseAfterOffer?: number;
   totalBeforeWallet?: number;
-  pricingRuleSummary?: any;
+  pricingRuleSummary?: PricingRuleSummary;
 
   insuranceTotal?: number;
   addonsTotal?: number;
@@ -48,7 +66,7 @@ type Props = {
   blockerMessage?: string;
   buttonLabel?: string;
   onProceed: () => void;
-  pricingSummary?: any;
+  pricingSummary?: PricingSummary;
 };
 
 function formatPrice(value: number) {
@@ -107,6 +125,7 @@ export default function CruiseFareSummaryCard({
   buttonLabel = "Proceed to Payment",
   onProceed,
 }: Props) {
+  const [showMobileFareDetails, setShowMobileFareDetails] = useState(false);
   const promoUsed = walletBreakdown?.promoUsed || 0;
   const earnedUsed = walletBreakdown?.earnedUsed || 0;
   const refundUsed = walletBreakdown?.refundUsed || 0;
@@ -114,7 +133,7 @@ export default function CruiseFareSummaryCard({
   const cabinBreakupText =
   pricingSummary?.cabins?.length > 0
     ? pricingSummary.cabins
-        .map((cabin: any) => {
+        .map((cabin) => {
           const travellers =
             Number(cabin.adults || 0) +
             Number(cabin.children || 0) +
@@ -144,8 +163,128 @@ export default function CruiseFareSummaryCard({
 
   const totalWalletUsed = promoUsed + earnedUsed + refundUsed;
 
+  const fareBreakup = (
+    <>
+      <FareRow
+        label="Cruise Base Fare"
+        value={baseFare}
+        detail={cabinBreakupText}
+      />
+
+      {appliedOffer > 0 ? (
+        <>
+          <FareRow
+            label="Offer Discount"
+            value={-appliedOffer}
+            positiveGreen
+          />
+
+          <div className="mb-4 rounded-[14px] border border-[#fed7aa] bg-[#fffaf5] p-3">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-[12px] font-bold text-[#9a3412]">
+                Base After Offer
+              </span>
+
+              <span className="text-[12px] font-extrabold text-[#ea580c]">
+                ₹{finalBaseAfterOffer.toLocaleString("en-IN")}
+              </span>
+            </div>
+
+            <div className="mt-1 text-[11px] font-semibold leading-[17px] text-[#7c2d12]">
+              Promo & Earned Credit apply only on cruise base fare after offer.
+              Taxes and extra charges remain outside benefit calculation.
+            </div>
+          </div>
+        </>
+      ) : null}
+
+      <FareRow label="Taxes & Fees" value={taxes} />
+
+      {portCharges > 0 ? <FareRow label="Port Charges" value={portCharges} /> : null}
+
+      {gratuityCharges > 0 ? (
+        <FareRow label="Gratuity Charges" value={gratuityCharges} />
+      ) : null}
+
+      {insuranceStatus === "skipped" ? (
+        <StatusRow label="Travel Protection" value="Skipped" />
+      ) : insuranceTotal > 0 ? (
+        <FareRow label="Travel Protection" value={insuranceTotal} />
+      ) : null}
+
+      {addonsStatus === "skipped" ? (
+        <StatusRow label="Add-ons" value="Skipped" />
+      ) : addonsTotal > 0 ? (
+        <FareRow label="Add-ons" value={addonsTotal} />
+      ) : null}
+
+      {discount > 0 ? (
+        <FareRow label="Discount" value={-discount} positiveGreen />
+      ) : null}
+
+      {tplCredit > 0 ? (
+        <>
+          <FareRow label="TPL Credit" value={-tplCredit} positiveGreen />
+
+          {(promoUsed > 0 || earnedUsed > 0 || refundUsed > 0) && (
+            <div className="-mt-1 mb-4 rounded-[14px] border border-[#dbeafe] bg-[#f8fbff] p-3">
+              <div className="mb-2 text-[12px] font-extrabold text-[#1d4ed8]">
+                TPL Wallet Benefit Applied
+              </div>
+
+              {promoUsed > 0 ? (
+                <MiniWalletRow label="Promo Credit" value={promoUsed} />
+              ) : null}
+
+              {earnedUsed > 0 ? (
+                <MiniWalletRow label="Earned Credit" value={earnedUsed} />
+              ) : null}
+
+              {refundUsed > 0 ? (
+                <MiniWalletRow label="Refund Wallet" value={refundUsed} />
+              ) : null}
+            </div>
+          )}
+        </>
+      ) : (
+        <FareRow label="TPL Credit" value={0} />
+      )}
+
+      {refundWalletAvailable > 0 && onToggleRefundWallet ? (
+        <div className="mb-4 rounded-[12px] border border-[#e5e7eb] bg-white p-3">
+          <label className="flex cursor-pointer items-start gap-2">
+            <input
+              type="checkbox"
+              checked={useRefundWallet}
+              onChange={(e) => onToggleRefundWallet(e.target.checked)}
+              className="mt-1"
+            />
+
+            <span>
+              <span className="block text-[13px] font-extrabold text-[#111827]">
+                Use Refund Wallet
+              </span>
+
+              <span className="mt-1 block text-[12px] font-semibold leading-[18px] text-[#6b7280]">
+                Available balance ₹{refundWalletAvailable.toLocaleString("en-IN")}
+              </span>
+            </span>
+          </label>
+        </div>
+      ) : null}
+
+      {earnedOnThisBooking > 0 ? (
+        <div className="mt-1 rounded-[14px] border border-[#fed7aa] bg-[linear-gradient(135deg,#fff7ed,#ffffff)] p-3 text-[12px] font-extrabold leading-[18px] text-[#ea580c]">
+          🎉 You will earn ₹{earnedOnThisBooking.toLocaleString("en-IN")} TPL
+          Earned Credit after this booking.
+        </div>
+      ) : null}
+    </>
+  );
+
   return (
-    <aside className="w-full">
+    <>
+    <aside className="hidden w-full lg:block">
       <div className="sticky top-[96px] z-20">
         <div className="overflow-hidden rounded-[24px] border border-[#d9e2ec] bg-white shadow-[0_12px_34px_rgba(15,23,42,0.08)]">
           {/* HEADER */}
@@ -208,128 +347,7 @@ export default function CruiseFareSummaryCard({
 
           {/* BODY */}
           <div className="border-b border-[#eef2f7] px-4 py-4">
-            <FareRow
-  label="Cruise Base Fare"
-  value={baseFare}
-  detail={cabinBreakupText}
-/>
-
-            {appliedOffer > 0 ? (
-              <>
-                <FareRow
-                  label="Offer Discount"
-                  value={-appliedOffer}
-                  positiveGreen
-                />
-
-                <div className="mb-4 rounded-[14px] border border-[#fed7aa] bg-[#fffaf5] p-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-[12px] font-bold text-[#9a3412]">
-                      Base After Offer
-                    </span>
-
-                    <span className="text-[12px] font-extrabold text-[#ea580c]">
-                      ₹{finalBaseAfterOffer.toLocaleString("en-IN")}
-                    </span>
-                  </div>
-
-                  <div className="mt-1 text-[11px] font-semibold leading-[17px] text-[#7c2d12]">
-                    Promo & Earned Credit apply only on cruise base fare after
-                    offer. Taxes and extra charges remain outside benefit
-                    calculation.
-                  </div>
-                </div>
-              </>
-            ) : null}
-
-            <FareRow label="Taxes & Fees" value={taxes} />
-
-            {portCharges > 0 ? (
-              <FareRow label="Port Charges" value={portCharges} />
-            ) : null}
-
-            {gratuityCharges > 0 ? (
-              <FareRow label="Gratuity Charges" value={gratuityCharges} />
-            ) : null}
-
-            {insuranceStatus === "skipped" ? (
-              <StatusRow label="Travel Protection" value="Skipped" />
-            ) : insuranceTotal > 0 ? (
-              <FareRow label="Travel Protection" value={insuranceTotal} />
-            ) : null}
-
-            {addonsStatus === "skipped" ? (
-              <StatusRow label="Add-ons" value="Skipped" />
-            ) : addonsTotal > 0 ? (
-              <FareRow label="Add-ons" value={addonsTotal} />
-            ) : null}
-
-            {discount > 0 ? (
-              <FareRow label="Discount" value={-discount} positiveGreen />
-            ) : null}
-
-            {tplCredit > 0 ? (
-              <>
-                <FareRow label="TPL Credit" value={-tplCredit} positiveGreen />
-
-                {(promoUsed > 0 || earnedUsed > 0 || refundUsed > 0) && (
-                  <div className="-mt-1 mb-4 rounded-[14px] border border-[#dbeafe] bg-[#f8fbff] p-3">
-                    <div className="mb-2 text-[12px] font-extrabold text-[#1d4ed8]">
-                      TPL Wallet Benefit Applied
-                    </div>
-
-                    {promoUsed > 0 ? (
-                      <MiniWalletRow label="Promo Credit" value={promoUsed} />
-                    ) : null}
-
-                    {earnedUsed > 0 ? (
-                      <MiniWalletRow
-                        label="Earned Credit"
-                        value={earnedUsed}
-                      />
-                    ) : null}
-
-                    {refundUsed > 0 ? (
-                      <MiniWalletRow label="Refund Wallet" value={refundUsed} />
-                    ) : null}
-                  </div>
-                )}
-              </>
-            ) : (
-              <FareRow label="TPL Credit" value={0} />
-            )}
-
-            {refundWalletAvailable > 0 && onToggleRefundWallet ? (
-              <div className="mb-4 rounded-[12px] border border-[#e5e7eb] bg-white p-3">
-                <label className="flex cursor-pointer items-start gap-2">
-                  <input
-                    type="checkbox"
-                    checked={useRefundWallet}
-                    onChange={(e) => onToggleRefundWallet(e.target.checked)}
-                    className="mt-1"
-                  />
-
-                  <span>
-                    <span className="block text-[13px] font-extrabold text-[#111827]">
-                      Use Refund Wallet
-                    </span>
-
-                    <span className="mt-1 block text-[12px] font-semibold leading-[18px] text-[#6b7280]">
-                      Available balance ₹
-                      {refundWalletAvailable.toLocaleString("en-IN")}
-                    </span>
-                  </span>
-                </label>
-              </div>
-            ) : null}
-
-            {earnedOnThisBooking > 0 ? (
-              <div className="mt-1 rounded-[14px] border border-[#fed7aa] bg-[linear-gradient(135deg,#fff7ed,#ffffff)] p-3 text-[12px] font-extrabold leading-[18px] text-[#ea580c]">
-                🎉 You will earn ₹
-                {earnedOnThisBooking.toLocaleString("en-IN")} TPL Earned Credit
-                after this booking.
-              </div>
-            ) : null}
+            {fareBreakup}
           </div>
 
           {finalTotalBeforeWallet > 0 && totalWalletUsed > 0 ? (
@@ -400,6 +418,114 @@ export default function CruiseFareSummaryCard({
         </div>
       </div>
     </aside>
+    {typeof document !== "undefined"
+      ? createPortal(
+          <>
+            <div className="fixed bottom-0 left-0 right-0 z-[999] w-screen border-t border-[#d9e2ec] bg-white px-3 pt-3 shadow-[0_-14px_34px_rgba(15,23,42,0.16)] lg:hidden">
+              <div className="mx-auto flex max-w-[520px] items-center gap-3 pb-[calc(12px+env(safe-area-inset-bottom))]">
+                <div className="min-w-0 flex-1">
+                  <div className="text-[10px] font-black uppercase tracking-[0.12em] text-[#64748b]">
+                    Total payable
+                  </div>
+
+                  <div className="mt-0.5 truncate text-[22px] font-black leading-none text-[#111827]">
+                    ₹{totalAmount.toLocaleString("en-IN")}
+                  </div>
+
+                  {cabinCount > 0 || travellerCount > 0 ? (
+                    <div className="mt-1 truncate text-[10px] font-bold text-[#64748b]">
+                      {cabinCount > 0 ? `${cabinCount} cabin${cabinCount > 1 ? "s" : ""}` : ""}
+                      {cabinCount > 0 && travellerCount > 0 ? " · " : ""}
+                      {travellerCount > 0
+                        ? `${travellerCount} traveller${travellerCount > 1 ? "s" : ""}`
+                        : ""}
+                    </div>
+                  ) : null}
+
+                  <button
+                    type="button"
+                    onClick={() => setShowMobileFareDetails(true)}
+                    className="mt-2 rounded-full border border-[#bae6fd] bg-[#f0f9ff] px-3 py-1 text-[11px] font-black text-[#0284c7]"
+                  >
+                    Fare Details
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={!canProceed}
+                  onClick={onProceed}
+                  className={`h-12 min-w-[148px] rounded-full px-5 text-[14px] font-black shadow-[0_10px_22px_rgba(239,68,68,0.22)] ${
+                    canProceed
+                      ? "bg-[#ef4444] text-white"
+                      : "cursor-not-allowed bg-[#cfd8e3] text-white"
+                  }`}
+                >
+                  {buttonLabel}
+                </button>
+              </div>
+            </div>
+
+            {showMobileFareDetails ? (
+              <div className="fixed inset-0 z-[1000] bg-black/45 px-3 pt-16 lg:hidden">
+                <div className="mx-auto flex max-h-[82vh] max-w-[520px] flex-col overflow-hidden rounded-t-[28px] border border-[#e5e7eb] bg-white shadow-2xl">
+                  <div className="flex items-start justify-between gap-4 border-b border-[#e5e7eb] px-4 py-4">
+                    <div>
+                      <div className="text-[18px] font-black text-[#111827]">
+                        Fare Details
+                      </div>
+                      <div className="mt-1 text-[12px] font-semibold text-[#64748b]">
+                        {title} · {formatDate(sailingDate)}
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setShowMobileFareDetails(false)}
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f1f5f9] text-[20px] font-black text-[#111827]"
+                    >
+                      ×
+                    </button>
+                  </div>
+
+                  <div className="overflow-y-auto px-4 py-4">
+                    {fareBreakup}
+
+                    {finalTotalBeforeWallet > 0 && totalWalletUsed > 0 ? (
+                      <div className="mt-4 rounded-[16px] border border-[#e5e7eb] bg-[#f8fafc] p-4">
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-[13px] font-black text-[#111827]">
+                            Total Before Wallet
+                          </span>
+                          <span className="text-[16px] font-black text-[#111827]">
+                            ₹{finalTotalBeforeWallet.toLocaleString("en-IN")}
+                          </span>
+                        </div>
+                      </div>
+                    ) : null}
+
+                    <div className="mt-4 rounded-[18px] bg-[#111827] p-4 text-white">
+                      <div className="text-[12px] font-bold text-white/70">
+                        Total Amount
+                      </div>
+                      <div className="mt-1 text-[26px] font-black">
+                        ₹{totalAmount.toLocaleString("en-IN")}
+                      </div>
+                      {!canProceed && blockerMessage ? (
+                        <div className="mt-3 rounded-xl bg-white/10 p-3 text-[12px] font-bold leading-5 text-white">
+                          {blockerMessage}
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          </>,
+          document.body
+        )
+      : null}
+    </>
   );
 }
 

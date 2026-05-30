@@ -57,6 +57,7 @@ export default function CruiseInclusionsSection({
         >
           {inclusions?.length ? (
             <div
+              className="cruise-inclusions-grid"
               style={{
                 display: "grid",
                 gridTemplateColumns: "1fr 1fr",
@@ -115,6 +116,13 @@ export default function CruiseInclusionsSection({
           )}
         </div>
       )}
+      <style jsx>{`
+        @media (max-width: 767px) {
+          .cruise-inclusions-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
     </section>
   );
 }

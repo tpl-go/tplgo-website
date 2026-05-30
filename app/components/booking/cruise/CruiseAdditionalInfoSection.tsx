@@ -72,6 +72,7 @@ export default function CruiseAdditionalInformationSection({
             >
               {items.map((item, index) => (
                 <div
+                  className="cruise-additional-info-row"
                   key={item.id || `${item.label}-${index}`}
                   style={{
                     display: "grid",
@@ -113,6 +114,14 @@ export default function CruiseAdditionalInformationSection({
           )}
         </div>
       )}
+      <style jsx>{`
+        @media (max-width: 767px) {
+          .cruise-additional-info-row {
+            grid-template-columns: 1fr !important;
+            gap: 6px !important;
+          }
+        }
+      `}</style>
     </section>
   );
 }

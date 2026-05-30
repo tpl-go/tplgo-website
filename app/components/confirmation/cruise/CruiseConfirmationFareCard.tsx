@@ -9,6 +9,14 @@ type WalletCalc = {
   totalWalletUsed?: number;
 };
 
+type OfferData = {
+  code?: string;
+  couponCode?: string;
+  slug?: string;
+  title?: string;
+  discountAmount?: number;
+} | null;
+
 type Props = {
   bookingId: string;
   paymentId?: string;
@@ -24,7 +32,7 @@ type Props = {
   appliedOffer?: number;
   appliedOfferCode?: string;
   appliedOfferTitle?: string;
-  offerData?: any;
+  offerData?: OfferData;
 
   discount?: number;
   tplCredit?: number;
@@ -133,8 +141,6 @@ export default function CruiseConfirmationFareCard({
       ? Number(totalBeforeWallet || 0)
       : finalBaseAfterOffer + nonBenefitTotal;
 
-  const grossAmount = Number(baseFare || 0) + nonBenefitTotal;
-
   const paymentStatusText =
     paymentStatus === "success"
       ? "Payment Successful"
@@ -221,11 +227,11 @@ export default function CruiseConfirmationFareCard({
         </div>
 
         <div className="space-y-3">
-          <FareRow label="Cruise Base Fare" value={baseFare} />
+          <FareRow label="Base / Cabin Fare" value={baseFare} />
 
           {offerAmount > 0 ? (
             <>
-              <FareRow label="Offer Discount" value={-offerAmount} orange />
+              <FareRow label="Offer Saving" value={-offerAmount} orange />
 
               <div className="rounded-[14px] border border-[#fed7aa] bg-[#fffaf5] p-3">
                 <MiniInfoRow
@@ -241,7 +247,7 @@ export default function CruiseConfirmationFareCard({
             </>
           ) : null}
 
-          <FareRow label="Taxes" value={taxes} />
+          <FareRow label="Taxes & Fees" value={taxes} />
           <FareRow label="Port Charges" value={portCharges} />
           <FareRow label="Gratuity Charges" value={gratuityCharges} />
           <FareRow label="Travel Protection" value={insuranceTotal} />
@@ -261,7 +267,7 @@ export default function CruiseConfirmationFareCard({
 
           {walletUsed > 0 ? (
             <>
-              <FareRow label="TPL Wallet Benefit" value={-walletUsed} orange />
+              <FareRow label="TPL Credit / Wallet" value={-walletUsed} orange />
 
               <div className="rounded-[14px] border border-[#dbeafe] bg-[#f8fbff] p-3">
                 <div className="mb-2 text-[12px] font-extrabold text-[#1d4ed8]">
@@ -298,7 +304,7 @@ export default function CruiseConfirmationFareCard({
             <div className="flex items-center justify-between gap-3">
               <div>
                 <div className="text-[20px] font-black text-[#111827]">
-                  Total Paid
+                  Final Paid
                 </div>
 
                 <div className="mt-1 text-[12px] font-semibold text-[#6b7280]">

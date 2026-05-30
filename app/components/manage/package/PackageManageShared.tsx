@@ -65,7 +65,7 @@ export function PrimaryButton({
     <button
       type="button"
       onClick={onClick}
-      className="rounded-full bg-[#ff6b00] px-6 py-3 text-sm font-bold text-white transition hover:opacity-90"
+      className="min-h-12 w-full rounded-full bg-[#ff6b00] px-6 py-3 text-sm font-bold text-white transition hover:opacity-90 md:w-auto"
     >
       {label}
     </button>

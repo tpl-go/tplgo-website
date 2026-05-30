@@ -1,6 +1,8 @@
 "use client";
 
-import { Sparkles, BadgeCheck, Tag } from "lucide-react";
+import { useState } from "react";
+import { createPortal } from "react-dom";
+import { Sparkles, BadgeCheck, Tag, X } from "lucide-react";
 import { applyBenefitPricing } from "@/app/lib/pricing/applyBenefitPricing";
 
 type CabinPricingItem = {
@@ -88,6 +90,7 @@ export default function CruisePriceSidebar({
   },
   activeUserMobile = "",
 }: Props) {
+  const [showMobileFareDetails, setShowMobileFareDetails] = useState(false);
   const hasSelection = !!pricingSummary?.cabins?.length;
   const isLoggedIn = !!activeUserMobile;
 
@@ -112,7 +115,7 @@ export default function CruisePriceSidebar({
 
   const baseAfterOffer = benefitPricing.baseAfterOffer;
   const totalBeforeWallet = benefitPricing.payableBeforeRefundWallet;
-  const finalTotal = benefitPricing.finalPayable;
+  const desktopFinalPayable = benefitPricing.finalPayable;
 
   const tplCreditUsed = benefitPricing.promoUsed + benefitPricing.earnedUsed;
   const totalWalletUsed =
@@ -120,10 +123,29 @@ export default function CruisePriceSidebar({
     benefitPricing.earnedUsed +
     benefitPricing.refundUsed;
 
+  const desktopSavingsAmount = activeOfferDiscount + totalWalletUsed;
+  const desktopOriginalPayable = baseAmount + taxesAndFees;
+
   const earnedOnThisBooking = Math.floor(baseAfterOffer * 0.02);
 
+  function getCabinDisplayAmount(subtotal: number) {
+    const rawAmount = Number(subtotal || 0);
+
+    if (!rawAmount || !cabinsTotal || activeOfferDiscount <= 0) {
+      return rawAmount;
+    }
+
+    const cabinOfferDiscount = Math.min(
+      rawAmount,
+      Math.round((rawAmount / cabinsTotal) * activeOfferDiscount)
+    );
+
+    return Math.max(rawAmount - cabinOfferDiscount, 0);
+  }
+
   return (
-    <aside className="w-full">
+    <>
+    <aside className="hidden w-full lg:block">
       <div className="sticky top-[110px] z-20 w-full">
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="border-b border-slate-200 bg-[#eef8ff] px-4 py-4">
@@ -131,14 +153,14 @@ export default function CruisePriceSidebar({
               {hasSelection ? "Total Price" : "Starting from"}
             </div>
 
-            {(activeOfferDiscount > 0 || totalWalletUsed > 0) ? (
+            {desktopSavingsAmount > 0 ? (
               <div className="mt-2 text-[14px] font-bold text-slate-400 line-through">
-                {formatPrice(baseAmount + taxesAndFees)}
+                {formatPrice(desktopOriginalPayable)}
               </div>
             ) : null}
 
             <div className="mt-1 text-[30px] font-black leading-none text-slate-900">
-              {formatPrice(finalTotal)}
+              {formatPrice(desktopFinalPayable)}
             </div>
 
             <div className="mt-2 text-[12px] font-semibold text-slate-600">
@@ -336,7 +358,7 @@ export default function CruisePriceSidebar({
             )}
 
             <div className="mt-3 border-t border-dashed border-slate-300 pt-3">
-              <PriceRow label="Total Amount" value={finalTotal} strong />
+              <PriceRow label="Total Amount" value={desktopFinalPayable} strong />
             </div>
           </div>
 
@@ -382,7 +404,12 @@ export default function CruisePriceSidebar({
                       )}
 
                       <div className="mt-2 text-[13px] font-extrabold text-slate-900">
-                        {formatPrice(cabin.subtotal)}
+                        {formatPrice(getCabinDisplayAmount(cabin.subtotal))}
+                        {activeOfferDiscount > 0 ? (
+                          <span className="ml-1 text-[11px] font-bold text-orange-600">
+                            after offer
+                          </span>
+                        ) : null}
                       </div>
                     </div>
                   );
@@ -414,6 +441,203 @@ export default function CruisePriceSidebar({
         </div>
       </div>
     </aside>
+    {typeof document !== "undefined"
+      ? createPortal(
+          <>
+            <div
+              className="fixed bottom-0 left-0 right-0 z-[999] w-screen border-t border-slate-200 bg-white px-3 pb-[calc(env(safe-area-inset-bottom)+8px)] pt-3 shadow-[0_-14px_34px_rgba(15,23,42,0.18)] lg:hidden"
+              style={{ bottom: 0, left: 0, right: 0, position: "fixed" }}
+            >
+              <div className="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <div className="text-[10px] font-black uppercase tracking-wide text-slate-500">
+                      {hasSelection ? "Total" : "From"}
+                    </div>
+                    {desktopSavingsAmount > 0 ? (
+                      <div className="truncate rounded-full bg-orange-50 px-2 py-0.5 text-[10px] font-black text-orange-700">
+                        Save {formatPrice(desktopSavingsAmount)}
+                      </div>
+                    ) : null}
+                  </div>
+
+                  <div className="mt-1 flex min-w-0 items-center gap-2">
+                    <div className="text-[23px] font-black leading-none text-slate-900">
+                      {formatPrice(desktopFinalPayable)}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setShowMobileFareDetails(true)}
+                      className="h-8 shrink-0 rounded-full border border-slate-200 bg-slate-50 px-3 text-[11px] font-black text-slate-800"
+                    >
+                      Details
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex shrink-0 items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={disabled}
+                    onClick={() => {
+                      if (!disabled) onProceed();
+                    }}
+                    className={`h-12 shrink-0 rounded-full px-5 text-[13px] font-black transition ${
+                      disabled
+                        ? "cursor-not-allowed bg-slate-300 text-white"
+                        : "bg-gradient-to-r from-orange-500 via-orange-600 to-amber-500 text-white shadow-[0_8px_20px_rgba(249,115,22,0.28)]"
+                    }`}
+                  >
+                    {hasSelection ? "Continue" : "Choose Cabin"}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {showMobileFareDetails ? (
+      <div className="fixed inset-0 z-[1000] lg:hidden">
+        <button
+          type="button"
+          aria-label="Close fare details"
+          className="absolute inset-0 h-full w-full bg-slate-950/45"
+          onClick={() => setShowMobileFareDetails(false)}
+        />
+
+        <div className="absolute inset-x-0 bottom-0 max-h-[82dvh] overflow-hidden rounded-t-[28px] border border-slate-200 bg-white shadow-[0_-18px_42px_rgba(15,23,42,0.25)]">
+          <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">
+            <div>
+              <div className="text-[16px] font-black text-slate-900">
+                Fare Details
+              </div>
+              <div className="mt-0.5 text-[12px] font-semibold text-slate-500">
+                Same fare breakup as desktop sidebar
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowMobileFareDetails(false)}
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm"
+              aria-label="Close fare details"
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          <div className="max-h-[calc(82dvh-72px)] overflow-y-auto px-4 pb-[calc(env(safe-area-inset-bottom)+16px)] pt-4">
+            {hasSelection ? (
+              <>
+                <PriceRow label="Cruise Base Fare" value={baseAmount} />
+
+                {activeOfferDiscount > 0 ? (
+                  <>
+                    <PriceRow
+                      label="Offer Discount"
+                      value={-activeOfferDiscount}
+                      orange
+                    />
+
+                    <div className="mb-3 rounded-[14px] border border-[#fed7aa] bg-[#fffaf5] p-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-[12px] font-bold text-[#9a3412]">
+                          Base After Offer
+                        </span>
+
+                        <span className="text-[12px] font-extrabold text-[#ea580c]">
+                          {formatPrice(baseAfterOffer)}
+                        </span>
+                      </div>
+                    </div>
+                  </>
+                ) : null}
+
+                <PriceRow label="Taxes & Fees" value={taxesAndFees} />
+
+                {tplCreditUsed > 0 ? (
+                  <PriceRow
+                    label="TPL Credit"
+                    value={-tplCreditUsed}
+                    orange
+                  />
+                ) : (
+                  <PriceRow label="TPL Credit" value={0} />
+                )}
+
+                {totalWalletUsed > 0 ? (
+                  <div className="-mt-1 mb-4 rounded-[14px] border border-[#dbeafe] bg-[#f8fbff] p-3">
+                    <div className="mb-2 text-[12px] font-extrabold text-[#1d4ed8]">
+                      TPL Wallet Benefit Applied
+                    </div>
+
+                    {benefitPricing.promoUsed > 0 ? (
+                      <MiniWalletRow
+                        label="Promo Credit"
+                        value={benefitPricing.promoUsed}
+                      />
+                    ) : null}
+
+                    {benefitPricing.earnedUsed > 0 ? (
+                      <MiniWalletRow
+                        label="Earned Credit"
+                        value={benefitPricing.earnedUsed}
+                      />
+                    ) : null}
+
+                    {benefitPricing.refundUsed > 0 ? (
+                      <MiniWalletRow
+                        label="Refund Wallet"
+                        value={benefitPricing.refundUsed}
+                      />
+                    ) : null}
+                  </div>
+                ) : null}
+
+                {benefitPricing.refundUsed > 0 ? (
+                  <PriceRow
+                    label="Refund Wallet"
+                    value={-benefitPricing.refundUsed}
+                    orange
+                  />
+                ) : null}
+
+                {totalWalletUsed > 0 ? (
+                  <div className="mb-3 rounded-[14px] border border-dashed border-slate-200 bg-white p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-[12px] font-bold text-slate-600">
+                        Total Before Wallet
+                      </span>
+
+                      <span className="text-[12px] font-extrabold text-slate-900">
+                        {formatPrice(totalBeforeWallet)}
+                      </span>
+                    </div>
+                  </div>
+                ) : null}
+              </>
+            ) : (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-[12px] font-semibold leading-[18px] text-slate-600">
+                Select cabin and passenger details to view exact fare, taxes and
+                final payable amount.
+              </div>
+            )}
+
+            <div className="mt-3 border-t border-dashed border-slate-300 pt-3">
+              <PriceRow
+                label="Final Payable"
+                value={desktopFinalPayable}
+                strong
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    ) : null}
+          </>,
+          document.body
+        )
+      : null}
+    </>
   );
 }
 

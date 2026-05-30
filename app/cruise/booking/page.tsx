@@ -11,6 +11,7 @@ import CruisePoliciesSection from "@/app/components/booking/cruise/CruisePolicie
 import CruiseAdditionalInfoSection from "@/app/components/booking/cruise/CruiseAdditionalInfoSection";
 import CruiseFareSummaryCard from "@/app/components/booking/cruise/CruiseFareSummaryCard";
 import CruiseOffersSection from "@/app/components/booking/cruise/CruiseOffersSection";
+import MobileInnerBack from "@/app/components/common/mobile/MobileInnerBack";
 import {
   calculateSmartOfferDiscount,
   getSmartActiveOfferItem,
@@ -322,12 +323,16 @@ function CruiseBookingPageContent() {
 
   if (!bookingData) {
     return (
-      <main className="min-h-screen bg-[#f5f7fb] text-black">
+      <main className="min-h-screen overflow-x-hidden bg-[#f5f7fb] text-black">
         <div className="sticky top-0 z-50 bg-[#f5f7fb]">
+          <div className="px-3 pt-3 lg:hidden">
+            <MobileInnerBack title="Cruise Booking" />
+          </div>
+
           <CruiseBookingTopNav />
         </div>
 
-        <div className="mx-auto max-w-[1280px] px-4 py-5">
+        <div className="mx-auto max-w-[1280px] px-3 py-3 lg:px-4 lg:py-5">
           <div className="rounded-xl border border-[#d9e2ec] bg-white p-6 text-base font-semibold text-slate-700">
             No cruise booking data found.
           </div>
@@ -434,11 +439,15 @@ const earnedOnThisBooking = Math.floor(
   const canProceed = !isExpired && isTravellerDone && isAdditionalInfoDone;
 
   return (
-    <main className="min-h-screen bg-[#f5f7fb] text-black">
+    <main className="min-h-screen overflow-x-hidden bg-[#f5f7fb] pb-[calc(112px+env(safe-area-inset-bottom))] text-black lg:pb-0">
       <div className="sticky top-0 z-50 bg-[#f5f7fb]">
+        <div className="px-3 pt-3 lg:hidden">
+          <MobileInnerBack title="Cruise Booking" />
+        </div>
+
         <CruiseBookingTopNav />
 
-        <div className="flex flex-wrap items-center justify-between gap-3 px-4 pb-3 pt-2">
+        <div className="flex flex-wrap items-center justify-between gap-3 px-3 pb-3 pt-2 lg:px-4">
           <div
             className={`text-[13px] font-bold ${
               isExpired ? "text-red-600" : "text-slate-700"
@@ -459,7 +468,7 @@ const earnedOnThisBooking = Math.floor(
         </div>
       </div>
 
-      <div className="mx-auto max-w-[1280px] px-4 py-5">
+      <div className="mx-auto max-w-[1280px] px-3 py-3 lg:px-4 lg:py-5">
         {showRefreshNotice ? (
           <div
             className={`mb-4 flex flex-wrap items-center justify-between gap-4 rounded-xl border p-4 ${
@@ -494,10 +503,21 @@ const earnedOnThisBooking = Math.floor(
           </div>
         ) : null}
 
-        <div className="flex items-start gap-4">
-          <div className="w-[76%] min-w-0">
-            <div className="overflow-hidden border border-[#d9e2ec] bg-white shadow-sm">
-              <CruiseTripSummarySection bookingData={bookingData} />
+        <div className="flex flex-col items-stretch gap-4 lg:flex-row lg:items-start">
+          <div className="w-full min-w-0 lg:w-[76%]">
+            <div className="overflow-hidden rounded-2xl border border-[#d9e2ec] bg-white shadow-sm lg:rounded-none">
+              <CruiseTripSummarySection
+                bookingData={bookingData}
+                resolvedTotalAmount={totalAmount}
+                fareBreakup={{
+                  baseFare,
+                  appliedOffer: appliedOfferAmount,
+                  baseAfterOffer: benefitPricing.baseAfterOffer,
+                  tplCredit: tplCreditUsed,
+                  totalBeforeWallet,
+                  finalPayable: totalAmount,
+                }}
+              />
 
               <div
                 style={{
@@ -578,7 +598,7 @@ const earnedOnThisBooking = Math.floor(
             </div>
           </div>
 
-          <div className="w-[24%] min-w-0">
+          <div className="w-full min-w-0 lg:w-[24%]">
             <CruiseFareSummaryCard
   title={bookingData.title}
   sailingDate={bookingData.sailingDate}

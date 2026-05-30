@@ -15,9 +15,30 @@ const tabs: { key: CruiseMainTabKey; label: string }[] = [
 ];
 
 export default function CruiseDetailTabs({ activeTab, onChange }: Props) {
+  const activeLabel =
+    tabs.find((tab) => tab.key === activeTab)?.label || "Cabin";
+
   return (
     <div className="bg-white">
-      <div className="flex items-center gap-10">
+      <div className="md:hidden">
+        <label className="mb-1 block text-[11px] font-black uppercase tracking-wide text-slate-500">
+          View section
+        </label>
+        <select
+          value={activeTab}
+          onChange={(event) => onChange(event.target.value as CruiseMainTabKey)}
+          className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 text-[14px] font-extrabold text-slate-900 outline-none"
+          aria-label={`Current section ${activeLabel}`}
+        >
+          {tabs.map((tab) => (
+            <option key={tab.key} value={tab.key}>
+              {tab.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="hidden items-center gap-10 md:flex">
         {tabs.map((tab) => (
           <button
             key={tab.key}

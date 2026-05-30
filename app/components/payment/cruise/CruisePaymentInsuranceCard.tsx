@@ -42,6 +42,7 @@ export default function CruisePaymentInsuranceCard({
       }}
     >
       <div
+        className="cruise-payment-insurance-body"
         style={{
           padding: "16px 18px 14px 18px",
           background: "#f7fcff",
@@ -175,6 +176,18 @@ export default function CruisePaymentInsuranceCard({
             : `ADD @ ₹${pricePerTraveller.toLocaleString("en-IN")}`}
         </button>
       </div>
+      <style jsx>{`
+        @media (max-width: 767px) {
+          .cruise-payment-insurance-body {
+            align-items: stretch !important;
+            flex-direction: column !important;
+          }
+
+          .cruise-payment-insurance-body button {
+            width: 100% !important;
+          }
+        }
+      `}</style>
     </section>
   );
 }

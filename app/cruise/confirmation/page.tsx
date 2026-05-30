@@ -9,6 +9,7 @@ import CruiseConfirmationCabinTravellerCard from "@/app/components/confirmation/
 import CruiseConfirmationFareCard from "@/app/components/confirmation/cruise/CruiseConfirmationFareCard";
 import CruiseConfirmationActionsCard from "@/app/components/confirmation/cruise/CruiseConfirmationActionsCard";
 import LoginModal from "@/app/components/common/LoginModal";
+import MobileInnerBack from "@/app/components/common/mobile/MobileInnerBack";
 
 import {
   addBooking,
@@ -467,8 +468,12 @@ export default function CruiseConfirmationPage() {
   const handlePrint = () => window.print();
 
   return (
-    <main className="min-h-screen bg-[#eef3f8] text-black">
-      <div className="bg-green-50 border-b border-green-200 text-center py-4">
+    <main className="min-h-screen overflow-x-hidden bg-[#eef3f8] text-black">
+      <div className="bg-white px-3 py-3 lg:hidden">
+        <MobileInnerBack title="Cruise Confirmation" />
+      </div>
+
+      <div className="bg-green-50 border-b border-green-200 px-3 py-4 text-center">
         <div className="font-black text-green-700 text-lg">
           🎉 Cruise Booking Confirmed
         </div>
@@ -486,8 +491,8 @@ export default function CruiseConfirmationPage() {
         ) : null}
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-6 flex gap-4">
-        <div className="w-[72%] flex flex-col gap-4">
+      <div className="mx-auto flex max-w-7xl flex-col gap-4 px-3 py-4 lg:flex-row lg:px-4 lg:py-6">
+        <div className="flex w-full flex-col gap-4 lg:w-[72%]">
           <CruiseConfirmationSuccessHeader
             bookingId={bookingId}
             title={cruise?.title || "Cruise Booking"}
@@ -555,7 +560,7 @@ export default function CruiseConfirmationPage() {
           />
         </div>
 
-        <div className="w-[28%]">
+        <div className="w-full lg:w-[28%]">
           <CruiseConfirmationActionsCard
             bookingId={bookingId}
             email={contact?.email}

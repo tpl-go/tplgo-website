@@ -191,6 +191,7 @@ export default function CruiseDomesticTravellerModal({
 
   return (
     <div
+      className="cruise-traveller-modal-overlay"
       onClick={onClose}
       style={{
         position: "fixed",
@@ -205,6 +206,7 @@ export default function CruiseDomesticTravellerModal({
       }}
     >
       <div
+        className="cruise-traveller-modal-panel"
         onClick={(e) => e.stopPropagation()}
         style={{
           width: "1100px",
@@ -216,6 +218,7 @@ export default function CruiseDomesticTravellerModal({
         }}
       >
         <div
+          className="cruise-traveller-modal-header"
           style={{
             padding: "16px 20px",
             borderBottom: "1px solid #e5e7eb",
@@ -261,7 +264,7 @@ export default function CruiseDomesticTravellerModal({
           </button>
         </div>
 
-        <div style={{ padding: "18px 20px 22px 20px" }}>
+        <div className="cruise-traveller-modal-body" style={{ padding: "18px 20px 22px 20px" }}>
           <div
             style={{
               background: "#f7d7cf",
@@ -323,6 +326,7 @@ export default function CruiseDomesticTravellerModal({
 
                   <div style={{ padding: "16px 14px 18px 14px" }}>
                     <div
+                      className="cruise-domestic-name-grid"
                       style={{
                         display: "grid",
                         gridTemplateColumns: "1fr 1fr 280px",
@@ -379,6 +383,7 @@ export default function CruiseDomesticTravellerModal({
                     </div>
 
                     <div
+                      className="cruise-domestic-contact-grid"
                       style={{
                         marginTop: "14px",
                         display: "grid",
@@ -439,6 +444,7 @@ export default function CruiseDomesticTravellerModal({
                       <div style={{ marginTop: "14px" }}>
                         <div style={labelStyle}>Date of Birth</div>
                         <div
+                          className="cruise-domestic-dob-grid"
                           style={{
                             display: "grid",
                             gridTemplateColumns: "120px 120px 120px",
@@ -558,6 +564,7 @@ export default function CruiseDomesticTravellerModal({
           </div>
 
           <div
+            className="cruise-traveller-modal-actions"
             style={{
               marginTop: "18px",
               display: "flex",
@@ -604,6 +611,77 @@ export default function CruiseDomesticTravellerModal({
           </div>
         </div>
       </div>
+      <style jsx>{`
+        @media (max-width: 767px) {
+          .cruise-traveller-modal-overlay {
+            align-items: flex-end !important;
+            padding: 0 !important;
+            overflow: hidden !important;
+          }
+
+          .cruise-traveller-modal-panel {
+            width: 100% !important;
+            max-width: 100% !important;
+            height: calc(100dvh - 10px) !important;
+            max-height: calc(100dvh - 10px) !important;
+            border-radius: 24px 24px 0 0 !important;
+            display: flex !important;
+            flex-direction: column !important;
+          }
+
+          .cruise-traveller-modal-header {
+            flex-shrink: 0 !important;
+            padding: 14px 16px !important;
+          }
+
+          .cruise-traveller-modal-header > div:first-child > div:first-child {
+            font-size: 18px !important;
+            line-height: 24px !important;
+          }
+
+          .cruise-traveller-modal-body {
+            min-height: 0 !important;
+            overflow-y: auto !important;
+            padding: 14px calc(14px + env(safe-area-inset-right)) calc(96px + env(safe-area-inset-bottom)) calc(14px + env(safe-area-inset-left)) !important;
+          }
+
+          .cruise-domestic-name-grid,
+          .cruise-domestic-contact-grid {
+            grid-template-columns: 1fr !important;
+            gap: 10px !important;
+          }
+
+          .cruise-domestic-dob-grid {
+            grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+            gap: 8px !important;
+          }
+
+          .cruise-traveller-modal-body input,
+          .cruise-traveller-modal-body select {
+            min-width: 0 !important;
+            height: 46px !important;
+            font-size: 14px !important;
+          }
+
+          .cruise-traveller-modal-actions {
+            position: fixed !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            z-index: 5 !important;
+            margin: 0 !important;
+            padding: 12px 14px calc(12px + env(safe-area-inset-bottom)) !important;
+            background: #ffffff !important;
+            border-top: 1px solid #e5e7eb !important;
+            justify-content: stretch !important;
+            box-shadow: 0 -12px 28px rgba(15, 23, 42, 0.12) !important;
+          }
+
+          .cruise-traveller-modal-actions button {
+            flex: 1 1 0 !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }

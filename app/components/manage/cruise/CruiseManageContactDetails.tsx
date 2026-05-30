@@ -143,7 +143,7 @@ export default function CruiseManageContactDetails({
         <button
           type="button"
           onClick={handleSave}
-          className="mt-6 h-[54px] rounded-full bg-[#ff6b00] px-8 text-sm font-black text-white shadow-[0_12px_24px_rgba(255,107,0,0.22)] transition hover:bg-[#f06400]"
+          className="mt-6 h-[54px] w-full rounded-full bg-[#ff6b00] px-8 text-sm font-black text-white shadow-[0_12px_24px_rgba(255,107,0,0.22)] transition hover:bg-[#f06400] md:w-auto"
         >
           Save Contact Details
         </button>

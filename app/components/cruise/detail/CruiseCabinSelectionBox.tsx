@@ -96,9 +96,9 @@ export default function CruiseCabinSelectionBox({
             key={row.id}
             className="overflow-hidden rounded-[18px] border border-slate-200 bg-white shadow-sm"
           >
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-5 py-4">
-              <div className="flex items-center gap-3">
-                <h4 className="text-[18px] font-bold text-slate-900">
+            <div className="flex flex-col gap-3 border-b border-slate-200 bg-slate-50 px-3 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-5 sm:py-4">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                <h4 className="text-[16px] font-black text-slate-900 sm:text-[18px] sm:font-bold">
                   Cabin {index + 1}
                 </h4>
 
@@ -123,15 +123,15 @@ export default function CruiseCabinSelectionBox({
               <button
                 type="button"
                 onClick={onAddRow}
-                className="inline-flex items-center gap-2 rounded-full border border-purple-200 bg-white px-4 py-2 text-[14px] font-semibold text-purple-700 transition hover:bg-purple-50"
+                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-full border border-purple-200 bg-white px-4 py-2 text-[13px] font-extrabold text-purple-700 transition hover:bg-purple-50 sm:w-auto sm:text-[14px] sm:font-semibold"
               >
                 <Plus size={16} />
                 Add New Cabin
               </button>
             </div>
 
-            <div className="px-5 py-5">
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="px-3 py-4 sm:px-5 sm:py-5">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <FieldBlock
                   label="Adults"
                   hint="12 Years & Above"
@@ -163,7 +163,7 @@ export default function CruiseCabinSelectionBox({
                 />
 
                 <div>
-                  <div className="text-[17px] font-semibold text-slate-900">
+                  <div className="text-[14px] font-black text-slate-900 sm:text-[17px] sm:font-semibold">
                     Nationality
                   </div>
                   <div className="mb-2 text-[12px] text-slate-500">
@@ -175,7 +175,7 @@ export default function CruiseCabinSelectionBox({
                     onChange={(e) =>
                       onUpdateRow(row.id, "nationality", e.target.value)
                     }
-                    className="h-[50px] w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-[15px] font-medium text-slate-800 outline-none transition focus:border-sky-300 focus:bg-white"
+                    className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-[15px] font-medium text-slate-800 outline-none transition focus:border-sky-300 focus:bg-white sm:h-[50px]"
                   >
                     {nationalityOptions.map((option) => (
                       <option key={option.id} value={option.id}>
@@ -186,8 +186,8 @@ export default function CruiseCabinSelectionBox({
                 </div>
               </div>
 
-              <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 sm:px-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                   <div className="space-y-1">
                     <div className="text-[13px] font-semibold text-slate-800">
                       Traveller Summary
@@ -197,7 +197,7 @@ export default function CruiseCabinSelectionBox({
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-start gap-2 sm:items-center">
                     {status.valid ? (
                       <CheckCircle2 size={16} className="text-green-600" />
                     ) : (
@@ -254,13 +254,13 @@ function FieldBlock({
 }) {
   return (
     <div>
-      <div className="text-[17px] font-semibold text-slate-900">{label}</div>
+      <div className="text-[14px] font-black text-slate-900 sm:text-[17px] sm:font-semibold">{label}</div>
       <div className="mb-2 text-[12px] text-slate-500">{hint}</div>
 
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="h-[50px] w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-[15px] font-medium text-slate-800 outline-none transition focus:border-sky-300 focus:bg-white"
+        className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-[15px] font-medium text-slate-800 outline-none transition focus:border-sky-300 focus:bg-white sm:h-[50px]"
       >
         {options.map((item) => (
           <option key={item} value={item}>

@@ -2,29 +2,33 @@
 
 import { useState } from "react";
 
+const QR_DARK_CELLS = new Set([
+  0, 1, 2, 3, 4, 7, 11, 14, 18, 21, 22, 23, 24, 25, 28, 30, 32, 34, 36, 38,
+  40, 42, 43, 44, 45, 46, 48,
+]);
+
 type PaymentOptionKey =
   | "upi"
+  | "qr"
   | "cards"
   | "emi"
-  | "netbanking"
-  | "paylater"
-  | "wallets";
+  | "netbanking";
 
 type Props = {
   defaultOption?: PaymentOptionKey | null;
+  payableAmount?: number;
   onPaymentMethodChange?: (method: string) => void;
 };
 
 export default function CruisePaymentOptionSection({
   defaultOption = null,
+  payableAmount = 0,
   onPaymentMethodChange,
 }: Props) {
   const [activeOption, setActiveOption] =
     useState<PaymentOptionKey | null>(defaultOption);
 
   const [selectedUpiMethod, setSelectedUpiMethod] = useState<string>("");
-  const [selectedEmiPlan, setSelectedEmiPlan] = useState<string>("");
-  const [selectedPayLater, setSelectedPayLater] = useState<string>("");
 
   return (
     <section
@@ -51,7 +55,7 @@ export default function CruisePaymentOptionSection({
       <PaymentRow
         icon="🇮🇳"
         title="UPI Options"
-        subtitle="Pay directly from your bank account"
+        subtitle="Pay Directly From Your Bank Account"
         isActive={activeOption === "upi"}
         onClick={() => {
           setActiveOption((prev) => (prev === "upi" ? null : "upi"));
@@ -77,6 +81,51 @@ export default function CruisePaymentOptionSection({
           <div style={{ marginTop: "18px" }}>
             <label style={fieldLabelStyle}>Enter UPI ID</label>
             <input placeholder="example@upi" style={inputStyle} />
+          </div>
+        </ExpandedBox>
+      )}
+
+      <PaymentRow
+        icon="▦"
+        title="QR Payment"
+        subtitle="Scan and pay using any UPI app"
+        badge="UPI QR"
+        isActive={activeOption === "qr"}
+        onClick={() => {
+          setActiveOption((prev) => (prev === "qr" ? null : "qr"));
+          onPaymentMethodChange?.("qr");
+        }}
+      />
+
+      {activeOption === "qr" && (
+        <ExpandedBox>
+          <div style={expandedTitleStyle}>Scan QR using any UPI app</div>
+
+          <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center">
+            <div className="mx-auto grid h-[168px] w-[168px] shrink-0 grid-cols-7 gap-1 rounded-2xl border border-[#d9e2ec] bg-white p-3 shadow-sm sm:mx-0">
+              {Array.from({ length: 49 }).map((_, index) => (
+                <span
+                  key={index}
+                  className={`rounded-[2px] ${
+                    QR_DARK_CELLS.has(index)
+                      ? "bg-[#0f172a]"
+                      : "bg-[#e2e8f0]"
+                  }`}
+                />
+              ))}
+            </div>
+
+            <div className="min-w-0 flex-1 rounded-2xl bg-[#f8fbff] p-4">
+              <div className="text-[13px] font-extrabold text-[#111827]">
+                Amount: ₹
+                {Math.round(payableAmount || 0).toLocaleString("en-IN")}
+              </div>
+              <div className="mt-2 text-[12px] font-semibold leading-5 text-[#475569]">
+                After payment, click Confirm Payment. This is a QR placeholder
+                for the current booking amount; gateway verification is not
+                integrated yet.
+              </div>
+            </div>
           </div>
         </ExpandedBox>
       )}
@@ -133,36 +182,15 @@ export default function CruisePaymentOptionSection({
       <PaymentRow
         icon="🧾"
         title="EMI"
-        subtitle="Credit/Debit Card & Cardless EMI available"
-        badge="NO COST EMI"
-        isActive={activeOption === "emi"}
-        onClick={() => {
-          setActiveOption((prev) => (prev === "emi" ? null : "emi"));
-          onPaymentMethodChange?.("emi");
-        }}
+        subtitle="Coming soon"
+        badge="COMING SOON"
+        disabled
       />
-
-      {activeOption === "emi" && (
-        <ExpandedBox>
-          <div style={expandedTitleStyle}>Choose EMI Option</div>
-
-          <div style={gridStyle}>
-            {["3 Months", "6 Months", "9 Months", "12 Months"].map((item) => (
-              <SelectableMiniCard
-                key={item}
-                label={item}
-                isSelected={selectedEmiPlan === item}
-                onClick={() => setSelectedEmiPlan(item)}
-              />
-            ))}
-          </div>
-        </ExpandedBox>
-      )}
 
       <PaymentRow
         icon="🏦"
         title="Net Banking"
-        subtitle="40+ banks available"
+        subtitle="40+ Banks Available"
         isActive={activeOption === "netbanking"}
         onClick={() => {
           setActiveOption((prev) =>
@@ -186,58 +214,6 @@ export default function CruisePaymentOptionSection({
         </ExpandedBox>
       )}
 
-      <PaymentRow
-        icon="⏳"
-        title="Pay Later"
-        subtitle="LazyPay, Amazon Pay Later and more"
-        isActive={activeOption === "paylater"}
-        onClick={() => {
-          setActiveOption((prev) => (prev === "paylater" ? null : "paylater"));
-          onPaymentMethodChange?.("paylater");
-        }}
-      />
-
-      {activeOption === "paylater" && (
-        <ExpandedBox>
-          <div style={expandedTitleStyle}>Available Pay Later Options</div>
-
-          <div style={gridStyle}>
-            {["LazyPay", "Amazon Pay Later"].map((item) => (
-              <SelectableMiniCard
-                key={item}
-                label={item}
-                isSelected={selectedPayLater === item}
-                onClick={() => setSelectedPayLater(item)}
-              />
-            ))}
-          </div>
-        </ExpandedBox>
-      )}
-
-      <PaymentRow
-        icon="🎁"
-        title="Gift Cards & e-wallets"
-        subtitle="Gift cards, wallets and partner balances"
-        isActive={activeOption === "wallets"}
-        onClick={() => {
-          setActiveOption((prev) => (prev === "wallets" ? null : "wallets"));
-          onPaymentMethodChange?.("wallets");
-        }}
-      />
-
-      {activeOption === "wallets" && (
-        <ExpandedBox>
-          <div style={expandedTitleStyle}>Wallet / Gift Card</div>
-
-          <div style={{ marginTop: "14px" }}>
-            <label style={fieldLabelStyle}>Enter Code</label>
-            <input
-              placeholder="Enter wallet or gift card code"
-              style={inputStyle}
-            />
-          </div>
-        </ExpandedBox>
-      )}
     </section>
   );
 }
@@ -248,6 +224,7 @@ function PaymentRow({
   subtitle,
   badge,
   isActive,
+  disabled = false,
   onClick,
 }: {
   icon: string;
@@ -255,11 +232,13 @@ function PaymentRow({
   subtitle: string;
   badge?: string;
   isActive?: boolean;
+  disabled?: boolean;
   onClick?: () => void;
 }) {
   return (
     <div
-      onClick={onClick}
+      onClick={disabled ? undefined : onClick}
+      aria-disabled={disabled}
       style={{
         padding: "18px 20px",
         borderBottom: "1px solid #e5e7eb",
@@ -267,9 +246,10 @@ function PaymentRow({
         justifyContent: "space-between",
         alignItems: "center",
         gap: "14px",
-        cursor: "pointer",
-        background: isActive ? "#f8fbff" : "#ffffff",
+        cursor: disabled ? "not-allowed" : "pointer",
+        background: disabled ? "#f8fafc" : isActive ? "#f8fbff" : "#ffffff",
         boxShadow: isActive ? "inset 0 0 0 1.5px #7dd3fc" : "none",
+        opacity: disabled ? 0.68 : 1,
         transition: "all 0.2s ease",
       }}
     >
@@ -286,7 +266,7 @@ function PaymentRow({
             width: "42px",
             height: "42px",
             borderRadius: "10px",
-            background: isActive ? "#dff2ff" : "#eef6ff",
+            background: disabled ? "#e5e7eb" : isActive ? "#dff2ff" : "#eef6ff",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -347,11 +327,11 @@ function PaymentRow({
         <span
           style={{
             fontSize: "18px",
-            color: isActive ? "#0ea5e9" : "#60a5fa",
+            color: disabled ? "#94a3b8" : isActive ? "#0ea5e9" : "#60a5fa",
             fontWeight: 800,
           }}
         >
-          ›
+          {disabled ? "×" : "›"}
         </span>
       </div>
     </div>
@@ -366,7 +346,7 @@ function ExpandedBox({
   return (
     <div
       style={{
-        padding: "18px 20px 20px 76px",
+        padding: "18px clamp(14px, 4vw, 20px) 20px clamp(14px, 4vw, 76px)",
         borderBottom: "1px solid #e5e7eb",
         background: "#ffffff",
       }}

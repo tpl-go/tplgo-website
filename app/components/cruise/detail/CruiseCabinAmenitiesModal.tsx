@@ -17,25 +17,27 @@ export default function CruiseCabinAmenitiesModal({
   if (!open || !cabin) return null;
 
   return (
-    <div className="fixed inset-0 z-[145] flex items-center justify-center bg-black/40 p-4">
-      <div className="relative w-full max-w-[760px] rounded-[22px] bg-white p-6 shadow-2xl">
+    <div className="fixed inset-0 z-[145] flex items-end justify-center bg-black/40 p-0 md:items-center md:p-4">
+      <div className="relative flex max-h-[88dvh] w-full max-w-[760px] flex-col overflow-hidden rounded-t-[26px] bg-white shadow-2xl md:rounded-[22px] md:p-6">
         <button
           type="button"
           onClick={onClose}
-          className="absolute right-5 top-5 rounded-full p-2 text-gray-700 hover:bg-gray-100"
+          className="absolute right-4 top-4 z-20 rounded-full bg-slate-100 p-2 text-gray-700 hover:bg-gray-100 md:right-5 md:top-5"
         >
           <X size={20} />
         </button>
 
-        <h3 className="text-[24px] font-semibold text-gray-900">
-          {cabin.name} Amenities
-        </h3>
+        <div className="shrink-0 border-b border-slate-100 px-4 py-4 pr-14 md:border-0 md:p-0 md:pr-14">
+          <h3 className="text-[20px] font-black text-gray-900 md:text-[24px] md:font-semibold">
+            {cabin.name} Amenities
+          </h3>
+        </div>
 
-        <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-2">
+        <div className="min-h-0 overflow-y-auto px-4 py-4 md:mt-6 md:grid md:grid-cols-2 md:gap-3 md:overflow-visible md:p-0">
           {cabin.amenities.map((amenity) => (
             <div
               key={amenity.id}
-              className="rounded-xl border bg-slate-50 px-4 py-3 text-base font-medium text-gray-800"
+              className="mb-3 rounded-xl border bg-slate-50 px-4 py-3 text-sm font-bold text-gray-800 last:mb-0 md:mb-0 md:text-base md:font-medium"
             >
               {amenity.label}
             </div>

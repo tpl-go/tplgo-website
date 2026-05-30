@@ -16,6 +16,7 @@ import CruisePaymentTopSummary from "@/app/components/payment/cruise/CruisePayme
 import CruisePaymentInsuranceCard from "@/app/components/payment/cruise/CruisePaymentInsuranceCard";
 import CruisePaymentOptionSection from "@/app/components/payment/cruise/CruisePaymentOptionSection";
 import CruisePaymentPriceCard from "@/app/components/payment/cruise/CruisePaymentPriceCard";
+import MobileInnerBack from "@/app/components/common/mobile/MobileInnerBack";
 
 import { AUTH_UPDATED_EVENT } from "@/app/lib/booking/guestAuth";
 
@@ -363,18 +364,22 @@ const priceBreakup = {
   }
 
   return (
-    <main className="min-h-screen bg-[#eef3f8] text-black">
-      <div className="h-[72px] bg-white border-b flex justify-between items-center px-6">
+    <main className="min-h-screen overflow-x-hidden bg-[#eef3f8] pb-[calc(112px+env(safe-area-inset-bottom))] text-black lg:pb-0">
+      <div className="bg-white border-b px-3 py-3 lg:hidden">
+        <MobileInnerBack title="Cruise Payment" />
+      </div>
+
+      <div className="flex min-h-[62px] items-center justify-between border-b bg-white px-3 lg:h-[72px] lg:px-6">
         <div className="text-2xl font-black">TPL</div>
 
-        <div className="flex gap-2 text-sm font-bold">
+        <div className="flex flex-wrap justify-end gap-2 text-xs font-bold lg:text-sm">
           <span>{formattedTime}</span>
           <span>SAFE & SECURED</span>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-6 flex gap-4">
-        <div className="w-[72%] flex flex-col gap-4">
+      <div className="mx-auto flex max-w-7xl flex-col gap-4 px-3 py-4 lg:flex-row lg:px-4 lg:py-6">
+        <div className="flex w-full flex-col gap-4 lg:w-[72%]">
           <CruisePaymentTopSummary
             bookingData={{
               ...cruiseData,
@@ -398,7 +403,7 @@ fareData={{
 />
 
           <section className="rounded-2xl border border-[#d9e2ec] bg-white px-5 py-4 shadow-sm">
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <div className="text-[16px] font-extrabold text-[#111827]">
                   {activeUser?.mobile
@@ -417,7 +422,7 @@ fareData={{
                 <button
                   type="button"
                   onClick={() => setShowLoginModal(true)}
-                  className="h-[42px] min-w-[110px] rounded-xl bg-[#1d9bf0] px-5 text-[13px] font-extrabold text-white transition hover:opacity-95"
+                  className="h-[42px] w-full rounded-xl bg-[#1d9bf0] px-5 text-[13px] font-extrabold text-white transition hover:opacity-95 lg:w-auto lg:min-w-[110px]"
                 >
                   LOGIN
                 </button>
@@ -436,6 +441,7 @@ fareData={{
           />
 
           <CruisePaymentOptionSection
+            payableAmount={priceBreakup.totalAmount}
             onPaymentMethodChange={(method) => {
               setSelectedPaymentMethod(method);
               applyPaymentMethod(method);
@@ -447,7 +453,7 @@ fareData={{
           />
         </div>
 
-        <div className="w-[28%]">
+        <div className="w-full lg:w-[28%]">
   <div className="space-y-4">
     <CruisePaymentPriceCard
       priceBreakup={priceBreakup}

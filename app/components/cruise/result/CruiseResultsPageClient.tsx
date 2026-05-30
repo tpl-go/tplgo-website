@@ -2,6 +2,8 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { SlidersHorizontal, X } from "lucide-react";
+import MobileInnerBack from "@/app/components/common/mobile/MobileInnerBack";
 import CruiseModifySearchBar from "./CruiseModifySearchBar";
 import CruiseFilterSidebar from "./CruiseFilterSidebar";
 import CruiseResultHeader from "./CruiseResultHeader";
@@ -57,6 +59,7 @@ function CruiseResultsPageClientContent({ searchMeta }: Props) {
 
   const [filters, setFilters] = useState(initialCruiseFilterState);
   const [sortKey, setSortKey] = useState<CruiseSortKey>("price");
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   useEffect(() => {
     setFilters(initialCruiseFilterState);
@@ -121,15 +124,32 @@ function CruiseResultsPageClientContent({ searchMeta }: Props) {
   }, [liveSearchMeta]);
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      <div className="mx-auto w-full max-w-[1650px] px-4 py-4">
-        <CruiseModifySearchBar
-          key={`modify-${paramsKey}`}
-          searchMeta={liveSearchMeta}
-        />
+    <div className="min-h-screen overflow-x-hidden bg-slate-100">
+      <div className="mx-auto w-full max-w-[1650px] px-3 pb-8 pt-3 sm:px-4 sm:py-4">
+        <div className="mb-3 lg:hidden">
+          <MobileInnerBack title="Cruise Results" />
+        </div>
 
-        <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[240px_minmax(0,1fr)]">
-          <div className="min-w-0">
+        <div className="min-w-0">
+          <CruiseModifySearchBar
+            key={`modify-${paramsKey}`}
+            searchMeta={liveSearchMeta}
+          />
+        </div>
+
+        <div className="mt-3 lg:mt-4">
+          <button
+            type="button"
+            onClick={() => setShowMobileFilters(true)}
+            className="flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-sky-200 bg-white px-4 text-[14px] font-extrabold text-sky-700 shadow-sm lg:hidden"
+          >
+            <SlidersHorizontal size={17} />
+            Filter cruises
+          </button>
+        </div>
+
+        <div className="mt-3 grid grid-cols-1 gap-3 lg:mt-4 lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-4">
+          <div className="hidden min-w-0 lg:block">
             <CruiseFilterSidebar
               sections={filterSections}
               filters={filters}
@@ -138,7 +158,7 @@ function CruiseResultsPageClientContent({ searchMeta }: Props) {
           </div>
 
           <div className="min-w-0">
-            <div className="space-y-4">
+            <div className="space-y-3 lg:space-y-4">
               <CruiseResultHeader
                 sortKey={sortKey}
                 onSortChange={setSortKey}
@@ -171,6 +191,69 @@ function CruiseResultsPageClientContent({ searchMeta }: Props) {
           </div>
         </div>
       </div>
+
+      {showMobileFilters ? (
+        <div className="fixed inset-0 z-50 h-[100dvh] overflow-hidden lg:hidden">
+          <button
+            type="button"
+            aria-label="Close cruise filters"
+            className="absolute inset-0 h-full w-full bg-slate-950/45"
+            onClick={() => setShowMobileFilters(false)}
+          />
+
+          <div className="absolute inset-x-0 bottom-0 flex h-[88dvh] max-h-[88dvh] min-h-0 flex-col overflow-hidden rounded-t-[28px] border border-slate-200 bg-slate-100 shadow-[0_-18px_40px_rgba(15,23,42,0.22)]">
+            <div className="shrink-0 border-b border-slate-200 bg-white px-4 py-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-[16px] font-black text-slate-900">
+                    Filter cruises
+                  </div>
+                  <div className="mt-0.5 text-[12px] font-semibold text-slate-500">
+                    Refine itinerary, cruise line and sailing options
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowMobileFilters(false)}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm"
+                  aria-label="Close filters"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-hidden px-3 pt-3">
+              <CruiseFilterSidebar
+                sections={filterSections}
+                filters={filters}
+                onChangeFilters={setFilters}
+              />
+            </div>
+
+            <div className="shrink-0 border-t border-slate-200 bg-white px-3 pb-[calc(env(safe-area-inset-bottom)+12px)] pt-3">
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setFilters(initialCruiseFilterState)}
+                  className="h-11 rounded-2xl border border-slate-300 bg-white text-[14px] font-extrabold text-slate-800 shadow-sm"
+                >
+                  Reset
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowMobileFilters(false)}
+                  className="h-11 rounded-2xl bg-gradient-to-r from-blue-600 via-sky-600 to-cyan-500 text-[14px] font-extrabold text-white shadow-[0_10px_22px_rgba(14,165,233,0.28)]"
+                >
+                  Apply Filters
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

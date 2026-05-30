@@ -85,6 +85,7 @@ export default function CruiseConfirmationTripCard({
       <div style={{ padding: "22px" }}>
         {/* HERO BLOCK */}
         <div
+          className="cruise-confirm-trip-hero"
           style={{
             border: "1px solid #e5e7eb",
             borderRadius: "20px",
@@ -216,6 +217,7 @@ export default function CruiseConfirmationTripCard({
 
         {/* ROUTE TIMELINE */}
         <div
+          className="cruise-confirm-route-grid"
           style={{
             marginTop: "18px",
             border: "1px solid #e5e7eb",
@@ -236,6 +238,7 @@ export default function CruiseConfirmationTripCard({
           </div>
 
           <div
+            className="cruise-confirm-route-snapshot-layout"
             style={{
               display: "grid",
               gridTemplateColumns: "1fr auto 1fr",
@@ -251,6 +254,7 @@ export default function CruiseConfirmationTripCard({
             />
 
             <div
+              className="cruise-confirm-route-divider"
               style={{
                 display: "flex",
                 flexDirection: "column",
@@ -298,6 +302,7 @@ export default function CruiseConfirmationTripCard({
 
         {/* INFO GRID */}
         <div
+          className="cruise-confirm-info-grid"
           style={{
             marginTop: "18px",
             display: "grid",
@@ -452,6 +457,55 @@ export default function CruiseConfirmationTripCard({
           )}
         </div>
       </div>
+      <style jsx>{`
+        @media (max-width: 767px) {
+          .cruise-confirm-trip-hero {
+            padding: 16px !important;
+          }
+
+          .cruise-confirm-trip-hero > div {
+            flex-direction: column !important;
+          }
+
+          .cruise-confirm-trip-hero > div > div:last-child {
+            min-width: 0 !important;
+            width: 100% !important;
+          }
+
+          .cruise-confirm-route-snapshot-layout,
+          .cruise-confirm-info-grid {
+            grid-template-columns: 1fr !important;
+          }
+
+          .cruise-confirm-route-divider {
+            flex-direction: row !important;
+            min-width: 0 !important;
+            width: 100% !important;
+            justify-content: center !important;
+            padding: 2px 0 !important;
+          }
+
+          .cruise-confirm-route-divider > div {
+            width: 42% !important;
+          }
+
+          .cruise-confirm-route-port {
+            text-align: left !important;
+            width: 100% !important;
+          }
+
+          .cruise-confirm-route-port > div:nth-child(2) {
+            overflow-wrap: anywhere !important;
+            font-size: 16px !important;
+            line-height: 23px !important;
+          }
+
+          .cruise-confirm-route-grid {
+            min-width: 0 !important;
+            width: 100% !important;
+          }
+        }
+      `}</style>
     </section>
   );
 }
@@ -469,6 +523,7 @@ function RoutePortCard({
 }) {
   return (
     <div
+      className="cruise-confirm-route-port"
       style={{
         border: "1px solid #e5e7eb",
         borderRadius: "16px",

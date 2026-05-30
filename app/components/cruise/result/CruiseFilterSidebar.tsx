@@ -39,8 +39,8 @@ export default function CruiseFilterSidebar({
   }
 
   return (
-    <div className="space-y-3">
-      <div className="overflow-hidden rounded-2xl shadow-[0_6px_18px_rgba(37,99,235,0.18)]">
+    <div className="flex max-h-[calc(86vh-65px)] min-h-0 flex-col lg:block lg:max-h-none lg:space-y-3">
+      <div className="mb-3 shrink-0 overflow-hidden rounded-2xl shadow-[0_6px_18px_rgba(37,99,235,0.18)] lg:mb-0">
         <div className="bg-gradient-to-r from-blue-600 via-sky-600 to-cyan-500 px-4 py-3">
           <div className="text-[18px] font-bold text-white">
             Filter Your Search
@@ -51,16 +51,18 @@ export default function CruiseFilterSidebar({
         </div>
       </div>
 
-      {sections.map((section) => (
-        <CruiseFilterSection
-          key={section.key}
-          section={section}
-          selectedValues={filters[section.key] ?? []}
-          onToggleValue={(value, checked) =>
-            updateFilterValue(section.key, value, checked)
-          }
-        />
-      ))}
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain pb-6 pr-1 lg:overflow-visible lg:pb-0 lg:pr-0">
+        {sections.map((section) => (
+          <CruiseFilterSection
+            key={section.key}
+            section={section}
+            selectedValues={filters[section.key] ?? []}
+            onToggleValue={(value, checked) =>
+              updateFilterValue(section.key, value, checked)
+            }
+          />
+        ))}
+      </div>
     </div>
   );
 }

@@ -50,6 +50,7 @@ type Props = {
   onPricingSummaryChange?: (summary: CruiseCabinPricingSummary) => void;
   onTimerStateChange?: (secondsLeft: number) => void;
   onCabinAssignmentMetaChange?: (meta: CabinAssignmentMeta[]) => void;
+  offerDiscount?: number;
 };
 
 function isCabinRowsValid(rows: CruiseCabinSelectionRow[]) {
@@ -79,6 +80,7 @@ export default function CruiseCabinTab({
   onPricingSummaryChange,
   onTimerStateChange,
   onCabinAssignmentMetaChange,
+  offerDiscount = 0,
 }: Props) {
   const [activeSection, setActiveSection] =
     useState<CruiseCabinSectionKey>("cabins");
@@ -165,6 +167,19 @@ export default function CruiseCabinTab({
       dynamicTaxesAndFees
     );
   }, [selectedCabins, data.cabins, dynamicTaxesAndFees]);
+
+  const safeOfferDiscount = Math.min(
+    Math.max(Number(offerDiscount || 0), 0),
+    pricingSummary.cabinsTotal || 0
+  );
+
+  const displayCabinsTotal = Math.max(
+    (pricingSummary.cabinsTotal || 0) - safeOfferDiscount,
+    0
+  );
+
+  const displayGrandTotal =
+    displayCabinsTotal + (pricingSummary.taxesAndFees || 0);
 
   useEffect(() => {
     onPricingSummaryChange?.(pricingSummary);
@@ -351,6 +366,8 @@ export default function CruiseCabinTab({
         title: "Selected Cabin",
         travellers: "",
         amount: 0,
+        originalAmount: 0,
+        offerDiscount: 0,
         deckCabinNumber: null as string | null,
         assignmentMode: "auto" as CabinAssignmentMode,
       };
@@ -369,11 +386,23 @@ export default function CruiseCabinTab({
     const pricingItem = pricingSummary.cabins.find(
       (item) => item.cabinKey === selected.cabinKey
     );
+    const rawAmount = pricingItem?.subtotal || 0;
+    const totalBase = pricingSummary.cabinsTotal || 0;
+    const cabinOfferDiscount =
+      totalBase > 0 && safeOfferDiscount > 0
+        ? Math.min(
+            rawAmount,
+            Math.round((rawAmount / totalBase) * safeOfferDiscount)
+          )
+        : 0;
+    const amountAfterOffer = Math.max(rawAmount - cabinOfferDiscount, 0);
 
     return {
       title: cabin.name,
       travellers: summaryParts.join(" "),
-      amount: pricingItem?.subtotal || 0,
+      amount: amountAfterOffer,
+      originalAmount: rawAmount,
+      offerDiscount: cabinOfferDiscount,
       deckCabinNumber:
         selectedDeckCabinsByCabinId[selected.cabinId]?.cabinNumber || null,
       assignmentMode: cabinAssignmentModes[selected.cabinId] || "auto",
@@ -385,7 +414,7 @@ export default function CruiseCabinTab({
     selectedCabins.every((selected) => isCabinRowsValid(selected.rows));
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 lg:space-y-4">
       <CruiseCabinSectionTabs
         activeSection={activeSection}
         onChange={setActiveSection}
@@ -393,22 +422,27 @@ export default function CruiseCabinTab({
       />
 
       {secondsLeft > 0 ? (
-        <div className="rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm font-semibold text-orange-700">
+        <div className="rounded-xl border border-orange-200 bg-orange-50 px-3 py-3 text-[13px] font-extrabold text-orange-700 lg:px-4 lg:text-sm lg:font-semibold">
           Cabin hold timer: {Math.floor(secondsLeft / 60)}:
           {String(secondsLeft % 60).padStart(2, "0")}
         </div>
       ) : null}
 
       {pricingSummary.cabins.length > 0 ? (
-        <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3">
-          <div className="text-sm font-semibold text-green-700">
+        <div className="rounded-xl border border-green-200 bg-green-50 px-3 py-3 lg:px-4">
+          <div className="text-[13px] font-extrabold leading-5 text-green-700 lg:text-sm lg:font-semibold">
             Selected cabins total: ₹
-            {pricingSummary.cabinsTotal.toLocaleString("en-IN")} | Taxes & Fees:
+            {displayCabinsTotal.toLocaleString("en-IN")} | Taxes & Fees:
             ₹{pricingSummary.taxesAndFees.toLocaleString("en-IN")} | Grand total:
-            ₹{pricingSummary.grandTotal.toLocaleString("en-IN")}
+            ₹{displayGrandTotal.toLocaleString("en-IN")}
+            {safeOfferDiscount > 0 ? (
+              <span className="ml-1 text-orange-700">
+                (Offer saved ₹{safeOfferDiscount.toLocaleString("en-IN")})
+              </span>
+            ) : null}
           </div>
 
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mt-3 flex gap-2 overflow-x-auto pb-1 lg:flex-wrap lg:overflow-visible lg:pb-0">
             {selectedCabins.map((selected, index) => {
               const summary = getCabinSummaryLabel(selected);
               const valid = isCabinRowsValid(selected.rows);
@@ -418,37 +452,43 @@ export default function CruiseCabinTab({
                   key={selected.cabinKey}
                   type="button"
                   onClick={() => handleOpenCabinFromChip(selected.cabinId)}
-                  className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 text-sm font-semibold transition ${
+                  className={`inline-flex max-w-[calc(100vw-42px)] shrink-0 items-center gap-2 rounded-full border px-3 py-2 text-[12px] font-bold transition lg:max-w-none lg:text-sm lg:font-semibold ${
                     activeExpandedCabinKey === selected.cabinId
                       ? "border-green-400 bg-white text-green-800"
                       : "border-green-300 bg-white/80 text-green-700 hover:bg-white"
                   }`}
                 >
-                  <span>
+                  <span className="min-w-0 truncate">
                     Cabin {index + 1} · {summary.title}
                   </span>
 
                   {summary.travellers ? (
-                    <span className="rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-bold text-green-800">
+                    <span className="shrink-0 rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-bold text-green-800">
                       {summary.travellers}
                     </span>
                   ) : null}
 
-                  <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-bold text-slate-700">
+                  <span className="shrink-0 rounded-full bg-white px-2 py-0.5 text-[11px] font-bold text-slate-700">
                     {summary.assignmentMode === "select"
                       ? "Specific Cabin"
                       : "Auto Assign"}
                   </span>
 
                   {summary.deckCabinNumber ? (
-                    <span className="rounded-full bg-purple-100 px-2 py-0.5 text-[11px] font-bold text-purple-700">
+                    <span className="shrink-0 rounded-full bg-purple-100 px-2 py-0.5 text-[11px] font-bold text-purple-700">
                       {summary.deckCabinNumber}
                     </span>
                   ) : null}
 
-                  <span className="text-[12px] font-bold text-green-800">
+                  <span className="whitespace-nowrap text-[12px] font-bold text-green-800">
                     ₹{summary.amount.toLocaleString("en-IN")}
                   </span>
+
+                  {summary.offerDiscount > 0 ? (
+                    <span className="whitespace-nowrap rounded-full bg-orange-50 px-2 py-0.5 text-[10px] font-black text-orange-700">
+                      after offer
+                    </span>
+                  ) : null}
 
                   {!valid ? (
                     <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">
@@ -479,13 +519,13 @@ export default function CruiseCabinTab({
         </div>
       ) : null}
 
-      <div className="rounded-2xl border bg-white p-4">
+      <div className="rounded-2xl border bg-white p-3 lg:p-4">
         {activeSection === "cabins" ? (
           <CruiseSailingSection
             itinerary={data.sailingPlan}
             mode="static"
             content={
-              <div className="space-y-5">
+              <div className="space-y-4 lg:space-y-5">
                 {sortedCabins.map((cabin) => {
                   const selectedRowsForThisCabin = selectedCabins
                     .filter((item) => item.cabinId === cabin.id)
@@ -572,8 +612,8 @@ export default function CruiseCabinTab({
       </div>
 
       {deckPlanSelectorCabin ? (
-        <div className="fixed inset-0 z-[140] flex items-center justify-center bg-black/45 p-4">
-          <div className="relative h-[88vh] w-full max-w-[1180px] overflow-hidden rounded-[22px] bg-white shadow-2xl">
+        <div className="fixed inset-0 z-[140] flex items-end justify-center bg-black/45 p-0 md:items-center md:p-4">
+          <div className="relative flex h-[92dvh] w-full max-w-[1180px] flex-col overflow-hidden rounded-t-[26px] bg-white shadow-2xl md:h-[88vh] md:rounded-[22px]">
             <button
               type="button"
               onClick={() => setDeckPlanSelectorCabin(null)}
@@ -582,17 +622,17 @@ export default function CruiseCabinTab({
               <X size={18} />
             </button>
 
-            <div className="border-b px-6 py-4 pr-16">
-              <div className="text-lg font-bold text-slate-900">
+            <div className="shrink-0 border-b px-4 py-4 pr-16 md:px-6">
+              <div className="text-base font-black text-slate-900 md:text-lg md:font-bold">
                 Select Cabin Number
               </div>
-              <div className="mt-1 text-sm text-slate-600">
+              <div className="mt-1 text-xs font-semibold text-slate-600 md:text-sm md:font-normal">
                 {deckPlanSelectorCabin.name} · Choose a specific cabin from deck
                 plan
               </div>
             </div>
 
-            <div className="h-[calc(88vh-78px)] overflow-y-auto p-4">
+            <div className="min-h-0 flex-1 overflow-y-auto p-3 md:p-4">
               <CruiseDeckPlanTab
                 deckPlans={data.deckPlans}
                 mode="select"

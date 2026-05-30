@@ -141,7 +141,7 @@ export default function PackageManageContactDetails({
             onClick={handleCancel}
             disabled={!hasUnsavedChanges}
             className={cn(
-              "h-[54px] rounded-full border px-8 text-sm font-black transition",
+              "h-[54px] w-full rounded-full border px-8 text-sm font-black transition lg:w-auto",
               hasUnsavedChanges
                 ? "border-[#fecaca] bg-white text-[#dc2626] hover:bg-[#fff1f2]"
                 : "cursor-not-allowed border-[#e5e7eb] bg-[#f8fafc] text-[#94a3b8]"
@@ -155,7 +155,7 @@ export default function PackageManageContactDetails({
             onClick={handleSave}
             disabled={!hasUnsavedChanges}
             className={cn(
-              "h-[54px] rounded-full px-8 text-sm font-black transition",
+              "h-[54px] w-full rounded-full px-8 text-sm font-black transition lg:w-auto",
               hasUnsavedChanges
                 ? "bg-[#ff6b00] text-white shadow-[0_12px_24px_rgba(255,107,0,0.22)] hover:bg-[#f06400]"
                 : "cursor-not-allowed bg-[#e5e7eb] text-[#94a3b8]"

@@ -137,6 +137,7 @@ function InfoRow({
   return (
     <div>
       <div
+        className="cruise-payment-summary-head"
         style={{
           fontSize: "13px",
           color: "#6b7280",
@@ -148,6 +149,7 @@ function InfoRow({
       </div>
 
       <div
+        className="cruise-payment-summary-contact"
         style={{
           fontSize: "14px",
           color: "#1f2937",
@@ -214,7 +216,10 @@ export default function CruisePaymentTopSummary({
 
   const pricingSummary = bookingData?.pricingSummary;
   const cabinAssignmentMeta = bookingData?.cabinAssignmentMeta || [];
-  const selectedCabins = pricingSummary?.cabins || [];
+  const selectedCabins = useMemo(
+    () => pricingSummary?.cabins || [],
+    [pricingSummary?.cabins]
+  );
   const leadTraveller = travellerValidation?.travellers?.[0];
 
   const totalTravellers = useMemo(() => {
@@ -397,6 +402,7 @@ export default function CruisePaymentTopSummary({
 
         <div style={{ minWidth: "260px" }}>
           <div
+            className="cruise-payment-details-grid"
             style={{
               fontSize: "13px",
               color: "#6b7280",
@@ -457,6 +463,7 @@ export default function CruisePaymentTopSummary({
                 }}
               >
                 <div
+                  className="cruise-payment-sailing-grid"
                   style={{
                     fontSize: "14px",
                     fontWeight: 800,
@@ -737,6 +744,38 @@ export default function CruisePaymentTopSummary({
           </div>
         </div>
       )}
+
+      <style jsx>{`
+        @media (max-width: 767px) {
+          .cruise-payment-summary-head {
+            flex-direction: column !important;
+            padding: 16px !important;
+          }
+
+          .cruise-payment-summary-head button {
+            width: 100% !important;
+            border-radius: 999px !important;
+            background: #ffffff !important;
+            padding: 10px 14px !important;
+            text-align: center !important;
+          }
+
+          .cruise-payment-summary-contact {
+            flex-direction: column !important;
+            padding: 14px 16px !important;
+          }
+
+          .cruise-payment-summary-contact > div {
+            min-width: 0 !important;
+            width: 100% !important;
+          }
+
+          .cruise-payment-details-grid,
+          .cruise-payment-sailing-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
     </section>
   );
 }

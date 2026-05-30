@@ -40,6 +40,15 @@ type CruiseBookingPayload = {
 
 type Props = {
   bookingData: CruiseBookingPayload;
+  resolvedTotalAmount?: number;
+  fareBreakup?: {
+    baseFare: number;
+    appliedOffer: number;
+    baseAfterOffer: number;
+    tplCredit: number;
+    totalBeforeWallet: number;
+    finalPayable: number;
+  };
 };
 
 function formatJourneyDate(value?: string | null) {
@@ -81,9 +90,23 @@ function buildVisitingPortsText(bookingData: CruiseBookingPayload) {
   return "Visiting ports will appear here";
 }
 
-export default function CruiseTripSummarySection({ bookingData }: Props) {
+export default function CruiseTripSummarySection({
+  bookingData,
+  resolvedTotalAmount,
+  fareBreakup,
+}: Props) {
   const pricingSummary = bookingData.pricingSummary;
   const cabinAssignmentMeta = bookingData.cabinAssignmentMeta || [];
+  const finalDisplayTotal =
+    typeof resolvedTotalAmount === "number"
+      ? resolvedTotalAmount
+      : pricingSummary?.grandTotal || 0;
+  const originalCabinTotal = fareBreakup?.baseFare ?? pricingSummary?.cabinsTotal ?? 0;
+  const offerSaving = fareBreakup?.appliedOffer ?? 0;
+  const offerAppliedTotal =
+    fareBreakup?.baseAfterOffer ??
+    Math.max(originalCabinTotal - offerSaving, 0);
+  const tplCreditUsed = fareBreakup?.tplCredit ?? 0;
 
   const selectedCabinCount =
     pricingSummary?.cabins?.length || bookingData.selectedCabins || 0;
@@ -213,6 +236,7 @@ export default function CruiseTripSummarySection({ bookingData }: Props) {
             }}
           >
             <div
+              className="cruise-trip-info-grid"
               style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
@@ -251,6 +275,7 @@ export default function CruiseTripSummarySection({ bookingData }: Props) {
 
             {pricingSummary?.cabins?.length ? (
               <div
+                className="cruise-trip-cabin-grid"
                 style={{
                   display: "grid",
                   gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
@@ -386,6 +411,7 @@ export default function CruiseTripSummarySection({ bookingData }: Props) {
             )}
 
             <div
+              className="cruise-trip-total-grid"
               style={{
                 marginTop: "18px",
                 borderTop: "1px solid #e5e7eb",
@@ -398,8 +424,27 @@ export default function CruiseTripSummarySection({ bookingData }: Props) {
               <div style={summaryBoxStyle}>
                 <div style={summaryLabelStyle}>Cabin Total</div>
                 <div style={summaryValueStyle}>
-                  ₹{(pricingSummary?.cabinsTotal || 0).toLocaleString("en-IN")}
+                  ₹{originalCabinTotal.toLocaleString("en-IN")}
                 </div>
+                {offerSaving > 0 ? (
+                  <div style={summaryHintStyle}>
+                    Original cabin fare before offer
+                  </div>
+                ) : null}
+              </div>
+
+              <div style={summaryBoxStyle}>
+                <div style={summaryLabelStyle}>After Offer</div>
+                <div style={summaryValueStyle}>
+                  ₹{offerAppliedTotal.toLocaleString("en-IN")}
+                </div>
+                {offerSaving > 0 ? (
+                  <div style={summarySavingStyle}>
+                    Saved ₹{offerSaving.toLocaleString("en-IN")}
+                  </div>
+                ) : (
+                  <div style={summaryHintStyle}>No offer discount applied</div>
+                )}
               </div>
 
               <div style={summaryBoxStyle}>
@@ -409,16 +454,38 @@ export default function CruiseTripSummarySection({ bookingData }: Props) {
                 </div>
               </div>
 
+              {tplCreditUsed > 0 ? (
+                <div style={summaryBoxStyle}>
+                  <div style={summaryLabelStyle}>TPL Credit</div>
+                  <div style={summaryCreditStyle}>
+                    -₹{tplCreditUsed.toLocaleString("en-IN")}
+                  </div>
+                  <div style={summaryHintStyle}>
+                    Wallet benefit applied
+                  </div>
+                </div>
+              ) : null}
+
               <div style={summaryBoxStyle}>
-                <div style={summaryLabelStyle}>Grand Total</div>
+                <div style={summaryLabelStyle}>Final Payable</div>
                 <div style={summaryValueStyle}>
-                  ₹{(pricingSummary?.grandTotal || 0).toLocaleString("en-IN")}
+                  ₹{finalDisplayTotal.toLocaleString("en-IN")}
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      <style jsx>{`
+        @media (max-width: 767px) {
+          .cruise-trip-info-grid,
+          .cruise-trip-cabin-grid,
+          .cruise-trip-total-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
     </section>
   );
 }
@@ -469,6 +536,28 @@ const summaryValueStyle: React.CSSProperties = {
   fontSize: "19px",
   fontWeight: 800,
   color: "#111827",
+};
+
+const summaryHintStyle: React.CSSProperties = {
+  marginTop: "6px",
+  fontSize: "11px",
+  fontWeight: 700,
+  color: "#6b7280",
+  lineHeight: "16px",
+};
+
+const summarySavingStyle: React.CSSProperties = {
+  marginTop: "6px",
+  fontSize: "12px",
+  fontWeight: 800,
+  color: "#ea580c",
+};
+
+const summaryCreditStyle: React.CSSProperties = {
+  marginTop: "6px",
+  fontSize: "19px",
+  fontWeight: 800,
+  color: "#16a34a",
 };
 
 const pillBase: React.CSSProperties = {

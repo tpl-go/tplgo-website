@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   CalendarDays,
@@ -13,6 +14,13 @@ import type {
   CruiseInfoItem,
   CruiseResultItem,
 } from "@/app/lib/cruise/cruiseResultTypes";
+import { applyBenefitPricing } from "@/app/lib/pricing/applyBenefitPricing";
+import {
+  calculateSmartOfferDiscount,
+  getSmartActiveOfferItem,
+  type SmartOfferItem,
+} from "@/app/lib/smartOffers";
+import CruiseOtherSailingDatesTable from "./CruiseOtherSailingDatesTable";
 
 type Props = {
   item: CruiseResultItem;
@@ -36,6 +44,53 @@ function buildInfoItem(
 
 export default function CruiseShipPreviewOtherDatesTab({ item }: Props) {
   const router = useRouter();
+  const [activeOffer, setActiveOffer] = useState<SmartOfferItem | null>(() =>
+    typeof window === "undefined" ? null : getSmartActiveOfferItem()
+  );
+
+  useEffect(() => {
+    const refresh = () => setActiveOffer(getSmartActiveOfferItem());
+    const refreshTimer = window.setTimeout(refresh, 0);
+
+    window.addEventListener("TPL_ACTIVE_OFFER_UPDATED", refresh);
+    window.addEventListener("TPL_SMART_OFFER_UPDATED", refresh);
+    window.addEventListener("storage", refresh);
+
+    return () => {
+      window.clearTimeout(refreshTimer);
+      window.removeEventListener("TPL_ACTIVE_OFFER_UPDATED", refresh);
+      window.removeEventListener("TPL_SMART_OFFER_UPDATED", refresh);
+      window.removeEventListener("storage", refresh);
+    };
+  }, []);
+
+  const activeOfferService = String(
+    activeOffer?.service || ""
+  ).toLowerCase();
+
+  const canApplyCruiseOffer =
+    !!activeOffer &&
+    (activeOfferService === "cruise" || activeOfferService === "all");
+
+  function getOfferAppliedFare(value?: number) {
+    const baseAmount = Number(value || 0);
+
+    if (!baseAmount) return 0;
+
+    const rawOfferDiscount = canApplyCruiseOffer
+      ? calculateSmartOfferDiscount(activeOffer, baseAmount)
+      : 0;
+
+    const pricing = applyBenefitPricing({
+      baseAmount,
+      offerDiscount: rawOfferDiscount,
+      promoCredit: 0,
+      earnedCredit: 0,
+      refundWallet: 0,
+    });
+
+    return pricing.baseAfterOffer || pricing.baseAmount;
+  }
 
   function handleShare(row: SailingRow) {
     const shareText = `${item.tripLabel} | ${row.date}`;
@@ -89,7 +144,18 @@ export default function CruiseShipPreviewOtherDatesTab({ item }: Props) {
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+    <>
+      <div className="md:hidden">
+        <CruiseOtherSailingDatesTable
+          item={item}
+          onOpenInfo={(info) => alert(info.title)}
+          onOpenItinerary={() =>
+            alert("Itinerary view wiring yahan next step me connect hogi.")
+          }
+        />
+      </div>
+
+    <div className="hidden overflow-hidden rounded-2xl border border-slate-200 bg-white md:block">
       <div className="grid grid-cols-[90px_140px_110px_110px_110px_110px_220px_150px] border-b border-slate-200 bg-slate-100 px-4 py-3 text-[13px] font-semibold text-slate-800">
         <div></div>
         <div>DATE</div>
@@ -127,10 +193,10 @@ export default function CruiseShipPreviewOtherDatesTab({ item }: Props) {
               {row.date}
             </div>
 
-            <FareCell value={row.inside} />
-            <FareCell value={row.outside} />
-            <FareCell value={row.balcony} />
-            <FareCell value={row.suite} />
+            <FareCell value={getOfferAppliedFare(row.inside)} />
+            <FareCell value={getOfferAppliedFare(row.outside)} />
+            <FareCell value={getOfferAppliedFare(row.balcony)} />
+            <FareCell value={getOfferAppliedFare(row.suite)} />
 
             <div className="flex items-center gap-2">
               <IconPillButton
@@ -207,6 +273,7 @@ export default function CruiseShipPreviewOtherDatesTab({ item }: Props) {
         ))}
       </div>
     </div>
+    </>
   );
 }
 

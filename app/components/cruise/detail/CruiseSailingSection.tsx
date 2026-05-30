@@ -34,9 +34,9 @@ export default function CruiseSailingSection({
   }
 
   return (
-    <div className="grid grid-cols-12 gap-6">
+    <div className="grid grid-cols-12 gap-4 lg:gap-6">
       {/* LEFT DAY PLAN STATIC */}
-      <aside className="col-span-12 lg:col-span-3">
+      <aside className="hidden lg:col-span-3 lg:block">
         <div className="lg:sticky lg:top-[210px]">
           <div className="mb-2 text-center text-base font-bold text-gray-800">
             Day Wise Plan
