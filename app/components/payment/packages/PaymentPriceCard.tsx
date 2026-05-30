@@ -142,7 +142,7 @@ export default function PaymentPriceCard({
 
   return (
     <aside className="w-full">
-      <div className="sticky top-[110px] z-20">
+      <div className="lg:sticky lg:top-[110px] lg:z-20">
         <div className="overflow-hidden rounded-[24px] border border-[#d9e2ec] bg-white shadow-[0_12px_34px_rgba(15,23,42,0.08)]">
           <div className="border-b border-[#e5e7eb] bg-white px-4 py-4">
             <div className="text-[22px] font-extrabold text-[#1f2937]">
@@ -244,7 +244,7 @@ export default function PaymentPriceCard({
             ) : null}
 
             <FareRow
-              label="Fees & Taxes"
+              label="Taxes & Fees"
               value={Number(taxes || 0)}
               detail="Taxes and supplier charges"
             />
@@ -299,7 +299,7 @@ export default function PaymentPriceCard({
           </div>
 
           <div className="border-b border-[#e5e7eb] bg-white px-4 py-4">
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
               <div>
                 <div className="text-[20px] font-extrabold text-[#111827]">
                   Total Amount
@@ -310,7 +310,7 @@ export default function PaymentPriceCard({
                 </div>
               </div>
 
-              <div className="whitespace-nowrap text-[30px] font-extrabold text-[#111827]">
+              <div className="whitespace-nowrap text-[28px] font-extrabold text-[#111827] sm:text-[30px]">
                 ₹{finalTotal.toLocaleString("en-IN")}
               </div>
             </div>
@@ -341,6 +341,8 @@ export default function PaymentPriceCard({
                 ? "Payment Success ✅"
                 : paymentActionState === "failure"
                 ? "Retry Payment"
+                : selectedPaymentMethod === "qr"
+                ? "Confirm Payment"
                 : "Proceed to Payment"}
             </button>
 

@@ -7,6 +7,7 @@ import IndiaBanner from "@/app/components/india/IndiaBanner";
 import IndiaTabs from "@/app/components/india/IndiaTabs";
 import IndiaFilters from "@/app/components/india/IndiaFilters";
 import IndiaPackagesGrid from "@/app/components/india/IndiaPackagesGrid";
+import MobileInnerBack from "@/app/components/common/mobile/MobileInnerBack";
 
 function normalizeText(value?: string) {
   return decodeURIComponent(value || "")
@@ -75,11 +76,15 @@ function PopularIndiaPageContent() {
   };
 
   return (
-    <main className="relative">
+    <main className="relative overflow-x-hidden">
+      <div className="absolute left-3 top-3 z-30 lg:hidden">
+        <MobileInnerBack title="Back" />
+      </div>
+
       <IndiaBanner slug="india" />
 
-      <div className="max-w-7xl mx-auto px-4 -mt-10 relative z-20">
-        <div className="bg-white/95 backdrop-blur border rounded-2xl shadow-sm px-4 pt-4 pb-6">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 -mt-6 lg:-mt-10 relative z-20">
+        <div className="bg-white/95 backdrop-blur border rounded-2xl shadow-sm px-3 pt-3 pb-4 lg:px-4 lg:pt-4 lg:pb-6">
           <IndiaTabs
             states={INDIA_STATES}
             activeState={activeState}
@@ -88,10 +93,10 @@ function PopularIndiaPageContent() {
         </div>
       </div>
 
-      <section className="max-w-7xl mx-auto px-4 pb-16 mt-4">
-        <div className="bg-white border rounded-xl shadow-sm p-6">
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-            <div className="lg:col-span-1 sticky top-32 h-fit">
+      <section className="max-w-7xl mx-auto px-3 sm:px-4 pb-20 lg:pb-16 mt-4">
+        <div className="bg-white lg:border lg:rounded-xl lg:shadow-sm lg:p-6">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 lg:gap-8">
+            <div className="lg:col-span-1 lg:sticky lg:top-32 h-fit">
               <IndiaFilters
                 selectedFilters={selectedFilters}
                 setSelectedFilters={setSelectedFilters}

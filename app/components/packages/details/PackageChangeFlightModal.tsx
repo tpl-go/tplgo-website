@@ -104,14 +104,14 @@ export default function PackageChangeFlightModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[240] bg-black/45 backdrop-blur-[2px] overflow-y-auto">
-      <div className="min-h-full px-4 py-4 flex items-start justify-center">
-        <div className="w-full max-w-[920px] rounded-[28px] border border-[#dbe4f0] bg-white shadow-[0_20px_60px_rgba(15,23,42,0.22)] overflow-hidden my-2">
+    <div className="fixed inset-0 z-[240] overflow-hidden bg-black/45 backdrop-blur-[2px] lg:overflow-y-auto">
+      <div className="flex h-[100dvh] items-stretch justify-center p-0 lg:h-auto lg:min-h-full lg:items-start lg:px-4 lg:py-4">
+        <div className="flex h-full w-full flex-col overflow-hidden rounded-none border border-[#dbe4f0] bg-white shadow-[0_20px_60px_rgba(15,23,42,0.22)] lg:my-2 lg:h-auto lg:max-w-[920px] lg:rounded-[28px]">
           {/* HEADER */}
-          <div className="border-b border-[#e5edf6] px-6 py-5 bg-white">
+          <div className="shrink-0 border-b border-[#e5edf6] bg-white px-4 py-4 lg:px-6 lg:py-5">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <div className="text-[24px] leading-none font-black text-[#111827]">
+                <div className="text-[20px] leading-none font-black text-[#111827] lg:text-[24px]">
                   Change Flight
                 </div>
 
@@ -147,8 +147,8 @@ export default function PackageChangeFlightModal({
           </div>
 
           {/* SWITCHER */}
-          <div className="border-b border-[#e5edf6] bg-[#f8fbff] px-6 py-3">
-            <div className="flex flex-wrap gap-3">
+          <div className="shrink-0 border-b border-[#e5edf6] bg-[#f8fbff] px-4 py-3 lg:px-6">
+            <div className="flex gap-3 overflow-x-auto pb-1 lg:flex-wrap lg:overflow-visible lg:pb-0">
               {flightPlans.map((flightIndex) => {
                 const selectedFlight =
                   selectedFlights?.[flightIndex] || defaultIncludedFlight || null;
@@ -161,7 +161,7 @@ export default function PackageChangeFlightModal({
                     key={flightIndex}
                     type="button"
                     onClick={() => setActiveSegmentIndex(flightIndex)}
-                    className={`min-w-[165px] rounded-xl border px-3 py-2 text-left transition ${
+                    className={`min-w-[150px] rounded-xl border px-3 py-2 text-left transition lg:min-w-[165px] ${
                       isActive
                         ? "border-blue-500 bg-blue-50 shadow-sm"
                         : hasSelection
@@ -201,7 +201,7 @@ export default function PackageChangeFlightModal({
           </div>
 
           {/* BODY */}
-          <div className="max-h-[46vh] overflow-y-auto bg-[#f8fafc] px-6 py-4">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-[#f8fafc] px-3 py-3 pb-6 lg:max-h-[46vh] lg:px-6 lg:py-4">
             <div className="rounded-2xl border border-[#dbe7f3] bg-white overflow-hidden">
               <div className="border-b border-[#e7eef7] bg-[#f8fbff] px-4 py-3">
                 <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
@@ -325,14 +325,14 @@ export default function PackageChangeFlightModal({
           </div>
 
           {/* FOOTER */}
-          <div className="border-t border-[#e5edf6] px-6 py-4 flex justify-between items-center bg-white">
+          <div className="flex shrink-0 flex-col gap-3 border-t border-[#e5edf6] bg-white px-4 py-4 lg:flex-row lg:items-center lg:justify-between lg:px-6">
             <div className="text-xs font-medium text-[#4b5563]">
               Flight pricing will be revalidated on booking.
             </div>
 
             <button
               onClick={handleClose}
-              className="px-5 py-2.5 rounded-xl border text-sm font-bold text-[#111827] hover:bg-slate-50 transition"
+              className="w-full px-5 py-2.5 rounded-xl border text-sm font-bold text-[#111827] hover:bg-slate-50 transition lg:w-auto"
             >
               Done
             </button>

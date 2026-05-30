@@ -477,6 +477,7 @@ export default function PackageConfirmationItineraryCard({
 
   return (
     <section
+      className="pkg-confirm-itinerary"
       style={{
         border: "1px solid #d9e2ec",
         background: "#ffffff",
@@ -486,6 +487,7 @@ export default function PackageConfirmationItineraryCard({
       }}
     >
       <div
+        className="pkg-confirm-card-head"
         style={{
           padding: "18px 20px",
           borderBottom: "1px solid #e5e7eb",
@@ -531,6 +533,7 @@ export default function PackageConfirmationItineraryCard({
       </div>
 
       <div
+        className="pkg-confirm-itinerary-body"
         style={{
           padding: "20px",
           display: "flex",
@@ -633,6 +636,7 @@ export default function PackageConfirmationItineraryCard({
             </div>
 
             <div
+              className="pkg-confirm-day-grid"
               style={{
                 padding: "18px",
                 display: "grid",
@@ -684,6 +688,7 @@ export default function PackageConfirmationItineraryCard({
                           }}
                         >
                           <div
+                            className="pkg-confirm-service-card-row"
                             style={{
                               display: "flex",
                               justifyContent: "space-between",
@@ -923,6 +928,33 @@ export default function PackageConfirmationItineraryCard({
           </div>
         ))}
       </div>
+
+      <style>{`
+        @media (max-width: 767px) {
+          .pkg-confirm-itinerary {
+            border-radius: 18px !important;
+          }
+
+          .pkg-confirm-card-head,
+          .pkg-confirm-itinerary-body {
+            padding: 16px !important;
+          }
+
+          .pkg-confirm-itinerary-body {
+            gap: 14px !important;
+          }
+
+          .pkg-confirm-day-grid {
+            grid-template-columns: 1fr !important;
+            padding: 14px !important;
+            gap: 14px !important;
+          }
+
+          .pkg-confirm-service-card-row {
+            flex-direction: column !important;
+          }
+        }
+      `}</style>
     </section>
   );
 }

@@ -88,6 +88,7 @@ export default function PackageConfirmationTravellerCard({
 
   return (
     <section
+      className="pkg-confirm-traveller"
       style={{
         border: "1px solid #d9e2ec",
         borderRadius: "22px",
@@ -97,6 +98,7 @@ export default function PackageConfirmationTravellerCard({
       }}
     >
       <div
+        className="pkg-confirm-card-head"
         style={{
           padding: "18px 20px",
           borderBottom: "1px solid #e5e7eb",
@@ -127,8 +129,9 @@ export default function PackageConfirmationTravellerCard({
         </div>
       </div>
 
-      <div style={{ padding: "20px" }}>
+      <div className="pkg-confirm-card-body" style={{ padding: "20px" }}>
         <div
+          className="pkg-confirm-traveller-grid"
           style={{
             display: "grid",
             gridTemplateColumns: "1.2fr 0.8fr",
@@ -326,6 +329,24 @@ export default function PackageConfirmationTravellerCard({
           </div>
         </div>
       </div>
+
+      <style>{`
+        @media (max-width: 767px) {
+          .pkg-confirm-traveller {
+            border-radius: 18px !important;
+          }
+
+          .pkg-confirm-card-head,
+          .pkg-confirm-card-body {
+            padding: 16px !important;
+          }
+
+          .pkg-confirm-traveller-grid {
+            grid-template-columns: 1fr !important;
+            gap: 14px !important;
+          }
+        }
+      `}</style>
     </section>
   );
 }

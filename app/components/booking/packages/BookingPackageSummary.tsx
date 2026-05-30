@@ -370,7 +370,7 @@ export default function BookingPackageSummary({
 
   return (
     <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-      <div className="border-b bg-gradient-to-r from-orange-50 via-white to-blue-50 px-5 py-4">
+      <div className="border-b bg-gradient-to-r from-orange-50 via-white to-blue-50 px-4 py-4 sm:px-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
             <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -399,7 +399,7 @@ export default function BookingPackageSummary({
             </div>
           </div>
 
-          <div className="min-w-[330px] rounded-2xl border border-orange-200 bg-white px-5 py-3 shadow-sm">
+          <div className="w-full rounded-2xl border border-orange-200 bg-white px-4 py-3 shadow-sm lg:min-w-[330px] lg:px-5">
             <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">
               Final Package Total
             </div>
@@ -446,7 +446,7 @@ export default function BookingPackageSummary({
         </div>
       </div>
 
-      <div className="px-5 py-4">
+      <div className="px-4 py-4 sm:px-5">
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
           <div className="rounded-xl border bg-gray-50 px-4 py-3">
             <div className="flex items-center gap-2 text-xs font-semibold uppercase text-gray-500">

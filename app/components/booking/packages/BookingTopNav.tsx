@@ -15,6 +15,7 @@ export default function BookingTopNav() {
 
   return (
     <div
+      className="booking-package-topnav"
   style={{
     
     width: "100%",
@@ -27,6 +28,7 @@ export default function BookingTopNav() {
   }}
 >
       <div
+        className="booking-package-topnav__inner"
         style={{
           maxWidth: "1280px",
           margin: "0 auto",
@@ -39,6 +41,7 @@ export default function BookingTopNav() {
         }}
       >
         <div
+          className="booking-package-topnav__title"
           style={{
             fontSize: "18px",
             fontWeight: 700,
@@ -50,6 +53,7 @@ export default function BookingTopNav() {
         </div>
 
         <div
+          className="booking-package-topnav__steps"
           style={{
             display: "flex",
             alignItems: "center",
@@ -61,6 +65,7 @@ export default function BookingTopNav() {
           }}
         >
           <button
+            className="booking-package-topnav__chip"
             onClick={() => scrollToSection("traveller-details")}
             style={{ background: "transparent", border: "none", color: "#ffffff", cursor: "pointer", fontWeight: 700 }}
           >
@@ -68,6 +73,7 @@ export default function BookingTopNav() {
           </button>
 
           <button
+            className="booking-package-topnav__chip"
             onClick={() => scrollToSection("package-addons")}
             style={{ background: "transparent", border: "none", color: "#ffffff", cursor: "pointer", fontWeight: 700 }}
           >
@@ -75,6 +81,7 @@ export default function BookingTopNav() {
           </button>
 
           <button
+            className="booking-package-topnav__chip"
             onClick={() => scrollToSection("package-itinerary")}
             style={{ background: "transparent", border: "none", color: "#ffffff", cursor: "pointer", fontWeight: 700 }}
           >
@@ -82,6 +89,7 @@ export default function BookingTopNav() {
           </button>
 
           <button
+            className="booking-package-topnav__chip"
             onClick={() => scrollToSection("cancellation-policy")}
             style={{ background: "transparent", border: "none", color: "#ffffff", cursor: "pointer", fontWeight: 700 }}
           >
@@ -89,6 +97,45 @@ export default function BookingTopNav() {
           </button>
         </div>
       </div>
+      <style>{`
+        @media (max-width: 1023px) {
+          .booking-package-topnav {
+            min-height: auto !important;
+          }
+
+          .booking-package-topnav__inner {
+            display: block !important;
+            padding: 10px 12px !important;
+          }
+
+          .booking-package-topnav__title {
+            margin-bottom: 8px !important;
+            font-size: 15px !important;
+          }
+
+          .booking-package-topnav__steps {
+            display: flex !important;
+            gap: 8px !important;
+            overflow-x: auto !important;
+            padding-bottom: 2px !important;
+            white-space: nowrap !important;
+            scrollbar-width: none;
+          }
+
+          .booking-package-topnav__steps::-webkit-scrollbar {
+            display: none;
+          }
+
+          .booking-package-topnav__chip {
+            flex: 0 0 auto;
+            border: 1px solid rgba(255, 255, 255, 0.18) !important;
+            border-radius: 999px !important;
+            background: rgba(255, 255, 255, 0.08) !important;
+            padding: 8px 12px !important;
+            font-size: 11px !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }

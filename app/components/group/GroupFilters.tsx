@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { SlidersHorizontal, X } from "lucide-react";
 
 interface Props {
   selectedFilters: string[];
@@ -34,6 +35,7 @@ export default function GroupFilters({
   const [searchCountry, setSearchCountry] = useState("");
   const [showAllCountries, setShowAllCountries] = useState(false);
   const [showAllThemes, setShowAllThemes] = useState(false);
+  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
 
   const themes = [
     "Cultural",
@@ -189,13 +191,59 @@ export default function GroupFilters({
       setSearchCountry("");
       setShowAllCountries(false);
       setShowAllThemes(false);
+      setIsMobileFiltersOpen(false);
     }
   }, [resetFilters]);
 
   return (
-    <div className="w-full sticky top-32">
-      <div className="bg-white border rounded-xl shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-black mb-6">Filters</h3>
+    <div className="w-full lg:sticky lg:top-32">
+      <button
+        type="button"
+        onClick={() => setIsMobileFiltersOpen(true)}
+        className="lg:hidden mb-3 flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-orange-200 bg-white px-4 text-sm font-semibold text-orange-600 shadow-sm"
+      >
+        <SlidersHorizontal className="h-4 w-4" />
+        Filters
+        {selectedFilters.length > 0 && (
+          <span className="rounded-full bg-orange-500 px-2 py-0.5 text-xs text-white">
+            {selectedFilters.length}
+          </span>
+        )}
+      </button>
+
+      {isMobileFiltersOpen && (
+        <button
+          type="button"
+          aria-label="Close filters"
+          className="fixed inset-0 z-40 bg-black/45 lg:hidden"
+          onClick={() => setIsMobileFiltersOpen(false)}
+        />
+      )}
+
+      <div
+        className={`bg-white border shadow-sm ${
+          isMobileFiltersOpen
+            ? "fixed inset-x-0 bottom-0 z-50 max-h-[86vh] overflow-y-auto rounded-t-3xl p-4"
+            : "hidden"
+        } lg:block lg:static lg:max-h-none lg:overflow-visible lg:rounded-xl lg:p-6`}
+      >
+        <div className="mb-4 flex items-center justify-between border-b pb-3 lg:hidden">
+          <div>
+            <p className="text-base font-semibold text-black">Filters</p>
+            <p className="text-xs text-gray-500">
+              Refine packages without leaving results
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsMobileFiltersOpen(false)}
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-black"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <h3 className="hidden lg:block text-lg font-semibold text-black mb-6">Filters</h3>
 
         {/* Countries */}
         <div className="border-b pb-5 mb-5 text-black">
@@ -327,13 +375,13 @@ export default function GroupFilters({
           </button>
 
           {openSection.flights && (
-            <div className="flex gap-3 mt-4">
+            <div className="grid grid-cols-2 gap-3 mt-4 lg:flex">
               <button
                 onClick={() => {
                   const newState = !flightFilter.withFlight;
                   updateSimpleFilter("With Flight", newState);
                 }}
-                className={`border px-3 py-2 rounded-md text-sm ${
+                className={`border px-3 py-2 rounded-md text-xs sm:text-sm lg:text-sm ${
                   flightFilter.withFlight
                     ? "bg-orange-500 text-white border-orange-500"
                     : "text-black"
@@ -347,7 +395,7 @@ export default function GroupFilters({
                   const newState = !flightFilter.withoutFlight;
                   updateSimpleFilter("Without Flight", newState);
                 }}
-                className={`border px-3 py-2 rounded-md text-sm ${
+                className={`border px-3 py-2 rounded-md text-xs sm:text-sm lg:text-sm ${
                   flightFilter.withoutFlight
                     ? "bg-orange-500 text-white border-orange-500"
                     : "text-black"
@@ -488,7 +536,7 @@ export default function GroupFilters({
           </button>
 
           {openSection.packageType && (
-            <div className="mt-4 flex gap-6 text-sm text-black">
+            <div className="mt-4 grid grid-cols-2 gap-3 text-sm text-black lg:flex lg:gap-6">
               <button
                 onClick={() => {
                   const value = "Customizable";
@@ -500,10 +548,10 @@ export default function GroupFilters({
                     setSelectedFilters([...selectedFilters, value]);
                   }
                 }}
-                className={`transition ${
+                className={`rounded-lg border px-3 py-2 transition lg:rounded-none lg:border-0 lg:p-0 ${
                   selectedFilters.includes("Customizable")
-                    ? "text-orange-500 font-semibold"
-                    : "text-black"
+                    ? "border-orange-500 bg-orange-50 text-orange-600 font-semibold lg:bg-transparent lg:text-orange-500"
+                    : "border-gray-200 text-black"
                 }`}
               >
                 Customizable (119)
@@ -520,10 +568,10 @@ export default function GroupFilters({
                     setSelectedFilters([...selectedFilters, value]);
                   }
                 }}
-                className={`transition ${
+                className={`rounded-lg border px-3 py-2 transition lg:rounded-none lg:border-0 lg:p-0 ${
                   selectedFilters.includes("Group Package")
-                    ? "text-orange-500 font-semibold"
-                    : "text-black"
+                    ? "border-orange-500 bg-orange-50 text-orange-600 font-semibold lg:bg-transparent lg:text-orange-500"
+                    : "border-gray-200 text-black"
                 }`}
               >
                 Group Package (9)
@@ -555,6 +603,23 @@ export default function GroupFilters({
               Premium Packages
             </label>
           )}
+        </div>
+
+        <div className="mt-5 flex gap-3 border-t pt-3 lg:hidden">
+          <button
+            type="button"
+            onClick={() => setSelectedFilters([])}
+            className="h-11 flex-1 rounded-xl border border-gray-300 text-sm font-semibold text-black"
+          >
+            Clear
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsMobileFiltersOpen(false)}
+            className="h-11 flex-1 rounded-xl bg-orange-500 text-sm font-semibold text-white"
+          >
+            Apply
+          </button>
         </div>
       </div>
     </div>

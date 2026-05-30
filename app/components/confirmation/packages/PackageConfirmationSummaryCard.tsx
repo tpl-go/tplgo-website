@@ -302,6 +302,7 @@ export default function PackageConfirmationSummaryCard({
 
   return (
     <section
+      className="pkg-confirm-summary"
       style={{
         border: "1px solid #d9e2ec",
         background: "#ffffff",
@@ -311,6 +312,7 @@ export default function PackageConfirmationSummaryCard({
       }}
     >
       <div
+        className="pkg-confirm-summary-head"
         style={{
           padding: "18px 20px",
           borderBottom: "1px solid #e5e7eb",
@@ -407,6 +409,7 @@ export default function PackageConfirmationSummaryCard({
         </div>
 
         <div
+          className="pkg-confirm-summary-id"
           style={{
             minWidth: "220px",
             border: "1px solid #e5e7eb",
@@ -442,6 +445,7 @@ export default function PackageConfirmationSummaryCard({
       </div>
 
       <div
+        className="pkg-confirm-summary-stats"
         style={{
           padding: "18px 20px",
           borderBottom: "1px solid #e5e7eb",
@@ -458,6 +462,7 @@ export default function PackageConfirmationSummaryCard({
       </div>
 
       <div
+        className="pkg-confirm-summary-services"
         style={{
           padding: "18px 20px",
           borderBottom: "1px solid #e5e7eb",
@@ -475,6 +480,7 @@ export default function PackageConfirmationSummaryCard({
         </div>
 
         <div
+          className="pkg-confirm-summary-services-grid"
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
@@ -490,6 +496,7 @@ export default function PackageConfirmationSummaryCard({
       </div>
 
       <div
+        className="pkg-confirm-summary-info"
         style={{
           padding: "18px 20px",
           display: "grid",
@@ -503,6 +510,36 @@ export default function PackageConfirmationSummaryCard({
           value={variant === "withoutFlight" ? "Without Flight" : "With Flight"}
         />
       </div>
+
+      <style>{`
+        @media (max-width: 767px) {
+          .pkg-confirm-summary {
+            border-radius: 18px !important;
+          }
+
+          .pkg-confirm-summary-head,
+          .pkg-confirm-summary-services,
+          .pkg-confirm-summary-info {
+            padding: 16px !important;
+          }
+
+          .pkg-confirm-summary-id {
+            min-width: 0 !important;
+            width: 100% !important;
+          }
+
+          .pkg-confirm-summary-stats,
+          .pkg-confirm-summary-services-grid,
+          .pkg-confirm-summary-info {
+            grid-template-columns: 1fr !important;
+            gap: 10px !important;
+          }
+
+          .pkg-confirm-summary-stats {
+            padding: 16px !important;
+          }
+        }
+      `}</style>
     </section>
   );
 }

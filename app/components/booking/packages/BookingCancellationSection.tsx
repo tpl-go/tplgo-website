@@ -274,6 +274,7 @@ function PolicyBlock({
 
       <div style={{ marginTop: "18px" }}>
         <div
+          className="booking-policy-line"
           style={{
             position: "relative",
             height: "24px",
@@ -294,6 +295,7 @@ function PolicyBlock({
           />
 
           <span
+            className="booking-policy-right-dot"
             style={{
               position: "absolute",
               left: "8px",
@@ -337,6 +339,7 @@ function PolicyBlock({
         </div>
 
         <div
+          className="booking-policy-labels"
           style={{
             display: "flex",
             justifyContent: "space-between",
@@ -367,7 +370,7 @@ function PolicyBlock({
             </div>
           </div>
 
-          <div style={{ textAlign: "right" }}>
+          <div className="booking-policy-right-label" style={{ textAlign: "right" }}>
             <div
               style={{
                 fontSize: "18px",
@@ -392,6 +395,7 @@ function PolicyBlock({
       </div>
 
       <div
+        className="booking-policy-notes"
         style={{
           marginTop: "22px",
           background: "#f9fafb",
@@ -433,6 +437,27 @@ function PolicyBlock({
           </div>
         ))}
       </div>
+      <style>{`
+        @media (max-width: 767px) {
+          .booking-policy-line {
+            display: none;
+          }
+
+          .booking-policy-labels {
+            display: grid !important;
+            grid-template-columns: 1fr !important;
+            gap: 14px !important;
+          }
+
+          .booking-policy-right-label {
+            text-align: left !important;
+          }
+
+          .booking-policy-notes {
+            padding: 14px !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }

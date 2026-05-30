@@ -14,6 +14,7 @@ import BookingPackageOffersSection, {
   type PackageOfferItem,
 } from "@/app/components/booking/packages/BookingPackageOffersSection";
 import LoginModal from "@/app/components/common/LoginModal";
+import MobileInnerBack from "@/app/components/common/mobile/MobileInnerBack";
 
 import { resolvePackageBySlug } from "@/app/data/packages/resolvePackage";
 import { getPackageSelectionState } from "@/app/lib/packages/packageSelectionStorage";
@@ -727,7 +728,11 @@ export default function BookingPage() {
   );
 
   return (
-    <main className="min-h-screen bg-[#f5f7fb] text-black">
+    <main className="min-h-screen overflow-x-hidden bg-[#f5f7fb] pb-6 text-black lg:pb-0">
+      <div className="border-b border-slate-100 bg-white px-3 py-2 lg:hidden">
+        <MobileInnerBack title="Back" />
+      </div>
+
       <div
         style={{
           position: "sticky",
@@ -739,15 +744,11 @@ export default function BookingPage() {
         <BookingTopNav />
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-5">
+      <div className="max-w-7xl mx-auto px-3 py-4 sm:px-4 lg:py-5">
         <div
-          style={{
-            display: "flex",
-            alignItems: "flex-start",
-            gap: "16px",
-          }}
+          className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,76%)_minmax(0,24%)] lg:items-start"
         >
-          <div style={{ width: "76%", minWidth: 0 }}>
+          <div className="min-w-0">
             <div className="mb-4">
               <BookingPackageSummary
                 packageTitle={pkg.title}
@@ -778,7 +779,7 @@ export default function BookingPage() {
             </div>
 
             <div className="mb-4 rounded-2xl border border-[#f3d7c7] bg-[#fff7ed] px-5 py-3 shadow-sm">
-              <div className="flex items-center justify-between gap-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                 <div>
                   <div className="text-[15px] font-extrabold text-slate-900">
                     {activeUser?.mobile
@@ -797,7 +798,7 @@ export default function BookingPage() {
                   <button
                     type="button"
                     onClick={() => setShowLoginModal(true)}
-                    className="h-[40px] rounded-xl border border-slate-300 bg-white px-5 text-[13px] font-extrabold text-slate-900 transition hover:border-sky-400 hover:text-sky-600"
+                    className="h-[42px] w-full rounded-xl border border-slate-300 bg-white px-5 text-[13px] font-extrabold text-slate-900 transition hover:border-sky-400 hover:text-sky-600 sm:w-auto"
                   >
                     LOGIN
                   </button>
@@ -839,7 +840,7 @@ export default function BookingPage() {
             </div>
           </div>
 
-          <div style={{ width: "24%", minWidth: 0 }}>
+          <div className="min-w-0">
             <div className="space-y-4">
               <BookingPriceCard
                 packageData={pkg}

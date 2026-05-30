@@ -34,11 +34,13 @@ export default function PackageConfirmationActionsCard({
 }: PackageConfirmationActionsCardProps) {
   return (
     <aside
+      className="pkg-confirm-actions"
       style={{
         width: "100%",
       }}
     >
       <div
+        className="pkg-confirm-actions-stack"
         style={{
           position: "sticky",
           top: "96px",
@@ -89,6 +91,7 @@ export default function PackageConfirmationActionsCard({
           </div>
 
           <div
+            className="pkg-confirm-actions-list"
             style={{
               padding: "16px",
               display: "grid",
@@ -249,6 +252,27 @@ export default function PackageConfirmationActionsCard({
           </div>
         </div>
       </div>
+
+      <style>{`
+        @media (max-width: 1023px) {
+          .pkg-confirm-actions-stack {
+            position: static !important;
+            top: auto !important;
+            z-index: auto !important;
+          }
+        }
+
+        @media (max-width: 767px) {
+          .pkg-confirm-actions-stack {
+            gap: 12px !important;
+          }
+
+          .pkg-confirm-actions-list {
+            padding: 14px !important;
+            gap: 10px !important;
+          }
+        }
+      `}</style>
     </aside>
   );
 }
@@ -291,6 +315,7 @@ function ActionButton({
         width: "100%",
         textAlign: "left",
         borderRadius: "16px",
+        minHeight: "54px",
         padding: "14px 14px",
         cursor: "pointer",
         transition: "all 0.2s ease",
@@ -302,6 +327,7 @@ function ActionButton({
           fontSize: "15px",
           fontWeight: 800,
           lineHeight: 1.3,
+          wordBreak: "break-word",
         }}
       >
         {label}
@@ -315,6 +341,7 @@ function ActionButton({
             lineHeight: "18px",
             opacity: variant === "primary" ? 0.9 : 0.7,
             fontWeight: 500,
+            wordBreak: "break-word",
           }}
         >
           {sublabel}

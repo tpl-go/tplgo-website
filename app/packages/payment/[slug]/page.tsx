@@ -16,6 +16,7 @@ import PaymentTopSummary from "@/app/components/payment/packages/PaymentTopSumma
 import PaymentInsuranceCard from "@/app/components/payment/packages/PaymentInsuranceCard";
 import PaymentOptionSection from "@/app/components/payment/packages/PaymentOptionSection";
 import PaymentPriceCard from "@/app/components/payment/packages/PaymentPriceCard";
+import MobileInnerBack from "@/app/components/common/mobile/MobileInnerBack";
 import { applyBenefitPricing } from "@/app/lib/pricing/applyBenefitPricing";
 import { resolvePackageBySlug } from "@/app/data/packages/resolvePackage";
 
@@ -528,21 +529,21 @@ const walletCalc = {
   }
 
   return (
-    <main className="min-h-screen bg-[#eef3f8] text-black">
+    <main className="min-h-screen overflow-x-hidden bg-[#eef3f8] text-black">
       <div
+        className="h-auto min-h-[64px] px-4 py-3 lg:h-[72px] lg:px-7 lg:py-0"
         style={{
-          height: "72px",
           background: "#ffffff",
           borderBottom: "1px solid #d9e2ec",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          padding: "0 28px",
+          gap: "12px",
         }}
       >
         <div
           style={{
-            fontSize: "26px",
+            fontSize: "clamp(22px, 6vw, 26px)",
             fontWeight: 900,
             color: "#111827",
             letterSpacing: "-0.4px",
@@ -558,6 +559,8 @@ const walletCalc = {
             gap: "10px",
             fontSize: "13px",
             fontWeight: 800,
+            flexWrap: "wrap",
+            justifyContent: "flex-end",
           }}
         >
           <span
@@ -596,23 +599,13 @@ const walletCalc = {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        <div
-          style={{
-            display: "flex",
-            alignItems: "stretch",
-            gap: "18px",
-          }}
-        >
-          <div
-            style={{
-              width: "72%",
-              minWidth: 0,
-              display: "flex",
-              flexDirection: "column",
-              gap: "16px",
-            }}
-          >
+      <div className="mx-auto max-w-7xl px-3 pb-8 pt-4 sm:px-4 sm:py-6">
+        <div className="mb-4 lg:hidden">
+          <MobileInnerBack title="Back" />
+        </div>
+
+        <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,72%)_minmax(280px,28%)] lg:gap-[18px]">
+          <div className="flex min-w-0 flex-col gap-4">
             <PaymentTopSummary
               packageData={pkg}
               bookingSummaryData={bookingReview?.summary || null}
@@ -625,10 +618,10 @@ const walletCalc = {
             />
 
             <div
+              className="rounded-2xl"
               style={{
                 border: "1px solid #d9e2ec",
                 background: "#ffffff",
-                borderRadius: "16px",
                 overflow: "hidden",
                 boxShadow: "0 2px 8px rgba(15,23,42,0.04)",
               }}
@@ -673,6 +666,7 @@ const walletCalc = {
                 {!activeUser?.mobile ? (
                   <button
                     onClick={() => setShowLoginModal(true)}
+                    className="w-full sm:w-auto"
                     style={{
                       minWidth: "110px",
                       height: "42px",
@@ -704,16 +698,11 @@ const walletCalc = {
                 setSelectedPaymentMethod(method);
                 applyPaymentMethod(method);
               }}
+              payableAmount={finalPayableAmount}
             />
           </div>
 
-          <div
-            style={{
-              width: "28%",
-              minWidth: 0,
-              alignSelf: "stretch",
-            }}
-          >
+          <div className="min-w-0 self-stretch">
             <PaymentPriceCard
               selectedVariant={{
                 ...selectedVariant,

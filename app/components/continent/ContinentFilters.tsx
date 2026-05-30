@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { SlidersHorizontal, X } from "lucide-react";
 
 interface Props {
   selectedFilters: string[];
@@ -34,6 +35,7 @@ export default function ContinentFilters({
   const [searchCountry, setSearchCountry] = useState("");
   const [showAllCountries, setShowAllCountries] = useState(false);
   const [showAllThemes, setShowAllThemes] = useState(false);
+  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
 
   const themes = [
     "Culture",
@@ -189,374 +191,448 @@ export default function ContinentFilters({
       setSearchCountry("");
       setShowAllCountries(false);
       setShowAllThemes(false);
+      setIsMobileFiltersOpen(false);
     }
   }, [resetFilters]);
 
-  return (
-    <div className="w-full sticky top-32">
-      <div className="bg-white border rounded-xl shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-black mb-6">Filters</h3>
+  useEffect(() => {
+    document.body.style.overflow = isMobileFiltersOpen ? "hidden" : "";
 
-        {/* Countries */}
-        <div className="border-b pb-5 mb-5 text-black">
-          <button
-            onClick={() => toggleSection("countries")}
-            className="flex justify-between w-full font-semibold text-black"
-          >
-            Countries
-            <span>{openSection.countries ? "▲" : "▼"}</span>
-          </button>
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isMobileFiltersOpen]);
 
-          {openSection.countries && (
-            <div className="mt-4">
-              <input
-                type="text"
-                placeholder="Search Country"
-                value={searchCountry}
-                onChange={(e) => setSearchCountry(e.target.value)}
-                className="w-full border rounded-md px-3 py-2 text-sm mb-3"
-              />
+  const filterPanel = (
+    <div className="bg-white border rounded-xl shadow-sm p-4 lg:p-6">
+      <h3 className="hidden lg:block text-lg font-semibold text-black mb-6">Filters</h3>
 
-              <div className="space-y-2">
-                {visibleCountries.map((country) => (
-                  <label key={country} className="flex items-center text-black">
-                    <input
-                      type="checkbox"
-                      checked={selectedCountries.includes(country)}
-                      onChange={() => toggleCountry(country)}
-                      className="mr-2"
-                    />
-                    {country}
-                  </label>
-                ))}
-              </div>
+      {/* Countries */}
+      <div className="border-b pb-5 mb-5 text-black">
+        <button
+          onClick={() => toggleSection("countries")}
+          className="flex justify-between w-full font-semibold text-black"
+        >
+          Countries
+          <span>{openSection.countries ? "▲" : "▼"}</span>
+        </button>
 
-              {filteredCountries.length > 4 && (
-                <button
-                  onClick={() => setShowAllCountries(!showAllCountries)}
-                  className="text-orange-500 text-sm mt-2"
-                >
-                  {showAllCountries ? "See Less" : "See All"}
-                </button>
-              )}
-            </div>
-          )}
-        </div>
+        {openSection.countries && (
+          <div className="mt-4">
+            <input
+              type="text"
+              placeholder="Search Country"
+              value={searchCountry}
+              onChange={(e) => setSearchCountry(e.target.value)}
+              className="w-full border rounded-md px-3 py-2 text-sm mb-3"
+            />
 
-        {/* Themes */}
-        <div className="border-b pb-5 mb-5">
-          <button
-            onClick={() => toggleSection("themes")}
-            className="flex justify-between w-full font-semibold text-black"
-          >
-            Themes
-            <span>{openSection.themes ? "▲" : "▼"}</span>
-          </button>
-
-          {openSection.themes && (
-            <div className="mt-3 space-y-2">
-              {visibleThemes.map((theme) => (
-                <label key={theme} className="flex items-center text-black">
+            <div className="space-y-2">
+              {visibleCountries.map((country) => (
+                <label key={country} className="flex items-center text-black">
                   <input
                     type="checkbox"
-                    checked={selectedThemes.includes(theme)}
-                    onChange={() => toggleTheme(theme)}
+                    checked={selectedCountries.includes(country)}
+                    onChange={() => toggleCountry(country)}
                     className="mr-2"
                   />
-                  {theme}
-                </label>
-              ))}
-
-              <button
-                onClick={() => setShowAllThemes(!showAllThemes)}
-                className="text-blue-500 text-sm"
-              >
-                {showAllThemes ? "Show Less" : "Show More"}
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Duration */}
-        <div className="border-b pb-5 mb-5">
-          <button
-            onClick={() => toggleSection("duration")}
-            className="flex justify-between w-full font-semibold text-black"
-          >
-            Duration (in Nights)
-            <span>{openSection.duration ? "▲" : "▼"}</span>
-          </button>
-
-          {openSection.duration && (
-            <div className="mt-4">
-              <input
-                type="range"
-                min="1"
-                max="15"
-                value={duration}
-                onChange={(e) => {
-                  const val = Number(e.target.value);
-
-                  setSelectedFilters(
-                    replaceGroupedFilter(
-                      selectedFilters,
-                      selectedFilters.filter((f) => f.startsWith("Duration ")),
-                      `Duration ${val}N`
-                    )
-                  );
-                }}
-                className="w-full"
-              />
-
-              <div className="flex justify-between text-sm mt-2 text-black">
-                <span>1N</span>
-                <span>{duration === 15 ? "15N+" : `${duration}N`}</span>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Flights */}
-        <div className="border-b pb-5 mb-5">
-          <button
-            onClick={() => toggleSection("flights")}
-            className="flex justify-between w-full font-semibold text-black"
-          >
-            Flights
-            <span>{openSection.flights ? "▲" : "▼"}</span>
-          </button>
-
-          {openSection.flights && (
-            <div className="flex gap-3 mt-4">
-              <button
-                onClick={() => {
-                  const newState = !flightFilter.withFlight;
-                  updateSimpleFilter("With Flight", newState);
-                }}
-                className={`border px-3 py-2 rounded-md text-sm ${
-                  flightFilter.withFlight
-                    ? "bg-orange-500 text-white border-orange-500"
-                    : "text-black"
-                }`}
-              >
-                With Flight (120)
-              </button>
-
-              <button
-                onClick={() => {
-                  const newState = !flightFilter.withoutFlight;
-                  updateSimpleFilter("Without Flight", newState);
-                }}
-                className={`border px-3 py-2 rounded-md text-sm ${
-                  flightFilter.withoutFlight
-                    ? "bg-orange-500 text-white border-orange-500"
-                    : "text-black"
-                }`}
-              >
-                Without Flight (90)
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Budget */}
-        <div className="border-b pb-5 mb-5">
-          <button
-            onClick={() => toggleSection("budget")}
-            className="flex justify-between w-full font-semibold text-black"
-          >
-            Budget (per person)
-            <span>{openSection.budget ? "▲" : "▼"}</span>
-          </button>
-
-          {openSection.budget && (
-            <div className="mt-4 space-y-3 text-sm text-black">
-              {[
-                { key: "under25", label: "< ₹25,000" },
-                { key: "25to35", label: "₹25,000 - ₹35,000" },
-                { key: "35to45", label: "₹35,000 - ₹45,000" },
-                { key: "above45", label: "> ₹45,000" },
-              ].map((item) => (
-                <label key={item.key} className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={budgetFilter === item.key}
-                    onChange={() => {
-                      const newVal =
-                        budgetFilter === item.key ? null : item.key;
-
-                      setSelectedFilters(
-                        replaceGroupedFilter(
-                          selectedFilters,
-                          [
-                            "< ₹25,000",
-                            "₹25,000 - ₹35,000",
-                            "₹35,000 - ₹45,000",
-                            "> ₹45,000",
-                          ],
-                          newVal ? item.label : null
-                        )
-                      );
-                    }}
-                    className="mr-2"
-                  />
-                  {item.label}
+                  {country}
                 </label>
               ))}
             </div>
-          )}
-        </div>
 
-        {/* Hotel */}
-        <div className="border-b pb-5 mb-5">
-          <button
-            onClick={() => toggleSection("hotel")}
-            className="flex justify-between w-full font-semibold text-black"
-          >
-            Hotel Category
-            <span>{openSection.hotel ? "▲" : "▼"}</span>
-          </button>
+            {filteredCountries.length > 4 && (
+              <button
+                onClick={() => setShowAllCountries(!showAllCountries)}
+                className="text-orange-500 text-sm mt-2"
+              >
+                {showAllCountries ? "See Less" : "See All"}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
 
-          {openSection.hotel && (
-            <div className="grid grid-cols-4 gap-2 mt-4">
-              {[
-                { name: "below3", label: "<3★" },
-                { name: "3star", label: "3★" },
-                { name: "4star", label: "4★" },
-                { name: "5star", label: "5★" },
-              ].map((hotel) => (
-                <button
-                  key={hotel.name}
-                  onClick={() => {
+      {/* Themes */}
+      <div className="border-b pb-5 mb-5">
+        <button
+          onClick={() => toggleSection("themes")}
+          className="flex justify-between w-full font-semibold text-black"
+        >
+          Themes
+          <span>{openSection.themes ? "▲" : "▼"}</span>
+        </button>
+
+        {openSection.themes && (
+          <div className="mt-3 space-y-2">
+            {visibleThemes.map((theme) => (
+              <label key={theme} className="flex items-center text-black">
+                <input
+                  type="checkbox"
+                  checked={selectedThemes.includes(theme)}
+                  onChange={() => toggleTheme(theme)}
+                  className="mr-2"
+                />
+                {theme}
+              </label>
+            ))}
+
+            <button
+              onClick={() => setShowAllThemes(!showAllThemes)}
+              className="text-blue-500 text-sm"
+            >
+              {showAllThemes ? "Show Less" : "Show More"}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Duration */}
+      <div className="border-b pb-5 mb-5">
+        <button
+          onClick={() => toggleSection("duration")}
+          className="flex justify-between w-full font-semibold text-black"
+        >
+          Duration (in Nights)
+          <span>{openSection.duration ? "▲" : "▼"}</span>
+        </button>
+
+        {openSection.duration && (
+          <div className="mt-4">
+            <input
+              type="range"
+              min="1"
+              max="15"
+              value={duration}
+              onChange={(e) => {
+                const val = Number(e.target.value);
+
+                setSelectedFilters(
+                  replaceGroupedFilter(
+                    selectedFilters,
+                    selectedFilters.filter((f) => f.startsWith("Duration ")),
+                    `Duration ${val}N`
+                  )
+                );
+              }}
+              className="w-full"
+            />
+
+            <div className="flex justify-between text-sm mt-2 text-black">
+              <span>1N</span>
+              <span>{duration === 15 ? "15N+" : `${duration}N`}</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Flights */}
+      <div className="border-b pb-5 mb-5">
+        <button
+          onClick={() => toggleSection("flights")}
+          className="flex justify-between w-full font-semibold text-black"
+        >
+          Flights
+          <span>{openSection.flights ? "▲" : "▼"}</span>
+        </button>
+
+        {openSection.flights && (
+          <div className="grid grid-cols-2 gap-3 mt-4 lg:flex">
+            <button
+              onClick={() => {
+                const newState = !flightFilter.withFlight;
+                updateSimpleFilter("With Flight", newState);
+              }}
+              className={`border px-3 py-2 rounded-md text-xs sm:text-sm lg:text-sm ${
+                flightFilter.withFlight
+                  ? "bg-orange-500 text-white border-orange-500"
+                  : "text-black"
+              }`}
+            >
+              With Flight (120)
+            </button>
+
+            <button
+              onClick={() => {
+                const newState = !flightFilter.withoutFlight;
+                updateSimpleFilter("Without Flight", newState);
+              }}
+              className={`border px-3 py-2 rounded-md text-xs sm:text-sm lg:text-sm ${
+                flightFilter.withoutFlight
+                  ? "bg-orange-500 text-white border-orange-500"
+                  : "text-black"
+              }`}
+            >
+              Without Flight (90)
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Budget */}
+      <div className="border-b pb-5 mb-5">
+        <button
+          onClick={() => toggleSection("budget")}
+          className="flex justify-between w-full font-semibold text-black"
+        >
+          Budget (per person)
+          <span>{openSection.budget ? "▲" : "▼"}</span>
+        </button>
+
+        {openSection.budget && (
+          <div className="mt-4 space-y-3 text-sm text-black">
+            {[
+              { key: "under25", label: "< ₹25,000" },
+              { key: "25to35", label: "₹25,000 - ₹35,000" },
+              { key: "35to45", label: "₹35,000 - ₹45,000" },
+              { key: "above45", label: "> ₹45,000" },
+            ].map((item) => (
+              <label key={item.key} className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={budgetFilter === item.key}
+                  onChange={() => {
                     const newVal =
-                      hotelFilter === hotel.name ? null : hotel.name;
+                      budgetFilter === item.key ? null : item.key;
 
                     setSelectedFilters(
                       replaceGroupedFilter(
                         selectedFilters,
-                        ["<3★", "3★", "4★", "5★"],
-                        newVal ? hotel.label : null
+                        [
+                          "< ₹25,000",
+                          "₹25,000 - ₹35,000",
+                          "₹35,000 - ₹45,000",
+                          "> ₹45,000",
+                        ],
+                        newVal ? item.label : null
                       )
                     );
                   }}
-                  className={`border rounded-md text-sm py-3 ${
-                    hotelFilter === hotel.name
-                      ? "bg-orange-500 text-white border-orange-500"
-                      : "text-black"
-                  }`}
-                >
-                  {hotel.label}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Buy Now */}
-        <div className="border-b pb-5 mb-5">
-          <button
-            onClick={() => toggleSection("bnpl")}
-            className="flex justify-between w-full font-semibold text-black"
-          >
-            Buy Now Pay Later
-            <span>{openSection.bnpl ? "▲" : "▼"}</span>
-          </button>
-
-          {openSection.bnpl && (
-            <label className="flex items-center mt-3 text-black">
-              <input
-                type="checkbox"
-                checked={bnplChecked}
-                onChange={(e) => {
-                  updateSimpleFilter("Book @ ₹2,000", e.target.checked);
-                }}
-                className="mr-2"
-              />
-              Book @ ₹2,000
-            </label>
-          )}
-        </div>
-
-        {/* Package Type */}
-        <div className="border-b pb-5 mb-5">
-          <button
-            onClick={() => toggleSection("packageType")}
-            className="flex justify-between w-full font-semibold text-black"
-          >
-            Package Type
-            <span>{openSection.packageType ? "▲" : "▼"}</span>
-          </button>
-
-          {openSection.packageType && (
-            <div className="mt-4 flex gap-6 text-sm text-black">
-              <button
-                onClick={() => {
-                  const value = "Customizable";
-                  if (selectedFilters.includes(value)) {
-                    setSelectedFilters(
-                      selectedFilters.filter((f) => f !== value)
-                    );
-                  } else {
-                    setSelectedFilters([...selectedFilters, value]);
-                  }
-                }}
-                className={`transition ${
-                  selectedFilters.includes("Customizable")
-                    ? "text-orange-500 font-semibold"
-                    : "text-black"
-                }`}
-              >
-                Customizable (119)
-              </button>
-
-              <button
-                onClick={() => {
-                  const value = "Group Package";
-                  if (selectedFilters.includes(value)) {
-                    setSelectedFilters(
-                      selectedFilters.filter((f) => f !== value)
-                    );
-                  } else {
-                    setSelectedFilters([...selectedFilters, value]);
-                  }
-                }}
-                className={`transition ${
-                  selectedFilters.includes("Group Package")
-                    ? "text-orange-500 font-semibold"
-                    : "text-black"
-                }`}
-              >
-                Group Package (9)
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Premium */}
-        <div>
-          <button
-            onClick={() => toggleSection("premium")}
-            className="flex justify-between w-full font-semibold text-black"
-          >
-            Premium Packages
-            <span>{openSection.premium ? "▲" : "▼"}</span>
-          </button>
-
-          {openSection.premium && (
-            <label className="flex items-center mt-3 text-black">
-              <input
-                type="checkbox"
-                checked={premiumChecked}
-                onChange={(e) => {
-                  updateSimpleFilter("Premium Packages", e.target.checked);
-                }}
-                className="mr-2"
-              />
-              Premium Packages
-            </label>
-          )}
-        </div>
+                  className="mr-2"
+                />
+                {item.label}
+              </label>
+            ))}
+          </div>
+        )}
       </div>
+
+      {/* Hotel */}
+      <div className="border-b pb-5 mb-5">
+        <button
+          onClick={() => toggleSection("hotel")}
+          className="flex justify-between w-full font-semibold text-black"
+        >
+          Hotel Category
+          <span>{openSection.hotel ? "▲" : "▼"}</span>
+        </button>
+
+        {openSection.hotel && (
+          <div className="grid grid-cols-4 gap-2 mt-4">
+            {[
+              { name: "below3", label: "<3★" },
+              { name: "3star", label: "3★" },
+              { name: "4star", label: "4★" },
+              { name: "5star", label: "5★" },
+            ].map((hotel) => (
+              <button
+                key={hotel.name}
+                onClick={() => {
+                  const newVal =
+                    hotelFilter === hotel.name ? null : hotel.name;
+
+                  setSelectedFilters(
+                    replaceGroupedFilter(
+                      selectedFilters,
+                      ["<3★", "3★", "4★", "5★"],
+                      newVal ? hotel.label : null
+                    )
+                  );
+                }}
+                className={`border rounded-md text-sm py-3 ${
+                  hotelFilter === hotel.name
+                    ? "bg-orange-500 text-white border-orange-500"
+                    : "text-black"
+                }`}
+              >
+                {hotel.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Buy Now */}
+      <div className="border-b pb-5 mb-5">
+        <button
+          onClick={() => toggleSection("bnpl")}
+          className="flex justify-between w-full font-semibold text-black"
+        >
+          Buy Now Pay Later
+          <span>{openSection.bnpl ? "▲" : "▼"}</span>
+        </button>
+
+        {openSection.bnpl && (
+          <label className="flex items-center mt-3 text-black">
+            <input
+              type="checkbox"
+              checked={bnplChecked}
+              onChange={(e) => {
+                updateSimpleFilter("Book @ ₹2,000", e.target.checked);
+              }}
+              className="mr-2"
+            />
+            Book @ ₹2,000
+          </label>
+        )}
+      </div>
+
+      {/* Package Type */}
+      <div className="border-b pb-5 mb-5">
+        <button
+          onClick={() => toggleSection("packageType")}
+          className="flex justify-between w-full font-semibold text-black"
+        >
+          Package Type
+          <span>{openSection.packageType ? "▲" : "▼"}</span>
+        </button>
+
+        {openSection.packageType && (
+          <div className="mt-4 grid grid-cols-2 gap-3 text-sm text-black lg:flex lg:gap-6">
+            <button
+              onClick={() => {
+                const value = "Customizable";
+                if (selectedFilters.includes(value)) {
+                  setSelectedFilters(
+                    selectedFilters.filter((f) => f !== value)
+                  );
+                } else {
+                  setSelectedFilters([...selectedFilters, value]);
+                }
+              }}
+              className={`rounded-lg border px-3 py-2 transition lg:rounded-none lg:border-0 lg:p-0 ${
+                selectedFilters.includes("Customizable")
+                  ? "border-orange-500 bg-orange-50 text-orange-600 font-semibold lg:bg-transparent lg:text-orange-500"
+                  : "border-gray-200 text-black"
+              }`}
+            >
+              Customizable (119)
+            </button>
+
+            <button
+              onClick={() => {
+                const value = "Group Package";
+                if (selectedFilters.includes(value)) {
+                  setSelectedFilters(
+                    selectedFilters.filter((f) => f !== value)
+                  );
+                } else {
+                  setSelectedFilters([...selectedFilters, value]);
+                }
+              }}
+              className={`rounded-lg border px-3 py-2 transition lg:rounded-none lg:border-0 lg:p-0 ${
+                selectedFilters.includes("Group Package")
+                  ? "border-orange-500 bg-orange-50 text-orange-600 font-semibold lg:bg-transparent lg:text-orange-500"
+                  : "border-gray-200 text-black"
+              }`}
+            >
+              Group Package (9)
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Premium */}
+      <div>
+        <button
+          onClick={() => toggleSection("premium")}
+          className="flex justify-between w-full font-semibold text-black"
+        >
+          Premium Packages
+          <span>{openSection.premium ? "▲" : "▼"}</span>
+        </button>
+
+        {openSection.premium && (
+          <label className="flex items-center mt-3 text-black">
+            <input
+              type="checkbox"
+              checked={premiumChecked}
+              onChange={(e) => {
+                updateSimpleFilter("Premium Packages", e.target.checked);
+              }}
+              className="mr-2"
+            />
+            Premium Packages
+          </label>
+        )}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="w-full lg:sticky lg:top-32">
+      <button
+        type="button"
+        onClick={() => setIsMobileFiltersOpen(true)}
+        className="lg:hidden mb-3 flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-orange-200 bg-white px-4 text-sm font-semibold text-orange-600 shadow-sm"
+      >
+        <SlidersHorizontal className="h-4 w-4" />
+        Filters
+        {selectedFilters.length > 0 && (
+          <span className="rounded-full bg-orange-500 px-2 py-0.5 text-xs text-white">
+            {selectedFilters.length}
+          </span>
+        )}
+      </button>
+
+      <div className="hidden lg:block">{filterPanel}</div>
+
+      {isMobileFiltersOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <button
+            type="button"
+            aria-label="Close filters"
+            className="absolute inset-0 bg-black/45"
+            onClick={() => setIsMobileFiltersOpen(false)}
+          />
+          <div className="absolute inset-x-0 bottom-0 max-h-[86vh] overflow-hidden rounded-t-3xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b px-4 py-3">
+              <div>
+                <p className="text-base font-semibold text-black">Filters</p>
+                <p className="text-xs text-gray-500">
+                  Refine packages without leaving results
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsMobileFiltersOpen(false)}
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-black"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="max-h-[calc(86vh-122px)] overflow-y-auto px-4 py-4">
+              {filterPanel}
+            </div>
+            <div className="flex gap-3 border-t bg-white px-4 py-3">
+              <button
+                type="button"
+                onClick={() => setSelectedFilters([])}
+                className="h-11 flex-1 rounded-xl border border-gray-300 text-sm font-semibold text-black"
+              >
+                Clear
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsMobileFiltersOpen(false)}
+                className="h-11 flex-1 rounded-xl bg-orange-500 text-sm font-semibold text-white"
+              >
+                Apply
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

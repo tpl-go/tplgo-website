@@ -131,10 +131,10 @@ export default function PackageCompactSearchBar({
 
   return (
     <div className="relative w-full overflow-visible rounded-2xl border border-white/10 bg-gradient-to-r from-[#0f172a] via-[#111827] to-[#0b1220] shadow-[0_18px_45px_rgba(2,6,23,0.35)]">
-      <div className="grid grid-cols-[2.1fr_1.15fr_1.2fr_155px] items-stretch overflow-visible">
+      <div className="grid grid-cols-1 items-stretch overflow-visible md:grid-cols-2 lg:grid-cols-[2.1fr_1.15fr_1.2fr_155px]">
         <div
           ref={cityRef}
-          className="relative border-r border-white/10 bg-white/[0.035] px-3 py-2 transition hover:bg-white/[0.07]"
+          className="relative border-b border-white/10 bg-white/[0.035] px-3 py-2 transition hover:bg-white/[0.07] md:border-r lg:border-b-0"
         >
           <div className="text-[10px] font-black uppercase tracking-[0.14em] text-cyan-300">
             Origin City
@@ -186,7 +186,7 @@ export default function PackageCompactSearchBar({
 
         <div
           ref={dateRef}
-          className="relative border-r border-white/10 bg-white/[0.035] px-3 py-2 transition hover:bg-white/[0.07]"
+          className="relative border-b border-white/10 bg-white/[0.035] px-3 py-2 transition hover:bg-white/[0.07] md:border-r lg:border-b-0"
         >
           <button
             type="button"
@@ -208,7 +208,7 @@ export default function PackageCompactSearchBar({
           </button>
 
           {dateOpen && (
-            <div className="absolute left-0 top-full z-50 mt-1 rounded-2xl bg-white shadow-2xl">
+            <div className="absolute left-0 top-full z-50 mt-1 w-[calc(100vw-24px)] max-w-[360px] overflow-x-auto rounded-2xl bg-white shadow-2xl sm:max-w-none md:w-auto">
               <DateRange
                 ranges={[
                   {
@@ -232,8 +232,8 @@ export default function PackageCompactSearchBar({
           )}
         </div>
 
-        <div className="border-r border-white/10 bg-white/[0.035] px-0 py-0 transition hover:bg-white/[0.07]">
-          <div className="[&>div]:!w-full [&>div>button:first-child]:!h-[68px] [&>div>button:first-child]:!w-full [&>div>button:first-child]:!rounded-none [&>div>button:first-child]:!border-0 [&>div>button:first-child]:!bg-transparent [&>div>button:first-child]:!text-white [&>div>button:first-child]:!shadow-none [&>div>button:first-child_*]:!text-white [&>div>button:first-child_*:first-child]:!text-cyan-300">
+        <div className="border-b border-white/10 bg-white/[0.035] px-0 py-0 transition hover:bg-white/[0.07] md:border-r lg:border-b-0">
+          <div className="[&>div]:!w-full [&>div>button:first-child]:!h-[60px] [&>div>button:first-child]:!w-full [&>div>button:first-child]:!rounded-none [&>div>button:first-child]:!border-0 [&>div>button:first-child]:!bg-transparent [&>div>button:first-child]:!text-white [&>div>button:first-child]:!shadow-none [&>div>button:first-child_*]:!text-white [&>div>button:first-child_*:first-child]:!text-cyan-300 lg:[&>div>button:first-child]:!h-[68px]">
             <PackageRoomGuestSelector
               rooms={rooms}
               setRooms={setRooms}

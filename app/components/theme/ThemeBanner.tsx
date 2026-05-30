@@ -37,7 +37,7 @@ export default function ThemeBanner({ themeId, themeName }: Props) {
   }, [imageSlug]);
 
   return (
-    <section className="relative w-full h-[400px] flex items-center justify-center overflow-hidden">
+    <section className="relative w-full h-[240px] sm:h-[300px] lg:h-[400px] flex items-center justify-center overflow-hidden">
 
       {/* Background Image Slider */}
       <img
@@ -52,11 +52,11 @@ export default function ThemeBanner({ themeId, themeName }: Props) {
       {/* Content */}
       <div className="relative z-10 text-center px-4">
 
-        <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
+        <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-2 lg:mb-4 leading-tight">
           {themeName} Theme Packages
         </h1>
 
-        <p className="text-white/90 text-lg">
+        <p className="text-white/90 text-sm sm:text-base lg:text-lg max-w-[290px] sm:max-w-none mx-auto">
           Explore curated travel experiences under {themeName} theme
         </p>
 

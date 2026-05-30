@@ -269,10 +269,10 @@ export default function BookingPriceCard({
 
   return (
     <aside className="w-full">
-      <div className="sticky top-[96px] z-20">
-        <div className="overflow-hidden rounded-[24px] border border-[#d9e2ec] bg-white shadow-[0_12px_34px_rgba(15,23,42,0.08)]">
+      <div className="relative z-20 lg:sticky lg:top-[96px]">
+        <div className="overflow-hidden rounded-[20px] border border-[#d9e2ec] bg-white shadow-[0_12px_34px_rgba(15,23,42,0.08)] lg:rounded-[24px]">
           <div className="border-b border-[#e5e7eb] bg-white px-4 py-4">
-            <div className="text-[22px] font-extrabold text-[#1f2937]">
+            <div className="text-[18px] font-extrabold text-[#1f2937] lg:text-[22px]">
               Fare Summary
             </div>
 
@@ -309,7 +309,7 @@ export default function BookingPriceCard({
                     ) : null}
                   </div>
 
-                  <div className="mt-2 text-[17px] font-black leading-tight text-[#111827]">
+                  <div className="mt-2 text-[15px] font-black leading-tight text-[#111827] lg:text-[17px]">
                     Best Package Offer Activated
                   </div>
 
@@ -438,9 +438,9 @@ export default function BookingPriceCard({
           </div>
 
           <div className="border-b border-[#e5e7eb] bg-white px-4 py-4">
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <div className="text-[20px] font-extrabold text-[#111827]">
+                <div className="text-[18px] font-extrabold text-[#111827] lg:text-[20px]">
                   Total Amount
                 </div>
 
@@ -449,7 +449,7 @@ export default function BookingPriceCard({
                 </div>
               </div>
 
-              <div className="whitespace-nowrap text-[30px] font-extrabold text-[#111827]">
+              <div className="whitespace-nowrap text-[26px] font-extrabold text-[#111827] lg:text-[30px]">
                 ₹{finalTotal.toLocaleString("en-IN")}
               </div>
             </div>

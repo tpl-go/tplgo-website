@@ -117,6 +117,7 @@ export default function PackageConfirmationSuccessHeader({
 
   return (
     <section
+      className="pkg-confirm-success"
       style={{
         border: "1px solid #d9e2ec",
         borderRadius: "24px",
@@ -127,6 +128,7 @@ export default function PackageConfirmationSuccessHeader({
       }}
     >
       <div
+        className="pkg-confirm-success-inner"
         style={{
           padding: "28px 26px 24px 26px",
           position: "relative",
@@ -206,6 +208,7 @@ export default function PackageConfirmationSuccessHeader({
             </div>
 
             <h1
+              className="pkg-confirm-success-title"
               style={{
                 margin: "16px 0 0 0",
                 fontSize: "34px",
@@ -219,6 +222,7 @@ export default function PackageConfirmationSuccessHeader({
             </h1>
 
             <div
+              className="pkg-confirm-success-package"
               style={{
                 marginTop: "12px",
                 fontSize: "16px",
@@ -280,6 +284,7 @@ export default function PackageConfirmationSuccessHeader({
           </div>
 
           <div
+            className="pkg-confirm-success-id-card"
             style={{
               minWidth: "320px",
               maxWidth: "100%",
@@ -376,6 +381,39 @@ export default function PackageConfirmationSuccessHeader({
           </div>
         </div>
       </div>
+
+      <style>{`
+        @media (max-width: 767px) {
+          .pkg-confirm-success {
+            border-radius: 18px !important;
+          }
+
+          .pkg-confirm-success-inner {
+            padding: 18px 16px !important;
+          }
+
+          .pkg-confirm-success-title {
+            margin-top: 12px !important;
+            font-size: 25px !important;
+            line-height: 31px !important;
+            letter-spacing: 0 !important;
+          }
+
+          .pkg-confirm-success-package {
+            margin-top: 14px !important;
+            font-size: 20px !important;
+            line-height: 27px !important;
+            word-break: break-word !important;
+          }
+
+          .pkg-confirm-success-id-card {
+            min-width: 0 !important;
+            width: 100% !important;
+            padding: 16px !important;
+            border-radius: 18px !important;
+          }
+        }
+      `}</style>
     </section>
   );
 }

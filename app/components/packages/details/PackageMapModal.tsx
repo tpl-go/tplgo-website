@@ -43,16 +43,16 @@ export default function PackageMapModal({
 
       {/* modal */}
       <div
-        className={`absolute bg-white shadow-xl border rounded-2xl overflow-hidden
-        ${max ? "inset-4" : "left-1/2 top-24 -translate-x-1/2 w-[980px] max-w-[94vw] h-[520px]"}`}
+        className={`absolute flex flex-col overflow-hidden bg-white shadow-xl border rounded-none lg:rounded-2xl
+        ${max ? "inset-0 lg:inset-4" : "inset-0 lg:left-1/2 lg:top-24 lg:h-[520px] lg:w-[980px] lg:max-w-[94vw] lg:-translate-x-1/2"}`}
       >
         {/* header */}
-        <div className="h-12 px-4 flex items-center justify-between border-b bg-white">
+        <div className="min-h-12 shrink-0 px-3 py-2 flex flex-col gap-2 border-b bg-white lg:h-12 lg:flex-row lg:items-center lg:justify-between lg:px-4 lg:py-0">
           <div className="text-sm font-bold text-black">
             {title ? title : "Route Map"}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="grid grid-cols-2 gap-2 lg:flex lg:items-center">
             <button
               onClick={() => setMax((s) => !s)}
               className="px-3 py-1.5 rounded-lg border text-black text-xs font-semibold hover:shadow-sm"
@@ -70,7 +70,7 @@ export default function PackageMapModal({
         </div>
 
         {/* body */}
-        <div className="h-[calc(100%-48px)] bg-gray-100 p-3">
+        <div className="min-h-0 flex-1 bg-gray-100 p-2 lg:p-3">
           <div className="w-full h-full rounded-xl border bg-white overflow-hidden">
             <RouteMap places={places} />
           </div>

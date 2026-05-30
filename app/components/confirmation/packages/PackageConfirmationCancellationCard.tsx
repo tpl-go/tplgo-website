@@ -11,19 +11,6 @@ type PolicyPoint = {
   subtext?: string;
 };
 
-function formatDateLabel(value?: string) {
-  if (!value) return "Date not available";
-
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return value;
-
-  return parsed.toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "2-digit",
-  });
-}
-
 function getCutoffDate(travelDate?: string, daysBefore = 15) {
   if (!travelDate) return null;
 
@@ -95,6 +82,7 @@ export default function PackageConfirmationCancellationCard({
 
   return (
     <section
+      className="pkg-confirm-cancellation"
       style={{
         border: "1px solid #d9e2ec",
         background: "#ffffff",
@@ -104,6 +92,7 @@ export default function PackageConfirmationCancellationCard({
       }}
     >
       <div
+        className="pkg-confirm-card-head"
         style={{
           padding: "18px 20px",
           borderBottom: "1px solid #e5e7eb",
@@ -134,6 +123,7 @@ export default function PackageConfirmationCancellationCard({
       </div>
 
       <div
+        className="pkg-confirm-cancellation-body"
         style={{
           padding: "20px",
           display: "flex",
@@ -223,6 +213,23 @@ export default function PackageConfirmationCancellationCard({
           </div>
         ) : null}
       </div>
+
+      <style>{`
+        @media (max-width: 767px) {
+          .pkg-confirm-cancellation {
+            border-radius: 18px !important;
+          }
+
+          .pkg-confirm-card-head,
+          .pkg-confirm-cancellation-body {
+            padding: 16px !important;
+          }
+
+          .pkg-confirm-cancellation-body {
+            gap: 20px !important;
+          }
+        }
+      `}</style>
     </section>
   );
 }
@@ -287,6 +294,7 @@ function PolicyBlock({
 
       <div style={{ marginTop: "18px" }}>
         <div
+          className="pkg-confirm-policy-line"
           style={{
             position: "relative",
             height: "24px",
@@ -307,6 +315,7 @@ function PolicyBlock({
           />
 
           <span
+            className="pkg-confirm-policy-marker-right"
             style={{
               position: "absolute",
               left: "8px",
@@ -350,6 +359,7 @@ function PolicyBlock({
         </div>
 
         <div
+          className="pkg-confirm-policy-labels"
           style={{
             display: "flex",
             justifyContent: "space-between",
@@ -380,7 +390,7 @@ function PolicyBlock({
             </div>
           </div>
 
-          <div style={{ textAlign: "right" }}>
+          <div className="pkg-confirm-policy-right" style={{ textAlign: "right" }}>
             <div
               style={{
                 fontSize: "18px",
@@ -403,6 +413,24 @@ function PolicyBlock({
           </div>
         </div>
       </div>
+
+      <style>{`
+        @media (max-width: 767px) {
+          .pkg-confirm-policy-line {
+            display: none !important;
+          }
+
+          .pkg-confirm-policy-labels {
+            display: grid !important;
+            grid-template-columns: 1fr !important;
+            gap: 14px !important;
+          }
+
+          .pkg-confirm-policy-right {
+            text-align: left !important;
+          }
+        }
+      `}</style>
 
       <div
         style={{

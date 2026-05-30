@@ -171,12 +171,12 @@ export default function PackageConfirmationFareCard({
   );
 
   return (
-    <div className="overflow-hidden rounded-[24px] border border-[#d9e2ec] bg-white shadow-[0_12px_34px_rgba(15,23,42,0.08)]">
-      <div className="border-b border-[#e5e7eb] bg-white px-5 py-4">
-        <div className="flex items-center gap-2">
+    <div className="overflow-hidden rounded-[18px] border border-[#d9e2ec] bg-white shadow-[0_12px_34px_rgba(15,23,42,0.08)] sm:rounded-[24px]">
+      <div className="border-b border-[#e5e7eb] bg-white px-4 py-4 sm:px-5">
+        <div className="flex items-start gap-2 sm:items-center">
           <CreditCard size={20} className="text-[#ea580c]" />
 
-          <h2 className="text-[22px] font-black text-[#111827]">
+          <h2 className="text-[20px] font-black leading-7 text-[#111827] sm:text-[22px]">
             Fare & Payment Summary
           </h2>
         </div>
@@ -187,7 +187,7 @@ export default function PackageConfirmationFareCard({
       </div>
 
       {safeOfferAmount > 0 ? (
-        <div className="relative overflow-hidden border-b border-[#fed7aa] bg-[linear-gradient(135deg,#fff7ed_0%,#ffffff_50%,#fff1e6_100%)] px-5 py-4">
+        <div className="relative overflow-hidden border-b border-[#fed7aa] bg-[linear-gradient(135deg,#fff7ed_0%,#ffffff_50%,#fff1e6_100%)] px-4 py-4 sm:px-5">
           <div className="absolute right-0 top-0 h-24 w-24 rounded-full bg-[#fb923c]/10 blur-3xl" />
 
           <div className="relative flex items-start gap-3">
@@ -225,7 +225,7 @@ export default function PackageConfirmationFareCard({
         </div>
       ) : null}
 
-      <div className="px-5 py-5">
+      <div className="px-4 py-4 sm:px-5 sm:py-5">
         <div className="mb-4 rounded-[16px] border border-[#e5e7eb] bg-[#f8fafc] p-4">
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <InfoItem label="Booking ID" value={bookingId} />
@@ -288,7 +288,7 @@ export default function PackageConfirmationFareCard({
             </div>
           ) : null}
 
-          <FareRow label="Fees & Taxes" value={feesAndTaxes} />
+          <FareRow label="Taxes & Fees" value={feesAndTaxes} />
 
           {insuranceAmount > 0 ? (
             <FareRow label="Insurance" value={insuranceAmount} />
@@ -337,7 +337,7 @@ export default function PackageConfirmationFareCard({
           ) : null}
 
           <div className="border-t border-dashed border-[#d1d5db] pt-4">
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
               <div>
                 <div className="text-[20px] font-black text-[#111827]">
                   Grand Total Paid
@@ -348,7 +348,7 @@ export default function PackageConfirmationFareCard({
                 </div>
               </div>
 
-              <div className="whitespace-nowrap text-[30px] font-black text-[#111827]">
+              <div className="whitespace-nowrap text-[28px] font-black text-[#111827] sm:text-[30px]">
                 ₹{Number(totalPaid || 0).toLocaleString("en-IN")}
               </div>
             </div>
@@ -395,7 +395,7 @@ function FareRow({
   return (
     <div className="flex items-start justify-between gap-3">
       <div
-        className={`text-[15px] font-bold ${
+        className={`min-w-0 break-words text-[15px] font-bold ${
           orange ? "text-[#ea580c]" : "text-[#1f2937]"
         }`}
       >
@@ -429,7 +429,7 @@ function WalletRow({ label, value }: { label: string; value: number }) {
 function MiniInfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="mt-1 flex items-center justify-between gap-3 first:mt-0">
-      <span className="text-[12px] font-bold text-[#64748b]">{label}</span>
+      <span className="min-w-0 break-words text-[12px] font-bold text-[#64748b]">{label}</span>
       <span className="text-[12px] font-extrabold text-[#475569]">{value}</span>
     </div>
   );

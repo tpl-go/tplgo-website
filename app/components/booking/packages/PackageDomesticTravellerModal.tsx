@@ -158,6 +158,7 @@ export default function PackageDomesticTravellerModal({
 
   return (
     <div
+      className="package-traveller-modal-overlay"
       onClick={onClose}
       style={{
         position: "fixed",
@@ -172,6 +173,7 @@ export default function PackageDomesticTravellerModal({
       }}
     >
       <div
+        className="package-traveller-modal-panel"
         onClick={(e) => e.stopPropagation()}
         style={{
           width: "1100px",
@@ -183,6 +185,7 @@ export default function PackageDomesticTravellerModal({
         }}
       >
         <div
+          className="package-traveller-modal-header"
           style={{
             padding: "16px 20px",
             borderBottom: "1px solid #e5e7eb",
@@ -228,7 +231,10 @@ export default function PackageDomesticTravellerModal({
           </button>
         </div>
 
-        <div style={{ padding: "18px 20px 22px 20px" }}>
+        <div
+          className="package-traveller-modal-body"
+          style={{ padding: "18px 20px 22px 20px" }}
+        >
           <div
             style={{
               background: "#f7d7cf",
@@ -290,6 +296,7 @@ export default function PackageDomesticTravellerModal({
 
                   <div style={{ padding: "16px 14px 18px 14px" }}>
                     <div
+                      className="package-traveller-primary-grid"
                       style={{
                         display: "grid",
                         gridTemplateColumns: "1fr 1fr 280px",
@@ -346,6 +353,7 @@ export default function PackageDomesticTravellerModal({
                     </div>
 
                     <div
+                      className="package-traveller-contact-grid"
                       style={{
                         marginTop: "14px",
                         display: "grid",
@@ -406,6 +414,7 @@ export default function PackageDomesticTravellerModal({
                       <div style={{ marginTop: "14px" }}>
                         <div style={labelStyle}>Date of Birth</div>
                         <div
+                          className="package-traveller-date-grid"
                           style={{
                             display: "grid",
                             gridTemplateColumns: "120px 120px 120px",
@@ -525,6 +534,7 @@ export default function PackageDomesticTravellerModal({
           </div>
 
           <div
+            className="package-traveller-modal-footer"
             style={{
               marginTop: "18px",
               display: "flex",
@@ -571,6 +581,73 @@ export default function PackageDomesticTravellerModal({
           </div>
         </div>
       </div>
+      <style>{`
+        @media (max-width: 767px) {
+          .package-traveller-modal-overlay {
+            align-items: stretch !important;
+            overflow: hidden !important;
+            padding: 0 !important;
+          }
+
+          .package-traveller-modal-panel {
+            display: flex !important;
+            width: 100% !important;
+            max-width: none !important;
+            height: 100dvh !important;
+            flex-direction: column !important;
+            border-radius: 0 !important;
+          }
+
+          .package-traveller-modal-header {
+            flex-shrink: 0 !important;
+            padding: 14px !important;
+          }
+
+          .package-traveller-modal-header div[style*="font-size: 24px"] {
+            font-size: 20px !important;
+          }
+
+          .package-traveller-modal-body {
+            min-height: 0 !important;
+            flex: 1 1 auto !important;
+            overflow-y: auto !important;
+            overscroll-behavior: contain !important;
+            padding: 14px !important;
+            padding-bottom: 118px !important;
+          }
+
+          .package-traveller-modal-body input,
+          .package-traveller-modal-body select,
+          .package-traveller-modal-body button {
+            min-width: 0 !important;
+          }
+
+          .package-traveller-primary-grid,
+          .package-traveller-contact-grid,
+          .package-traveller-date-grid {
+            grid-template-columns: 1fr !important;
+          }
+
+          .package-traveller-modal-footer {
+            position: fixed !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            z-index: 2 !important;
+            margin: 0 !important;
+            flex-shrink: 0 !important;
+            flex-direction: column-reverse !important;
+            align-items: stretch !important;
+            background: #ffffff !important;
+            border-top: 1px solid #e5e7eb !important;
+            padding: 12px 14px !important;
+          }
+
+          .package-traveller-modal-footer button {
+            width: 100% !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }

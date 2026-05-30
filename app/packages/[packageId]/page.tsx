@@ -6,6 +6,7 @@ import { UserRound, Wallet, Sparkles, BadgeCheck, Tag } from "lucide-react";
 import { resolvePackageByRouteId } from "@/app/data/packages/resolvePackage";
 
 import LoginModal from "@/app/components/common/LoginModal";
+import MobileInnerBack from "@/app/components/common/mobile/MobileInnerBack";
 import PackageHeader from "@/app/components/packages/details/PackageHeader";
 import PackageCompactSearchBar from "@/app/components/packages/details/PackageCompactSearchBar";
 import PackageTabs from "@/app/components/packages/details/PackageTabs";
@@ -718,9 +719,15 @@ const [selectedOffer, setSelectedOffer] =
   }
 
   return (
-    <div className="bg-white relative">
+    <div className="relative overflow-x-hidden bg-white pb-6 lg:pb-0">
+      <div className="border-b border-slate-100 bg-white px-3 py-2 lg:hidden">
+        <div className="mx-auto max-w-7xl">
+          <MobileInnerBack title="Back" />
+        </div>
+      </div>
+
       <div className="border-b bg-[#f3f8ff]">
-        <div className="max-w-7xl mx-auto px-2 py-2">
+        <div className="max-w-7xl mx-auto px-3 py-2 lg:px-2">
           <PackageCompactSearchBar
             originCity={draftOriginCity}
             setOriginCity={setDraftOriginCity}
@@ -734,8 +741,8 @@ const [selectedOffer, setSelectedOffer] =
         </div>
       </div>
 
-      <div className="sticky top-0  z-40 bg-white border-b shadow-sm">
-        <div className="max-w-7xl mx-auto px-2 py-1">
+      <div className="z-40 bg-white border-b shadow-sm lg:sticky lg:top-0">
+        <div className="max-w-7xl mx-auto px-3 py-2 lg:px-2 lg:py-1">
           <PackageHeader
             title={pkg.title}
             durationLabel={durationLabel}
@@ -751,7 +758,7 @@ const [selectedOffer, setSelectedOffer] =
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4">
         <div className="pt-0">
           <PackageMediaGrid
             packageId={packageId}
@@ -791,7 +798,7 @@ const [selectedOffer, setSelectedOffer] =
                 </div>
               </div>
             ) : (
-              <div className="flex items-start justify-between gap-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
                 <div className="flex items-start gap-3">
                   <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-orange-500 text-white">
                     <Wallet className="h-5 w-5" />
@@ -811,7 +818,7 @@ const [selectedOffer, setSelectedOffer] =
                 <button
                   type="button"
                   onClick={() => setShowLoginModal(true)}
-                  className="shrink-0 rounded-xl bg-orange-500 px-4 py-2 text-[12px] font-bold text-white hover:bg-orange-600"
+                  className="w-full shrink-0 rounded-xl bg-orange-500 px-4 py-2.5 text-[12px] font-bold text-white hover:bg-orange-600 sm:w-auto sm:py-2"
                 >
                   Login / Signup
                 </button>
@@ -855,21 +862,21 @@ const [selectedOffer, setSelectedOffer] =
           </div>
         </div>
 
-        <div className="mt-2 grid grid-cols-12 gap-8">
+        <div className="mt-3 grid grid-cols-12 gap-4 lg:mt-2 lg:gap-8">
           <div className="col-span-12 lg:col-span-9">
-            <div className="rounded-2xl border bg-white overflow-visible">
+            <div className="overflow-hidden rounded-2xl border bg-white lg:overflow-visible">
               <div className="mt-2 z-20 bg-white">
-                <div className="px-4 pt-0 border-b">
+                <div className="px-3 pt-0 border-b sm:px-4">
                   <PackageTabs activeTab={activeTab} onChange={setActiveTab} />
                 </div>
 
                 {activeTab === "itinerary" && (
-                  <div className="px-4 py-3 border-b bg-white">
-                    <div className="rounded-xl border bg-[#EAF3FF] px-4 py-3">
-                      <div className="grid grid-cols-6 gap-3 items-center">
+                  <div className="px-3 py-3 border-b bg-white sm:px-4">
+                    <div className="rounded-xl border bg-[#EAF3FF] px-3 py-3 sm:px-4">
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6 lg:gap-3 items-center">
                         <button
                           type="button"
-                          className="rounded-xl bg-white border border-[#d6e4f5] px-3 py-2 text-center hover:shadow-sm transition"
+                          className="rounded-xl bg-white border border-[#d6e4f5] px-2 py-2 text-center hover:shadow-sm transition sm:px-3"
                         >
                           <div className="text-[11px] font-semibold text-[#4b5563]">
                             Day Plan
@@ -885,7 +892,7 @@ const [selectedOffer, setSelectedOffer] =
                         <button
                           type="button"
                           onClick={() => setShowFlightModal(true)}
-                          className="rounded-xl bg-white border border-[#d6e4f5] px-3 py-2 text-center hover:shadow-sm transition"
+                          className="rounded-xl bg-white border border-[#d6e4f5] px-2 py-2 text-center hover:shadow-sm transition sm:px-3"
                         >
                           <div className="text-[11px] font-semibold text-[#4b5563]">
                             Flights
@@ -901,7 +908,7 @@ const [selectedOffer, setSelectedOffer] =
                         <button
                           type="button"
                           onClick={() => setShowHotelModal(true)}
-                          className="rounded-xl bg-white border border-[#d6e4f5] px-3 py-2 text-center hover:shadow-sm transition"
+                          className="rounded-xl bg-white border border-[#d6e4f5] px-2 py-2 text-center hover:shadow-sm transition sm:px-3"
                         >
                           <div className="text-[11px] font-semibold text-[#4b5563]">
                             Hotels
@@ -917,7 +924,7 @@ const [selectedOffer, setSelectedOffer] =
                         <button
                           type="button"
                           onClick={() => setShowTransferModal(true)}
-                          className="rounded-xl bg-white border border-[#d6e4f5] px-3 py-2 text-center hover:shadow-sm transition"
+                          className="rounded-xl bg-white border border-[#d6e4f5] px-2 py-2 text-center hover:shadow-sm transition sm:px-3"
                         >
                           <div className="text-[11px] font-semibold text-[#4b5563]">
                             Transfers
@@ -933,7 +940,7 @@ const [selectedOffer, setSelectedOffer] =
                         <button
                           type="button"
                           onClick={() => setShowActivityModal(true)}
-                          className="rounded-xl bg-white border border-[#d6e4f5] px-3 py-2 text-center hover:shadow-sm transition"
+                          className="rounded-xl bg-white border border-[#d6e4f5] px-2 py-2 text-center hover:shadow-sm transition sm:px-3"
                         >
                           <div className="text-[11px] font-semibold text-[#4b5563]">
                             Activities
@@ -949,7 +956,7 @@ const [selectedOffer, setSelectedOffer] =
                         <button
                           type="button"
                           onClick={() => setShowMealModal(true)}
-                          className="rounded-xl bg-white border border-[#d6e4f5] px-3 py-2 text-center hover:shadow-sm transition"
+                          className="rounded-xl bg-white border border-[#d6e4f5] px-2 py-2 text-center hover:shadow-sm transition sm:px-3"
                         >
                           <div className="text-[11px] font-semibold text-[#4b5563]">
                             Meals

@@ -453,9 +453,9 @@ export default function ThemePackagesGrid({
   const resultCount = filteredPackages.length;
 
   return (
-    <div>
+    <div className="min-w-0">
       {selectedFilters.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2 mt-4 mb-6">
+        <div className="flex flex-nowrap lg:flex-wrap items-center gap-2 mt-2 lg:mt-4 mb-5 lg:mb-6 overflow-x-auto pb-1">
           {selectedFilters.map((filter) => (
             <button
               key={filter}
@@ -466,7 +466,7 @@ export default function ThemePackagesGrid({
                   setActiveSubTheme("");
                 }
               }}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium bg-white text-blue-800 border border-blue-200 rounded-full"
+              className="flex shrink-0 items-center gap-2 px-3 py-1.5 text-xs sm:text-sm font-medium bg-white text-blue-800 border border-blue-200 rounded-full"
             >
               {filter}
               <span className="text-blue-600">✕</span>
@@ -475,20 +475,20 @@ export default function ThemePackagesGrid({
 
           <button
             onClick={onClearAll}
-            className="text-sm font-semibold text-red-600 ml-2 hover:text-red-700"
+            className="shrink-0 text-sm font-semibold text-red-600 ml-1 lg:ml-2 hover:text-red-700"
           >
             Clear All
           </button>
         </div>
       )}
 
-      <div className="flex items-center justify-between gap-4 flex-wrap mb-5">
-        <div className="text-sm md:text-base font-medium text-gray-700 whitespace-nowrap">
+      <div className="flex items-start lg:items-center justify-between gap-3 lg:gap-4 flex-wrap mb-4 lg:mb-5">
+        <div className="text-sm md:text-base font-medium text-gray-700">
           {searchQuery ? (
             <>
               Showing <span className="font-semibold text-black">{resultCount}</span>{" "}
               results for{" "}
-              <span className="font-semibold text-black">"{searchQuery}"</span>
+              <span className="font-semibold text-black">&quot;{searchQuery}&quot;</span>
             </>
           ) : (
             <>
@@ -498,7 +498,7 @@ export default function ThemePackagesGrid({
           )}
         </div>
 
-        <div className="flex items-center gap-3 w-full lg:w-auto lg:min-w-[550px]">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto lg:min-w-[550px]">
           <div className="relative flex-1 min-w-0">
             <Search className="w-4 h-4 text-gray-500 absolute left-4 top-1/2 -translate-y-1/2" />
 
@@ -507,7 +507,7 @@ export default function ThemePackagesGrid({
               placeholder="Search packages or destination..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full h-[48px] border-2 border-orange-300 rounded-xl pl-11 pr-11 text-[15px] font-medium text-black placeholder:text-gray-400 bg-white shadow-[0_6px_18px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400"
+              className="w-full h-[44px] lg:h-[48px] border-2 border-orange-300 rounded-xl pl-11 pr-11 text-sm lg:text-[15px] font-medium text-black placeholder:text-gray-400 bg-white shadow-[0_6px_18px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400"
             />
 
             {searchQuery && (
@@ -524,7 +524,7 @@ export default function ThemePackagesGrid({
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value)}
-            className="h-[48px] min-w-[170px] border border-gray-300 px-4 rounded-xl text-sm font-medium bg-white text-black shadow-[0_4px_12px_rgba(0,0,0,0.05)] focus:outline-none focus:ring-2 focus:ring-orange-300"
+            className="h-[44px] lg:h-[48px] w-full sm:w-auto sm:min-w-[170px] border border-gray-300 px-4 rounded-xl text-sm font-medium bg-white text-black shadow-[0_4px_12px_rgba(0,0,0,0.05)] focus:outline-none focus:ring-2 focus:ring-orange-300"
           >
             <option value="popular">Sort by Popular</option>
             <option value="price">Sort by Price</option>
@@ -535,7 +535,7 @@ export default function ThemePackagesGrid({
 
 
       {filteredPackages.length === 0 ? (
-        <div className="border rounded-xl bg-white p-10 text-center">
+        <div className="border rounded-xl bg-white p-6 lg:p-10 text-center">
           <p className="text-lg font-semibold text-black mb-2">
             No packages found
           </p>
@@ -553,7 +553,7 @@ export default function ThemePackagesGrid({
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 items-start">
           {visiblePackages.map((pkg) => {
   const landOfferPreview = getPackageOfferPreview(
   {
@@ -624,9 +624,9 @@ const offerTitle =
                   prev === pkg.routeId ? null : pkg.routeId
                 )
               }
-              className="border rounded-xl shadow-sm hover:shadow-md transition bg-white cursor-pointer"
+              className="border rounded-xl shadow-sm hover:shadow-md transition bg-white cursor-pointer overflow-hidden lg:overflow-visible"
             >
-              <div className="h-52 bg-gray-200 rounded-t-xl relative cursor-pointer">
+              <div className="h-40 sm:h-48 lg:h-52 bg-gray-200 relative cursor-pointer lg:rounded-t-xl">
                 <span className="absolute top-3 left-3 bg-black text-white text-xs px-3 py-1 rounded-full">
   {offerTitle || "Best Deal"}
 </span>
@@ -640,10 +640,10 @@ const offerTitle =
                 {activePackage === pkg.routeId && (
                   <div
                     ref={popupRef}
-                    className="absolute top-16 left-4 right-4 bg-white rounded-xl shadow-lg p-4 z-20 border"
+                    className="absolute top-12 lg:top-16 left-3 right-3 lg:left-4 lg:right-4 bg-white rounded-xl shadow-lg p-3 lg:p-4 z-20 border"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <h4 className="font-semibold text-black mb-3 pr-8">
+                    <h4 className="font-semibold text-sm lg:text-base text-black mb-3 pr-8">
                       {pkg.title}
                     </h4>
 
@@ -666,7 +666,7 @@ const offerTitle =
                           pkg.defaultOriginCity
                         );
                       }}
-                      className="border rounded-lg p-3 mb-3 flex justify-between items-center hover:shadow cursor-pointer bg-white"
+                      className="border rounded-lg p-3 mb-3 flex justify-between items-center gap-3 hover:shadow cursor-pointer bg-white"
                     >
                       <div>
                         <p className="text-xs text-gray-600">
@@ -676,7 +676,7 @@ const offerTitle =
                         <p className="font-semibold text-black">With Flight</p>
                       </div>
 
-                      <div className="text-right flex items-center gap-2">
+                      <div className="text-right flex items-center gap-2 shrink-0">
                         <div>
   {flightOfferDiscount > 0 && (
     <p className="text-[11px] font-semibold text-black line-through">
@@ -709,7 +709,7 @@ const offerTitle =
                           pkg.defaultOriginCity
                         );
                       }}
-                      className="border rounded-lg p-3 flex justify-between items-center hover:shadow cursor-pointer bg-white"
+                      className="border rounded-lg p-3 flex justify-between items-center gap-3 hover:shadow cursor-pointer bg-white"
                     >
                       <div>
                         <p className="text-xs text-gray-600">
@@ -718,7 +718,7 @@ const offerTitle =
                         <p className="font-semibold text-black">Without Flight</p>
                       </div>
 
-                      <div className="text-right flex items-center gap-2">
+                      <div className="text-right flex items-center gap-2 shrink-0">
                         <div>
   {offerDiscount > 0 && (
     <p className="text-[11px] font-semibold text-black line-through">
@@ -745,21 +745,21 @@ const offerTitle =
                 )}
               </div>
 
-              <div className="p-4">
-                <div className="flex justify-between items-center mb-2">
-                  <h3 className="font-semibold text-lg text-black">
+              <div className="p-3.5 lg:p-4">
+                <div className="flex justify-between items-start gap-3 mb-2">
+                  <h3 className="font-semibold text-base lg:text-lg leading-snug text-black min-w-0">
                     {pkg.title}
                   </h3>
-                  <span className="text-xs border px-2 py-1 rounded text-black">
+                  <span className="shrink-0 text-xs border px-2 py-1 rounded text-black">
                     {pkg.nights}
                   </span>
                 </div>
 
-                <p className="text-sm text-gray-700 mb-3 font-medium">
+                <p className="text-xs sm:text-sm text-gray-700 mb-3 font-medium leading-relaxed">
                   {pkg.route}
                 </p>
 
-                <div className="grid grid-cols-2 text-sm text-gray-800 gap-2 mb-4">
+                <div className="grid grid-cols-2 text-xs sm:text-sm text-gray-800 gap-2 mb-4">
                   <p>• Round Trip Flights</p>
                   <p>• Intercity Transfers</p>
                   <p>• 4 Star Hotels</p>
@@ -768,20 +768,20 @@ const offerTitle =
                   <p>• Activities</p>
                 </div>
 
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-end gap-3">
                   <div className="text-xs text-gray-700 font-medium">
                     No Cost EMI at <br />
                     {pkg.emi}
                   </div>
 
-                  <div className="text-right">
+                  <div className="text-right shrink-0">
   {offerDiscount > 0 && (
     <p className="text-[15px] font-bold text-black line-through">
       ₹{pkg.withoutFlightPrice.toLocaleString("en-IN")}
     </p>
   )}
 
-  <p className="text-xl font-bold text-black">
+  <p className="text-lg lg:text-xl font-bold text-black">
     ₹{finalOfferPrice.toLocaleString("en-IN")}
   </p>
 
@@ -795,7 +795,7 @@ const offerTitle =
 </div>
                 </div>
 
-                <div className="text-center text-xs text-blue-500 mt-3 font-medium">
+                <div className="mt-3 rounded-lg bg-blue-50 px-3 py-2 text-center text-xs font-semibold text-blue-600">
                   2 More Options Available
                 </div>
               </div>

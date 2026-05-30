@@ -446,7 +446,7 @@ export default function ItineraryTab({
   ];
 
   return (
-    <div className="grid grid-cols-12 gap-6">
+    <div className="grid grid-cols-12 gap-4 lg:gap-6">
       <aside className="col-span-12 lg:col-span-3">
         <div className="lg:sticky" style={{ top: DAY_HEADER_TOP }}>
           <div className="text-base font-bold text-gray-800 mb-2 text-center">
@@ -456,7 +456,7 @@ export default function ItineraryTab({
           <div className="rounded-2xl border bg-white p-3">
             <div
               ref={leftScrollRef}
-              className="relative overflow-y-auto pr-2"
+              className="relative overflow-x-auto overflow-y-hidden pr-0 lg:overflow-y-auto lg:pr-2"
               style={{ maxHeight: leftMaxH }}
             >
               <style jsx>{`
@@ -469,9 +469,9 @@ export default function ItineraryTab({
                 }
               `}</style>
 
-              <div className="absolute left-[10px] top-1 bottom-1 w-[2px] bg-gray-200" />
+              <div className="absolute left-[10px] top-1 bottom-1 hidden w-[2px] bg-gray-200 lg:block" />
 
-              <div className="space-y-2 pl-6">
+              <div className="flex gap-2 lg:block lg:space-y-2 lg:pl-6">
                 {days.map((d) => {
                   const isActive = d.day === activeDay;
 
@@ -482,14 +482,14 @@ export default function ItineraryTab({
                         leftItemRef.current[d.day] = el;
                       }}
                       onClick={() => goToDay(d.day)}
-                      className={`relative w-full text-left rounded-xl px-3 py-2.5 transition ${
+                      className={`relative min-w-[150px] text-left rounded-xl px-3 py-2.5 transition lg:w-full lg:min-w-0 ${
                         isActive
                           ? "bg-[#1E3A8A] text-white"
                           : "bg-white hover:bg-gray-50 text-gray-900"
                       }`}
                     >
                       <span
-                        className={`absolute left-[-18px] top-[14px] h-3 w-3 rounded-full border-2 ${
+                        className={`absolute left-[-18px] top-[14px] hidden h-3 w-3 rounded-full border-2 lg:block ${
                           isActive
                             ? "bg-white border-white"
                             : "bg-white border-gray-300"
@@ -595,11 +595,11 @@ export default function ItineraryTab({
               className="rounded-2xl border bg-white"
             >
               <div
-                className="sticky z-10 bg-white border-b rounded-t-2xl"
+                className="bg-white border-b rounded-t-2xl lg:sticky lg:z-10"
                 style={{ top: DAY_HEADER_TOP }}
               >
-                <div className="px-5 py-4">
-                  <div className="flex items-center gap-3">
+                <div className="px-4 py-4 lg:px-5">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
                     <span className="px-3 py-1 rounded-full bg-gray-100 border text-sm font-bold text-black">
                       Day {d.day}
                     </span>
@@ -636,13 +636,13 @@ export default function ItineraryTab({
                 </div>
               </div>
 
-              <div className="p-5 space-y-3">
+              <div className="space-y-3 p-4 lg:p-5">
                 {flowCards.map((card) => (
                   <div
                     key={card.key}
                     className="rounded-xl border bg-gray-50 px-4 py-3"
                   >
-                    <div className="flex items-start justify-between gap-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
                       <div className="min-w-0">
                         <div className="text-sm font-semibold text-gray-900">
                           {card.title}
@@ -654,7 +654,7 @@ export default function ItineraryTab({
 
                         {(card.selectedLabel || card.includedLabel) ? (
                           <div
-                            className={`mt-2 inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold border ${
+                            className={`mt-2 inline-flex max-w-full items-center rounded-full px-3 py-1 text-[11px] font-semibold border ${
                               card.selectedLabel
                                 ? "border-blue-200 bg-blue-50 text-blue-700"
                                 : "border-gray-200 bg-white text-gray-700"
@@ -671,7 +671,7 @@ export default function ItineraryTab({
                         <button
                           type="button"
                           onClick={() => handleContextAction(card.actionKey)}
-                          className="shrink-0 text-xs font-semibold text-blue-600 hover:text-blue-800"
+                          className="shrink-0 rounded-full border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 hover:text-blue-800 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:text-blue-600"
                         >
                           {card.changeLabel}
                         </button>

@@ -409,7 +409,7 @@ export default function BookingTravellersSection({
 
   return (
     <>
-      <section id="traveller-detail">
+      <section id="traveller-details">
         <div
           style={sectionHeaderStyle}
           onClick={() => setIsOpen((prev) => !prev)}
@@ -526,7 +526,7 @@ export default function BookingTravellersSection({
               ) : null}
             </div>
 
-            <div style={{ padding: "18px", background: "#ffffff" }}>
+            <div className="booking-travellers-body" style={{ padding: "18px", background: "#ffffff" }}>
               <div
                 style={{
                   marginBottom: "18px",
@@ -551,6 +551,7 @@ export default function BookingTravellersSection({
 
                   return (
                     <div
+                      className="booking-traveller-card"
                       key={traveller.id}
                       style={{
                         display: "flex",
@@ -639,7 +640,7 @@ export default function BookingTravellersSection({
               <div style={{ marginTop: "28px" }}>
                 <h3 style={subHeadingStyle}>Booking details will be sent to</h3>
 
-                <div style={grid3Style}>
+                <div className="booking-contact-grid" style={grid3Style}>
                   <Field label="Country Code">
                     <select
                       style={inputStyle}
@@ -723,6 +724,7 @@ export default function BookingTravellersSection({
                   <h3 style={subHeadingStyle}>Your State</h3>
 
                   <div
+                    className="booking-gst-grid"
                     style={{
                       ...grid3Style,
                       gridTemplateColumns: "1fr 1fr",
@@ -799,6 +801,32 @@ export default function BookingTravellersSection({
         isOpen={showLoginModal}
         onClose={() => setShowLoginModal(false)}
       />
+      <style>{`
+        @media (max-width: 767px) {
+          .booking-contact-grid {
+            grid-template-columns: 1fr !important;
+          }
+
+          .booking-travellers-body {
+            padding: 14px !important;
+          }
+
+          .booking-traveller-card {
+            align-items: flex-start !important;
+            flex-direction: column !important;
+            gap: 12px !important;
+            padding: 14px 0 !important;
+          }
+
+          .booking-traveller-card > p {
+            align-self: flex-start !important;
+          }
+
+          .booking-gst-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
     </>
   );
 }

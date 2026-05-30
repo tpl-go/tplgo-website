@@ -70,11 +70,13 @@ export default function PackageHeader({
   };
 
   return (
-    <div className="bg-white border rounded-2xl shadow-sm px-3 py-2">
-      <div className="flex items-start justify-between gap-4">
+    <div className="bg-white border rounded-2xl shadow-sm px-3 py-3 lg:py-2">
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between md:gap-4">
         {/* LEFT */}
         <div className="min-w-0 flex-1">
-          <h1 className="text-xl font-bold text-black">{title}</h1>
+          <h1 className="text-lg font-bold leading-snug text-black md:text-xl">
+            {title}
+          </h1>
 
           <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-gray-700">
             <span
@@ -123,11 +125,11 @@ export default function PackageHeader({
         </div>
 
         {/* RIGHT */}
-        <div className="flex flex-col items-end gap-2 shrink-0">
-          <div className="flex gap-2">
+        <div className="flex w-full flex-col items-stretch gap-2 shrink-0 md:w-auto md:items-end">
+          <div className="grid w-full grid-cols-2 gap-2 md:flex md:w-auto">
             <button
               onClick={() => onVariantChange("withFlight")}
-              className={`px-3.5 py-2 rounded-xl border text-xs font-semibold transition ${
+              className={`w-full px-3.5 py-2 rounded-xl border text-xs font-semibold transition md:w-auto ${
                 variant === "withFlight"
                   ? "bg-orange-500 text-white border-orange-500 shadow-sm"
                   : "bg-white text-gray-800 border-gray-300 hover:shadow-sm"
@@ -138,7 +140,7 @@ export default function PackageHeader({
 
             <button
               onClick={() => onVariantChange("withoutFlight")}
-              className={`px-3.5 py-2 rounded-xl border text-xs font-semibold transition ${
+              className={`w-full px-3.5 py-2 rounded-xl border text-xs font-semibold transition md:w-auto ${
                 variant === "withoutFlight"
                   ? "bg-orange-500 text-white border-orange-500 shadow-sm"
                   : "bg-white text-gray-800 border-gray-300 hover:shadow-sm"
@@ -150,7 +152,7 @@ export default function PackageHeader({
 
           <button
             onClick={onShare}
-            className="text-xs tracking-wider text-gray-600 hover:text-black flex items-center gap-1 mt-1"
+            className="mt-1 flex items-center justify-end gap-1 text-xs tracking-wider text-gray-600 hover:text-black"
           >
             🔗 <span className="underline">Share</span>
           </button>
@@ -158,12 +160,12 @@ export default function PackageHeader({
       </div>
 
       {/* MOBILE FALLBACK */}
-      <div className="mt-2 flex md:hidden flex-wrap gap-2">
+      <div className="mt-2 flex flex-col gap-2 md:hidden sm:flex-row sm:flex-wrap">
         {travelDateLabel ? (
           <button
             type="button"
             onClick={onChangeDate}
-            className="inline-flex items-center gap-2 rounded-full border border-blue-300 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-900 shadow-sm"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-blue-300 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-900 shadow-sm sm:w-auto"
           >
             <span className="text-base">📅</span>
             <span>{travelDateLabel}</span>
@@ -175,7 +177,7 @@ export default function PackageHeader({
           <button
             type="button"
             onClick={onChangeCity}
-            className="inline-flex items-center gap-2 rounded-full border border-orange-300 bg-orange-50 px-4 py-2 text-sm font-semibold text-orange-900 shadow-sm"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-orange-300 bg-orange-50 px-4 py-2 text-sm font-semibold text-orange-900 shadow-sm sm:w-auto"
           >
             <span className="text-base">🛫</span>
             <span>{originCity}</span>

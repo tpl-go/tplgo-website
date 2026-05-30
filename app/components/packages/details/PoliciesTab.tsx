@@ -7,15 +7,15 @@ const Section = ({
   title: string;
   children: React.ReactNode;
 }) => (
-  <div className="bg-white border rounded-2xl p-5 shadow-sm">
+  <div className="bg-white border rounded-2xl p-4 shadow-sm sm:p-5">
     <h3 className="text-sm font-bold text-black">{title}</h3>
-    <div className="mt-3 text-sm text-gray-700 leading-relaxed">{children}</div>
+    <div className="mt-3 text-sm leading-relaxed text-gray-700">{children}</div>
   </div>
 );
 
 export default function PoliciesTab() {
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 px-3 py-3 sm:px-4 sm:py-4">
       <Section title="Cancellation Policy">
         <ul className="list-disc pl-5 space-y-1">
           <li>Cancellation charges depend on date/time of cancellation.</li>

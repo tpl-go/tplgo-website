@@ -253,10 +253,10 @@ export default function PackageMediaGrid({
   const embedUrl = getEmbedUrl(videoUrl);
 
   return (
-    <div className="mt-1">
-      <div className="grid grid-cols-12 gap-3">
+    <div className="mt-1 overflow-hidden">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-12">
         <div
-          className="col-span-12 lg:col-span-3 rounded-2xl overflow-hidden border bg-gray-100 cursor-pointer relative h-[200px]"
+          className="col-span-1 lg:col-span-3 rounded-2xl overflow-hidden border bg-gray-100 cursor-pointer relative h-[180px] sm:h-[220px] lg:h-[200px]"
           onClick={() => goGallery("gallery")}
         >
           <img
@@ -272,7 +272,7 @@ export default function PackageMediaGrid({
         </div>
 
         <div
-          className="col-span-12 lg:col-span-3 rounded-2xl overflow-hidden border bg-black cursor-pointer h-[200px]"
+          className="col-span-1 lg:col-span-3 rounded-2xl overflow-hidden border bg-black cursor-pointer h-[180px] sm:h-[220px] lg:h-[200px]"
           onClick={() => goGallery("video")}
         >
           {embedUrl ? (
@@ -290,7 +290,7 @@ export default function PackageMediaGrid({
           )}
         </div>
 
-        <div className="col-span-12 lg:col-span-2 rounded-2xl border bg-white p-3 h-[200px] overflow-hidden">
+        <div className="col-span-1 lg:col-span-2 rounded-2xl border bg-white p-3 min-h-[150px] overflow-hidden lg:h-[200px]">
           <div className="text-xs font-bold text-gray-800 tracking-wide">
             PACKAGE HIGHLIGHTS
           </div>
@@ -318,21 +318,21 @@ export default function PackageMediaGrid({
         </div>
 
         <div
-          className="col-span-12 lg:col-span-2 rounded-2xl border bg-white p-3 h-[200px] cursor-pointer hover:shadow-sm transition"
+          className="col-span-1 lg:col-span-2 rounded-2xl border bg-white p-3 min-h-[175px] cursor-pointer hover:shadow-sm transition lg:h-[200px]"
           onClick={() => setMapOpen(true)}
         >
           <div className="mb-2 text-[11px] font-bold text-gray-800 tracking-wide">
             {mapTitle}
           </div>
 
-          <div className="rounded-xl overflow-hidden h-[150px] relative z-0">
+          <div className="rounded-xl overflow-hidden h-[135px] relative z-0 lg:h-[150px]">
             <MiniRouteMap places={places} />
           </div>
         </div>
 
-        <div className="col-span-12 lg:col-span-2 h-[200px] grid grid-rows-2 gap-3">
+        <div className="col-span-1 lg:col-span-2 grid grid-cols-2 gap-3 lg:h-[200px] lg:grid-cols-1 lg:grid-rows-2">
           <div
-            className="rounded-2xl border bg-gray-900 text-white flex items-center px-4 cursor-pointer relative overflow-hidden"
+            className="min-h-[86px] rounded-2xl border bg-gray-900 text-white flex items-center px-4 cursor-pointer relative overflow-hidden lg:min-h-0"
             onClick={() => goGallery("activities")}
           >
             <div className="absolute inset-0 opacity-40 bg-gradient-to-b from-black/10 to-black/70" />
@@ -342,7 +342,7 @@ export default function PackageMediaGrid({
           </div>
 
           <div
-            className="rounded-2xl border bg-gray-800 text-white flex items-center px-4 cursor-pointer relative overflow-hidden"
+            className="min-h-[86px] rounded-2xl border bg-gray-800 text-white flex items-center px-4 cursor-pointer relative overflow-hidden lg:min-h-0"
             onClick={() => goGallery("property")}
           >
             <div className="absolute inset-0 opacity-40 bg-gradient-to-b from-black/10 to-black/70" />

@@ -258,7 +258,7 @@ export default function BookingPackageOffersSection({
           <div className="relative mb-4 overflow-hidden rounded-[18px] border border-[#fed7aa] bg-[linear-gradient(135deg,#fff7ed,#ffffff)] p-4">
             <div className="absolute right-0 top-0 h-20 w-20 rounded-full bg-[#fb923c]/10 blur-3xl" />
 
-            <div className="relative flex items-start justify-between gap-3">
+            <div className="relative flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <div className="flex items-center gap-1 rounded-full bg-[linear-gradient(135deg,#f97316,#ea580c)] px-3 py-1 shadow-[0_6px_18px_rgba(249,115,22,0.3)]">
@@ -286,7 +286,7 @@ export default function BookingPackageOffersSection({
               <button
                 type="button"
                 onClick={onRemoveOffer}
-                className="h-[38px] shrink-0 rounded-full border border-[#fed7aa] bg-white px-4 text-[12px] font-black text-[#ea580c]"
+                className="h-[38px] w-full shrink-0 rounded-full border border-[#fed7aa] bg-white px-4 text-[12px] font-black text-[#ea580c] sm:w-auto"
               >
                 Remove
               </button>
@@ -309,7 +309,7 @@ export default function BookingPackageOffersSection({
                 >
                   <div className="absolute right-0 top-0 h-16 w-16 rounded-full bg-[#fb923c]/5 blur-2xl" />
 
-                  <div className="relative flex items-start justify-between gap-3">
+                  <div className="relative flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <div className="rounded-full bg-[#111827] px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-white">
@@ -343,7 +343,7 @@ export default function BookingPackageOffersSection({
                     <button
                       type="button"
                       onClick={() => onApplyOffer(offer)}
-                      className="min-w-[100px] rounded-full border border-[#fdba74] bg-white px-4 py-2 text-[12px] font-black text-[#ea580c] transition-all hover:bg-[#fff7ed]"
+                      className="w-full rounded-full border border-[#fdba74] bg-white px-4 py-2 text-[12px] font-black text-[#ea580c] transition-all hover:bg-[#fff7ed] sm:min-w-[100px] sm:w-auto"
                     >
                       APPLY
                     </button>

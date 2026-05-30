@@ -408,7 +408,7 @@ export default function SummaryTab({
                   key={row.title}
                   className="rounded-xl border bg-white px-4 py-3"
                 >
-                  <div className="flex items-start justify-between gap-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
                     <div className="min-w-0">
                       <div className="text-[14px] font-bold text-[#111827]">
                         {row.title}
@@ -419,7 +419,7 @@ export default function SummaryTab({
                     </div>
 
                     <div
-                      className={`shrink-0 rounded-full px-3 py-1 text-[11px] font-bold ${
+                      className={`w-fit shrink-0 rounded-full px-3 py-1 text-[11px] font-bold ${
                         Number(row.diff || 0) > 0
                           ? "border border-orange-200 bg-orange-50 text-orange-700"
                           : Number(row.diff || 0) < 0
@@ -540,21 +540,21 @@ export default function SummaryTab({
               </div>
 
               <div className="p-4 space-y-3">
-                <div className="flex items-center justify-between text-[14px]">
+                <div className="flex items-center justify-between gap-3 text-[14px]">
                   <span className="font-semibold text-[#4b5563]">Base Package Price</span>
                   <span className="font-bold text-[#111827]">
                     {formatCurrency(basePrice)}
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between text-[14px]">
+                <div className="flex items-center justify-between gap-3 text-[14px]">
                   <span className="font-semibold text-[#4b5563]">Customization Total</span>
                   <span className="font-bold text-[#111827]">
                     {formatCurrency(upgradeTotal)}
                   </span>
                 </div>
 
-                <div className="border-t pt-3 flex items-center justify-between">
+                <div className="border-t pt-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                   <span className="text-[15px] font-extrabold text-[#111827]">
                     Final Price / Adult
                   </span>

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import LoginModal from "@/app/components/common/LoginModal";
+import MobileInnerBack from "@/app/components/common/mobile/MobileInnerBack";
 
 import PackageConfirmationSuccessHeader from "@/app/components/confirmation/packages/PackageConfirmationSuccessHeader";
 import PackageConfirmationSummaryCard from "@/app/components/confirmation/packages/PackageConfirmationSummaryCard";
@@ -508,11 +509,13 @@ const payloadStorageKey = `tpl_booking_payload_package_${safePaidAt}_${mobile}_$
   const handlePrint = () => window.print();
 
   return (
-    <main className="min-h-screen bg-[#eef3f8] text-black">
-      
+    <main className="min-h-screen overflow-x-hidden bg-[#eef3f8] text-black">
+      <div className="mx-auto max-w-7xl px-3 pt-4 lg:hidden">
+        <MobileInnerBack title="Back" />
+      </div>
 
-      <div className="bg-green-50 border-b border-green-200 text-center py-4">
-        <div className="font-black text-green-700 text-lg">
+      <div className="mt-4 border-b border-green-200 bg-green-50 px-4 py-4 text-center lg:mt-0">
+        <div className="text-base font-black text-green-700 sm:text-lg">
           🎉 Package Booking Confirmed
         </div>
         <div className="text-sm text-green-600">
@@ -520,7 +523,7 @@ const payloadStorageKey = `tpl_booking_payload_package_${safePaidAt}_${mobile}_$
         </div>
 
         {finalEarnedCreditAmount > 0 ? (
-          <div className="mt-2 text-sm font-bold text-green-700">
+          <div className="mt-2 text-sm font-bold leading-5 text-green-700">
             🎁 You earned ₹
             {Number(finalEarnedCreditAmount).toLocaleString("en-IN")} TPL
             Earned Credit on this booking.
@@ -528,8 +531,8 @@ const payloadStorageKey = `tpl_booking_payload_package_${safePaidAt}_${mobile}_$
         ) : null}
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-6 flex gap-4">
-        <div className="w-[72%] flex flex-col gap-4">
+      <div className="mx-auto flex max-w-7xl flex-col gap-4 px-3 py-4 sm:px-4 lg:flex-row lg:gap-4 lg:py-6">
+        <div className="flex min-w-0 flex-col gap-4 lg:w-[72%]">
           <PackageConfirmationSuccessHeader
             bookingId={bookingId}
             title={summary.packageTitle || "Package Booking Confirmed"}
@@ -545,7 +548,7 @@ const payloadStorageKey = `tpl_booking_payload_package_${safePaidAt}_${mobile}_$
           />
 
           {finalEarnedCreditAmount > 0 ? (
-            <div className="rounded-2xl border border-green-200 bg-green-50 px-5 py-4 text-[14px] font-bold text-green-700">
+            <div className="rounded-2xl border border-green-200 bg-green-50 px-4 py-4 text-[14px] font-bold leading-5 text-green-700 sm:px-5">
               🎉 You earned ₹
               {Number(finalEarnedCreditAmount).toLocaleString("en-IN")} TPL
               Earned Credit. This has been added to your wallet.
@@ -655,7 +658,7 @@ const payloadStorageKey = `tpl_booking_payload_package_${safePaidAt}_${mobile}_$
           />
         </div>
 
-        <div className="w-[28%]">
+        <div className="min-w-0 lg:w-[28%]">
           <PackageConfirmationActionsCard
             bookingId={bookingId}
             paymentId={paymentId}

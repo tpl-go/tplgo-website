@@ -2,12 +2,14 @@
 
 import { useMemo, useState, use, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { ChevronDown, Globe2, X } from "lucide-react";
 
 import ContinentBanner from "../../components/continent/ContinentBanner";
 import CountryTabs from "../../components/continent/CountryTabs";
 import ContinentFilters from "../../components/continent/ContinentFilters";
 import ContinentPackagesGrid from "../../components/continent/ContinentPackagesGrid";
 import ContinentTabs from "../../components/homepage/continents/ContinentTabs";
+import MobileInnerBack from "../../components/common/mobile/MobileInnerBack";
 
 interface PageProps {
   params: Promise<{
@@ -217,6 +219,7 @@ export default function ContinentPage({ params }: PageProps) {
   const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
   const [resetFilters, setResetFilters] = useState(false);
   const [isManualCountrySelection, setIsManualCountrySelection] = useState(false);
+  const [isContinentSheetOpen, setIsContinentSheetOpen] = useState(false);
 
   const matchedCountry = searchParams.get("matchedCountry") || "";
   const toCity = searchParams.get("toCity") || "";
@@ -244,6 +247,11 @@ export default function ContinentPage({ params }: PageProps) {
     router.push(`/continent/${selectedContinent.routeSlug}?${params.toString()}`);
   };
 
+  const handleMobileContinentSwitch = (id: string) => {
+    setIsContinentSheetOpen(false);
+    handleContinentSwitch(id);
+  };
+
   const handleCountryChange = (country: string) => {
     setIsManualCountrySelection(true);
     setActiveCountry(country);
@@ -257,18 +265,47 @@ export default function ContinentPage({ params }: PageProps) {
   };
 
   return (
-    <main className="relative">
+    <main className="relative overflow-x-hidden">
+      <div className="absolute left-3 top-3 z-30 lg:hidden">
+        <MobileInnerBack title="Back" />
+      </div>
+
       <ContinentBanner slug={bannerSlug} />
 
-      <div className="max-w-7xl mx-auto px-4 -mt-10 relative z-20">
-        <div className="bg-white/95 backdrop-blur border rounded-2xl shadow-sm px-4 pt-4 pb-6">
-          <ContinentTabs
-            continents={continents}
-            active={activeContinentId}
-            setActive={handleContinentSwitch}
-          />
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 -mt-6 lg:-mt-10 relative z-20">
+        <div className="bg-white/95 backdrop-blur border rounded-2xl shadow-sm px-3 pt-3 pb-4 lg:px-4 lg:pt-4 lg:pb-6">
+          <div className="md:hidden">
+            <button
+              type="button"
+              onClick={() => setIsContinentSheetOpen(true)}
+              className="flex w-full items-center justify-between rounded-2xl border border-orange-100 bg-gradient-to-r from-orange-50 to-white px-3.5 py-3 text-left shadow-sm"
+            >
+              <span className="flex min-w-0 items-center gap-3">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-orange-500 text-white">
+                  <Globe2 className="h-4 w-4" />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-[11px] font-bold uppercase tracking-wide text-orange-600">
+                    Continent
+                  </span>
+                  <span className="block truncate text-sm font-bold text-black">
+                    {continentConfig.displayName}
+                  </span>
+                </span>
+              </span>
+              <ChevronDown className="h-4 w-4 shrink-0 text-gray-500" />
+            </button>
+          </div>
 
-          <div className="-mt-10 rounded-3x1">
+          <div className="hidden md:block">
+            <ContinentTabs
+              continents={continents}
+              active={activeContinentId}
+              setActive={handleContinentSwitch}
+            />
+          </div>
+
+          <div className="mt-3 lg:-mt-10 rounded-3x1">
             <CountryTabs
               slug={bannerSlug}
               countries={countries}
@@ -279,10 +316,62 @@ export default function ContinentPage({ params }: PageProps) {
         </div>
       </div>
 
-      <section className="max-w-7xl mx-auto px-4 pb-16 mt-4">
-        <div className="bg-white border rounded-xl shadow-sm p-6">
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-            <div className="lg:col-span-1 sticky top-32 h-fit">
+      {isContinentSheetOpen && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          <button
+            type="button"
+            aria-label="Close continent selector"
+            className="absolute inset-0 bg-black/45"
+            onClick={() => setIsContinentSheetOpen(false)}
+          />
+          <div className="absolute inset-x-0 bottom-0 rounded-t-3xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b px-4 py-3">
+              <div>
+                <p className="text-base font-bold text-black">Choose continent</p>
+                <p className="text-xs text-gray-500">Switch package results instantly</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsContinentSheetOpen(false)}
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-black"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 gap-2 px-4 py-4">
+              {CONTINENT_REGISTRY.map((continent) => {
+                const isActive = continent.id === activeContinentId;
+
+                return (
+                  <button
+                    key={continent.id}
+                    type="button"
+                    onClick={() => handleMobileContinentSwitch(continent.id)}
+                    className={`flex items-center justify-between rounded-2xl border px-4 py-3 text-left transition ${
+                      isActive
+                        ? "border-orange-500 bg-orange-50 text-orange-600"
+                        : "border-gray-200 bg-white text-black"
+                    }`}
+                  >
+                    <span className="text-sm font-bold">{continent.displayName}</span>
+                    <span
+                      className={`h-2.5 w-2.5 rounded-full ${
+                        isActive ? "bg-orange-500" : "bg-gray-300"
+                      }`}
+                    />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <section className="max-w-7xl mx-auto px-3 sm:px-4 pb-20 lg:pb-16 mt-4">
+        <div className="bg-white lg:border lg:rounded-xl lg:shadow-sm lg:p-6">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 lg:gap-8">
+            <div className="lg:col-span-1 lg:sticky lg:top-32 h-fit">
               <ContinentFilters
                 selectedFilters={selectedFilters}
                 setSelectedFilters={setSelectedFilters}

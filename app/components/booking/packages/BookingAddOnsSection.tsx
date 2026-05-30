@@ -91,8 +91,16 @@ export default function BookingAddOnsSection({
 
       {/* INSURANCE MODAL */}
       {showInsuranceDetails && (
-        <div onClick={() => setShowInsuranceDetails(false)} style={modalOverlay}>
-          <div onClick={(e) => e.stopPropagation()} style={modalBox}>
+        <div
+          className="booking-addon-modal-overlay"
+          onClick={() => setShowInsuranceDetails(false)}
+          style={modalOverlay}
+        >
+          <div
+            className="booking-addon-modal-box"
+            onClick={(e) => e.stopPropagation()}
+            style={modalBox}
+          >
             <div style={modalHeader}>
               <h3 style={{ margin: 0 }}>Insurance Details</h3>
               <button
@@ -113,8 +121,16 @@ export default function BookingAddOnsSection({
 
       {/* VISA MODAL */}
       {showVisaDetails && (
-        <div onClick={() => setShowVisaDetails(false)} style={modalOverlay}>
-          <div onClick={(e) => e.stopPropagation()} style={modalBox}>
+        <div
+          className="booking-addon-modal-overlay"
+          onClick={() => setShowVisaDetails(false)}
+          style={modalOverlay}
+        >
+          <div
+            className="booking-addon-modal-box"
+            onClick={(e) => e.stopPropagation()}
+            style={modalBox}
+          >
             <div style={modalHeader}>
               <h3 style={{ margin: 0 }}>Visa Protect Details</h3>
               <button
@@ -135,6 +151,37 @@ export default function BookingAddOnsSection({
           </div>
         </div>
       )}
+
+      <style>{`
+        @media (max-width: 767px) {
+          .booking-addon-modal-overlay {
+            align-items: stretch !important;
+            padding: 0 !important;
+            z-index: 1300 !important;
+          }
+
+          .booking-addon-modal-box {
+            display: flex !important;
+            width: 100% !important;
+            min-height: 100dvh !important;
+            flex-direction: column !important;
+            border-radius: 0 !important;
+          }
+
+          .booking-addon-card-top {
+            flex-direction: column !important;
+            gap: 12px !important;
+          }
+
+          .booking-addon-card-action {
+            text-align: left !important;
+          }
+
+          .booking-addon-select-btn {
+            width: 100% !important;
+          }
+        }
+      `}</style>
     </>
   );
 }
@@ -169,7 +216,7 @@ function CardContent({
 }: any) {
   return (
     <div style={cardBox}>
-      <div style={cardTop}>
+      <div className="booking-addon-card-top" style={cardTop}>
         <div>
           <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
             <h5 style={cardTitle}>{title}</h5>
@@ -194,8 +241,12 @@ function CardContent({
         ))}
       </div>
 
-      <div style={{ marginTop: "18px", textAlign: "right" }}>
+      <div
+        className="booking-addon-card-action"
+        style={{ marginTop: "18px", textAlign: "right" }}
+      >
         <button
+          className="booking-addon-select-btn"
           onClick={onToggle}
           style={{
             ...selectBtn,

@@ -13,7 +13,6 @@ import {
   UtensilsCrossed,
   Ticket,
   Shield,
-  Phone,
   Mail,
   FileText,
   CheckCircle2,
@@ -369,7 +368,7 @@ export default function PaymentTopSummary({
 
   return (
     <section className="rounded-[24px] border border-slate-200 bg-white overflow-hidden shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
-      <div className="bg-gradient-to-r from-[#eef6ff] via-white to-[#fff5ea] border-b border-slate-200 px-5 py-5">
+      <div className="bg-gradient-to-r from-[#eef6ff] via-white to-[#fff5ea] border-b border-slate-200 px-4 py-4 sm:px-5 sm:py-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
@@ -391,11 +390,11 @@ export default function PaymentTopSummary({
               ) : null}
             </div>
 
-            <div className="mt-3 text-[24px] font-black leading-tight text-slate-900">
+            <div className="mt-3 break-words text-[22px] font-black leading-tight text-slate-900 sm:text-[24px]">
               {title}
             </div>
 
-            <div className="mt-2 flex items-center gap-2 text-[14px] text-slate-600">
+            <div className="mt-2 flex min-w-0 items-center gap-2 text-[14px] text-slate-600">
               <MapPin size={16} className="text-orange-500 shrink-0" />
               <span className="truncate">{routeLabel}</span>
             </div>
@@ -467,7 +466,7 @@ export default function PaymentTopSummary({
         </div>
       </div>
 
-      <div className="px-5 py-4 border-b border-slate-200 bg-white">
+      <div className="px-4 py-4 border-b border-slate-200 bg-white sm:px-5">
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
           {serviceCards.map((item) => (
             <div
@@ -489,9 +488,9 @@ export default function PaymentTopSummary({
         </div>
       </div>
 
-      <div className="px-5 py-4 bg-white">
+      <div className="px-4 py-4 bg-white sm:px-5">
         <div className="flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-3">
             <BadgeText
               label="Room Mix"
               value={roomMixLabel}
@@ -520,7 +519,7 @@ export default function PaymentTopSummary({
           <button
             type="button"
             onClick={() => setShowDetails((prev) => !prev)}
-            className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-2 text-[13px] font-extrabold text-slate-800 transition hover:border-sky-400 hover:text-sky-700"
+            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-full border border-slate-300 bg-white px-4 text-[13px] font-extrabold text-slate-800 transition hover:border-sky-400 hover:text-sky-700 sm:w-auto"
           >
             {showDetails ? "Hide Details" : "View Details"}
             {showDetails ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
@@ -776,11 +775,11 @@ function BadgeText({
   };
 
   return (
-    <div className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 ${colorMap[color].box}`}>
+    <div className={`inline-flex max-w-full flex-wrap items-center gap-2 rounded-full border px-3 py-2 ${colorMap[color].box}`}>
       <span className={`text-[11px] font-extrabold uppercase ${colorMap[color].label}`}>
         {label}
       </span>
-      <span className="text-[12px] font-bold">{value}</span>
+      <span className="min-w-0 break-words text-[12px] font-bold">{value}</span>
     </div>
   );
 }

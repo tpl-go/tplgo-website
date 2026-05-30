@@ -104,14 +104,14 @@ export default function PackageChangeActivityModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[240] overflow-y-auto bg-black/45 backdrop-blur-[2px]">
-      <div className="flex min-h-full items-start justify-center px-4 py-4">
-        <div className="my-2 w-full max-w-[920px] overflow-hidden rounded-[28px] border border-[#dbe4f0] bg-white shadow-[0_20px_60px_rgba(15,23,42,0.22)]">
+    <div className="fixed inset-0 z-[240] overflow-hidden bg-black/45 backdrop-blur-[2px] lg:overflow-y-auto">
+      <div className="flex h-[100dvh] items-stretch justify-center p-0 lg:h-auto lg:min-h-full lg:items-start lg:px-4 lg:py-4">
+        <div className="flex h-full w-full flex-col overflow-hidden rounded-none border border-[#dbe4f0] bg-white shadow-[0_20px_60px_rgba(15,23,42,0.22)] lg:my-2 lg:h-auto lg:max-w-[920px] lg:rounded-[28px]">
           {/* HEADER */}
-          <div className="border-b border-[#e5edf6] bg-white px-6 py-5">
+          <div className="shrink-0 border-b border-[#e5edf6] bg-white px-4 py-4 lg:px-6 lg:py-5">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <div className="text-[24px] font-black leading-none text-[#111827]">
+                <div className="text-[20px] font-black leading-none text-[#111827] lg:text-[24px]">
                   Change Activity
                 </div>
 
@@ -149,8 +149,8 @@ export default function PackageChangeActivityModal({
           </div>
 
           {/* SWITCHER */}
-          <div className="border-b border-[#e5edf6] bg-[#f8fbff] px-6 py-3">
-            <div className="flex flex-wrap gap-3">
+          <div className="shrink-0 border-b border-[#e5edf6] bg-[#f8fbff] px-4 py-3 lg:px-6">
+            <div className="flex gap-3 overflow-x-auto pb-1 lg:flex-wrap lg:overflow-visible lg:pb-0">
               {activityPlans.map((activityIndex) => {
                 const selectedActivity =
                   selectedActivities?.[activityIndex] || defaultIncludedActivity || null;
@@ -163,7 +163,7 @@ export default function PackageChangeActivityModal({
                     key={activityIndex}
                     type="button"
                     onClick={() => setActiveActivityIndex(activityIndex)}
-                    className={`min-w-[165px] rounded-xl border px-3 py-2 text-left transition ${
+                    className={`min-w-[150px] rounded-xl border px-3 py-2 text-left transition lg:min-w-[165px] ${
                       isActive
                         ? "border-blue-500 bg-blue-50 shadow-sm"
                         : hasSelection
@@ -201,7 +201,7 @@ export default function PackageChangeActivityModal({
           </div>
 
           {/* BODY */}
-          <div className="max-h-[46vh] overflow-y-auto bg-[#f8fafc] px-6 py-4">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-[#f8fafc] px-3 py-3 pb-6 lg:max-h-[46vh] lg:px-6 lg:py-4">
             <div className="overflow-hidden rounded-2xl border border-[#dbe7f3] bg-white">
               <div className="border-b border-[#e7eef7] bg-[#f8fbff] px-4 py-3">
                 <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
@@ -315,14 +315,14 @@ export default function PackageChangeActivityModal({
           </div>
 
           {/* FOOTER */}
-          <div className="flex items-center justify-between border-t border-[#e5edf6] bg-white px-6 py-4">
+          <div className="flex shrink-0 flex-col gap-3 border-t border-[#e5edf6] bg-white px-4 py-4 lg:flex-row lg:items-center lg:justify-between lg:px-6">
             <div className="text-xs font-medium text-[#4b5563]">
               Activity pricing will be revalidated on booking.
             </div>
 
             <button
               onClick={handleClose}
-              className="rounded-xl border px-5 py-2.5 text-sm font-bold text-[#111827] transition hover:bg-slate-50"
+              className="w-full rounded-xl border px-5 py-2.5 text-sm font-bold text-[#111827] transition hover:bg-slate-50 lg:w-auto"
             >
               Done
             </button>

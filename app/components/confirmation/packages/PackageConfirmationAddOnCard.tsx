@@ -28,6 +28,7 @@ export default function PackageConfirmationAddOnCard({
 
   return (
     <section
+      className="pkg-confirm-addon"
       style={{
         border: "1px solid #d9e2ec",
         borderRadius: "22px",
@@ -37,6 +38,7 @@ export default function PackageConfirmationAddOnCard({
       }}
     >
       <div
+        className="pkg-confirm-card-head"
         style={{
           padding: "18px 20px",
           borderBottom: "1px solid #e5e7eb",
@@ -67,9 +69,10 @@ export default function PackageConfirmationAddOnCard({
         </div>
       </div>
 
-      <div style={{ padding: "20px" }}>
+      <div className="pkg-confirm-card-body" style={{ padding: "20px" }}>
         {hasAnyAddOn ? (
           <div
+            className="pkg-confirm-addon-grid"
             style={{
               display: "grid",
               gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
@@ -182,6 +185,24 @@ export default function PackageConfirmationAddOnCard({
           </div>
         )}
       </div>
+
+      <style>{`
+        @media (max-width: 767px) {
+          .pkg-confirm-addon {
+            border-radius: 18px !important;
+          }
+
+          .pkg-confirm-card-head,
+          .pkg-confirm-card-body {
+            padding: 16px !important;
+          }
+
+          .pkg-confirm-addon-grid {
+            grid-template-columns: 1fr !important;
+            gap: 12px !important;
+          }
+        }
+      `}</style>
     </section>
   );
 }

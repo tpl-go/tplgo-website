@@ -1,4 +1,5 @@
 import Link from "next/link";
+import MobileInnerBack from "@/app/components/common/mobile/MobileInnerBack";
 import {
   ArrowRight,
   Bot,
@@ -56,8 +57,12 @@ const futureItems = [
 
 export default function ExplorePage() {
   return (
-    <main className="min-h-screen bg-white text-slate-900">
-      <section className="relative overflow-hidden bg-[#061839] px-3 py-10 text-white sm:px-4 md:py-20">
+    <main className="relative min-h-screen overflow-x-hidden bg-white text-slate-900">
+      <div className="absolute left-3 top-3 z-30 lg:hidden">
+        <MobileInnerBack title="Back" />
+      </div>
+
+      <section className="relative overflow-hidden bg-[#061839] px-3 pb-10 pt-16 text-white sm:px-4 md:py-20">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.36),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(14,165,233,0.26),transparent_40%)]" />
         <div className="absolute inset-0 bg-black/20" />
 
@@ -82,13 +87,13 @@ export default function ExplorePage() {
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap md:mt-8">
               <Link
                 href="/"
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-bold text-[#061839] shadow-xl transition hover:-translate-y-0.5"
+                className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-bold text-[#061839] shadow-xl transition hover:-translate-y-0.5 sm:w-auto"
               >
                 Back to TPL
                 <ArrowRight size={17} />
               </Link>
 
-              <button className="rounded-full border border-white/25 bg-white/10 px-6 py-3 text-sm font-bold text-white backdrop-blur-md">
+              <button className="min-h-11 w-full rounded-full border border-white/25 bg-white/10 px-6 py-3 text-sm font-bold text-white backdrop-blur-md sm:w-auto">
                 Join Waitlist
               </button>
             </div>
@@ -98,11 +103,11 @@ export default function ExplorePage() {
             {showcaseItems.map((item, index) => (
               <div
                 key={item}
-                className={`min-h-[138px] rounded-[22px] border border-white/15 bg-white/10 p-4 shadow-2xl backdrop-blur-xl sm:min-h-[150px] md:min-h-[185px] md:rounded-[30px] md:p-5 ${
+                className={`min-h-[118px] rounded-[22px] border border-white/15 bg-white/10 p-4 shadow-2xl backdrop-blur-xl sm:min-h-[150px] md:min-h-[185px] md:rounded-[30px] md:p-5 ${
                   index % 2 === 1 ? "sm:mt-10" : ""
                 }`}
               >
-                <div className="mb-6 inline-flex rounded-full bg-white/15 px-3 py-1 text-xs font-bold md:mb-14">
+                <div className="mb-4 inline-flex rounded-full bg-white/15 px-3 py-1 text-xs font-bold md:mb-14">
                   Coming Soon
                 </div>
 
@@ -255,7 +260,7 @@ export default function ExplorePage() {
         </div>
       </section>
 
-      <section className="px-3 py-10 sm:px-4 md:py-16">
+      <section className="px-3 pb-20 pt-10 sm:px-4 md:py-16">
         <div className="mx-auto max-w-5xl rounded-[24px] bg-gradient-to-br from-[#061839] via-[#0b3a7a] to-[#0b5cff] p-5 text-center text-white shadow-2xl md:rounded-[34px] md:p-12">
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-100 md:text-sm md:tracking-[0.25em]">
             Something big is coming
@@ -272,13 +277,13 @@ export default function ExplorePage() {
           </p>
 
           <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row sm:flex-wrap">
-            <button className="rounded-full bg-white px-7 py-3 text-sm font-bold text-[#061839]">
+            <button className="min-h-11 w-full rounded-full bg-white px-7 py-3 text-sm font-bold text-[#061839] sm:w-auto">
               Join Waitlist
             </button>
 
             <Link
               href="/"
-              className="rounded-full border border-white/25 bg-white/10 px-7 py-3 text-sm font-bold text-white backdrop-blur-md"
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-white/25 bg-white/10 px-7 py-3 text-sm font-bold text-white backdrop-blur-md sm:w-auto"
             >
               Explore TPL
             </Link>
