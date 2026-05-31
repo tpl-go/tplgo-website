@@ -147,13 +147,13 @@ export default function CabResultDateField({
         value={formatDisplayDate(value)}
         onClick={() => setOpen((prev) => !prev)}
         placeholder={placeholder}
-        className="w-full cursor-pointer bg-transparent text-[16px] font-semibold text-white outline-none placeholder:text-slate-400"
+        className="w-full cursor-pointer bg-transparent text-[15px] font-semibold text-white outline-none placeholder:text-slate-400 sm:text-[16px]"
       />
 
       {open && (
         <div
           ref={popupRef}
-          className="absolute left-0 top-[calc(100%+8px)] z-[140] w-[320px] rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl"
+          className="absolute left-0 top-[calc(100%+8px)] z-[140] w-[min(calc(100vw-2rem),320px)] rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl"
         >
           <div className="mb-4 flex items-center justify-between">
             <button

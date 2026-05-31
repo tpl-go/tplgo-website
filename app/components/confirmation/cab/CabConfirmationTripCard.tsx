@@ -14,11 +14,13 @@ function InfoItem({
   value: string;
 }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4">
+    <div className="min-w-0 rounded-xl border border-slate-200 bg-white p-4">
       <div className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
         {label}
       </div>
-      <div className="mt-2 text-[15px] font-bold text-slate-900">{value}</div>
+      <div className="mt-2 break-words text-[15px] font-bold text-slate-900">
+        {value}
+      </div>
     </div>
   );
 }

@@ -2,55 +2,69 @@
 
 import { useState } from "react";
 
-type PaymentOptionKey =
-  | "upi"
-  | "cards"
-  | "emi"
-  | "netbanking"
-  | "paylater"
-  | "wallets";
+const QR_DARK_CELLS = new Set([
+  0, 1, 2, 3, 4, 7, 11, 14, 18, 21, 22, 23, 24, 25, 28, 30, 32, 34, 36, 38,
+  40, 42, 43, 44, 45, 46, 48,
+]);
+
+type PaymentOptionKey = "upi" | "qr" | "cards" | "emi" | "netbanking";
 
 type Props = {
   defaultOption?: PaymentOptionKey | null;
+  payableAmount?: number;
   onPaymentMethodChange?: (method: string) => void;
 };
 
 export default function CabPaymentOptionSection({
   defaultOption = null,
+  payableAmount = 0,
   onPaymentMethodChange,
 }: Props) {
   const [activeOption, setActiveOption] =
     useState<PaymentOptionKey | null>(defaultOption);
-
   const [selectedUpiMethod, setSelectedUpiMethod] = useState("");
-  const [selectedEmiPlan, setSelectedEmiPlan] = useState("");
-  const [selectedPayLater, setSelectedPayLater] = useState("");
+
+  function selectOption(option: PaymentOptionKey) {
+    const next = activeOption === option ? null : option;
+    setActiveOption(next);
+    onPaymentMethodChange?.(next ? option : "");
+  }
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-[#d9e2ec] bg-white shadow-[0_2px_8px_rgba(15,23,42,0.04)]">
-      <div className="border-b border-[#e5e7eb] px-5 py-[18px] text-[20px] font-extrabold text-[#111827]">
+    <section
+      style={{
+        border: "1px solid #d9e2ec",
+        background: "#ffffff",
+        borderRadius: "16px",
+        overflow: "hidden",
+        boxShadow: "0 2px 8px rgba(15,23,42,0.04)",
+      }}
+    >
+      <div
+        style={{
+          padding: "18px 20px",
+          borderBottom: "1px solid #e5e7eb",
+          fontSize: "26px",
+          fontWeight: 800,
+          color: "#111827",
+        }}
+      >
         Payment Options
       </div>
 
       <PaymentRow
         icon="🇮🇳"
         title="UPI Options"
-        subtitle="Pay directly from your bank account"
+        subtitle="Pay Directly From Your Bank Account"
         isActive={activeOption === "upi"}
-        onClick={() => {
-          const next = activeOption === "upi" ? null : "upi";
-          setActiveOption(next);
-          onPaymentMethodChange?.(next ? "upi" : "");
-        }}
+        onClick={() => selectOption("upi")}
       />
 
       {activeOption === "upi" && (
         <ExpandedBox>
-          <div className="text-[14px] font-extrabold text-[#111827]">
-            Choose UPI Method
-          </div>
+          <div style={expandedTitleStyle}>Choose UPI Method</div>
 
-          <div className="mt-[14px] grid grid-cols-2 gap-3">
+          <div style={gridStyle}>
             {["Google Pay", "PhonePe", "Paytm", "BHIM UPI"].map((item) => (
               <SelectableMiniCard
                 key={item}
@@ -58,20 +72,56 @@ export default function CabPaymentOptionSection({
                 isSelected={selectedUpiMethod === item}
                 onClick={() => {
                   setSelectedUpiMethod(item);
-                  onPaymentMethodChange?.(`upi:${item}`);
+                  onPaymentMethodChange?.("upi");
                 }}
               />
             ))}
           </div>
 
-          <div className="mt-[18px]">
-            <label className="mb-2 block text-[12px] font-bold text-[#374151]">
-              Enter UPI ID
-            </label>
-            <input
-              placeholder="example@upi"
-              className="h-[44px] w-full rounded-[10px] border border-[#d1d5db] px-[14px] text-[13px] text-[#111827] outline-none"
-            />
+          <div style={{ marginTop: "18px" }}>
+            <label style={fieldLabelStyle}>Enter UPI ID</label>
+            <input placeholder="example@upi" style={inputStyle} />
+          </div>
+        </ExpandedBox>
+      )}
+
+      <PaymentRow
+        icon="▦"
+        title="QR Payment"
+        subtitle="Scan and pay using any UPI app"
+        badge="UPI QR"
+        isActive={activeOption === "qr"}
+        onClick={() => selectOption("qr")}
+      />
+
+      {activeOption === "qr" && (
+        <ExpandedBox>
+          <div style={expandedTitleStyle}>Scan QR using any UPI app</div>
+
+          <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center">
+            <div className="mx-auto grid h-[168px] w-[168px] shrink-0 grid-cols-7 gap-1 rounded-2xl border border-[#d9e2ec] bg-white p-3 shadow-sm sm:mx-0">
+              {Array.from({ length: 49 }).map((_, index) => (
+                <span
+                  key={index}
+                  className={`rounded-[2px] ${
+                    QR_DARK_CELLS.has(index)
+                      ? "bg-[#0f172a]"
+                      : "bg-[#e2e8f0]"
+                  }`}
+                />
+              ))}
+            </div>
+
+            <div className="min-w-0 flex-1 rounded-2xl bg-[#f8fbff] p-4">
+              <div className="text-[13px] font-extrabold text-[#111827]">
+                Amount: ₹{Math.round(payableAmount || 0).toLocaleString("en-IN")}
+              </div>
+              <div className="mt-2 text-[12px] font-semibold leading-5 text-[#475569]">
+                After payment, click Confirm Payment. This is a QR placeholder
+                for the current booking amount; gateway verification is not
+                integrated yet.
+              </div>
+            </div>
           </div>
         </ExpandedBox>
       )}
@@ -81,59 +131,33 @@ export default function CabPaymentOptionSection({
         title="Credit & Debit Cards"
         subtitle="Visa, Mastercard, Amex, Rupay and more"
         isActive={activeOption === "cards"}
-        onClick={() => {
-          const next = activeOption === "cards" ? null : "cards";
-          setActiveOption(next);
-          onPaymentMethodChange?.(next ? "cards" : "");
-        }}
+        onClick={() => selectOption("cards")}
       />
 
       {activeOption === "cards" && (
         <ExpandedBox>
-          <div className="text-[14px] font-extrabold text-[#111827]">
-            Card Details
+          <div style={expandedTitleStyle}>Card Details</div>
+
+          <div style={{ marginTop: "16px" }}>
+            <label style={fieldLabelStyle}>Card Number</label>
+            <input placeholder="1234 5678 9012 3456" style={inputStyle} />
           </div>
 
-          <div className="mt-4">
-            <label className="mb-2 block text-[12px] font-bold text-[#374151]">
-              Card Number
-            </label>
-            <input
-              placeholder="1234 5678 9012 3456"
-              className="h-[44px] w-full rounded-[10px] border border-[#d1d5db] px-[14px] text-[13px] text-[#111827] outline-none"
-            />
-          </div>
-
-          <div className="mt-[14px] grid grid-cols-2 gap-[14px]">
+          <div className="mt-[14px] grid grid-cols-1 gap-[14px] sm:grid-cols-2">
             <div>
-              <label className="mb-2 block text-[12px] font-bold text-[#374151]">
-                Expiry
-              </label>
-              <input
-                placeholder="MM/YY"
-                className="h-[44px] w-full rounded-[10px] border border-[#d1d5db] px-[14px] text-[13px] text-[#111827] outline-none"
-              />
+              <label style={fieldLabelStyle}>Expiry</label>
+              <input placeholder="MM/YY" style={inputStyle} />
             </div>
 
             <div>
-              <label className="mb-2 block text-[12px] font-bold text-[#374151]">
-                CVV
-              </label>
-              <input
-                placeholder="123"
-                className="h-[44px] w-full rounded-[10px] border border-[#d1d5db] px-[14px] text-[13px] text-[#111827] outline-none"
-              />
+              <label style={fieldLabelStyle}>CVV</label>
+              <input placeholder="123" style={inputStyle} />
             </div>
           </div>
 
-          <div className="mt-[14px]">
-            <label className="mb-2 block text-[12px] font-bold text-[#374151]">
-              Name on Card
-            </label>
-            <input
-              placeholder="Enter card holder name"
-              className="h-[44px] w-full rounded-[10px] border border-[#d1d5db] px-[14px] text-[13px] text-[#111827] outline-none"
-            />
+          <div style={{ marginTop: "14px" }}>
+            <label style={fieldLabelStyle}>Name on Card</label>
+            <input placeholder="Enter card holder name" style={inputStyle} />
           </div>
         </ExpandedBox>
       )}
@@ -141,134 +165,30 @@ export default function CabPaymentOptionSection({
       <PaymentRow
         icon="🧾"
         title="EMI"
-        subtitle="Credit / Debit Card & cardless EMI available"
-        badge="NO COST EMI"
-        isActive={activeOption === "emi"}
-        onClick={() => {
-          const next = activeOption === "emi" ? null : "emi";
-          setActiveOption(next);
-          onPaymentMethodChange?.(next ? "emi" : "");
-        }}
+        subtitle="Coming soon"
+        badge="COMING SOON"
+        disabled
       />
-
-      {activeOption === "emi" && (
-        <ExpandedBox>
-          <div className="text-[14px] font-extrabold text-[#111827]">
-            Choose EMI Option
-          </div>
-
-          <div className="mt-[14px] grid grid-cols-2 gap-3">
-            {["3 Months", "6 Months", "9 Months", "12 Months"].map((item) => (
-              <SelectableMiniCard
-                key={item}
-                label={item}
-                isSelected={selectedEmiPlan === item}
-                onClick={() => {
-                  setSelectedEmiPlan(item);
-                  onPaymentMethodChange?.(`emi:${item}`);
-                }}
-              />
-            ))}
-          </div>
-        </ExpandedBox>
-      )}
 
       <PaymentRow
         icon="🏦"
         title="Net Banking"
-        subtitle="40+ banks available"
+        subtitle="40+ Banks Available"
         isActive={activeOption === "netbanking"}
-        onClick={() => {
-          const next = activeOption === "netbanking" ? null : "netbanking";
-          setActiveOption(next);
-          onPaymentMethodChange?.(next ? "netbanking" : "");
-        }}
+        onClick={() => selectOption("netbanking")}
       />
 
       {activeOption === "netbanking" && (
         <ExpandedBox>
-          <div className="text-[14px] font-extrabold text-[#111827]">
-            Select Your Bank
-          </div>
+          <div style={expandedTitleStyle}>Select Your Bank</div>
 
-          <select
-            className="mt-[14px] h-[44px] w-full rounded-[10px] border border-[#d1d5db] px-[14px] text-[13px] text-[#111827] outline-none"
-            onChange={(e) =>
-              onPaymentMethodChange?.(
-                e.target.value ? `netbanking:${e.target.value}` : "netbanking"
-              )
-            }
-          >
-            <option value="">Select Bank</option>
-            <option value="HDFC Bank">HDFC Bank</option>
-            <option value="ICICI Bank">ICICI Bank</option>
-            <option value="SBI">SBI</option>
-            <option value="Axis Bank">Axis Bank</option>
+          <select style={{ ...inputStyle, marginTop: "14px" }}>
+            <option>Select Bank</option>
+            <option>HDFC Bank</option>
+            <option>ICICI Bank</option>
+            <option>SBI</option>
+            <option>Axis Bank</option>
           </select>
-        </ExpandedBox>
-      )}
-
-      <PaymentRow
-        icon="⏳"
-        title="Pay Later"
-        subtitle="LazyPay, Amazon Pay Later"
-        isActive={activeOption === "paylater"}
-        onClick={() => {
-          const next = activeOption === "paylater" ? null : "paylater";
-          setActiveOption(next);
-          onPaymentMethodChange?.(next ? "paylater" : "");
-        }}
-      />
-
-      {activeOption === "paylater" && (
-        <ExpandedBox>
-          <div className="text-[14px] font-extrabold text-[#111827]">
-            Available Pay Later Options
-          </div>
-
-          <div className="mt-[14px] grid grid-cols-2 gap-3">
-            {["LazyPay", "Amazon Pay Later"].map((item) => (
-              <SelectableMiniCard
-                key={item}
-                label={item}
-                isSelected={selectedPayLater === item}
-                onClick={() => {
-                  setSelectedPayLater(item);
-                  onPaymentMethodChange?.(`paylater:${item}`);
-                }}
-              />
-            ))}
-          </div>
-        </ExpandedBox>
-      )}
-
-      <PaymentRow
-        icon="🎁"
-        title="Gift Cards & e-wallets"
-        subtitle="Gift card / wallet code"
-        isActive={activeOption === "wallets"}
-        onClick={() => {
-          const next = activeOption === "wallets" ? null : "wallets";
-          setActiveOption(next);
-          onPaymentMethodChange?.(next ? "wallets" : "");
-        }}
-      />
-
-      {activeOption === "wallets" && (
-        <ExpandedBox>
-          <div className="text-[14px] font-extrabold text-[#111827]">
-            Wallet / Gift Card
-          </div>
-
-          <div className="mt-[14px]">
-            <label className="mb-2 block text-[12px] font-bold text-[#374151]">
-              Enter Code
-            </label>
-            <input
-              placeholder="Enter wallet or gift card code"
-              className="h-[44px] w-full rounded-[10px] border border-[#d1d5db] px-[14px] text-[13px] text-[#111827] outline-none"
-            />
-          </div>
         </ExpandedBox>
       )}
     </section>
@@ -281,6 +201,7 @@ function PaymentRow({
   subtitle,
   badge,
   isActive,
+  disabled = false,
   onClick,
 }: {
   icon: string;
@@ -288,31 +209,49 @@ function PaymentRow({
   subtitle: string;
   badge?: string;
   isActive?: boolean;
+  disabled?: boolean;
   onClick?: () => void;
 }) {
   return (
     <div
-      onClick={onClick}
-      className={`flex cursor-pointer items-center justify-between gap-[14px] border-b border-[#e5e7eb] px-5 py-[16px] ${
-        isActive
-          ? "bg-[#f8fbff] shadow-[inset_0_0_0_1.5px_#7dd3fc]"
-          : "bg-white"
-      }`}
+      onClick={disabled ? undefined : onClick}
+      aria-disabled={disabled}
+      style={{
+        padding: "18px 20px",
+        borderBottom: "1px solid #e5e7eb",
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        gap: "14px",
+        cursor: disabled ? "not-allowed" : "pointer",
+        background: disabled ? "#f8fafc" : isActive ? "#f8fbff" : "#ffffff",
+        boxShadow: isActive ? "inset 0 0 0 1.5px #7dd3fc" : "none",
+        opacity: disabled ? 0.68 : 1,
+        transition: "all 0.2s ease",
+      }}
     >
       <div className="flex min-w-0 items-center gap-[14px]">
         <div
-          className={`flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-[10px] text-[18px] ${
-            isActive ? "bg-[#dff2ff]" : "bg-[#eef6ff]"
-          }`}
+          style={{
+            width: "42px",
+            height: "42px",
+            borderRadius: "10px",
+            background: disabled ? "#e5e7eb" : isActive ? "#dff2ff" : "#eef6ff",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: "20px",
+            flexShrink: 0,
+          }}
         >
           {icon}
         </div>
 
         <div className="min-w-0">
-          <div className="text-[14px] font-extrabold text-[#111827]">
+          <div className="break-words text-[16px] font-extrabold text-[#111827]">
             {title}
           </div>
-          <div className="mt-[3px] text-[12px] leading-[17px] text-[#6b7280]">
+          <div className="mt-[3px] break-words text-[13px] leading-[18px] text-[#6b7280]">
             {subtitle}
           </div>
         </div>
@@ -320,17 +259,19 @@ function PaymentRow({
 
       <div className="flex shrink-0 items-center gap-3">
         {badge ? (
-          <span className="rounded-full bg-[#ccfbf1] px-2 py-[5px] text-[10px] font-extrabold text-[#0f766e]">
+          <span className="rounded-full bg-[#ccfbf1] px-2 py-[5px] text-[10px] font-extrabold text-[#0f766e] sm:text-[11px]">
             {badge}
           </span>
         ) : null}
 
         <span
-          className={`text-[16px] font-extrabold ${
-            isActive ? "text-[#0ea5e9]" : "text-[#60a5fa]"
-          }`}
+          style={{
+            fontSize: "18px",
+            color: disabled ? "#94a3b8" : isActive ? "#0ea5e9" : "#60a5fa",
+            fontWeight: 800,
+          }}
         >
-          ›
+          {disabled ? "×" : "›"}
         </span>
       </div>
     </div>
@@ -339,7 +280,13 @@ function PaymentRow({
 
 function ExpandedBox({ children }: { children: React.ReactNode }) {
   return (
-    <div className="border-b border-[#e5e7eb] bg-white px-5 pb-5 pl-[72px] pt-[18px]">
+    <div
+      style={{
+        padding: "18px clamp(14px, 4vw, 20px) 20px clamp(14px, 4vw, 76px)",
+        borderBottom: "1px solid #e5e7eb",
+        background: "#ffffff",
+      }}
+    >
       {children}
     </div>
   );
@@ -361,13 +308,52 @@ function SelectableMiniCard({
         e.stopPropagation();
         onClick?.();
       }}
-      className={`min-h-[44px] rounded-[10px] px-[14px] py-[10px] text-[13px] font-bold ${
-        isSelected
-          ? "border-[1.5px] border-[#7dd3fc] bg-[#f8fbff] text-[#0f172a]"
-          : "border border-[#d1d5db] bg-white text-[#1f2937]"
-      }`}
+      style={{
+        minHeight: "46px",
+        border: isSelected ? "1.5px solid #7dd3fc" : "1px solid #d1d5db",
+        borderRadius: "10px",
+        background: isSelected ? "#f8fbff" : "#ffffff",
+        padding: "10px 14px",
+        fontSize: "14px",
+        fontWeight: 700,
+        color: isSelected ? "#0f172a" : "#1f2937",
+        cursor: "pointer",
+      }}
     >
       {label}
     </button>
   );
 }
+
+const expandedTitleStyle: React.CSSProperties = {
+  fontSize: "15px",
+  fontWeight: 800,
+  color: "#111827",
+};
+
+const fieldLabelStyle: React.CSSProperties = {
+  display: "block",
+  marginBottom: "8px",
+  fontSize: "13px",
+  fontWeight: 700,
+  color: "#374151",
+};
+
+const inputStyle: React.CSSProperties = {
+  width: "100%",
+  height: "46px",
+  border: "1px solid #d1d5db",
+  borderRadius: "10px",
+  padding: "0 14px",
+  fontSize: "14px",
+  color: "#111827",
+  outline: "none",
+  background: "#ffffff",
+};
+
+const gridStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+  gap: "12px",
+  marginTop: "14px",
+};

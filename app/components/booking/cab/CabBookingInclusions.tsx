@@ -8,11 +8,11 @@ export default function CabBookingInclusions({ data }: { data: CabBookingPageDat
       {data.inclusions.map((item, i) => (
         <div key={i} className="flex gap-3">
           <div className="mt-1 text-sky-500">✔</div>
-          <div>
-            <div className="text-[14px] font-semibold text-slate-900">
+          <div className="min-w-0">
+            <div className="break-words text-[14px] font-semibold text-slate-900">
               {item.title}
             </div>
-            <div className="text-[13px] text-slate-500">
+            <div className="break-words text-[13px] text-slate-500">
               {item.subtitle}
             </div>
           </div>

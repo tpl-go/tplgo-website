@@ -2,6 +2,7 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
+import MobileInnerBack from "@/app/components/common/mobile/MobileInnerBack";
 
 export type CabManageTab =
   | "summary"
@@ -69,12 +70,16 @@ export default function CabManageLayout({
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#f8f9fb]">
+      <div className="bg-[#f8f9fb] px-3 pt-3 lg:hidden">
+        <MobileInnerBack title="Cab Manage" />
+      </div>
+
       <div className="mx-auto w-full max-w-[1440px] px-3 py-4 md:px-6 md:py-5 lg:px-8 lg:py-6">
         <div className="mb-4 rounded-[20px] border border-black/5 bg-white p-4 shadow-[0_10px_40px_rgba(0,0,0,0.04)] md:mb-5 md:rounded-[28px] md:p-5 lg:p-6">
           <button
             type="button"
             onClick={() => router.push("/account/bookings")}
-            className="inline-flex min-h-10 items-center gap-2 rounded-full border border-[#d9e2ec] bg-white px-4 py-2 text-[12px] font-extrabold text-[#111827] shadow-[0_6px_18px_rgba(15,23,42,0.06)] transition hover:border-[#bfd3ea] hover:bg-[#f8fbff] md:px-5 md:text-[13px]"
+            className="hidden min-h-10 items-center gap-2 rounded-full border border-[#d9e2ec] bg-white px-4 py-2 text-[12px] font-extrabold text-[#111827] shadow-[0_6px_18px_rgba(15,23,42,0.06)] transition hover:border-[#bfd3ea] hover:bg-[#f8fbff] md:px-5 md:text-[13px] lg:inline-flex"
           >
             <span style={{ fontSize: "14px", lineHeight: 1 }}>←</span>
             <span>Back to My Bookings</span>
@@ -85,7 +90,7 @@ export default function CabManageLayout({
               <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#ff6b00]">
                 Manage Booking
               </p>
-              <h1 className="mt-1 text-[20px] font-bold leading-7 text-[#111827] md:text-2xl">
+              <h1 className="mt-1 break-words text-[20px] font-bold leading-7 text-[#111827] md:text-2xl">
                 Modify Your Cab Booking
               </h1>
               <p className="mt-1 text-[13px] leading-5 text-[#6b7280] md:text-sm">
@@ -118,6 +123,9 @@ export default function CabManageLayout({
               </div>
 
               <div className="p-3 lg:hidden">
+                <p className="mb-2 text-[11px] font-black uppercase tracking-[0.14em] text-[#6b7280]">
+                  Manage Section
+                </p>
                 <select
                   value={activeTab}
                   onChange={(event) =>
@@ -226,7 +234,7 @@ function InfoPill({
       </p>
       <p className="mt-1 break-words text-sm font-bold text-[#111827]">{value || "-"}</p>
       {subValue ? (
-        <p className="mt-0.5 truncate text-xs text-[#6b7280]">{subValue}</p>
+        <p className="mt-0.5 break-words text-xs text-[#6b7280] lg:truncate">{subValue}</p>
       ) : null}
     </div>
   );

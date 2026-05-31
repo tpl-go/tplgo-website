@@ -213,10 +213,10 @@ export default function CabResultCard({ item, searchMeta }: Props) {
     };
   }, []);
 
-  const pricingSnapshot = useMemo(
-    () => buildCabPricingSnapshot(item),
-    [item, offerRefreshKey]
-  );
+  const pricingSnapshot = useMemo(() => {
+    void offerRefreshKey;
+    return buildCabPricingSnapshot(item);
+  }, [item, offerRefreshKey]);
 
   const displayBaseFare = pricingSnapshot.baseFare;
   const displayFinalPrice = pricingSnapshot.offerApplied
@@ -263,8 +263,8 @@ export default function CabResultCard({ item, searchMeta }: Props) {
   return (
     <div className="rounded-[20px] border border-slate-200 bg-white p-4 shadow-sm">
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[140px_minmax(0,1fr)_220px]">
-        <div className="flex justify-center lg:justify-start">
-          <div className="w-[118px] rounded-[18px] bg-[#eef8ff] p-3">
+        <div className="flex justify-start">
+          <div className="flex w-full items-center gap-3 rounded-[18px] bg-[#eef8ff] p-3 lg:block lg:w-[118px]">
             <div className="flex h-[74px] items-center justify-center rounded-[14px] bg-[#dff3ff]">
               {item.image ? (
                 <Image
@@ -279,7 +279,7 @@ export default function CabResultCard({ item, searchMeta }: Props) {
               )}
             </div>
 
-            <div className="mt-3 rounded-full bg-sky-500 px-3 py-1 text-center text-[11px] font-bold text-white">
+            <div className="rounded-full bg-sky-500 px-3 py-1 text-center text-[11px] font-bold text-white lg:mt-3">
               {formatFuelType(item.fuelType)}
             </div>
           </div>
@@ -287,7 +287,7 @@ export default function CabResultCard({ item, searchMeta }: Props) {
 
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-[16px] font-extrabold leading-5 text-slate-900">
+            <h3 className="break-words text-[16px] font-extrabold leading-5 text-slate-900">
               {item.name}
             </h3>
 
@@ -300,7 +300,7 @@ export default function CabResultCard({ item, searchMeta }: Props) {
             {item.brand} • {item.reviewCount} reviews
           </div>
 
-          <div className="mt-2 text-[14px] text-slate-800">
+          <div className="mt-2 break-words text-[14px] text-slate-800">
             {isBike ? (
               <>
                 {formatVehicleType(item.vehicleType)} • {item.engineCc || 0}cc
@@ -369,8 +369,8 @@ export default function CabResultCard({ item, searchMeta }: Props) {
           ) : null}
         </div>
 
-        <div className="flex flex-col items-end">
-          <div className="text-right">
+        <div className="flex flex-col rounded-2xl border border-slate-100 bg-slate-50 p-4 lg:items-end lg:border-0 lg:bg-transparent lg:p-0">
+          <div className="text-left lg:text-right">
             <div className="text-[13px] font-bold text-sky-700">
               {pricingSnapshot.offerApplied
                 ? `₹${pricingSnapshot.offerAmount.toLocaleString("en-IN")} off`
@@ -388,7 +388,7 @@ export default function CabResultCard({ item, searchMeta }: Props) {
             </div>
 
             <div className="mt-1 text-[12px] text-slate-500">
-              + Taxes & Charges
+              + Taxes & Fees
             </div>
 
             {pricingSnapshot.offerApplied ? (
@@ -401,7 +401,7 @@ export default function CabResultCard({ item, searchMeta }: Props) {
           <button
             type="button"
             onClick={handleSelect}
-            className="mt-4 h-[44px] min-w-[170px] rounded-xl bg-sky-500 px-5 text-[13px] font-extrabold text-white transition hover:bg-sky-600"
+            className="mt-4 h-[48px] w-full rounded-xl bg-sky-500 px-5 text-[13px] font-extrabold text-white transition hover:bg-sky-600 lg:h-[44px] lg:min-w-[170px]"
           >
             {isBike ? "SELECT BIKE" : "SELECT CAB"}
           </button>

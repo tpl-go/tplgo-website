@@ -39,6 +39,7 @@ export default function CabConfirmationActionsCard({
       }}
     >
       <div
+        className="cab-confirmation-actions-stack"
         style={{
           width: "100%",
           position: "sticky",
@@ -269,6 +270,18 @@ export default function CabConfirmationActionsCard({
           </div>
         </div>
       </div>
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+            @media (max-width: 1023px) {
+              .cab-confirmation-actions-stack {
+                position: static !important;
+                top: auto !important;
+              }
+            }
+          `,
+        }}
+      />
     </aside>
   );
 }
@@ -305,7 +318,7 @@ function PrimaryActionButton({
       }}
     >
       <span style={{ fontSize: "16px", lineHeight: 1 }}>{icon}</span>
-      <span>{label}</span>
+      <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>{label}</span>
     </button>
   );
 }
@@ -341,7 +354,7 @@ function SecondaryActionButton({
       }}
     >
       <span style={{ fontSize: "15px", lineHeight: 1 }}>{icon}</span>
-      <span>{label}</span>
+      <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>{label}</span>
     </button>
   );
 }

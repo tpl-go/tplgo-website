@@ -126,16 +126,6 @@ export default function CabModifySearchBar({ searchMeta }: Props) {
     setErrors({});
   }
 
-  function handleSwapFromTo() {
-    setFrom(to);
-    setTo(from);
-    setErrors((prev) => ({
-      ...prev,
-      from: undefined,
-      to: undefined,
-    }));
-  }
-
   function handleSwapPickupDrop() {
     setPickup(drop);
     setDrop(pickup);
@@ -754,8 +744,9 @@ export default function CabModifySearchBar({ searchMeta }: Props) {
         )}
 
         {showStops && stopsText ? (
-          <div className="border-t border-slate-700 bg-[#0f172a] px-4 py-2 text-[12px] text-slate-300">
-            <span className="font-semibold text-white">Stops:</span> {stopsText}
+          <div className="border-t border-slate-700 bg-[#0f172a] px-4 py-2 text-[12px] leading-5 text-slate-300">
+            <span className="font-semibold text-white">Stops:</span>{" "}
+            <span className="break-words">{stopsText}</span>
           </div>
         ) : null}
       </div>
@@ -798,7 +789,7 @@ function TripTypeBox({
 
 function SwapBox({ onClick }: { onClick: () => void }) {
   return (
-    <div className="flex items-center justify-center border-r border-slate-700 bg-[#111827] px-2 py-2">
+    <div className="flex items-center justify-center border-b border-slate-700 bg-[#111827] px-2 py-2 lg:border-b-0 lg:border-r">
       <button
         type="button"
         onClick={onClick}
@@ -813,11 +804,11 @@ function SwapBox({ onClick }: { onClick: () => void }) {
 
 function SearchBox({ onSearch }: { onSearch: () => void }) {
   return (
-    <div className="flex items-center justify-center border-l border-slate-700 bg-[#111827] px-3 py-2">
+    <div className="flex items-center justify-center border-t border-slate-700 bg-[#111827] px-3 py-3 lg:border-l lg:border-t-0 lg:py-2">
       <button
         type="button"
         onClick={onSearch}
-        className="h-[46px] w-full rounded-xl bg-sky-500 px-4 text-[14px] font-extrabold text-white transition hover:bg-sky-600"
+        className="h-[48px] w-full rounded-xl bg-sky-500 px-4 text-[14px] font-extrabold text-white transition hover:bg-sky-600"
       >
         SEARCH
       </button>
@@ -840,7 +831,7 @@ function FieldBox({
 }) {
   return (
     <div
-      className={`min-w-0 overflow-visible border-r px-3 py-2 ${
+      className={`min-w-0 overflow-visible border-b px-3 py-3 lg:border-b-0 lg:border-r lg:py-2 ${
         dark ? "border-slate-700 bg-[#111827]" : "border-slate-200 bg-white"
       }`}
     >
@@ -852,7 +843,7 @@ function FieldBox({
         {label}
       </div>
 
-      <div className="overflow-visible">{children}</div>
+      <div className="min-w-0 overflow-visible">{children}</div>
 
       {error ? (
         <div className="mt-1 text-[11px] font-semibold text-red-400">
@@ -860,7 +851,7 @@ function FieldBox({
         </div>
       ) : helper ? (
         <div
-          className={`mt-1 truncate text-[11px] ${
+          className={`mt-1 break-words text-[11px] lg:truncate ${
             dark ? "text-slate-300" : "text-slate-500"
           }`}
         >

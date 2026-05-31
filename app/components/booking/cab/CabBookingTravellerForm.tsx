@@ -84,7 +84,7 @@ export default function CabBookingTravellerForm({
           value={values.pickupLocation}
           onChange={(e) => onChange("pickupLocation", e.target.value)}
           placeholder="Enter pickup location"
-          className="h-[50px] w-full rounded-xl border border-slate-300 px-4 text-[14px] outline-none"
+          className="h-[50px] w-full rounded-xl border border-slate-300 px-4 text-[16px] outline-none lg:text-[14px]"
         />
         {errors.pickupLocation ? (
           <div className="mt-1 text-[12px] font-medium text-red-500">
@@ -108,7 +108,7 @@ export default function CabBookingTravellerForm({
           <select
             value={values.gender}
             onChange={(e) => onChange("gender", e.target.value)}
-            className="h-[50px] w-full rounded-xl border border-slate-300 px-4 text-[14px] outline-none"
+            className="h-[50px] w-full rounded-xl border border-slate-300 px-4 text-[16px] outline-none lg:text-[14px]"
           >
             <option value="">Select gender</option>
             <option value="male">Male</option>
@@ -139,7 +139,7 @@ export default function CabBookingTravellerForm({
         />
       </div>
 
-      <label className="flex items-center gap-3 text-[14px] text-slate-700">
+      <label className="flex items-start gap-3 text-[14px] leading-5 text-slate-700">
         <input
           type="checkbox"
           checked={values.usePickupAsBillingAddress}
@@ -172,7 +172,7 @@ function InputField({
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="h-[50px] w-full rounded-xl border border-slate-300 px-4 text-[14px] outline-none"
+        className="h-[50px] w-full rounded-xl border border-slate-300 px-4 text-[16px] outline-none lg:text-[14px]"
       />
       {error ? (
         <div className="mt-1 text-[12px] font-medium text-red-500">{error}</div>

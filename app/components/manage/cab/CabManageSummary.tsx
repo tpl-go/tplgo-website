@@ -63,7 +63,7 @@ export default function CabManageSummary({
         <InfoCard label="Ride ID" value={rideId || "-"} />
       </div>
 
-      <div className="rounded-[24px] border border-black/5 bg-[#f8f9fb] p-5">
+      <div className="rounded-[24px] border border-black/5 bg-[#f8f9fb] p-4 sm:p-5">
         <h3 className="text-base font-bold text-[#111827]">
           Ride Snapshot
         </h3>
@@ -80,14 +80,14 @@ export default function CabManageSummary({
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#6b7280]">
               Special Request / Add-ons
             </p>
-            <p className="mt-1 text-sm font-bold text-[#111827]">
+            <p className="mt-1 break-words text-sm font-bold text-[#111827]">
               {specialRequest}
             </p>
           </div>
         ) : null}
       </div>
 
-      <div className="rounded-[24px] border border-black/5 bg-[#f8f9fb] p-5">
+      <div className="rounded-[24px] border border-black/5 bg-[#f8f9fb] p-4 sm:p-5">
         <h3 className="text-base font-bold text-[#111827]">Fare Snapshot</h3>
 
         <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-4">

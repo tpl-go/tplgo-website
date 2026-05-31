@@ -85,13 +85,13 @@ export default function CabResultTimeField({
         value={value}
         onClick={() => setOpen((prev) => !prev)}
         placeholder={placeholder}
-        className="w-full cursor-pointer bg-transparent text-[16px] font-semibold text-white outline-none placeholder:text-slate-400"
+        className="w-full cursor-pointer bg-transparent text-[15px] font-semibold text-white outline-none placeholder:text-slate-400 sm:text-[16px]"
       />
 
       {open && (
         <div
           ref={popupRef}
-          className="absolute left-0 top-[calc(100%+8px)] z-[140] w-[360px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+          className="absolute left-0 top-[calc(100%+8px)] z-[140] w-[min(calc(100vw-2rem),360px)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
         >
           <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
             <div className="text-[14px] font-extrabold text-slate-900">
@@ -107,7 +107,7 @@ export default function CabResultTimeField({
             </button>
           </div>
 
-          <div className="grid grid-cols-3 gap-3 p-4">
+          <div className="grid grid-cols-3 gap-2 p-3 sm:gap-3 sm:p-4">
             <PickerColumn
               title="Hour"
               options={HOURS}
@@ -154,7 +154,7 @@ function PickerColumn({
     <div>
       <div className="mb-2 text-[12px] font-bold text-slate-500">{title}</div>
 
-      <div className="h-[220px] overflow-y-auto rounded-2xl border border-slate-200 bg-slate-50 p-2">
+      <div className="h-[180px] overflow-y-auto rounded-2xl border border-slate-200 bg-slate-50 p-2 sm:h-[220px]">
         <div className="space-y-2">
           {options.map((option) => {
             const active = selectedValue === option;

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import LoginModal from "@/app/components/common/LoginModal";
+import MobileInnerBack from "@/app/components/common/mobile/MobileInnerBack";
 
 import CabConfirmationSuccessHeader from "@/app/components/confirmation/cab/CabConfirmationSuccessHeader";
 import CabConfirmationJourneyCard from "@/app/components/confirmation/cab/CabConfirmationJourneyCard";
@@ -493,9 +494,12 @@ const pickupDate = String(rawPickupDate).slice(0, 10);
 
   if (!data) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-[#eef3f8]">
-        <div className="bg-white p-6 rounded-xl border font-semibold">
-          No cab confirmation data found.
+      <main className="min-h-screen overflow-x-hidden bg-[#eef3f8]">
+        <MobileInnerBack title="Cab Confirmation" />
+        <div className="flex min-h-[70vh] items-center justify-center px-4">
+          <div className="rounded-xl border bg-white p-6 text-center font-semibold">
+            No cab confirmation data found.
+          </div>
         </div>
       </main>
     );
@@ -504,10 +508,11 @@ const pickupDate = String(rawPickupDate).slice(0, 10);
   const handlePrint = () => window.print();
 
   return (
-    <main className="min-h-screen bg-[#eef3f8] text-black">
-      <div className="bg-green-50 border-b border-green-200 text-center py-4">
-        <div className="font-black text-green-700 text-lg">
-          🎉 Cab Booking Confirmed
+    <main className="min-h-screen overflow-x-hidden bg-[#eef3f8] text-black">
+      <MobileInnerBack title="Cab Confirmation" />
+      <div className="border-b border-green-200 bg-green-50 px-4 py-4 text-center">
+        <div className="text-lg font-black text-green-700">
+          Cab Booking Confirmed
         </div>
 
         <div className="text-sm text-green-600">
@@ -523,8 +528,8 @@ const pickupDate = String(rawPickupDate).slice(0, 10);
         ) : null}
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-6 flex gap-4">
-        <div className="w-[72%] flex flex-col gap-4">
+      <div className="mx-auto flex max-w-7xl flex-col gap-4 px-3 py-4 md:px-4 md:py-6 lg:flex-row">
+        <div className="flex w-full min-w-0 flex-col gap-4 lg:w-[72%]">
           <CabConfirmationSuccessHeader
             bookingId={bookingId}
             rideId={rideId}
@@ -539,8 +544,8 @@ const pickupDate = String(rawPickupDate).slice(0, 10);
           />
 
           {finalEarnedCreditAmount > 0 ? (
-            <div className="rounded-2xl border border-green-200 bg-green-50 px-5 py-4 text-[14px] font-bold text-green-700">
-              🎉 You earned ₹
+            <div className="rounded-2xl border border-green-200 bg-green-50 px-4 py-4 text-[13px] font-bold leading-5 text-green-700 md:px-5 md:text-[14px]">
+              You earned ₹
               {Number(finalEarnedCreditAmount).toLocaleString("en-IN")} TPL
               Earned Credit. This has been added to your wallet.
             </div>
@@ -592,7 +597,7 @@ const pickupDate = String(rawPickupDate).slice(0, 10);
           />
         </div>
 
-        <div className="w-[28%]">
+        <div className="w-full min-w-0 pb-6 lg:w-[28%] lg:pb-0">
           <CabConfirmationActionsCard
             bookingId={bookingId}
             rideId={rideId}

@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import MobileInnerBack from "@/app/components/common/mobile/MobileInnerBack";
 
 import {
   BOOKING_UPDATED_EVENT,
@@ -454,9 +455,12 @@ function CabManagePageContent() {
 
   if (isLoading) {
     return (
-      <main className="min-h-screen bg-[#f8f9fb] px-4 py-10">
-        <div className="mx-auto max-w-[1440px] rounded-[28px] border border-black/5 bg-white p-8 text-sm text-[#6b7280]">
-          Loading cab manage booking...
+      <main className="min-h-screen overflow-x-hidden bg-[#f8f9fb]">
+        <MobileInnerBack title="Cab Manage" />
+        <div className="px-4 py-6 md:py-10">
+          <div className="mx-auto max-w-[1440px] rounded-[20px] border border-black/5 bg-white p-6 text-sm text-[#6b7280] md:rounded-[28px] md:p-8">
+            Loading cab manage booking...
+          </div>
         </div>
       </main>
     );
@@ -464,11 +468,14 @@ function CabManagePageContent() {
 
   if (!booking || !payload) {
     return (
-      <main className="min-h-screen bg-[#f8f9fb] px-4 py-10">
-        <div className="mx-auto max-w-[1440px] rounded-[28px] border border-black/5 bg-white p-8">
-          <h1 className="text-xl font-bold text-[#111827]">
-            Cab booking not found
-          </h1>
+      <main className="min-h-screen overflow-x-hidden bg-[#f8f9fb]">
+        <MobileInnerBack title="Cab Manage" />
+        <div className="px-4 py-6 md:py-10">
+          <div className="mx-auto max-w-[1440px] rounded-[20px] border border-black/5 bg-white p-6 md:rounded-[28px] md:p-8">
+            <h1 className="text-xl font-bold text-[#111827]">
+              Cab booking not found
+            </h1>
+          </div>
         </div>
       </main>
     );

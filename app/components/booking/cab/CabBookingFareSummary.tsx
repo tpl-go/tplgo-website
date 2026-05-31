@@ -102,10 +102,10 @@ export default function CabBookingFareSummary({
 
   return (
     <aside className="w-full">
-      <div className="sticky top-[88px] z-20">
-        <div className="overflow-hidden rounded-[24px] border border-[#d9e2ec] bg-white shadow-[0_12px_34px_rgba(15,23,42,0.08)]">
+      <div className="z-20 lg:sticky lg:top-[88px]">
+        <div className="overflow-hidden rounded-[22px] border border-[#d9e2ec] bg-white shadow-[0_12px_34px_rgba(15,23,42,0.08)] sm:rounded-[24px]">
           <div className="border-b border-[#e5e7eb] bg-white px-4 py-4">
-            <div className="text-[22px] font-extrabold text-[#1f2937]">
+            <div className="text-[20px] font-extrabold text-[#1f2937] sm:text-[22px]">
               Fare Summary
             </div>
             <div className="mt-1 text-[12px] font-semibold text-[#6b7280]">
@@ -259,8 +259,8 @@ export default function CabBookingFareSummary({
           </div>
 
           <div className="border-b border-[#e5e7eb] bg-white px-4 py-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
                 <div className="text-[20px] font-extrabold text-[#111827]">
                   Total Amount
                 </div>
@@ -270,7 +270,7 @@ export default function CabBookingFareSummary({
                 </div>
               </div>
 
-              <div className="whitespace-nowrap text-[30px] font-extrabold text-[#111827]">
+              <div className="shrink-0 whitespace-nowrap text-[28px] font-extrabold text-[#111827] sm:text-[30px]">
                 ₹{finalPayable.toLocaleString("en-IN")}
               </div>
             </div>
@@ -320,7 +320,7 @@ function FareRow({
   return (
     <div className="mb-3 flex items-start justify-between gap-3 last:mb-0">
       <div
-        className={`text-[15px] font-bold ${
+        className={`min-w-0 break-words text-[15px] font-bold ${
           positiveGreen ? "text-[#ea580c]" : "text-[#1f2937]"
         }`}
       >
@@ -365,7 +365,7 @@ function WalletRow({ label, value }: { label: string; value: number }) {
 function StatusRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="mb-3 flex items-center justify-between gap-3 last:mb-0">
-      <div className="text-[15px] font-bold text-[#1f2937]">{label}</div>
+      <div className="min-w-0 break-words text-[15px] font-bold text-[#1f2937]">{label}</div>
 
       <div className="whitespace-nowrap text-[15px] font-bold text-[#6b7280]">
         {value}

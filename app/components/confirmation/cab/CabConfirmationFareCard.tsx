@@ -317,8 +317,8 @@ export default function CabConfirmationFareCard({
           ) : null}
 
           <div className="border-t border-dashed border-[#d1d5db] pt-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
                 <div className="text-[20px] font-black text-[#111827]">
                   Total Paid
                 </div>
@@ -328,7 +328,7 @@ export default function CabConfirmationFareCard({
                 </div>
               </div>
 
-              <div className="whitespace-nowrap text-[30px] font-black text-[#111827]">
+              <div className="break-words text-[28px] font-black text-[#111827] sm:whitespace-nowrap sm:text-[30px]">
                 ₹{finalPaidAmount.toLocaleString("en-IN")}
               </div>
             </div>
@@ -371,7 +371,7 @@ function FareRow({
   return (
     <div className="flex items-start justify-between gap-3">
       <div
-        className={`text-[15px] font-bold ${
+        className={`min-w-0 break-words text-[15px] font-bold ${
           orange ? "text-[#ea580c]" : "text-[#1f2937]"
         }`}
       >
@@ -379,7 +379,7 @@ function FareRow({
       </div>
 
       <div
-        className={`whitespace-nowrap text-[15px] font-bold ${
+        className={`shrink-0 whitespace-nowrap text-[15px] font-bold ${
           orange ? "text-[#ea580c]" : "text-[#1f2937]"
         }`}
       >

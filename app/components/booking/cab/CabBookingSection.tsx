@@ -21,9 +21,11 @@ export default function CabBookingSection({
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className="flex w-full items-center justify-between px-5 py-4 text-left"
+        className="flex w-full items-center justify-between gap-4 px-4 py-4 text-left sm:px-5"
       >
-        <span className="text-[18px] font-extrabold text-slate-900">{title}</span>
+        <span className="break-words text-[17px] font-extrabold text-slate-900 sm:text-[18px]">
+          {title}
+        </span>
         <ChevronDown
           className={`h-5 w-5 text-slate-500 transition-transform ${
             open ? "rotate-180" : ""
@@ -31,7 +33,11 @@ export default function CabBookingSection({
         />
       </button>
 
-      {open ? <div className="border-t border-slate-200 px-5 py-5">{children}</div> : null}
+      {open ? (
+        <div className="border-t border-slate-200 px-4 py-4 sm:px-5 sm:py-5">
+          {children}
+        </div>
+      ) : null}
     </div>
   );
 }

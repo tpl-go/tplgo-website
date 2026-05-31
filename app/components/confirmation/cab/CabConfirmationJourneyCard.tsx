@@ -76,7 +76,7 @@ export default function CabConfirmationJourneyCard({
         </h3>
       </div>
 
-      <div style={{ padding: "22px" }}>
+      <div className="p-4 md:p-[22px]">
         <div
           style={{
             border: "1px solid #e5e7eb",
@@ -137,8 +137,8 @@ export default function CabConfirmationJourneyCard({
               }}
             >
               <div
+                className="hidden md:grid"
                 style={{
-                  display: "grid",
                   gridTemplateColumns: "1fr auto 1fr",
                   gap: "14px",
                   alignItems: "center",
@@ -287,6 +287,28 @@ export default function CabConfirmationJourneyCard({
                   </div>
                 </div>
               </div>
+
+              <div className="flex flex-col gap-3 md:hidden">
+                <MobileJourneyPoint
+                  label="Pickup"
+                  time={pickupTime || "--:--"}
+                  location={fromLocation || "Pickup Location"}
+                  date={formatDate(pickupDate)}
+                />
+
+                <div className="flex justify-center">
+                  <div className="rounded-full border border-blue-100 bg-blue-50 px-4 py-2 text-center text-[12px] font-extrabold text-blue-700">
+                    Cab Ride
+                  </div>
+                </div>
+
+                <MobileJourneyPoint
+                  label="Drop"
+                  time={dropTime || "--:--"}
+                  location={toLocation || "Drop Location"}
+                  date={dropTime ? formatDate(finalDropDate) : "Scheduled Drop"}
+                />
+              </div>
             </div>
 
             <div
@@ -307,6 +329,7 @@ export default function CabConfirmationJourneyCard({
             </div>
 
             <div
+              className="cab-confirmation-info-grid"
               style={{
                 marginTop: "16px",
                 display: "grid",
@@ -359,7 +382,47 @@ export default function CabConfirmationJourneyCard({
           </div>
         </div>
       </div>
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+            @media (max-width: 767px) {
+              .cab-confirmation-info-grid {
+                grid-template-columns: minmax(0, 1fr) !important;
+              }
+            }
+          `,
+        }}
+      />
     </section>
+  );
+}
+
+function MobileJourneyPoint({
+  label,
+  time,
+  location,
+  date,
+}: {
+  label: string;
+  time: string;
+  location: string;
+  date: string;
+}) {
+  return (
+    <div className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-500">
+        {label}
+      </div>
+      <div className="mt-2 break-words text-[26px] font-black leading-8 text-slate-950">
+        {time}
+      </div>
+      <div className="mt-2 break-words text-[16px] font-black leading-6 text-slate-900">
+        {location}
+      </div>
+      <div className="mt-1 break-words text-[12px] font-bold leading-5 text-slate-500">
+        {date}
+      </div>
+    </div>
   );
 }
 

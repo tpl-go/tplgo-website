@@ -39,8 +39,8 @@ export default function CabBookingSpecialRequests({
                 : "border-slate-200 bg-white hover:border-sky-300"
             }`}
           >
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex items-start gap-3">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex min-w-0 items-start gap-3">
                 <div className="pt-[2px]">
                   <input
                     type="checkbox"
@@ -50,12 +50,12 @@ export default function CabBookingSpecialRequests({
                   />
                 </div>
 
-                <div>
-                  <div className="text-[16px] font-bold text-slate-900">
+                <div className="min-w-0">
+                  <div className="break-words text-[16px] font-bold text-slate-900">
                     {item.title}
                   </div>
 
-                  <div className="mt-1 text-[13px] text-slate-500">
+                  <div className="mt-1 break-words text-[13px] text-slate-500">
                     {item.description}
                   </div>
                 </div>

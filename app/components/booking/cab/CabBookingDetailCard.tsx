@@ -12,7 +12,7 @@ export default function CabBookingDetailCard({ data }: Props) {
   const isBike = searchMeta.rideType === "bikeRental";
 
   return (
-    <div className="rounded-[20px] border border-slate-200 bg-white p-5 shadow-sm">
+    <div className="rounded-[20px] border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[130px_1fr]">
         <div className="rounded-[18px] bg-[#eef8ff] p-3">
           <div className="flex h-[84px] items-center justify-center rounded-[14px] bg-[#dff3ff]">
@@ -26,9 +26,11 @@ export default function CabBookingDetailCard({ data }: Props) {
           </div>
         </div>
 
-        <div>
+        <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-[22px] font-extrabold text-slate-900">{cab.name}</h2>
+            <h2 className="break-words text-[20px] font-extrabold leading-7 text-slate-900 sm:text-[22px]">
+              {cab.name}
+            </h2>
             <span className="rounded-md bg-sky-600 px-2 py-[2px] text-[11px] font-bold text-white">
               {cab.rating}/5
             </span>
@@ -38,7 +40,7 @@ export default function CabBookingDetailCard({ data }: Props) {
             {cab.brand} • {cab.reviewCount} reviews
           </div>
 
-          <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <InfoBox
               label={searchMeta.from || searchMeta.pickup || "Pickup"}
               value={searchMeta.to || searchMeta.drop || "Drop"}
@@ -73,7 +75,7 @@ function InfoBox({ label, value }: { label: string; value: string }) {
       <div className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
         {label}
       </div>
-      <div className="mt-1 text-[14px] font-semibold text-slate-900">{value}</div>
+      <div className="mt-1 break-words text-[14px] font-semibold text-slate-900">{value}</div>
     </div>
   );
 }

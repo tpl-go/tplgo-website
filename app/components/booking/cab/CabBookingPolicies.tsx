@@ -7,10 +7,10 @@ export default function CabBookingPolicies({ data }: { data: CabBookingPageData 
     <div className="space-y-4">
       {data.policies.map((item, i) => (
         <div key={i}>
-          <div className="text-[14px] font-semibold text-slate-900">
+          <div className="break-words text-[14px] font-semibold text-slate-900">
             {item.title}
           </div>
-          <div className="text-[13px] text-slate-500">
+          <div className="break-words text-[13px] text-slate-500">
             {item.subtitle}
           </div>
         </div>

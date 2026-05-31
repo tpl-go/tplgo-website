@@ -1,6 +1,3 @@
-import CabModifySearchBar from "@/app/components/cab/result/CabModifySearchBar";
-import CabResultCard from "@/app/components/cab/result/CabResultCard";
-import CabResultFilters from "@/app/components/cab/result/CabResultFilters";
 import { CAB_RESULT_DATA } from "@/app/lib/cab/cabResultData";
 import type { CabResultItem } from "@/app/lib/cab/cabResultTypes";
 import { parseCabResultSearchParams } from "@/app/lib/cab/cabResultHelpers";

@@ -34,14 +34,14 @@ export default function CabManageContactDetails({
 
   return (
     <div className="space-y-5">
-      <div className="rounded-[28px] border border-black/5 bg-white p-5 shadow-[0_10px_40px_rgba(0,0,0,0.04)] lg:p-6">
+      <div className="rounded-[24px] border border-black/5 bg-white p-4 shadow-[0_10px_40px_rgba(0,0,0,0.04)] sm:p-5 lg:rounded-[28px] lg:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div>
+          <div className="min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#ff6b00]">
               Contact Details
             </p>
 
-            <h2 className="mt-1 text-xl font-bold text-[#111827] md:text-2xl">
+            <h2 className="mt-1 break-words text-xl font-bold text-[#111827] md:text-2xl">
               Update cab booking contact details
             </h2>
 
@@ -63,9 +63,9 @@ export default function CabManageContactDetails({
         </div>
       </div>
 
-      <div className="rounded-[28px] border border-black/5 bg-white p-5 shadow-[0_10px_40px_rgba(0,0,0,0.04)] lg:p-6">
+      <div className="rounded-[24px] border border-black/5 bg-white p-4 shadow-[0_10px_40px_rgba(0,0,0,0.04)] sm:p-5 lg:rounded-[28px] lg:p-6">
         <div className="flex flex-col gap-4 border-b border-[#eef2f7] pb-5 lg:flex-row lg:items-start lg:justify-between">
-          <div>
+          <div className="min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#ff6b00]">
               Active Contact
             </p>
@@ -137,7 +137,7 @@ export default function CabManageContactDetails({
             type="button"
             onClick={handleSave}
             className={cn(
-              "h-[54px] rounded-full px-8 text-sm font-black transition",
+              "h-[54px] w-full rounded-full px-8 text-sm font-black transition sm:w-auto",
               "bg-[#ff6b00] text-white shadow-[0_12px_24px_rgba(255,107,0,0.22)] hover:bg-[#f06400]"
             )}
           >

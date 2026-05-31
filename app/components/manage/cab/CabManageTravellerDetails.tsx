@@ -33,7 +33,7 @@ export default function CabManageTravellerDetails({
       {travellers.map((traveller, index) => (
         <div
           key={traveller.id || index}
-          className="rounded-[24px] border border-black/5 bg-[#f8f9fb] p-5"
+          className="rounded-[24px] border border-black/5 bg-[#f8f9fb] p-4 sm:p-5"
         >
           <p className="text-sm font-bold text-[#111827]">
             Traveller {index + 1}

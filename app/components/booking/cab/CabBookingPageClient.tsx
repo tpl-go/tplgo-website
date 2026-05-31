@@ -29,6 +29,7 @@ import CabBookingReviews from "@/app/components/booking/cab/CabBookingReviews";
 import CabBookingSpecialRequests from "@/app/components/booking/cab/CabBookingSpecialRequests";
 import CabBookingOffers from "@/app/components/booking/cab/CabBookingOffers";
 import LoginModal from "@/app/components/common/LoginModal";
+import MobileInnerBack from "@/app/components/common/mobile/MobileInnerBack";
 
 import { getWallet } from "@/app/lib/wallet/walletStorage";
 import { AUTH_UPDATED_EVENT } from "@/app/lib/booking/guestAuth";
@@ -492,9 +493,12 @@ export default function CabBookingPageClient({ cab, searchMeta }: Props) {
 
   if (!cab || !data || !fare) {
     return (
-      <main className="min-h-screen bg-[#f5f7fb] text-black">
+      <main className="min-h-screen overflow-x-hidden bg-[#f5f7fb] text-black">
+        <div className="bg-[#f5f7fb] px-3 pt-3 lg:hidden">
+          <MobileInnerBack title="Cab Booking" />
+        </div>
         <CabBookingTopBar timerLabel="10:00" />
-        <div className="mx-auto max-w-[1400px] px-4 py-6">
+        <div className="mx-auto max-w-[1400px] px-3 py-4 md:px-4 md:py-6">
           <div className="rounded-2xl border border-slate-200 bg-white p-8 text-[18px] font-bold text-slate-700">
             No booking data found.
           </div>
@@ -504,17 +508,22 @@ export default function CabBookingPageClient({ cab, searchMeta }: Props) {
   }
 
   return (
-    <main className="min-h-screen bg-[#f5f7fb] text-black">
+    <main className="min-h-screen overflow-x-hidden bg-[#f5f7fb] pb-5 text-black">
+      <div className="bg-[#f5f7fb] px-3 pt-3 lg:hidden">
+        <MobileInnerBack title="Cab Booking" />
+      </div>
       <CabBookingTopBar timerLabel={timerLabel} />
 
-      <div className="mx-auto max-w-[1400px] px-4 py-6">
-        <div className="flex items-start gap-5">
-          <div className="w-[74%] min-w-0 space-y-5">
-            <CabBookingDetailCard data={data} />
+      <div className="mx-auto max-w-[1400px] px-3 py-4 md:px-4 md:py-6">
+        <div className="flex flex-col items-stretch gap-4 lg:flex-row lg:items-start lg:gap-5">
+          <div className="flex w-full min-w-0 flex-col gap-4 lg:w-[74%] lg:gap-5">
+            <div className="order-1">
+              <CabBookingDetailCard data={data} />
+            </div>
 
-            <section className="rounded-2xl border border-[#f3d7c7] bg-[#fff7ed] px-5 py-3 shadow-sm">
-              <div className="flex items-center justify-between gap-4">
-                <div>
+            <section className="order-2 rounded-2xl border border-[#f3d7c7] bg-[#fff7ed] px-4 py-4 shadow-sm sm:px-5 sm:py-3">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
                   <div className="text-[15px] font-extrabold text-slate-900">
                     {activeUser?.mobile
                       ? `Logged in as ${getDisplayNameFromUser(activeUser)}`
@@ -532,7 +541,7 @@ export default function CabBookingPageClient({ cab, searchMeta }: Props) {
                   <button
                     type="button"
                     onClick={() => setShowLoginModal(true)}
-                    className="h-[40px] rounded-xl border border-slate-300 bg-white px-5 text-[13px] font-extrabold text-slate-900 transition hover:border-sky-400 hover:text-sky-600"
+                    className="h-[44px] w-full rounded-xl border border-slate-300 bg-white px-5 text-[13px] font-extrabold text-slate-900 transition hover:border-sky-400 hover:text-sky-600 sm:h-[40px] sm:w-auto"
                   >
                     LOGIN
                   </button>
@@ -540,36 +549,55 @@ export default function CabBookingPageClient({ cab, searchMeta }: Props) {
               </div>
             </section>
 
-            <CabBookingSection title="Traveller Details" defaultOpen>
-              <CabBookingTravellerForm
-                values={traveller}
-                errors={errors}
-                onChange={handleTravellerChange}
+            <div className="order-3">
+              <CabBookingSection title="Traveller Details" defaultOpen>
+                <CabBookingTravellerForm
+                  values={traveller}
+                  errors={errors}
+                  onChange={handleTravellerChange}
+                />
+              </CabBookingSection>
+            </div>
+
+            <div className="order-6 lg:order-4">
+              <CabBookingSection title="Special Requests">
+                <CabBookingSpecialRequests
+                  items={data.specialRequests}
+                  onChange={setSelectedAddons}
+                />
+              </CabBookingSection>
+            </div>
+
+            <div className="order-4 lg:order-5">
+              <CabBookingSection title="Inclusions">
+                <CabBookingInclusions data={data} />
+              </CabBookingSection>
+            </div>
+
+            <div className="order-5 lg:hidden">
+              <CabBookingOffers
+                appliedOfferCode={finalSelectedOffer?.code || ""}
+                bookingValue={estimatedBookingValue}
+                onApplyOffer={handleApplyOffer as any}
+                onRemoveOffer={handleRemoveOffer}
               />
-            </CabBookingSection>
+            </div>
 
-            <CabBookingSection title="Special Requests">
-              <CabBookingSpecialRequests
-                items={data.specialRequests}
-                onChange={setSelectedAddons}
-              />
-            </CabBookingSection>
+            <div className="order-7 lg:order-6">
+              <CabBookingSection title="Policies">
+                <CabBookingPolicies data={data} />
+              </CabBookingSection>
+            </div>
 
-            <CabBookingSection title="Inclusions">
-              <CabBookingInclusions data={data} />
-            </CabBookingSection>
-
-            <CabBookingSection title="Policies">
-              <CabBookingPolicies data={data} />
-            </CabBookingSection>
-
-            <CabBookingSection title="User Reviews">
-              <CabBookingReviews data={data} />
-            </CabBookingSection>
+            <div className="order-8 lg:order-7">
+              <CabBookingSection title="User Reviews">
+                <CabBookingReviews data={data} />
+              </CabBookingSection>
+            </div>
           </div>
 
-          <div className="w-[26%] min-w-0 self-start">
-            <div className="sticky top-24 space-y-4">
+          <div className="w-full min-w-0 self-start lg:w-[26%]">
+            <div className="space-y-4 lg:sticky lg:top-24">
               <CabBookingFareSummary
                 fare={fare}
                 canProceed={canProceed}
@@ -587,12 +615,14 @@ export default function CabBookingPageClient({ cab, searchMeta }: Props) {
                 onProceed={handleProceedToPayment}
               />
 
-              <CabBookingOffers
-                appliedOfferCode={finalSelectedOffer?.code || ""}
-                bookingValue={estimatedBookingValue}
-                onApplyOffer={handleApplyOffer as any}
-                onRemoveOffer={handleRemoveOffer}
-              />
+              <div className="hidden lg:block">
+                <CabBookingOffers
+                  appliedOfferCode={finalSelectedOffer?.code || ""}
+                  bookingValue={estimatedBookingValue}
+                  onApplyOffer={handleApplyOffer as any}
+                  onRemoveOffer={handleRemoveOffer}
+                />
+              </div>
             </div>
           </div>
         </div>

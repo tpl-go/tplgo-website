@@ -55,8 +55,8 @@ export default function CabManageAddons({
         subtitle="Select a cab option and review upgrade or refund settlement."
       />
 
-      <div className="rounded-[24px] border border-black/5 bg-[#f8f9fb] p-5">
-        <p className="text-sm font-bold text-[#111827]">
+      <div className="rounded-[24px] border border-black/5 bg-[#f8f9fb] p-4 sm:p-5">
+        <p className="break-words text-sm font-bold text-[#111827]">
           Current Cab: {cabName}
         </p>
 
@@ -74,7 +74,7 @@ export default function CabManageAddons({
               Current Selected Cab
             </p>
 
-            <p className="mt-1 text-sm font-bold text-[#111827]">
+            <p className="mt-1 break-words text-sm font-bold text-[#111827]">
               {selectedVariant.name || cabName}
             </p>
 
@@ -86,7 +86,7 @@ export default function CabManageAddons({
         ) : null}
       </div>
 
-      <div className="rounded-[24px] border border-black/5 bg-white p-5">
+      <div className="rounded-[24px] border border-black/5 bg-white p-4 sm:p-5">
         <p className="text-base font-bold text-[#111827]">
           Available Cab Options
         </p>
@@ -111,15 +111,15 @@ export default function CabManageAddons({
                   key={variant.id || variant.name}
                   type="button"
                   onClick={() => onVariantChange(variant)}
-                  className={`rounded-2xl border p-4 text-left transition ${
+                  className={`min-w-0 rounded-2xl border p-4 text-left transition ${
                     isSelected
                       ? "border-[#ff6b00] bg-[#fff7f2] shadow-[0_8px_24px_rgba(255,107,0,0.08)]"
                       : "border-black/5 bg-[#f8f9fb] hover:border-[#ff6b00]/30"
                   }`}
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-bold text-[#111827]">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0">
+                      <p className="break-words text-sm font-bold text-[#111827]">
                         {variant.name ||
                           variant.vehicleType ||
                           "Cab Option"}
@@ -153,7 +153,7 @@ export default function CabManageAddons({
                   </div>
 
                   {!!variant.features?.length && (
-                    <p className="mt-3 text-xs font-semibold text-[#6b7280]">
+                    <p className="mt-3 break-words text-xs font-semibold text-[#6b7280]">
                       {variant.features.slice(0, 4).join(" • ")}
                     </p>
                   )}
@@ -174,7 +174,7 @@ export default function CabManageAddons({
         </div>
       </div>
 
-      <div className="rounded-[24px] border border-black/5 bg-white p-5 shadow-sm">
+      <div className="rounded-[24px] border border-black/5 bg-white p-4 shadow-sm sm:p-5">
         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#ff6b00]">
           Settlement Summary
         </p>
@@ -210,8 +210,8 @@ export default function CabManageAddons({
 
         <div className="mt-5 rounded-2xl bg-[#fff7f2] p-4">
           {quote.settlementMode === "payment" && (
-            <div className="flex items-center justify-between gap-4">
-              <div>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b7280]">
                   Net Payable
                 </p>
@@ -224,7 +224,7 @@ export default function CabManageAddons({
               <button
                 type="button"
                 onClick={onContinue}
-                className="rounded-full bg-[#ff6b00] px-5 py-3 text-sm font-semibold text-white"
+                className="min-h-[48px] w-full rounded-full bg-[#ff6b00] px-5 py-3 text-sm font-semibold text-white sm:w-auto"
               >
                 Continue to Payment
               </button>
@@ -232,8 +232,8 @@ export default function CabManageAddons({
           )}
 
           {quote.settlementMode === "wallet_credit" && (
-            <div className="flex items-center justify-between gap-4">
-              <div>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b7280]">
                   Refund Wallet Credit
                 </p>
@@ -246,7 +246,7 @@ export default function CabManageAddons({
               <button
                 type="button"
                 onClick={onContinue}
-                className="rounded-full bg-[#111827] px-5 py-3 text-sm font-semibold text-white"
+                className="min-h-[48px] w-full rounded-full bg-[#111827] px-5 py-3 text-sm font-semibold text-white sm:w-auto"
               >
                 Save Changes
               </button>
@@ -254,8 +254,8 @@ export default function CabManageAddons({
           )}
 
           {quote.settlementMode === "save" && (
-            <div className="flex items-center justify-between gap-4">
-              <div>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
                 <p className="text-sm font-semibold text-[#111827]">
                   No payment required
                 </p>
@@ -268,7 +268,7 @@ export default function CabManageAddons({
               <button
                 type="button"
                 onClick={onContinue}
-                className="rounded-full bg-[#111827] px-5 py-3 text-sm font-semibold text-white"
+                className="min-h-[48px] w-full rounded-full bg-[#111827] px-5 py-3 text-sm font-semibold text-white sm:w-auto"
               >
                 Save Changes
               </button>
@@ -297,8 +297,10 @@ function Row({
 }) {
   return (
     <div className="flex items-center justify-between gap-4 rounded-2xl bg-[#f8f9fb] px-4 py-3">
-      <p className="text-sm text-[#4b5563]">{label}</p>
-      <p className="text-sm font-semibold text-[#111827]">{value}</p>
+      <p className="min-w-0 break-words text-sm text-[#4b5563]">{label}</p>
+      <p className="shrink-0 text-sm font-semibold text-[#111827]">
+        {value}
+      </p>
     </div>
   );
 }

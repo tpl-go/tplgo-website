@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import CabModifySearchBar from "@/app/components/cab/result/CabModifySearchBar";
 import CabResultCard from "@/app/components/cab/result/CabResultCard";
 import CabResultFilters from "@/app/components/cab/result/CabResultFilters";
+import MobileInnerBack from "@/app/components/common/mobile/MobileInnerBack";
 import type {
   CabResultItem,
   CabResultSearchMeta,
@@ -129,15 +130,31 @@ const dropCity =
   }, [searchMeta]);
 
   return (
-    <main className="min-h-screen bg-[#f5f7fb] text-slate-900">
-      <div className="mx-auto max-w-[1400px] px-4 pb-8 pt-4">
-        <div className=" z-[80] -mx-2 bg-[#f5f7fb]/95 px-2 pb-4 pt-1 backdrop-blur-sm">
+    <main className="min-h-screen overflow-x-hidden bg-[#f5f7fb] text-slate-900">
+      <div className="bg-[#f5f7fb] px-3 pt-3 lg:hidden">
+        <MobileInnerBack title="Cab Results" />
+      </div>
+
+      <div className="mx-auto max-w-[1400px] px-3 pb-8 pt-3 md:px-4 md:pt-4">
+        <div className="z-[80] -mx-1 bg-[#f5f7fb]/95 px-1 pb-3 pt-1 backdrop-blur-sm md:-mx-2 md:px-2 md:pb-4">
           <div className="rounded-[24px]">
             <CabModifySearchBar searchMeta={searchMeta} />
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
+        <div className="mb-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm lg:hidden">
+          <div className="text-[11px] font-black uppercase tracking-[0.14em] text-sky-600">
+            Cab Results
+          </div>
+          <div className="mt-1 break-words text-[18px] font-black leading-6 text-slate-900">
+            {offerDestination}
+          </div>
+          <div className="mt-1 text-[13px] font-semibold text-slate-500">
+            {filteredItems.length} option{filteredItems.length === 1 ? "" : "s"} found
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[300px_minmax(0,1fr)] lg:gap-6">
           <CabResultFilters
             rideType={searchMeta.rideType}
             items={baseItems}
@@ -147,7 +164,7 @@ const dropCity =
           <section className="min-w-0">
             <div />
 
-            <div className="mt-4">
+            <div className="mt-4 lg:mt-0">
               <SmartResultsOfferStrip
                 service="cab"
                 destination={offerDestination}
@@ -156,7 +173,9 @@ const dropCity =
               />
             </div>
 
-            <div className="mt-4 text-[14px] text-slate-700">{infoText}</div>
+            <div className="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[14px] font-semibold text-slate-700 shadow-sm lg:border-0 lg:bg-transparent lg:px-0 lg:py-0 lg:shadow-none">
+              {infoText}
+            </div>
 
             <div className="mt-4 space-y-4">
               {filteredItems.length > 0 ? (

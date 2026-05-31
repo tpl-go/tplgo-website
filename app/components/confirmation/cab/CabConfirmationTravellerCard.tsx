@@ -73,7 +73,7 @@ export default function CabConfirmationTravellerCard({
         </h3>
       </div>
 
-      <div style={{ padding: "22px" }}>
+      <div className="p-4 md:p-[22px]">
         {leadTraveller ? (
           <div
             style={{
@@ -134,6 +134,7 @@ export default function CabConfirmationTravellerCard({
         ) : null}
 
         <div
+          className="cab-traveller-grid"
           style={{
             display: "grid",
             gridTemplateColumns: "1.15fr 0.85fr",
@@ -164,6 +165,7 @@ export default function CabConfirmationTravellerCard({
               {travellers.length > 0 ? (
                 travellers.map((traveller, index) => (
                   <div
+                    className="cab-traveller-row"
                     key={traveller.id || index}
                     style={{
                       border: "1px solid #e5e7eb",
@@ -180,6 +182,7 @@ export default function CabConfirmationTravellerCard({
                     }}
                   >
                     <div
+                      className="cab-traveller-main"
                       style={{
                         display: "flex",
                         alignItems: "center",
@@ -241,6 +244,7 @@ export default function CabConfirmationTravellerCard({
                     </div>
 
                     <div
+                      className="cab-traveller-status"
                       style={{
                         fontSize: "11px",
                         fontWeight: 900,
@@ -298,6 +302,27 @@ export default function CabConfirmationTravellerCard({
           </div>
         </div>
       </div>
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+            @media (max-width: 767px) {
+              .cab-traveller-grid {
+                grid-template-columns: minmax(0, 1fr) !important;
+              }
+              .cab-traveller-row {
+                align-items: flex-start !important;
+                flex-direction: column !important;
+              }
+              .cab-traveller-main {
+                width: 100% !important;
+              }
+              .cab-traveller-status {
+                white-space: normal !important;
+              }
+            }
+          `,
+        }}
+      />
     </section>
   );
 }

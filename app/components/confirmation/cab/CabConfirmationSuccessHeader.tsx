@@ -106,6 +106,7 @@ export default function CabConfirmationSuccessHeader({
       }}
     >
       <div
+        className="cab-success-header-inner"
         style={{
           padding: "28px 26px 24px 26px",
           position: "relative",
@@ -185,6 +186,7 @@ export default function CabConfirmationSuccessHeader({
             </div>
 
             <h1
+              className="cab-success-title"
               style={{
                 margin: "16px 0 0 0",
                 fontSize: "34px",
@@ -198,6 +200,7 @@ export default function CabConfirmationSuccessHeader({
             </h1>
 
             <div
+              className="cab-success-cab-title"
               style={{
                 marginTop: "12px",
                 fontSize: "16px",
@@ -250,6 +253,7 @@ export default function CabConfirmationSuccessHeader({
           </div>
 
           <div
+            className="cab-success-id-card"
             style={{
               minWidth: "320px",
               maxWidth: "100%",
@@ -275,6 +279,7 @@ export default function CabConfirmationSuccessHeader({
             </div>
 
             <div
+              className="cab-success-booking-id"
               style={{
                 fontSize: "28px",
                 fontWeight: 900,
@@ -309,6 +314,7 @@ export default function CabConfirmationSuccessHeader({
                 </div>
 
                 <div
+                  className="cab-success-ride-id"
                   style={{
                     fontSize: "22px",
                     fontWeight: 900,
@@ -372,6 +378,42 @@ export default function CabConfirmationSuccessHeader({
           </div>
         </div>
       </div>
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+            @media (max-width: 767px) {
+              .cab-success-header-inner {
+                padding: 18px 14px !important;
+              }
+              .cab-success-title {
+                font-size: 26px !important;
+                line-height: 32px !important;
+                letter-spacing: 0 !important;
+              }
+              .cab-success-cab-title {
+                font-size: 21px !important;
+                line-height: 28px !important;
+                letter-spacing: 0 !important;
+                word-break: break-word !important;
+              }
+              .cab-success-id-card {
+                min-width: 0 !important;
+                width: 100% !important;
+                border-radius: 18px !important;
+                padding: 16px !important;
+              }
+              .cab-success-booking-id {
+                font-size: 21px !important;
+                line-height: 28px !important;
+              }
+              .cab-success-ride-id {
+                font-size: 18px !important;
+                line-height: 24px !important;
+              }
+            }
+          `,
+        }}
+      />
     </section>
   );
 }
