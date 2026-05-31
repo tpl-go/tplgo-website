@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import LoginModal from "@/app/components/common/LoginModal";
+import MobileInnerBack from "@/app/components/common/mobile/MobileInnerBack";
 
 import BusConfirmationSuccessHeader from "@/app/components/confirmation/bus/BusConfirmationSuccessHeader";
 import BusConfirmationJourneyCard from "@/app/components/confirmation/bus/BusConfirmationJourneyCard";
@@ -439,7 +440,10 @@ const payloadStorageKey = `tpl_booking_payload_bus_${safePaidAt}_${mobile}_${lea
 
   if (!data) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-[#eef3f8]">
+      <main className="flex min-h-screen items-center justify-center overflow-x-hidden bg-[#eef3f8] px-3">
+        <div className="fixed left-0 right-0 top-0 bg-[#eef3f8] px-3 pt-3 lg:hidden">
+          <MobileInnerBack title="Bus Confirmation" />
+        </div>
         <div className="bg-white p-6 rounded-xl border font-semibold">
           No bus confirmation data found.
         </div>
@@ -453,10 +457,13 @@ const payloadStorageKey = `tpl_booking_payload_bus_${safePaidAt}_${mobile}_${lea
   const handlePrint = () => window.print();
 
   return (
-    <main className="min-h-screen bg-[#eef3f8] text-black">
+    <main className="min-h-screen overflow-x-hidden bg-[#eef3f8] pb-5 text-black">
+      <div className="bg-[#eef3f8] px-3 pt-3 lg:hidden">
+        <MobileInnerBack title="Bus Confirmation" />
+      </div>
       
 
-      <div className="bg-green-50 border-b border-green-200 text-center py-4">
+      <div className="border-b border-green-200 bg-green-50 px-3 py-4 text-center">
         <div className="font-black text-green-700 text-lg">
           🎉 Bus Booking Confirmed
         </div>
@@ -473,8 +480,8 @@ const payloadStorageKey = `tpl_booking_payload_bus_${safePaidAt}_${mobile}_${lea
         ) : null}
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-6 flex gap-4">
-        <div className="w-[72%] flex flex-col gap-4">
+      <div className="mx-auto flex max-w-7xl flex-col gap-4 px-3 py-4 md:px-4 md:py-6 lg:flex-row">
+        <div className="flex w-full min-w-0 flex-col gap-4 lg:w-[72%]">
           <BusConfirmationSuccessHeader
             bookingId={bookingId}
             ticketNumber={ticketNumber}
@@ -491,7 +498,7 @@ const payloadStorageKey = `tpl_booking_payload_bus_${safePaidAt}_${mobile}_${lea
           />
 
           {finalEarnedCreditAmount > 0 ? (
-            <div className="rounded-2xl border border-green-200 bg-green-50 px-5 py-4 text-[14px] font-bold text-green-700">
+            <div className="rounded-2xl border border-green-200 bg-green-50 px-4 py-4 text-[14px] font-bold text-green-700 sm:px-5">
               🎉 You earned ₹
               {Number(finalEarnedCreditAmount).toLocaleString("en-IN")} TPL
               Earned Credit. This has been added to your wallet.
@@ -544,7 +551,7 @@ const payloadStorageKey = `tpl_booking_payload_bus_${safePaidAt}_${mobile}_${lea
 />
         </div>
 
-        <div className="w-[28%]">
+        <div className="w-full min-w-0 lg:w-[28%]">
           <BusConfirmationActionsCard
             bookingId={bookingId}
             ticketNumber={ticketNumber}

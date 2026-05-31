@@ -56,8 +56,8 @@ export default function BusPaymentPriceCard({
   return (
     <aside className="flex h-full w-full">
       <div className="flex min-h-full w-full flex-col gap-4">
-        <div className="sticky top-[110px] z-20 flex flex-col gap-4 bg-[#eef3f8]">
-          <div className="overflow-hidden rounded-[28px] border border-[#d9e2ec] bg-white shadow-[0_14px_40px_rgba(15,23,42,0.08)]">
+        <div className="z-20 flex flex-col gap-4 bg-[#eef3f8] lg:sticky lg:top-[110px]">
+          <div className="overflow-hidden rounded-[22px] border border-[#d9e2ec] bg-white shadow-[0_14px_40px_rgba(15,23,42,0.08)] sm:rounded-[28px]">
             <div className="border-b border-[#edf2f7] bg-white px-5 py-5">
               <div className="text-[20px] font-black text-[#111827]">
                 Total Due
@@ -91,7 +91,7 @@ export default function BusPaymentPriceCard({
               )}
 
               <PriceRow
-                label="Tax & Surcharge"
+                label="Taxes & Fees"
                 value={priceBreakup.taxAndSurcharge}
               />
 
@@ -186,7 +186,7 @@ export default function BusPaymentPriceCard({
                   Final Payable
                 </span>
 
-                <span className="text-[22px] font-black text-[#111827]">
+                <span className="shrink-0 text-[22px] font-black text-[#111827]">
                   {formatPrice(priceBreakup.totalAmount)}
                 </span>
               </div>
@@ -267,7 +267,7 @@ function PriceRow({
   return (
     <div className="mb-3 flex items-start justify-between gap-3 last:mb-0">
       <span
-        className={`text-[15px] font-bold ${
+        className={`min-w-0 break-words text-[15px] font-bold ${
           positiveOrange ? "text-[#ea580c]" : "text-[#1f2937]"
         }`}
       >
@@ -289,7 +289,7 @@ function PriceRow({
 function StatusRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="mb-3 flex items-center justify-between gap-3 last:mb-0">
-      <span className="text-[15px] font-bold text-[#1f2937]">{label}</span>
+      <span className="min-w-0 break-words text-[15px] font-bold text-[#1f2937]">{label}</span>
 
       <span className="whitespace-nowrap text-[14px] font-bold text-[#6b7280]">
         {value}

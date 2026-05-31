@@ -129,12 +129,12 @@ export default function BusConfirmationFareCard({
       : "border-[#fecaca] bg-[#fee2e2] text-[#b91c1c]";
 
   return (
-    <div className="overflow-hidden rounded-[24px] border border-[#d9e2ec] bg-white shadow-[0_12px_34px_rgba(15,23,42,0.08)]">
-      <div className="border-b border-[#e5e7eb] bg-white px-5 py-4">
-        <div className="flex items-center gap-2">
+    <div className="overflow-hidden rounded-[22px] border border-[#d9e2ec] bg-white shadow-[0_12px_34px_rgba(15,23,42,0.08)] sm:rounded-[24px]">
+      <div className="border-b border-[#e5e7eb] bg-white px-4 py-4 sm:px-5">
+        <div className="flex min-w-0 items-center gap-2">
           <CreditCard size={20} className="text-[#ea580c]" />
 
-          <h2 className="text-[22px] font-black text-[#111827]">
+          <h2 className="break-words text-[20px] font-black text-[#111827] sm:text-[22px]">
             Fare & Payment Details
           </h2>
         </div>
@@ -183,7 +183,7 @@ export default function BusConfirmationFareCard({
         </div>
       ) : null}
 
-      <div className="px-5 py-5">
+      <div className="px-4 py-5 sm:px-5">
         <div className="mb-4 rounded-[16px] border border-[#e5e7eb] bg-[#f8fafc] p-4">
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <InfoItem label="Booking ID" value={bookingId} />
@@ -214,7 +214,7 @@ export default function BusConfirmationFareCard({
             <StatusRow label="Seat Upgrade" value="Standard seat selected" />
           )}
 
-          <FareRow label="Taxes & Surcharges" value={taxAndSurcharge} />
+          <FareRow label="Taxes & Fees" value={taxAndSurcharge} />
 
           {tripSecureTotal > 0 ? (
             <FareRow label="Trip Secure" value={tripSecureTotal} />
@@ -278,8 +278,8 @@ export default function BusConfirmationFareCard({
           ) : null}
 
           <div className="border-t border-dashed border-[#d1d5db] pt-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
                 <div className="text-[20px] font-black text-[#111827]">
                   Total Paid
                 </div>
@@ -289,7 +289,7 @@ export default function BusConfirmationFareCard({
                 </div>
               </div>
 
-              <div className="whitespace-nowrap text-[30px] font-black text-[#111827]">
+              <div className="shrink-0 whitespace-nowrap text-[28px] font-black text-[#111827] sm:text-[30px]">
                 ₹{Number(totalAmount || 0).toLocaleString("en-IN")}
               </div>
             </div>
@@ -330,7 +330,7 @@ function FareRow({
   return (
     <div className="flex items-start justify-between gap-3">
       <div
-        className={`text-[15px] font-bold ${
+        className={`min-w-0 break-words text-[15px] font-bold ${
           orange ? "text-[#ea580c]" : "text-[#1f2937]"
         }`}
       >
@@ -352,7 +352,7 @@ function FareRow({
 function StatusRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-start justify-between gap-3">
-      <div className="text-[15px] font-bold text-[#1f2937]">{label}</div>
+      <div className="min-w-0 break-words text-[15px] font-bold text-[#1f2937]">{label}</div>
 
       <div className="whitespace-nowrap text-[14px] font-bold text-[#6b7280]">
         {value}

@@ -9,6 +9,7 @@ import BusPaymentTripSecureCard from "@/app/components/payment/bus/BusPaymentTri
 import BusPaymentOptionSection from "@/app/components/payment/bus/BusPaymentOptionSection";
 import BusPaymentPriceCard from "@/app/components/payment/bus/BusPaymentPriceCard";
 import LoginModal from "@/app/components/common/LoginModal";
+import MobileInnerBack from "@/app/components/common/mobile/MobileInnerBack";
 
 import { AUTH_UPDATED_EVENT } from "@/app/lib/booking/guestAuth";
 import {
@@ -621,9 +622,12 @@ export default function BusPaymentPage() {
 
   if (!paymentData) {
     return (
-      <main className="min-h-screen bg-[#f5f7fb]">
+      <main className="min-h-screen overflow-x-hidden bg-[#f5f7fb]">
+        <div className="bg-[#f5f7fb] px-3 pt-3 lg:hidden">
+          <MobileInnerBack title="Bus Payment" />
+        </div>
         <BusBookingTopBar timerLabel="10:00" />
-        <div className="mx-auto max-w-[1400px] px-4 py-6">
+        <div className="mx-auto max-w-[1400px] px-3 py-4 md:px-4 md:py-6">
           <div className="rounded-2xl border border-slate-200 bg-white p-8 text-[18px] font-bold text-slate-700">
             No payment data found.
           </div>
@@ -642,12 +646,15 @@ export default function BusPaymentPage() {
   } = paymentData;
 
   return (
-    <main className="min-h-screen bg-[#f5f7fb] text-black">
+    <main className="min-h-screen overflow-x-hidden bg-[#f5f7fb] pb-5 text-black">
+      <div className="bg-[#f5f7fb] px-3 pt-3 lg:hidden">
+        <MobileInnerBack title="Bus Payment" />
+      </div>
       <BusBookingTopBar timerLabel={timerLabel} />
 
-      <div className="mx-auto max-w-[1400px] px-4 py-6">
-        <div className="flex items-start gap-5">
-          <div className="w-[74%] min-w-0 space-y-5">
+      <div className="mx-auto max-w-[1400px] px-3 py-4 md:px-4 md:py-6">
+        <div className="flex flex-col items-stretch gap-4 lg:flex-row lg:items-start lg:gap-5">
+          <div className="w-full min-w-0 space-y-4 lg:w-[74%] lg:space-y-5">
             <BusPaymentTopSummary
               bookingPayload={bookingPayload}
               travellers={travellers}
@@ -662,9 +669,9 @@ export default function BusPaymentPage() {
               offerData={appliedOffer}
             />
 
-            <section className="rounded-2xl border border-[#d9e2ec] bg-white px-5 py-4 shadow-sm">
-              <div className="flex items-center justify-between gap-4">
-                <div>
+            <section className="rounded-2xl border border-[#d9e2ec] bg-white px-4 py-4 shadow-sm sm:px-5">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
                   <div className="text-[16px] font-extrabold text-[#111827]">
                     Additional discounts and saved payment options
                   </div>
@@ -679,7 +686,7 @@ export default function BusPaymentPage() {
                   <button
                     type="button"
                     onClick={() => setShowLoginModal(true)}
-                    className="h-[42px] min-w-[110px] rounded-xl bg-[#1d9bf0] px-5 text-[13px] font-extrabold text-white transition hover:opacity-95"
+                    className="h-[42px] w-full rounded-xl bg-[#1d9bf0] px-5 text-[13px] font-extrabold text-white transition hover:opacity-95 sm:w-auto sm:min-w-[110px]"
                   >
                     LOGIN
                   </button>
@@ -695,11 +702,12 @@ export default function BusPaymentPage() {
 
             <BusPaymentOptionSection
               defaultOption={null}
+              payableAmount={recalculatedTotal}
               onPaymentMethodChange={setSelectedPaymentMethod}
             />
           </div>
 
-          <div className="w-[26%] min-w-0 self-start">
+          <div className="w-full min-w-0 self-start lg:w-[26%]">
             <BusPaymentPriceCard
   priceBreakup={{
     baseFare: pricing.baseFare,

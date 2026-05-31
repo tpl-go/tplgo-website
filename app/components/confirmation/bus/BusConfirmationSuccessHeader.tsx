@@ -108,6 +108,7 @@ export default function BusConfirmationSuccessHeader({
       }}
     >
       <div
+        className="bus-confirmation-success-shell"
         style={{
           padding: "28px 26px 24px 26px",
           position: "relative",
@@ -141,6 +142,7 @@ export default function BusConfirmationSuccessHeader({
         />
 
         <div
+          className="bus-confirmation-success-grid"
           style={{
             position: "relative",
             display: "flex",
@@ -187,6 +189,7 @@ export default function BusConfirmationSuccessHeader({
             </div>
 
             <h1
+              className="bus-confirmation-success-title"
               style={{
                 margin: "16px 0 0 0",
                 fontSize: "34px",
@@ -194,6 +197,7 @@ export default function BusConfirmationSuccessHeader({
                 fontWeight: 900,
                 color: "#0f172a",
                 letterSpacing: "-0.6px",
+                wordBreak: "break-word",
               }}
             >
               {bookingStatusText}
@@ -215,6 +219,7 @@ export default function BusConfirmationSuccessHeader({
             </div>
 
             <div
+              className="bus-confirmation-bus-name"
               style={{
                 marginTop: "22px",
                 fontSize: "28px",
@@ -223,6 +228,7 @@ export default function BusConfirmationSuccessHeader({
                 color: "#111827",
                 maxWidth: "900px",
                 letterSpacing: "-0.4px",
+                wordBreak: "break-word",
               }}
             >
               {busName}
@@ -265,6 +271,7 @@ export default function BusConfirmationSuccessHeader({
           </div>
 
           <div
+            className="bus-confirmation-reference-card"
             style={{
               minWidth: "320px",
               maxWidth: "100%",
@@ -387,6 +394,35 @@ export default function BusConfirmationSuccessHeader({
           </div>
         </div>
       </div>
+
+      <style jsx global>{`
+        @media (max-width: 767px) {
+          .bus-confirmation-success-shell {
+            padding: 18px 14px !important;
+          }
+
+          .bus-confirmation-success-grid {
+            flex-direction: column !important;
+            gap: 16px !important;
+          }
+
+          .bus-confirmation-success-title {
+            font-size: 28px !important;
+            line-height: 34px !important;
+          }
+
+          .bus-confirmation-bus-name {
+            font-size: 22px !important;
+            line-height: 29px !important;
+          }
+
+          .bus-confirmation-reference-card {
+            min-width: 0 !important;
+            width: 100% !important;
+            padding: 16px !important;
+          }
+        }
+      `}</style>
     </section>
   );
 }

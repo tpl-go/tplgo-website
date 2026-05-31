@@ -1,17 +1,19 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { BusResultItem } from "@/app/lib/bus/busTypes";
 import BusResultCard from "./BusResultCard";
 
 type Props = {
   buses: BusResultItem[];
+  focusedBusId?: string | null;
   onViewDetails?: (bus: BusResultItem) => void;
   onSelectSeats?: (bus: BusResultItem) => void;
 };
 
 export default function GovernmentBusGroupCard({
   buses,
+  focusedBusId,
   onViewDetails,
   onSelectSeats,
 }: Props) {
@@ -32,22 +34,29 @@ export default function GovernmentBusGroupCard({
     };
   }, [buses]);
 
+  useEffect(() => {
+    if (!focusedBusId) return;
+    if (buses.some((bus) => bus.id === focusedBusId)) {
+      setExpanded(true);
+    }
+  }, [buses, focusedBusId]);
+
   if (!summary) return null;
 
   return (
     <div className="space-y-3">
       
       {/* GOV HEADER CARD */}
-      <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-        <div className="flex items-center justify-between gap-4">
+      <div className="min-w-0 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+        <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           
           {/* LEFT */}
-          <div>
+          <div className="min-w-0">
             <span className="inline-block text-[10px] font-semibold text-indigo-600 mb-1">
               Government Bus
             </span>
 
-            <h3 className="text-[18px] font-semibold text-slate-900">
+            <h3 className="break-words text-[18px] font-semibold text-slate-900">
               {summary.operatorName}
             </h3>
 
@@ -57,7 +66,7 @@ export default function GovernmentBusGroupCard({
           </div>
 
           {/* RIGHT */}
-          <div className="text-right">
+          <div className="text-left sm:text-right">
             <p className="text-[18px] font-semibold text-slate-900">
               ₹{summary.minPrice} - ₹{summary.maxPrice}
             </p>
@@ -80,6 +89,7 @@ export default function GovernmentBusGroupCard({
             <BusResultCard
               key={bus.id}
               bus={bus}
+              focused={bus.id === focusedBusId}
               onViewDetails={onViewDetails}
               onSelectSeats={onSelectSeats}
             />

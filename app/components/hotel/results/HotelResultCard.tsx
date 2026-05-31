@@ -392,7 +392,7 @@ export default function HotelResultCard({ hotel }: Props) {
               }}
               className="mt-3 h-11 w-full rounded-xl bg-[#0b74ff] px-4 text-[13px] font-black text-white md:hidden"
             >
-              View Deal
+              View Detail
             </button>
 
             {firstVariant?.availableRooms ? (

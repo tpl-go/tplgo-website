@@ -20,7 +20,7 @@ export default function BusManageSpecialRequest({
         subtitle="Add or update request notes for bus travel."
       />
 
-      <div className="rounded-[24px] border border-black/5 bg-[#f8f9fb] p-5">
+      <div className="rounded-[24px] border border-black/5 bg-[#f8f9fb] p-4 sm:p-5">
         <div className="space-y-4">
           <div className="rounded-2xl border border-[#e5e7eb] bg-white px-4 py-4">
             <p className="text-sm font-bold text-[#111827]">

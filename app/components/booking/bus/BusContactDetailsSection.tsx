@@ -78,8 +78,8 @@ export default function BusContactDetailsSection({
 
   return (
     <>
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="flex items-center gap-3">
+      <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
+        <div className="flex min-w-0 flex-col gap-1 md:flex-row md:items-center md:gap-3">
           <h2 className="text-[18px] font-extrabold text-slate-900">
             Contact Details
           </h2>
@@ -88,7 +88,7 @@ export default function BusContactDetailsSection({
           </span>
         </div>
 
-        <div className="mt-5 grid grid-cols-2 gap-4">
+        <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
             <label className="mb-2 block text-[12px] font-semibold text-slate-700">
               Email Id*
@@ -127,8 +127,8 @@ export default function BusContactDetailsSection({
         </div>
       </section>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="flex items-center gap-3">
+      <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
+        <div className="flex min-w-0 flex-col gap-1 md:flex-row md:items-center md:gap-3">
           <h2 className="text-[17px] font-extrabold text-slate-900">
             Your pincode and state
           </h2>
@@ -137,7 +137,7 @@ export default function BusContactDetailsSection({
           </span>
         </div>
 
-        <div className="mt-4 max-w-[380px]">
+        <div className="mt-4 max-w-full md:max-w-[380px]">
           <label className="mb-2 block text-[12px] font-semibold text-slate-700">
             Select the State
           </label>

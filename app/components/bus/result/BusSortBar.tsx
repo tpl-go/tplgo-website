@@ -37,46 +37,48 @@ export default function BusSortBar({
   resultsCount,
 }: Props) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white px-4 py-2 shadow-sm">
-      <div className="flex items-center justify-between flex-wrap gap-3">
+    <div className="min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-3 shadow-sm md:px-4 md:py-2">
+      <div className="flex min-w-0 flex-col gap-3 md:flex-row md:flex-wrap md:items-center md:justify-between">
         {/* LEFT SIDE */}
-        <div className="flex items-center gap-5 flex-wrap">
+        <div className="flex min-w-0 flex-col gap-3 md:flex-row md:flex-wrap md:items-center md:gap-5">
           <p className="text-[13px] font-semibold text-slate-600">
             {resultsCount} buses found
           </p>
 
-          <div className="flex items-center gap-4 text-sm">
-            <span className="font-semibold text-slate-700">SORT BY</span>
+          <div className="flex min-w-0 flex-col gap-2 text-sm sm:flex-row sm:items-center sm:gap-4">
+            <span className="shrink-0 font-semibold text-slate-700">SORT BY</span>
 
-            {SORT_OPTIONS.map((item) => {
-              const isActive = activeSort === item.key;
+            <div className="flex min-w-0 gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible sm:pb-0">
+              {SORT_OPTIONS.map((item) => {
+                const isActive = activeSort === item.key;
 
-              const href = `/bus/result?fromCity=${encodeURIComponent(
-                fromCity
-              )}&fromPoint=${encodeURIComponent(
-                fromPoint || ""
-              )}&toCity=${encodeURIComponent(
-                toCity
-              )}&toPoint=${encodeURIComponent(
-                toPoint || ""
-              )}&date=${encodeURIComponent(
-                date
-              )}&sort=${encodeURIComponent(item.key)}`;
+                const href = `/bus/result?fromCity=${encodeURIComponent(
+                  fromCity
+                )}&fromPoint=${encodeURIComponent(
+                  fromPoint || ""
+                )}&toCity=${encodeURIComponent(
+                  toCity
+                )}&toPoint=${encodeURIComponent(
+                  toPoint || ""
+                )}&date=${encodeURIComponent(
+                  date
+                )}&sort=${encodeURIComponent(item.key)}`;
 
-              return (
-                <a
-                  key={item.key}
-                  href={href}
-                  className={`px-2 py-1 rounded-md transition ${
-                    isActive
-                      ? "text-blue-600 font-semibold bg-blue-50"
-                      : "text-slate-600 hover:text-blue-600"
-                  }`}
-                >
-                  {item.label}
-                </a>
-              );
-            })}
+                return (
+                  <a
+                    key={item.key}
+                    href={href}
+                    className={`min-h-9 shrink-0 rounded-md px-3 py-2 transition ${
+                      isActive
+                        ? "bg-blue-50 font-semibold text-blue-600"
+                        : "text-slate-600 hover:text-blue-600"
+                    }`}
+                  >
+                    {item.label}
+                  </a>
+                );
+              })}
+            </div>
           </div>
         </div>
 

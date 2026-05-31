@@ -6,6 +6,7 @@ import { applyBenefitPricing } from "@/app/lib/pricing/applyBenefitPricing";
 
 type Props = {
   bus: BusResultItem;
+  focused?: boolean;
   onViewDetails?: (bus: BusResultItem) => void;
   onSelectSeats?: (bus: BusResultItem) => void;
 };
@@ -126,6 +127,7 @@ function getOfferDiscountAmount(offer: any, baseAmount: number) {
 
 export default function BusResultCard({
   bus,
+  focused = false,
   onViewDetails,
   onSelectSeats,
 }: Props) {
@@ -222,9 +224,16 @@ export default function BusResultCard({
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:shadow-lg">
+    <div
+      data-bus-result-id={bus.id}
+      className={`min-w-0 scroll-mt-24 overflow-hidden rounded-2xl border bg-white shadow-sm transition-all duration-300 hover:shadow-lg ${
+        focused
+          ? "border-[#16a34a] ring-2 ring-[#86efac]"
+          : "border-slate-200"
+      }`}
+    >
       <div className="px-4 py-3">
-        <div className="grid grid-cols-[1.15fr_0.9fr_0.7fr] items-center gap-4">
+        <div className="grid min-w-0 grid-cols-1 gap-4 md:grid-cols-[1.15fr_0.9fr_0.7fr] md:items-center">
           <div className="min-w-0">
             <div className="mb-2 flex flex-wrap items-center gap-2">
               <span className="rounded bg-blue-600 px-2 py-[2px] text-[10px] font-semibold text-white">
@@ -256,26 +265,26 @@ export default function BusResultCard({
               )}
             </div>
 
-            <h3 className="truncate text-[18px] font-semibold text-slate-900">
+            <h3 className="break-words text-[18px] font-semibold leading-6 text-slate-900 md:truncate">
               {bus.operatorName}
             </h3>
 
-            <p className="truncate text-[14px] font-medium text-slate-700">
+            <p className="break-words text-[14px] font-medium leading-5 text-slate-700 md:truncate">
               {bus.busName}
             </p>
 
-            <p className="text-[12px] text-slate-500">{bus.busType}</p>
+            <p className="break-words text-[12px] text-slate-500">{bus.busType}</p>
 
             {isOfferApplied && (
-              <p className="mt-1 truncate text-[11px] font-medium text-emerald-700">
+              <p className="mt-1 break-words text-[11px] font-medium text-emerald-700 md:truncate">
                 {offerTitle}
               </p>
             )}
           </div>
 
-          <div className="flex items-center justify-center">
-            <div className="flex items-center justify-center gap-6 text-center">
-              <div className="min-w-[72px]">
+          <div className="flex min-w-0 items-center justify-start md:justify-center">
+            <div className="flex w-full min-w-0 items-center justify-between gap-3 text-center md:w-auto md:justify-center md:gap-6">
+              <div className="min-w-0 md:min-w-[72px]">
                 <p className="text-[20px] font-semibold text-slate-900">
                   {bus.departureTime}
                 </p>
@@ -284,12 +293,12 @@ export default function BusResultCard({
                 </p>
               </div>
 
-              <div className="w-[90px]">
+              <div className="min-w-[70px] flex-1 md:w-[90px] md:flex-none">
                 <p className="text-[12px] text-slate-500">{bus.duration}</p>
                 <div className="mt-1 h-[1px] w-full bg-slate-300" />
               </div>
 
-              <div className="min-w-[72px]">
+              <div className="min-w-0 md:min-w-[72px]">
                 <p className="text-[20px] font-semibold text-slate-900">
                   {bus.arrivalTime}
                 </p>
@@ -300,8 +309,8 @@ export default function BusResultCard({
             </div>
           </div>
 
-          <div className="min-w-0 text-right">
-            <div className="flex items-end justify-end gap-2">
+          <div className="min-w-0 text-left md:text-right">
+            <div className="flex items-end justify-start gap-2 md:justify-end">
               {strikePrice > 0 && strikePrice > displayPrice && (
                 <span className="text-[12px] text-slate-400 line-through">
                   ₹{strikePrice}
@@ -326,20 +335,20 @@ export default function BusResultCard({
         </div>
       </div>
 
-      <div className="border-t border-slate-200 bg-slate-50 px-4 py-2">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-4 text-[12px] text-slate-500">
+      <div className="border-t border-slate-200 bg-slate-50 px-4 py-3 md:py-2">
+        <div className="flex min-w-0 flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="flex min-w-0 flex-col gap-2 text-[12px] text-slate-500 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
             <button
               type="button"
               onClick={() => onViewDetails?.(bus)}
-              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-[14px] font-semibold text-slate-700 transition hover:border-sky-400 hover:text-sky-600"
+              className="min-h-11 w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-[14px] font-semibold text-slate-700 transition hover:border-sky-400 hover:text-sky-600 sm:w-auto"
             >
               View Details
             </button>
 
             <span>{bus.reviewCount} Reviews</span>
 
-            <span className="max-w-[200px] truncate">
+            <span className="max-w-full break-words md:max-w-[200px] md:truncate">
               {bus.amenities.slice(0, 3).join(" • ")}
             </span>
           </div>
@@ -347,7 +356,7 @@ export default function BusResultCard({
           <button
             type="button"
             onClick={handleSelectSeats}
-            className="rounded-lg bg-orange-500 px-5 py-2 text-[13px] font-semibold text-white shadow-sm transition hover:bg-orange-600"
+            className="min-h-11 w-full rounded-lg bg-orange-500 px-5 py-2 text-[13px] font-semibold text-white shadow-sm transition hover:bg-orange-600 md:w-auto"
           >
             SELECT SEATS
           </button>

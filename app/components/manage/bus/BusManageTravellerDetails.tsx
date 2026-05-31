@@ -35,14 +35,14 @@ export default function BusManageTravellerDetails({
       {travellers.map((traveller, index) => (
         <div
           key={traveller.id || index}
-          className="rounded-[24px] border border-black/5 bg-[#f8f9fb] p-5"
+          className="rounded-[24px] border border-black/5 bg-[#f8f9fb] p-4 sm:p-5"
         >
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
             <p className="text-sm font-bold text-[#111827]">
               Passenger {index + 1}
             </p>
 
-            <span className="rounded-full bg-white px-3 py-1 text-[11px] font-bold text-[#6b7280]">
+            <span className="inline-flex w-full items-center justify-center rounded-full bg-white px-3 py-2 text-[11px] font-bold text-[#6b7280] sm:w-auto sm:py-1">
               Seat: {traveller.seatNo || traveller.seatNumber || "-"}
             </span>
           </div>

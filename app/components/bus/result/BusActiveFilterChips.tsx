@@ -90,17 +90,17 @@ export default function BusActiveFilterChips({
   if (chips.length === 0) return null;
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex flex-wrap gap-2">
+    <div className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+        <div className="flex min-w-0 flex-wrap gap-2">
           {chips.map((chip) => (
             <button
               key={chip.id}
               type="button"
               onClick={() => onRemoveChip(chip.category, chip.value)}
-              className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 text-sm font-medium text-sky-700 transition hover:border-sky-300 hover:bg-sky-100"
+              className="inline-flex max-w-full items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 text-sm font-medium text-sky-700 transition hover:border-sky-300 hover:bg-sky-100"
             >
-              <span>{chip.label}</span>
+              <span className="min-w-0 break-words">{chip.label}</span>
               <span className="text-base leading-none">×</span>
             </button>
           ))}

@@ -2,45 +2,90 @@
 
 import { useState } from "react";
 
-type PaymentOptionKey =
-  | "upi"
-  | "cards"
-  | "emi"
-  | "netbanking"
-  | "paylater"
-  | "wallets";
+const QR_DARK_CELLS = new Set([
+  "0-0",
+  "0-1",
+  "0-2",
+  "0-4",
+  "0-6",
+  "0-7",
+  "0-8",
+  "1-0",
+  "1-2",
+  "1-5",
+  "1-6",
+  "1-8",
+  "2-0",
+  "2-1",
+  "2-2",
+  "2-4",
+  "2-7",
+  "2-8",
+  "3-3",
+  "3-5",
+  "3-6",
+  "4-0",
+  "4-2",
+  "4-4",
+  "4-5",
+  "4-8",
+  "5-1",
+  "5-3",
+  "5-6",
+  "5-7",
+  "6-0",
+  "6-1",
+  "6-2",
+  "6-4",
+  "6-6",
+  "6-8",
+  "7-0",
+  "7-2",
+  "7-5",
+  "7-7",
+  "8-0",
+  "8-1",
+  "8-2",
+  "8-4",
+  "8-6",
+  "8-8",
+]);
+
+type PaymentOptionKey = "upi" | "qr" | "cards" | "emi" | "netbanking";
 
 type Props = {
   defaultOption?: PaymentOptionKey | null;
+  payableAmount?: number;
   onPaymentMethodChange?: (method: string) => void;
 };
 
 export default function BusPaymentOptionSection({
   defaultOption = null,
+  payableAmount = 0,
   onPaymentMethodChange,
 }: Props) {
   const [activeOption, setActiveOption] =
     useState<PaymentOptionKey | null>(defaultOption);
 
   const [selectedUpiMethod, setSelectedUpiMethod] = useState("");
-  const [selectedEmiPlan, setSelectedEmiPlan] = useState("");
-  const [selectedPayLater, setSelectedPayLater] = useState("");
+
+  const selectOption = (option: PaymentOptionKey) => {
+    setActiveOption((prev) => (prev === option ? null : option));
+    onPaymentMethodChange?.(option);
+  };
 
   return (
     <section className="overflow-hidden rounded-2xl border border-[#d9e2ec] bg-white shadow-[0_2px_8px_rgba(15,23,42,0.04)]">
-      <div className="border-b border-[#e5e7eb] px-5 py-[18px] text-[20px] font-extrabold text-[#111827]">
+      <div className="border-b border-[#e5e7eb] px-4 py-4 text-[18px] font-extrabold text-[#111827] sm:px-5 sm:text-[20px]">
         Payment Options
       </div>
 
       <PaymentRow
-        icon="🇮🇳"
+        icon="UPI"
         title="UPI Options"
         subtitle="Pay directly from your bank account"
         isActive={activeOption === "upi"}
-        onClick={() => {
-          setActiveOption((prev) => (prev === "upi" ? null : "upi"));
-          onPaymentMethodChange?.("upi");
-        }}
+        onClick={() => selectOption("upi")}
       />
 
       {activeOption === "upi" && (
@@ -49,7 +94,7 @@ export default function BusPaymentOptionSection({
             Choose UPI Method
           </div>
 
-          <div className="mt-[14px] grid grid-cols-2 gap-3">
+          <div className="mt-[14px] grid grid-cols-1 gap-3 sm:grid-cols-2">
             {["Google Pay", "PhonePe", "Paytm", "BHIM UPI"].map((item) => (
               <SelectableMiniCard
                 key={item}
@@ -73,14 +118,55 @@ export default function BusPaymentOptionSection({
       )}
 
       <PaymentRow
-        icon="💳"
+        icon="QR"
+        title="QR Payment"
+        subtitle="Scan and pay with any UPI app"
+        badge="UPI QR"
+        isActive={activeOption === "qr"}
+        onClick={() => selectOption("qr")}
+      />
+
+      {activeOption === "qr" && (
+        <ExpandedBox>
+          <div className="grid gap-4 sm:grid-cols-[auto_1fr] sm:items-center">
+            <div className="mx-auto grid h-[132px] w-[132px] grid-cols-9 gap-[3px] rounded-[18px] border border-[#d1d5db] bg-white p-3 sm:mx-0">
+              {Array.from({ length: 81 }).map((_, index) => {
+                const row = Math.floor(index / 9);
+                const col = index % 9;
+                return (
+                  <span
+                    key={`${row}-${col}`}
+                    className={`rounded-[2px] ${
+                      QR_DARK_CELLS.has(`${row}-${col}`)
+                        ? "bg-[#111827]"
+                        : "bg-[#e5e7eb]"
+                    }`}
+                  />
+                );
+              })}
+            </div>
+
+            <div className="min-w-0">
+              <div className="text-[14px] font-extrabold text-[#111827]">
+                Scan to pay
+              </div>
+              <div className="mt-2 text-[13px] font-semibold leading-[20px] text-[#4b5563]">
+                Open any UPI app, scan this QR and complete your bus payment.
+              </div>
+              <div className="mt-3 rounded-[12px] bg-[#f8fbff] px-3 py-2 text-[12px] font-extrabold text-[#0f766e]">
+                Amount: ₹{Number(payableAmount || 0).toLocaleString("en-IN")}
+              </div>
+            </div>
+          </div>
+        </ExpandedBox>
+      )}
+
+      <PaymentRow
+        icon="CARD"
         title="Credit & Debit Cards"
         subtitle="Visa, Mastercard, Amex, Rupay and more"
         isActive={activeOption === "cards"}
-        onClick={() => {
-          setActiveOption((prev) => (prev === "cards" ? null : "cards"));
-          onPaymentMethodChange?.("cards");
-        }}
+        onClick={() => selectOption("cards")}
       />
 
       {activeOption === "cards" && (
@@ -99,7 +185,7 @@ export default function BusPaymentOptionSection({
             />
           </div>
 
-          <div className="mt-[14px] grid grid-cols-2 gap-[14px]">
+          <div className="mt-[14px] grid grid-cols-1 gap-[14px] sm:grid-cols-2">
             <div>
               <label className="mb-2 block text-[12px] font-bold text-[#374151]">
                 Expiry
@@ -134,47 +220,19 @@ export default function BusPaymentOptionSection({
       )}
 
       <PaymentRow
-        icon="🧾"
+        icon="EMI"
         title="EMI"
-        subtitle="Credit / Debit Card & cardless EMI available"
-        badge="NO COST EMI"
-        isActive={activeOption === "emi"}
-        onClick={() => {
-          setActiveOption((prev) => (prev === "emi" ? null : "emi"));
-          onPaymentMethodChange?.("emi");
-        }}
+        subtitle="Coming soon"
+        badge="COMING SOON"
+        disabled
       />
 
-      {activeOption === "emi" && (
-        <ExpandedBox>
-          <div className="text-[14px] font-extrabold text-[#111827]">
-            Choose EMI Option
-          </div>
-
-          <div className="mt-[14px] grid grid-cols-2 gap-3">
-            {["3 Months", "6 Months", "9 Months", "12 Months"].map((item) => (
-              <SelectableMiniCard
-                key={item}
-                label={item}
-                isSelected={selectedEmiPlan === item}
-                onClick={() => setSelectedEmiPlan(item)}
-              />
-            ))}
-          </div>
-        </ExpandedBox>
-      )}
-
       <PaymentRow
-        icon="🏦"
+        icon="BANK"
         title="Net Banking"
         subtitle="40+ banks available"
         isActive={activeOption === "netbanking"}
-        onClick={() => {
-          setActiveOption((prev) =>
-            prev === "netbanking" ? null : "netbanking"
-          );
-          onPaymentMethodChange?.("netbanking");
-        }}
+        onClick={() => selectOption("netbanking")}
       />
 
       {activeOption === "netbanking" && (
@@ -192,65 +250,6 @@ export default function BusPaymentOptionSection({
           </select>
         </ExpandedBox>
       )}
-
-      <PaymentRow
-        icon="⏳"
-        title="Pay Later"
-        subtitle="LazyPay, Amazon Pay Later"
-        isActive={activeOption === "paylater"}
-        onClick={() => {
-          setActiveOption((prev) => (prev === "paylater" ? null : "paylater"));
-          onPaymentMethodChange?.("paylater");
-        }}
-      />
-
-      {activeOption === "paylater" && (
-        <ExpandedBox>
-          <div className="text-[14px] font-extrabold text-[#111827]">
-            Available Pay Later Options
-          </div>
-
-          <div className="mt-[14px] grid grid-cols-2 gap-3">
-            {["LazyPay", "Amazon Pay Later"].map((item) => (
-              <SelectableMiniCard
-                key={item}
-                label={item}
-                isSelected={selectedPayLater === item}
-                onClick={() => setSelectedPayLater(item)}
-              />
-            ))}
-          </div>
-        </ExpandedBox>
-      )}
-
-      <PaymentRow
-        icon="🎁"
-        title="Gift Cards & e-wallets"
-        subtitle="Gift card / wallet code"
-        isActive={activeOption === "wallets"}
-        onClick={() => {
-          setActiveOption((prev) => (prev === "wallets" ? null : "wallets"));
-          onPaymentMethodChange?.("wallets");
-        }}
-      />
-
-      {activeOption === "wallets" && (
-        <ExpandedBox>
-          <div className="text-[14px] font-extrabold text-[#111827]">
-            Wallet / Gift Card
-          </div>
-
-          <div className="mt-[14px]">
-            <label className="mb-2 block text-[12px] font-bold text-[#374151]">
-              Enter Code
-            </label>
-            <input
-              placeholder="Enter wallet or gift card code"
-              className="h-[44px] w-full rounded-[10px] border border-[#d1d5db] px-[14px] text-[13px] text-[#111827] outline-none"
-            />
-          </div>
-        </ExpandedBox>
-      )}
     </section>
   );
 }
@@ -261,6 +260,7 @@ function PaymentRow({
   subtitle,
   badge,
   isActive,
+  disabled = false,
   onClick,
 }: {
   icon: string;
@@ -268,51 +268,68 @@ function PaymentRow({
   subtitle: string;
   badge?: string;
   isActive?: boolean;
+  disabled?: boolean;
   onClick?: () => void;
 }) {
   return (
-    <div
-      onClick={onClick}
-      className={`flex cursor-pointer items-center justify-between gap-[14px] border-b border-[#e5e7eb] px-5 py-[16px] ${
-        isActive ? "bg-[#f8fbff] shadow-[inset_0_0_0_1.5px_#7dd3fc]" : "bg-white"
+    <button
+      type="button"
+      onClick={disabled ? undefined : onClick}
+      disabled={disabled}
+      className={`flex w-full items-center justify-between gap-3 border-b border-[#e5e7eb] px-4 py-4 text-left sm:px-5 ${
+        disabled
+          ? "cursor-not-allowed bg-[#f9fafb] opacity-70"
+          : isActive
+          ? "bg-[#f8fbff] shadow-[inset_0_0_0_1.5px_#7dd3fc]"
+          : "bg-white"
       }`}
     >
-      <div className="flex min-w-0 items-center gap-[14px]">
+      <div className="flex min-w-0 items-center gap-3 sm:gap-[14px]">
         <div
-          className={`flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-[10px] text-[18px] ${
-            isActive ? "bg-[#dff2ff]" : "bg-[#eef6ff]"
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] text-[10px] font-black ${
+            isActive ? "bg-[#dff2ff] text-[#0369a1]" : "bg-[#eef6ff] text-[#2563eb]"
           }`}
         >
           {icon}
         </div>
 
         <div className="min-w-0">
-          <div className="text-[14px] font-extrabold text-[#111827]">
+          <div className="break-words text-[14px] font-extrabold leading-[18px] text-[#111827]">
             {title}
           </div>
-          <div className="mt-[3px] text-[12px] leading-[17px] text-[#6b7280]">
+          <div className="mt-[3px] break-words text-[12px] leading-[17px] text-[#6b7280]">
             {subtitle}
           </div>
         </div>
       </div>
 
-      <div className="flex shrink-0 items-center gap-3">
+      <div className="flex shrink-0 items-center gap-2 sm:gap-3">
         {badge ? (
-          <span className="rounded-full bg-[#ccfbf1] px-2 py-[5px] text-[10px] font-extrabold text-[#0f766e]">
+          <span className="rounded-full bg-[#ccfbf1] px-2 py-[5px] text-[9px] font-extrabold text-[#0f766e] sm:text-[10px]">
             {badge}
           </span>
         ) : null}
 
-        <span className={`text-[16px] font-extrabold ${isActive ? "text-[#0ea5e9]" : "text-[#60a5fa]"}`}>
-          ›
-        </span>
+        {!disabled ? (
+          <span
+            className={`text-[16px] font-extrabold ${
+              isActive ? "text-[#0ea5e9]" : "text-[#60a5fa]"
+            }`}
+          >
+            ›
+          </span>
+        ) : null}
       </div>
-    </div>
+    </button>
   );
 }
 
 function ExpandedBox({ children }: { children: React.ReactNode }) {
-  return <div className="border-b border-[#e5e7eb] bg-white px-5 pb-5 pl-[72px] pt-[18px]">{children}</div>;
+  return (
+    <div className="border-b border-[#e5e7eb] bg-white px-4 pb-5 pt-[18px] sm:px-5 md:pl-[72px]">
+      {children}
+    </div>
+  );
 }
 
 function SelectableMiniCard({

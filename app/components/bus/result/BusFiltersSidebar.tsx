@@ -14,6 +14,7 @@ type Props = {
   results: BusResultItem[];
   filters: BusFilters;
   onFiltersChange: (filters: BusFilters) => void;
+  className?: string;
 };
 
 const PICKUP_TIME_OPTIONS: { key: BusTimeBucket; label: string }[] = [
@@ -145,6 +146,7 @@ export default function BusFiltersSidebar({
   results,
   filters,
   onFiltersChange,
+  className = "",
 }: Props) {
   const [pickupSearch, setPickupSearch] = useState("");
   const [operatorSearch, setOperatorSearch] = useState("");
@@ -204,7 +206,9 @@ export default function BusFiltersSidebar({
   }
 
   return (
-    <aside className="w-[280px] shrink-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+    <aside
+      className={`w-[280px] shrink-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm ${className}`}
+    >
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-xl font-bold text-slate-800">Filters</h2>
         <button

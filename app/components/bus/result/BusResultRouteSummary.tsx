@@ -25,10 +25,10 @@ export default function BusResultRouteSummary({
   resultsCount,
 }: Props) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-bold leading-tight text-slate-800">
+    <div className="min-w-0 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="break-words text-lg font-bold leading-6 text-slate-800 md:text-xl md:leading-tight">
             Buses from {fromCity || "From City"} to {toCity || "To City"}
           </h1>
 

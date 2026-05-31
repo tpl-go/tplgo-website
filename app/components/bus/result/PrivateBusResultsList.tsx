@@ -5,12 +5,14 @@ import BusResultCard from "./BusResultCard";
 
 type Props = {
   buses: BusResultItem[];
+  focusedBusId?: string | null;
   onViewDetails?: (bus: BusResultItem) => void;
   onSelectSeats?: (bus: BusResultItem) => void;
 };
 
 export default function PrivateBusResultsList({
   buses,
+  focusedBusId,
   onViewDetails,
   onSelectSeats,
 }: Props) {
@@ -22,6 +24,7 @@ export default function PrivateBusResultsList({
         <BusResultCard
           key={bus.id}
           bus={bus}
+          focused={bus.id === focusedBusId}
           onViewDetails={onViewDetails}
           onSelectSeats={onSelectSeats}
         />

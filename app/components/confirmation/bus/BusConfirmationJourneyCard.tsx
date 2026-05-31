@@ -151,8 +151,9 @@ export default function BusConfirmationJourneyCard({
             <span style={topPillStyle}>Confirmed Journey</span>
           </div>
 
-          <div style={{ padding: "18px" }}>
+          <div className="bus-confirmation-journey-body" style={{ padding: "18px" }}>
             <div
+              className="hidden md:block"
               style={{
                 border: "1px solid #e5e7eb",
                 borderRadius: "18px",
@@ -314,6 +315,31 @@ export default function BusConfirmationJourneyCard({
               </div>
             </div>
 
+            <div className="md:hidden">
+              <div className="rounded-[18px] border border-[#e5e7eb] bg-[linear-gradient(135deg,#f8fafc_0%,#ffffff_100%)] p-4">
+                <MobileTimelineCard
+                  label="Departure"
+                  time={departureTime || "--:--"}
+                  city={fromCity}
+                  point={fromPoint || boardingPoint?.name || "Boarding Point"}
+                />
+
+                <div className="my-3 flex justify-center">
+                  <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-[#bfdbfe] bg-[#eff6ff] px-3 py-2 text-center text-[12px] font-extrabold text-[#1d4ed8]">
+                    <span>🚌</span>
+                    <span className="break-words">{duration || "Bus Journey"}</span>
+                  </div>
+                </div>
+
+                <MobileTimelineCard
+                  label="Arrival"
+                  time={arrivalTime || "--:--"}
+                  city={toCity}
+                  point={toPoint || droppingPoint?.name || "Dropping Point"}
+                />
+              </div>
+            </div>
+
             <div
               style={{
                 marginTop: "14px",
@@ -339,6 +365,7 @@ export default function BusConfirmationJourneyCard({
             </div>
 
             <div
+              className="bus-confirmation-info-grid"
               style={{
                 marginTop: "16px",
                 display: "grid",
@@ -360,7 +387,48 @@ export default function BusConfirmationJourneyCard({
           </div>
         </div>
       </div>
+
+      <style jsx global>{`
+        @media (max-width: 767px) {
+          .bus-confirmation-journey-body {
+            padding: 14px !important;
+          }
+
+          .bus-confirmation-info-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
     </section>
+  );
+}
+
+function MobileTimelineCard({
+  label,
+  time,
+  city,
+  point,
+}: {
+  label: string;
+  time: string;
+  city: string;
+  point: string;
+}) {
+  return (
+    <div className="w-full min-w-0 rounded-2xl border border-[#e5e7eb] bg-white p-4 shadow-[0_4px_14px_rgba(15,23,42,0.04)]">
+      <div className="text-[12px] font-extrabold uppercase tracking-[0.08em] text-[#64748b]">
+        {label}
+      </div>
+      <div className="mt-2 break-words text-[28px] font-black leading-[30px] text-[#0f172a]">
+        {time}
+      </div>
+      <div className="mt-2 break-words text-[18px] font-black leading-[24px] text-[#111827]">
+        {city}
+      </div>
+      <div className="mt-1 break-words text-[12px] font-bold leading-[18px] text-[#64748b]">
+        {point}
+      </div>
+    </div>
   );
 }
 
@@ -399,6 +467,7 @@ function InfoCard({
           fontWeight: 900,
           color: "#111827",
           lineHeight: "22px",
+          wordBreak: "break-word",
         }}
       >
         {value}

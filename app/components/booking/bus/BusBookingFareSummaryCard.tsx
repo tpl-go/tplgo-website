@@ -79,8 +79,8 @@ export default function BusBookingFareSummaryCard({
 
   return (
     <aside className="w-full">
-      <div className="sticky top-[88px] z-20">
-        <div className="overflow-hidden rounded-[28px] border border-[#d9e2ec] bg-white shadow-[0_14px_40px_rgba(15,23,42,0.08)]">
+      <div className="lg:sticky lg:top-[88px] lg:z-20">
+        <div className="overflow-hidden rounded-[22px] border border-[#d9e2ec] bg-white shadow-[0_14px_40px_rgba(15,23,42,0.08)] md:rounded-[28px]">
           {/* HEADER */}
           <div className="border-b border-[#edf2f7] bg-white px-5 py-5">
             <div className="text-[24px] font-black tracking-[-0.02em] text-[#111827]">
@@ -287,9 +287,9 @@ export default function BusBookingFareSummaryCard({
 
           {/* TOTAL */}
           <div className="border-b border-[#e5e7eb] bg-white px-5 py-5">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="text-[22px] font-black text-[#111827]">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div className="min-w-0">
+                <div className="text-[20px] font-black text-[#111827] md:text-[22px]">
                   Total Amount
                 </div>
 
@@ -298,7 +298,7 @@ export default function BusBookingFareSummaryCard({
                 </div>
               </div>
 
-              <div className="whitespace-nowrap text-[32px] font-black tracking-[-0.03em] text-[#111827]">
+              <div className="whitespace-nowrap text-[28px] font-black tracking-[-0.03em] text-[#111827] md:text-[32px]">
                 ₹{finalTotal.toLocaleString("en-IN")}
               </div>
             </div>
@@ -350,7 +350,7 @@ function FareRow({
 
   return (
     <div className="mb-3 flex items-start justify-between gap-3 last:mb-0">
-      <div>
+      <div className="min-w-0">
         <div
           className={`text-[15px] font-bold ${
             positiveOrange
@@ -369,7 +369,7 @@ function FareRow({
       </div>
 
       <div
-        className={`whitespace-nowrap text-[15px] font-bold ${
+        className={`shrink-0 whitespace-nowrap text-[15px] font-bold ${
           positiveOrange
             ? "text-[#ea580c]"
             : "text-[#1f2937]"
@@ -412,11 +412,11 @@ function StatusRow({
 }) {
   return (
     <div className="mb-3 flex items-center justify-between gap-3 last:mb-0">
-      <div className="text-[15px] font-bold text-[#1f2937]">
+      <div className="min-w-0 text-[15px] font-bold text-[#1f2937]">
         {label}
       </div>
 
-      <div className="whitespace-nowrap text-[14px] font-bold text-[#6b7280]">
+      <div className="shrink-0 text-right text-[14px] font-bold text-[#6b7280]">
         {value}
       </div>
     </div>

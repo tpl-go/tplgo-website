@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { BusResultItem } from "@/app/lib/bus/busTypes";
 import { applyBenefitPricing } from "@/app/lib/pricing/applyBenefitPricing";
@@ -12,11 +12,21 @@ import BusSeatSelectionModal from "./BusSeatSelectionModal";
 
 type Props = {
   results: BusResultItem[];
+  focusedBusId?: string | null;
 };
 
 const SMART_ACTIVE_OFFER_KEY = "tpl_smart_active_offer_v1";
 const SMART_OFFER_SOURCE_KEY = "tpl_smart_offer_source_v1";
 const SPECIAL_ACTIVE_OFFER_PAYLOAD_KEY = "tplActiveOfferPayload";
+const GOVERNMENT_KEYWORDS = [
+  "upsrtc",
+  "rsrtc",
+  "gsrtc",
+  "msrtc",
+  "hrtc",
+  "government",
+  "state roadways",
+];
 
 function readActiveBusOffer() {
   if (typeof window === "undefined") return null;
@@ -131,7 +141,19 @@ function getOfferDiscountAmount(offer: any, baseAmount: number) {
   return Math.min(Math.max(discount, 0), baseAmount);
 }
 
-export default function BusResultsSection({ results }: Props) {
+function prioritizeFocusedBus(
+  results: BusResultItem[],
+  focusedBusId?: string | null
+) {
+  if (!focusedBusId) return results;
+
+  const focused = results.find((bus) => bus.id === focusedBusId);
+  if (!focused) return results;
+
+  return [focused, ...results.filter((bus) => bus.id !== focusedBusId)];
+}
+
+export default function BusResultsSection({ results, focusedBusId }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -141,32 +163,43 @@ export default function BusResultsSection({ results }: Props) {
   const [selectedBusForSeats, setSelectedBusForSeats] =
     useState<BusResultItem | null>(null);
 
-  const governmentKeywords = [
-    "upsrtc",
-    "rsrtc",
-    "gsrtc",
-    "msrtc",
-    "hrtc",
-    "government",
-    "state roadways",
-  ];
+  const orderedResults = useMemo(() => {
+    return prioritizeFocusedBus(results, focusedBusId);
+  }, [results, focusedBusId]);
 
   const governmentBuses = useMemo(() => {
-    return results.filter((bus) =>
-      governmentKeywords.some((keyword) =>
+    return orderedResults.filter((bus) =>
+      GOVERNMENT_KEYWORDS.some((keyword) =>
         bus.operatorName.toLowerCase().includes(keyword)
       )
     );
-  }, [results]);
+  }, [orderedResults]);
 
   const privateBuses = useMemo(() => {
-    return results.filter(
+    return orderedResults.filter(
       (bus) =>
-        !governmentKeywords.some((keyword) =>
+        !GOVERNMENT_KEYWORDS.some((keyword) =>
           bus.operatorName.toLowerCase().includes(keyword)
         )
     );
-  }, [results]);
+  }, [orderedResults]);
+
+  useEffect(() => {
+    if (!focusedBusId) return;
+
+    const timer = window.setTimeout(() => {
+      const target = document.querySelector(
+        `[data-bus-result-id="${focusedBusId}"]`
+      );
+
+      target?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 80);
+
+    return () => window.clearTimeout(timer);
+  }, [focusedBusId, results]);
 
   function handleSeatFlowConfirm(payload: {
     bus: BusResultItem;
@@ -317,6 +350,7 @@ export default function BusResultsSection({ results }: Props) {
         {governmentBuses.length > 0 && (
           <GovernmentBusGroupCard
             buses={governmentBuses}
+            focusedBusId={focusedBusId}
             onViewDetails={(bus) => setSelectedBusForDetails(bus)}
             onSelectSeats={(bus) => setSelectedBusForSeats(bus)}
           />
@@ -324,6 +358,7 @@ export default function BusResultsSection({ results }: Props) {
 
         <PrivateBusResultsList
           buses={privateBuses}
+          focusedBusId={focusedBusId}
           onViewDetails={(bus) => setSelectedBusForDetails(bus)}
           onSelectSeats={(bus) => setSelectedBusForSeats(bus)}
         />

@@ -76,7 +76,7 @@ export default function BusTravellerDetailsSection({
   }
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
       <h2 className="text-[18px] font-extrabold text-slate-900">
         Traveller Details
       </h2>
@@ -85,7 +85,7 @@ export default function BusTravellerDetailsSection({
         {travellers.map((traveller, index) => (
           <div
             key={traveller.seatNumber}
-            className="grid grid-cols-[90px_1.4fr_120px_220px] items-center gap-4 rounded-xl border border-slate-200 px-4 py-4"
+            className="grid min-w-0 grid-cols-1 gap-4 rounded-xl border border-slate-200 px-4 py-4 md:grid-cols-[90px_1.4fr_120px_220px] md:items-center"
           >
             <div className="text-[14px] font-semibold text-slate-700">
               Seat {traveller.seatNumber}

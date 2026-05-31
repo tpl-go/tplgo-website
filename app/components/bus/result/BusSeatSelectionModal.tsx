@@ -398,12 +398,12 @@ const offerDiscountTotal = useMemo(() => {
   }
 
   return (
-    <div className="fixed inset-0 z-[320] flex items-center justify-center bg-black/45 px-4">
-      <div className="flex max-h-[92vh] w-full max-w-7xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl">
-        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
-          <div>
-            <h2 className="text-2xl font-bold text-slate-900">Select Seats</h2>
-            <p className="mt-1 text-sm text-slate-500">
+    <div className="fixed inset-0 z-[320] flex items-end justify-center bg-black/45 px-0 md:items-center md:px-4">
+      <div className="flex max-h-[94vh] w-full max-w-7xl flex-col overflow-hidden rounded-t-[28px] bg-white shadow-2xl md:max-h-[92vh] md:rounded-3xl">
+        <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-4 md:px-6">
+          <div className="min-w-0">
+            <h2 className="text-xl font-bold text-slate-900 md:text-2xl">Select Seats</h2>
+            <p className="mt-1 break-words text-sm text-slate-500">
               {bus.operatorName} • {bus.fromCity} → {bus.toCity}
             </p>
           </div>
@@ -417,8 +417,8 @@ const offerDiscountTotal = useMemo(() => {
           </button>
         </div>
 
-        <div className="border-b border-slate-200 px-6 py-3">
-          <div className="flex items-center gap-4 text-sm font-semibold">
+        <div className="border-b border-slate-200 px-4 py-3 md:px-6">
+          <div className="flex gap-3 overflow-x-auto text-sm font-semibold md:items-center md:gap-4">
             <span className={step === "seats" ? "text-sky-600" : "text-slate-500"}>
               1. Seats
             </span>
@@ -431,46 +431,46 @@ const offerDiscountTotal = useMemo(() => {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-6">
+        <div className="flex-1 overflow-y-auto px-4 py-4 md:px-6 md:py-6">
           {step === "seats" && (
-            <div className="grid grid-cols-[1.4fr_0.9fr] gap-6">
-              <div className="rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-5 shadow-sm">
-                <div className="mb-5 flex items-center justify-between rounded-2xl bg-slate-900 px-4 py-3 text-white">
-                  <div>
+            <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-[1.4fr_0.9fr] lg:gap-6">
+              <div className="min-w-0 rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-4 shadow-sm md:p-5">
+                <div className="mb-5 flex flex-col gap-3 rounded-2xl bg-slate-900 px-4 py-3 text-white sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
                     <p className="text-sm font-black">Premium Seat Map</p>
-                    <p className="text-[11px] text-slate-300">
+                    <p className="break-words text-[11px] text-slate-300">
                       Base seats and upgrade seats are shown separately
                     </p>
                   </div>
 
-                  <div className="rounded-full bg-white/10 px-3 py-1 text-[11px] font-bold">
+                  <div className="w-fit rounded-full bg-white/10 px-3 py-1 text-[11px] font-bold">
                     Base ₹{baseFare}
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-8">
-                  <div>
+                <div className="grid min-w-0 grid-cols-1 gap-6 md:grid-cols-2 md:gap-8">
+                  <div className="min-w-0">
                     <h3 className="mb-4 text-lg font-bold text-slate-900">
                       LOWER BERTH ({lowerDeckSeats.length})
                     </h3>
 
-                    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                    <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white p-4">
                       <div className="mb-3 h-2 rounded-full bg-slate-200" />
-                      <div className="grid grid-cols-3 gap-4">
+                      <div className="grid min-w-[176px] grid-cols-3 gap-3 md:gap-4">
                         {lowerDeckSeats.map(renderSeatBox)}
                       </div>
                     </div>
                   </div>
 
-                  <div>
+                  <div className="min-w-0">
                     <h3 className="mb-4 text-lg font-bold text-slate-900">
                       UPPER BERTH ({upperDeckSeats.length})
                     </h3>
 
                     {upperDeckSeats.length > 0 ? (
-                      <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                      <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white p-4">
                         <div className="mb-3 h-2 rounded-full bg-slate-200" />
-                        <div className="grid grid-cols-3 gap-4">
+                        <div className="grid min-w-[176px] grid-cols-3 gap-3 md:gap-4">
                           {upperDeckSeats.map(renderSeatBox)}
                         </div>
                       </div>
@@ -483,7 +483,7 @@ const offerDiscountTotal = useMemo(() => {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 p-5">
+              <div className="min-w-0 rounded-2xl border border-slate-200 p-4 md:p-5">
                 <h3 className="text-lg font-bold text-slate-900">Know your seats</h3>
 
                 <div className="mt-4 space-y-3">
@@ -540,12 +540,12 @@ const offerDiscountTotal = useMemo(() => {
                   </div>
 
                   <div className="mt-4 border-t border-slate-200 pt-4">
-                    <div className="flex items-center justify-between text-sm text-slate-600">
+                    <div className="flex items-center justify-between gap-3 text-sm text-slate-600">
                       <span>Travellers</span>
                       <span>{travellerCount}</span>
                     </div>
 
-                    <div className="mt-2 flex items-center justify-between text-sm text-slate-600">
+                    <div className="mt-2 flex items-center justify-between gap-3 text-sm text-slate-600">
                       <span>Base Fare</span>
                       <span>
                         {travellerCount > 1
@@ -556,18 +556,18 @@ const offerDiscountTotal = useMemo(() => {
                     </div>
 
                     {offerDiscountTotal > 0 && (
-                      <div className="mt-2 flex items-center justify-between text-sm font-semibold text-emerald-700">
+                      <div className="mt-2 flex items-center justify-between gap-3 text-sm font-semibold text-emerald-700">
                         <span>Offer {offerCode ? `(${offerCode})` : ""}</span>
                         <span>-₹{offerDiscountTotal}</span>
                       </div>
                     )}
 
-                    <div className="mt-2 flex items-center justify-between text-sm text-slate-600">
+                    <div className="mt-2 flex items-center justify-between gap-3 text-sm text-slate-600">
                       <span>Seat Upgrade</span>
                       <span>₹{seatDifferenceTotal}</span>
                     </div>
 
-                    <div className="mt-2 flex items-center justify-between text-base font-bold text-slate-900">
+                    <div className="mt-2 flex items-center justify-between gap-3 text-base font-bold text-slate-900">
                       <span>Total</span>
                       <span>₹{payableAfterOffer}</span>
                     </div>
@@ -578,8 +578,8 @@ const offerDiscountTotal = useMemo(() => {
           )}
 
           {step === "boarding" && (
-            <div className="grid grid-cols-[1fr_1fr] gap-6">
-              <div className="rounded-2xl border border-slate-200 p-5">
+            <div className="grid min-w-0 grid-cols-1 gap-4 md:grid-cols-[1fr_1fr] md:gap-6">
+              <div className="min-w-0 rounded-2xl border border-slate-200 p-4 md:p-5">
                 <h3 className="mb-4 text-lg font-bold text-slate-900">
                   Select Pickup & Drop Points
                 </h3>
@@ -617,10 +617,10 @@ const offerDiscountTotal = useMemo(() => {
                           <p className="text-lg font-bold text-slate-900">
                             {point.time}
                           </p>
-                          <p className="mt-1 text-base font-semibold text-slate-800">
+                          <p className="mt-1 break-words text-base font-semibold text-slate-800">
                             {point.name}
                           </p>
-                          <p className="mt-1 text-sm text-slate-500">
+                          <p className="mt-1 break-words text-sm text-slate-500">
                             {point.address}
                           </p>
                         </span>
@@ -630,7 +630,7 @@ const offerDiscountTotal = useMemo(() => {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 p-5">
+              <div className="min-w-0 rounded-2xl border border-slate-200 p-4 md:p-5">
                 <h3 className="text-lg font-bold text-slate-900">
                   Selected Seats Summary
                 </h3>
@@ -683,8 +683,8 @@ const offerDiscountTotal = useMemo(() => {
           )}
 
           {step === "dropping" && (
-            <div className="grid grid-cols-[1fr_1fr] gap-6">
-              <div className="rounded-2xl border border-slate-200 p-5">
+            <div className="grid min-w-0 grid-cols-1 gap-4 md:grid-cols-[1fr_1fr] md:gap-6">
+              <div className="min-w-0 rounded-2xl border border-slate-200 p-4 md:p-5">
                 <h3 className="mb-4 text-lg font-bold text-slate-900">
                   Select Drop Point
                 </h3>
@@ -722,10 +722,10 @@ const offerDiscountTotal = useMemo(() => {
                           <p className="text-lg font-bold text-slate-900">
                             {point.time}
                           </p>
-                          <p className="mt-1 text-base font-semibold text-slate-800">
+                          <p className="mt-1 break-words text-base font-semibold text-slate-800">
                             {point.name}
                           </p>
-                          <p className="mt-1 text-sm text-slate-500">
+                          <p className="mt-1 break-words text-sm text-slate-500">
                             {point.address}
                           </p>
                         </span>
@@ -735,7 +735,7 @@ const offerDiscountTotal = useMemo(() => {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 p-5">
+              <div className="min-w-0 rounded-2xl border border-slate-200 p-4 md:p-5">
                 <h3 className="text-lg font-bold text-slate-900">
                   Booking Summary
                 </h3>
@@ -743,7 +743,7 @@ const offerDiscountTotal = useMemo(() => {
                 <div className="mt-4 space-y-3 rounded-2xl bg-slate-50 p-4">
                   <div>
                     <p className="text-sm text-slate-500">Bus</p>
-                    <p className="text-base font-semibold text-slate-900">
+                    <p className="break-words text-base font-semibold text-slate-900">
                       {bus.operatorName}
                     </p>
                   </div>
@@ -800,17 +800,17 @@ const offerDiscountTotal = useMemo(() => {
           )}
         </div>
 
-        <div className="flex items-center justify-between border-t border-slate-200 px-6 py-4">
+        <div className="flex flex-col gap-3 border-t border-slate-200 px-4 py-3 md:flex-row md:items-center md:justify-between md:px-6 md:py-4">
           <button
             type="button"
             onClick={handleBack}
-            className="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            className="min-h-11 w-full rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 md:w-auto"
           >
             {step === "seats" ? "Close" : "Back"}
           </button>
 
-          <div className="flex items-center gap-4">
-            <div className="text-right">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
+            <div className="text-left md:text-right">
               <p className="text-sm text-slate-500">
                 Total{" "}
                 {seatDifferenceTotal > 0
@@ -825,7 +825,7 @@ const offerDiscountTotal = useMemo(() => {
             <button
               type="button"
               onClick={handleNext}
-              className="rounded-xl bg-orange-500 px-8 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"
+              className="min-h-11 w-full rounded-xl bg-orange-500 px-8 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600 md:w-auto"
             >
               {step === "dropping" ? "BOOK NOW" : "Next"}
             </button>

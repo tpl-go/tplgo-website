@@ -39,6 +39,7 @@ export default function BusConfirmationActionsCard({
       }}
     >
       <div
+        className="bus-confirmation-actions-stack"
         style={{
           width: "100%",
           position: "sticky",
@@ -269,6 +270,15 @@ export default function BusConfirmationActionsCard({
           </div>
         </div>
       </div>
+
+      <style jsx global>{`
+        @media (max-width: 1023px) {
+          .bus-confirmation-actions-stack {
+            position: static !important;
+            top: auto !important;
+          }
+        }
+      `}</style>
     </aside>
   );
 }

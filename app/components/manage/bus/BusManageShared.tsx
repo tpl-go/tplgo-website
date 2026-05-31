@@ -8,12 +8,12 @@ export function SectionTitle({
   subtitle: string;
 }) {
   return (
-    <div>
+    <div className="min-w-0">
       <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#ff6b00]">
         Bus Manage
       </p>
-      <h2 className="mt-1 text-xl font-bold text-[#111827]">{title}</h2>
-      <p className="mt-1 text-sm text-[#6b7280]">{subtitle}</p>
+      <h2 className="mt-1 break-words text-xl font-bold text-[#111827]">{title}</h2>
+      <p className="mt-1 break-words text-sm text-[#6b7280]">{subtitle}</p>
     </div>
   );
 }
@@ -65,7 +65,7 @@ export function PrimaryButton({
     <button
       type="button"
       onClick={onClick}
-      className="rounded-full bg-[#ff6b00] px-6 py-3 text-sm font-bold text-white transition hover:opacity-90"
+      className="min-h-[48px] w-full rounded-full bg-[#ff6b00] px-6 py-3 text-sm font-bold text-white transition hover:opacity-90 sm:w-auto"
     >
       {label}
     </button>

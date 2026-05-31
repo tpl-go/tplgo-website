@@ -1,5 +1,6 @@
 import BusResultTopSearchBar from "@/app/components/bus/result/BusResultTopSearchBar";
 import BusResultsPageShell from "@/app/components/bus/result/BusResultsPageShell";
+import MobileInnerBack from "@/app/components/common/mobile/MobileInnerBack";
 
 import {
   searchBuses,
@@ -43,10 +44,14 @@ export default async function BusResultPage({
   const results = sortBusResults(rawResults, sort);
 
   return (
-    <main className="min-h-screen bg-[#f5f7fb] text-black">
-      <div className="mx-auto max-w-[1400px] px-4 py-4">
+    <main className="min-h-screen overflow-x-hidden bg-[#f5f7fb] text-black">
+      <div className="bg-[#f5f7fb] px-3 pt-3 lg:hidden">
+        <MobileInnerBack title="Bus Results" />
+      </div>
+
+      <div className="mx-auto max-w-[1400px] px-3 py-3 md:px-4 md:py-4">
         {/* TOP SEARCH BAR */}
-        <div className=" mb-4">
+        <div className="mb-4">
           <BusResultTopSearchBar
             key={`${fromCity}-${fromPoint}-${toCity}-${toPoint}-${date}`}
             initialSearch={{

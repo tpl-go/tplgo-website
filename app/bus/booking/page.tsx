@@ -13,6 +13,7 @@ import BusBookingFareSummaryCard from "@/app/components/booking/bus/BusBookingFa
 import BusBookingOffersSection from "@/app/components/booking/bus/BusBookingOffersSection";
 import BusPoliciesModal from "@/app/components/booking/bus/BusPoliciesModal";
 import LoginModal from "@/app/components/common/LoginModal";
+import MobileInnerBack from "@/app/components/common/mobile/MobileInnerBack";
 
 import {
   getSmartActiveOfferItem,
@@ -443,12 +444,16 @@ export default function BusBookingPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f5f7fb] text-black">
+    <main className="min-h-screen overflow-x-hidden bg-[#f5f7fb] pb-5 text-black">
+      <div className="bg-[#f5f7fb] px-3 pt-3 lg:hidden">
+        <MobileInnerBack title="Bus Booking" />
+      </div>
+
       <BusBookingTopBar timerLabel={timerLabel} />
 
-      <div className="mx-auto max-w-[1400px] px-4 py-6">
-        <div className="flex items-start gap-5">
-          <div className="w-[74%] min-w-0 space-y-5">
+      <div className="mx-auto max-w-[1400px] px-3 py-4 md:px-4 md:py-6">
+        <div className="flex min-w-0 flex-col items-stretch gap-5 lg:flex-row lg:items-start">
+          <div className="w-full min-w-0 space-y-5 lg:w-[74%]">
             <BusBookingSummaryCard
               bus={bookingPayload.bus}
               selectedSeats={bookingPayload.selectedSeats}
@@ -457,9 +462,9 @@ export default function BusBookingPage() {
               onViewPolicies={() => setShowPolicies(true)}
             />
 
-            <section className="rounded-2xl border border-[#f3d7c7] bg-[#fff7ed] px-5 py-2 shadow-sm">
-              <div className="flex items-center justify-between gap-4">
-                <div>
+            <section className="rounded-2xl border border-[#f3d7c7] bg-[#fff7ed] px-4 py-4 shadow-sm md:px-5 md:py-2">
+              <div className="flex min-w-0 flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div className="min-w-0">
                   <div className="text-[15px] font-extrabold text-slate-900">
                     {activeUser?.mobile
                       ? `Logged in as ${getDisplayNameFromUser(activeUser)}`
@@ -477,7 +482,7 @@ export default function BusBookingPage() {
                   <button
                     type="button"
                     onClick={() => setShowLoginModal(true)}
-                    className="h-[40px] rounded-xl border border-slate-300 bg-white px-5 text-[13px] font-extrabold text-slate-900 transition hover:border-sky-400 hover:text-sky-600"
+                    className="h-[44px] w-full rounded-xl border border-slate-300 bg-white px-5 text-[13px] font-extrabold text-slate-900 transition hover:border-sky-400 hover:text-sky-600 md:w-auto"
                   >
                     LOGIN
                   </button>
@@ -509,7 +514,7 @@ export default function BusBookingPage() {
             />
           </div>
 
-          <div className="w-[26%] min-w-0 self-start">
+          <div className="w-full min-w-0 self-start lg:w-[26%]">
             <BusBookingFareSummaryCard
               baseFare={baseFare}
               seatUpgradeTotal={seatUpgradeTotal}

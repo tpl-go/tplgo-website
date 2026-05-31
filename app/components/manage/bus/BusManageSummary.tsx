@@ -67,7 +67,7 @@ export default function BusManageSummary({
         <InfoCard label="Travellers" value={travellersLabel} />
       </div>
 
-      <div className="rounded-[24px] border border-black/5 bg-[#f8f9fb] p-5">
+      <div className="rounded-[24px] border border-black/5 bg-[#f8f9fb] p-4 sm:p-5">
         <h3 className="text-base font-bold text-[#111827]">
           Journey Snapshot
         </h3>
@@ -84,7 +84,7 @@ export default function BusManageSummary({
         </div>
       </div>
 
-      <div className="rounded-[24px] border border-black/5 bg-[#f8f9fb] p-5">
+      <div className="rounded-[24px] border border-black/5 bg-[#f8f9fb] p-4 sm:p-5">
         <h3 className="text-base font-bold text-[#111827]">Fare Snapshot</h3>
 
         <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-4">
@@ -93,7 +93,7 @@ export default function BusManageSummary({
             value={formatPrice(fareSummary.baseFare)}
           />
           <InfoCard
-            label="Taxes / Surcharge"
+            label="Taxes & Fees"
             value={formatPrice(fareSummary.taxAndSurcharge)}
           />
           <InfoCard

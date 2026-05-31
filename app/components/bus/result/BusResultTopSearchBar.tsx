@@ -64,8 +64,8 @@ export default function BusResultTopSearchBar({ initialSearch }: Props) {
   }
 
   return (
-    <div className="w-full rounded-2xl border border-white/10 bg-gradient-to-r from-[#0f172a] via-[#111827] to-[#0b1220] p-3 shadow-[0_18px_45px_rgba(2,6,23,0.35)]">
-      <div className="grid grid-cols-[1.15fr_56px_1.15fr_0.95fr_155px] items-center gap-3">
+    <div className="w-full overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-r from-[#0f172a] via-[#111827] to-[#0b1220] p-3 shadow-[0_18px_45px_rgba(2,6,23,0.35)]">
+      <div className="grid min-w-0 grid-cols-1 items-stretch gap-3 md:grid-cols-[1.15fr_56px_1.15fr_0.95fr_155px] md:items-center">
         {/* FROM */}
         <BusCityPointSelector
           mode="FROM"
@@ -74,11 +74,11 @@ export default function BusResultTopSearchBar({ initialSearch }: Props) {
         />
 
         {/* SWAP */}
-        <div className="flex items-center justify-center">
+        <div className="flex items-center justify-center md:order-none">
           <button
             type="button"
             onClick={() => dispatch({ type: "SWAP_LOCATIONS" })}
-            className="flex h-[52px] w-[52px] items-center justify-center rounded-xl border border-white/10 bg-white/[0.06] text-cyan-300 shadow-sm transition-all duration-300 hover:border-cyan-300/50 hover:bg-white/[0.1]"
+            className="flex h-11 w-full items-center justify-center rounded-xl border border-white/10 bg-white/[0.06] text-cyan-300 shadow-sm transition-all duration-300 hover:border-cyan-300/50 hover:bg-white/[0.1] md:h-[52px] md:w-[52px]"
             aria-label="Swap locations"
           >
             <ArrowRightLeft size={18} />
@@ -99,7 +99,7 @@ export default function BusResultTopSearchBar({ initialSearch }: Props) {
         <button
           type="button"
           onClick={handleSearch}
-          className="h-[75px] w-full rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 px-4 text-[14px] font-black text-white shadow-[0_10px_24px_rgba(14,165,233,0.35)] transition hover:scale-[1.02] hover:from-cyan-300 hover:to-blue-500 active:scale-[0.98]"
+          className="h-12 w-full rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 px-4 text-[14px] font-black text-white shadow-[0_10px_24px_rgba(14,165,233,0.35)] transition hover:scale-[1.02] hover:from-cyan-300 hover:to-blue-500 active:scale-[0.98] md:h-[75px]"
         >
           SEARCH
         </button>

@@ -14,9 +14,9 @@ export default function BusTripAssuredSection({
   onToggle,
 }: Props) {
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="flex items-start justify-between gap-4">
-        <div>
+    <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
+      <div className="flex min-w-0 flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div className="min-w-0">
           <h2 className="text-[18px] font-extrabold text-slate-900">
             Get TripAssured at just ₹20
           </h2>
@@ -25,12 +25,12 @@ export default function BusTripAssuredSection({
           </p>
         </div>
 
-        <div className="rounded-full bg-violet-50 px-4 py-2 text-[13px] font-bold text-violet-700">
+        <div className="w-fit rounded-full bg-violet-50 px-4 py-2 text-[13px] font-bold text-violet-700">
           10 Lakh+ people secured their trips
         </div>
       </div>
 
-      <div className="mt-5 grid grid-cols-2 gap-4">
+      <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
         <div className="rounded-xl border border-slate-200 px-4 py-3 text-[16px] font-semibold text-slate-800">
           Upto ₹75000 for Hospitalisation
         </div>
@@ -39,7 +39,7 @@ export default function BusTripAssuredSection({
         </div>
       </div>
 
-      <label className="mt-5 flex items-center gap-3 text-[16px] text-slate-800">
+      <label className="mt-5 flex items-start gap-3 text-[15px] leading-6 text-slate-800 md:items-center md:text-[16px]">
         <input
           type="checkbox"
           checked={selected}

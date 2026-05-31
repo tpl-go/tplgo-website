@@ -83,7 +83,7 @@ export default function BusManageSeatsAddons({
         subtitle="Modify passenger seats and review fare difference before confirmation."
       />
 
-      <div className="rounded-[24px] border border-black/5 bg-[#f8f9fb] p-5">
+      <div className="rounded-[24px] border border-black/5 bg-[#f8f9fb] p-4 sm:p-5">
         <p className="text-base font-bold text-[#111827]">
           Current Passenger Seats
         </p>
@@ -104,7 +104,7 @@ export default function BusManageSeatsAddons({
                   className="rounded-2xl border border-black/5 bg-white p-4"
                 >
                   <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-sm font-bold text-[#111827]">
                         {item.travellerName || `Passenger ${index + 1}`}
                       </p>
@@ -124,7 +124,7 @@ export default function BusManageSeatsAddons({
                       </p>
                     </div>
 
-                    <div className="rounded-xl bg-[#f8f9fb] px-4 py-3">
+                    <div className="w-full rounded-xl bg-[#f8f9fb] px-4 py-3 md:w-auto">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6b7280]">
                         Selected Seat
                       </p>
@@ -139,9 +139,9 @@ export default function BusManageSeatsAddons({
                     </div>
                   </div>
 
-                  <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+                  <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
                     {uniqueAvailableSeats.length === 0 ? (
-                      <div className="col-span-2 rounded-2xl border border-black/5 bg-[#f8f9fb] p-4 text-sm font-semibold text-[#6b7280] md:col-span-4">
+                      <div className="col-span-2 rounded-2xl border border-black/5 bg-[#f8f9fb] p-4 text-sm font-semibold text-[#6b7280] sm:col-span-3 md:col-span-4">
                         Available seats not found in payload.
                       </div>
                     ) : (
@@ -176,7 +176,7 @@ export default function BusManageSeatsAddons({
                               item.travellerId &&
                               onSeatChange(item.travellerId, seat)
                             }
-                            className={`rounded-2xl border px-3 py-3 text-left transition ${
+                            className={`min-h-[108px] rounded-2xl border px-3 py-3 text-left transition ${
                               disabled
                                 ? "cursor-not-allowed border-black/5 bg-gray-100 opacity-50"
                                 : isSelected
@@ -185,12 +185,12 @@ export default function BusManageSeatsAddons({
                             }`}
                           >
                             <div className="flex items-start justify-between gap-2">
-                              <div>
-                                <p className="text-sm font-black text-[#111827]">
+                              <div className="min-w-0">
+                                <p className="break-words text-sm font-black text-[#111827]">
                                   {seatNo || "-"}
                                 </p>
 
-                                <p className="mt-1 text-xs font-semibold text-[#6b7280]">
+                                <p className="mt-1 break-words text-xs font-semibold text-[#6b7280]">
                                   {isCurrent
                                     ? "Current Seat"
                                     : "Available Seat"}
@@ -220,7 +220,7 @@ export default function BusManageSeatsAddons({
         </div>
       </div>
 
-      <div className="rounded-[24px] border border-black/5 bg-white p-5 shadow-sm">
+      <div className="rounded-[24px] border border-black/5 bg-white p-4 shadow-sm sm:p-5">
         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#ff6b00]">
           Settlement Summary
         </p>
@@ -249,8 +249,8 @@ export default function BusManageSeatsAddons({
 
         <div className="mt-5 rounded-2xl bg-[#fff7f2] p-4">
           {quote.settlementMode === "payment" && (
-            <div className="flex items-center justify-between gap-4">
-              <div>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b7280]">
                   Net Payable
                 </p>
@@ -263,7 +263,7 @@ export default function BusManageSeatsAddons({
               <button
                 type="button"
                 onClick={onContinue}
-                className="rounded-full bg-[#ff6b00] px-5 py-3 text-sm font-semibold text-white"
+                className="min-h-[48px] w-full rounded-full bg-[#ff6b00] px-5 py-3 text-sm font-semibold text-white sm:w-auto"
               >
                 Continue to Payment
               </button>
@@ -271,8 +271,8 @@ export default function BusManageSeatsAddons({
           )}
 
           {quote.settlementMode === "wallet_credit" && (
-            <div className="flex items-center justify-between gap-4">
-              <div>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b7280]">
                   Refund Wallet Credit
                 </p>
@@ -285,7 +285,7 @@ export default function BusManageSeatsAddons({
               <button
                 type="button"
                 onClick={onContinue}
-                className="rounded-full bg-[#111827] px-5 py-3 text-sm font-semibold text-white"
+                className="min-h-[48px] w-full rounded-full bg-[#111827] px-5 py-3 text-sm font-semibold text-white sm:w-auto"
               >
                 Save Changes
               </button>
@@ -293,8 +293,8 @@ export default function BusManageSeatsAddons({
           )}
 
           {quote.settlementMode === "save" && (
-            <div className="flex items-center justify-between gap-4">
-              <div>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
                 <p className="text-sm font-semibold text-[#111827]">
                   No payment required
                 </p>
@@ -307,7 +307,7 @@ export default function BusManageSeatsAddons({
               <button
                 type="button"
                 onClick={onContinue}
-                className="rounded-full bg-[#111827] px-5 py-3 text-sm font-semibold text-white"
+                className="min-h-[48px] w-full rounded-full bg-[#111827] px-5 py-3 text-sm font-semibold text-white sm:w-auto"
               >
                 Save Changes
               </button>
@@ -322,9 +322,9 @@ export default function BusManageSeatsAddons({
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-4 rounded-2xl bg-[#f8f9fb] px-4 py-3">
-      <p className="text-sm text-[#4b5563]">{label}</p>
+      <p className="min-w-0 break-words text-sm text-[#4b5563]">{label}</p>
 
-      <p className="text-sm font-semibold text-[#111827]">{value}</p>
+      <p className="shrink-0 text-sm font-semibold text-[#111827]">{value}</p>
     </div>
   );
 }

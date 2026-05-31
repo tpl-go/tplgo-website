@@ -33,15 +33,15 @@ export default function BusViewDetailsModal({
   if (!open || !bus) return null;
 
   return (
-    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/40 px-4">
-      <div className="max-h-[90vh] w-full max-w-6xl overflow-hidden rounded-3xl bg-white shadow-2xl">
+    <div className="fixed inset-0 z-[300] flex items-end justify-center bg-black/40 px-0 md:items-center md:px-4">
+      <div className="flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-t-[28px] bg-white shadow-2xl md:max-h-[90vh] md:rounded-3xl">
         {/* HEADER */}
-        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
-          <div>
-            <h2 className="text-2xl font-bold text-slate-900">
+        <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-4 md:px-6 md:py-5">
+          <div className="min-w-0">
+            <h2 className="text-xl font-bold text-slate-900 md:text-2xl">
               Bus Details
             </h2>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 break-words text-sm text-slate-500">
               {bus.fromCity} → {bus.toCity}
             </p>
           </div>
@@ -56,8 +56,24 @@ export default function BusViewDetailsModal({
         </div>
 
         {/* TABS */}
-        <div className="border-b border-slate-200 px-6">
-          <div className="flex flex-wrap gap-8">
+        <div className="border-b border-slate-200 px-4 py-3 md:px-6 md:py-0">
+          <div className="md:hidden">
+            <label className="mb-2 block text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">
+              Details Section
+            </label>
+            <select
+              value={activeTab === "policies" ? "details" : activeTab}
+              onChange={(event) => setActiveTab(event.target.value as TabKey)}
+              className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-bold text-slate-900 outline-none focus:border-sky-400"
+              aria-label="Select details section"
+            >
+              <option value="details">Bus Details</option>
+              <option value="points">Pickup & Drop Points</option>
+              <option value="amenities">Amenities</option>
+            </select>
+          </div>
+
+          <div className="hidden md:flex md:flex-wrap md:gap-8">
             {[
               { key: "details", label: "Bus Details" },
               { key: "points", label: "Pickup & Drop Points" },
@@ -71,7 +87,7 @@ export default function BusViewDetailsModal({
                   key={tab.key}
                   type="button"
                   onClick={() => setActiveTab(tab.key as TabKey)}
-                  className={`border-b-2 px-1 py-4 text-sm font-semibold transition ${
+                  className={`min-h-11 shrink-0 border-b-2 px-1 py-3 text-sm font-semibold transition md:py-4 ${
                     isActive
                       ? "border-red-400 text-red-500"
                       : "border-transparent text-slate-600 hover:text-slate-900"
@@ -85,12 +101,12 @@ export default function BusViewDetailsModal({
         </div>
 
         {/* BODY */}
-        <div className="max-h-[70vh] overflow-y-auto px-6 py-6">
+        <div className="flex-1 overflow-y-auto px-4 py-4 md:max-h-[70vh] md:px-6 md:py-6">
           {activeTab === "details" && (
-            <div className="grid grid-cols-[1.2fr_1fr_0.8fr_1fr] gap-6">
-              <div>
+            <div className="grid min-w-0 grid-cols-1 gap-4 md:grid-cols-[1.2fr_1fr_0.8fr_1fr] md:gap-6">
+              <div className="min-w-0">
                 <div className="mb-4 h-20 w-20 rounded-xl bg-blue-600" />
-                <p className="text-lg font-bold text-slate-900">
+                <p className="break-words text-lg font-bold text-slate-900">
                   {bus.operatorName}
                 </p>
                 <p className="mt-1 text-sm text-slate-500">{bus.busName}</p>
@@ -100,8 +116,8 @@ export default function BusViewDetailsModal({
                 </p>
               </div>
 
-              <div>
-                <p className="text-xl font-bold text-slate-900">
+              <div className="min-w-0 rounded-2xl border border-slate-200 p-4 md:border-0 md:p-0">
+                <p className="break-words text-lg font-bold text-slate-900 md:text-xl">
                   {bus.departureDate}, {bus.departureTime}
                 </p>
                 <p className="mt-2 text-base text-slate-700">{bus.fromCity}</p>
@@ -110,15 +126,15 @@ export default function BusViewDetailsModal({
                 </p>
               </div>
 
-              <div className="text-center">
+              <div className="rounded-2xl border border-slate-200 p-4 text-left md:border-0 md:p-0 md:text-center">
                 <p className="text-base font-semibold text-slate-700">
                   {bus.duration}
                 </p>
                 <p className="mt-2 text-sm text-slate-500">Direct / Route Bus</p>
               </div>
 
-              <div>
-                <p className="text-xl font-bold text-slate-900">
+              <div className="min-w-0 rounded-2xl border border-slate-200 p-4 md:border-0 md:p-0">
+                <p className="break-words text-lg font-bold text-slate-900 md:text-xl">
                   {bus.arrivalDate}, {bus.arrivalTime}
                 </p>
                 <p className="mt-2 text-base text-slate-700">{bus.toCity}</p>
@@ -130,7 +146,7 @@ export default function BusViewDetailsModal({
           )}
 
           {activeTab === "points" && (
-            <div className="grid grid-cols-2 gap-8">
+            <div className="grid min-w-0 grid-cols-1 gap-6 md:grid-cols-2 md:gap-8">
               <div>
                 <h3 className="mb-4 text-lg font-bold text-slate-900">
                   Boarding Points
@@ -145,10 +161,10 @@ export default function BusViewDetailsModal({
                       <p className="text-lg font-bold text-slate-900">
                         {point.time}
                       </p>
-                      <p className="mt-1 text-base font-semibold text-slate-800">
+                      <p className="mt-1 break-words text-base font-semibold text-slate-800">
                         {point.name}
                       </p>
-                      <p className="mt-1 text-sm text-slate-500">
+                      <p className="mt-1 break-words text-sm text-slate-500">
                         {point.address}
                       </p>
                     </div>
@@ -170,10 +186,10 @@ export default function BusViewDetailsModal({
                       <p className="text-lg font-bold text-slate-900">
                         {point.time}
                       </p>
-                      <p className="mt-1 text-base font-semibold text-slate-800">
+                      <p className="mt-1 break-words text-base font-semibold text-slate-800">
                         {point.name}
                       </p>
-                      <p className="mt-1 text-sm text-slate-500">
+                      <p className="mt-1 break-words text-sm text-slate-500">
                         {point.address}
                       </p>
                     </div>
@@ -189,7 +205,7 @@ export default function BusViewDetailsModal({
                 Bus Amenities
               </h3>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 md:gap-4">
                 {bus.amenities.map((item) => (
                   <div
                     key={item}

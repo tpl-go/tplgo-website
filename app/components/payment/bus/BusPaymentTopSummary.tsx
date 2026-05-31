@@ -80,9 +80,9 @@ function InfoRow({
   value: string;
 }) {
   return (
-    <div>
+    <div className="min-w-0">
       <div className="mb-1 text-[12px] font-bold text-[#6b7280]">{label}</div>
-      <div className="text-[13px] font-semibold leading-[20px] text-[#1f2937]">
+      <div className="break-words text-[13px] font-semibold leading-[20px] text-[#1f2937]">
         {value}
       </div>
     </div>
@@ -138,15 +138,15 @@ export default function BusPaymentTopSummary({
 
   return (
     <section className="overflow-hidden rounded-[18px] border border-[#d9e2ec] bg-[#eef6ff] shadow-[0_2px_8px_rgba(15,23,42,0.04)]">
-      <div className="flex items-start justify-between gap-4 px-5 py-[18px]">
+      <div className="flex flex-col gap-4 px-4 py-[18px] sm:flex-row sm:items-start sm:justify-between sm:px-5">
         <div className="min-w-0 flex-1">
           <div className="mb-2 text-[24px] leading-none">🚌</div>
 
-          <h2 className="m-0 text-[20px] font-extrabold leading-[28px] text-[#1f2937]">
+          <h2 className="m-0 break-words text-[18px] font-extrabold leading-[26px] text-[#1f2937] sm:text-[20px] sm:leading-[28px]">
             {bookingPayload.bus.operatorName} ({bookingPayload.bus.busName})
           </h2>
 
-          <div className="mt-2 flex flex-wrap items-center gap-2 text-[13px] font-semibold text-[#4b5563]">
+          <div className="mt-2 flex flex-wrap items-center gap-2 break-words text-[13px] font-semibold text-[#4b5563]">
             <span>{bookingPayload.search.fromCity}</span>
             <span>→</span>
             <span>{bookingPayload.search.toCity}</span>
@@ -162,37 +162,37 @@ export default function BusPaymentTopSummary({
         <button
           type="button"
           onClick={() => setShowDetails((prev) => !prev)}
-          className="whitespace-nowrap border-0 bg-transparent pt-[6px] text-[13px] font-extrabold text-[#1d9bf0]"
+          className="h-10 w-full rounded-xl border border-[#bfdbfe] bg-white px-3 text-[13px] font-extrabold text-[#1d9bf0] sm:w-auto sm:whitespace-nowrap sm:border-0 sm:bg-transparent sm:pt-[6px]"
         >
           {showDetails ? "HIDE DETAILS ▲" : "VIEW DETAILS ▼"}
         </button>
       </div>
 
-      <div className="flex flex-wrap justify-between gap-[18px] border-t border-[#d9e2ec] bg-white px-5 py-4">
+      <div className="flex flex-col gap-[18px] border-t border-[#d9e2ec] bg-white px-4 py-4 sm:flex-row sm:flex-wrap sm:justify-between sm:px-5">
         <div className="min-w-0">
           <div className="mb-1 text-[12px] font-bold text-[#6b7280]">
             Booking details will be sent to:
           </div>
 
-          <div className="text-[14px] font-bold text-[#1f2937]">
+          <div className="break-words text-[14px] font-bold text-[#1f2937]">
             {primaryTravellerName}
           </div>
 
-          <div className="mt-1 text-[12px] font-medium text-[#4b5563]">
+          <div className="mt-1 break-words text-[12px] font-medium text-[#4b5563]">
             {contactSummary}
           </div>
         </div>
 
-        <div className="min-w-[260px]">
+        <div className="min-w-0 sm:min-w-[260px]">
           <div className="mb-1 text-[12px] font-bold text-[#6b7280]">
             Bus Journey Summary
           </div>
 
-          <div className="text-[14px] font-bold text-[#1f2937]">
+          <div className="break-words text-[14px] font-bold text-[#1f2937]">
             Seats: {seatSummary}
           </div>
 
-          <div className="mt-1 text-[12px] font-medium text-[#4b5563]">
+          <div className="mt-1 break-words text-[12px] font-medium text-[#4b5563]">
             {bookingPayload.selectedBoardingPoint.name} →{" "}
             {bookingPayload.selectedDroppingPoint.name}
           </div>
@@ -200,8 +200,8 @@ export default function BusPaymentTopSummary({
       </div>
 
       {showDetails && (
-        <div className="grid grid-cols-[1.2fr_1fr] gap-[18px] border-t border-[#d9e2ec] bg-[#f8fbff] px-5 py-4">
-          <div>
+        <div className="grid grid-cols-1 gap-[18px] border-t border-[#d9e2ec] bg-[#f8fbff] px-4 py-4 md:grid-cols-[1.2fr_1fr] md:px-5">
+          <div className="min-w-0">
             <SectionLabel>Bus Booking Summary</SectionLabel>
 
             <div className="grid gap-3">
@@ -248,7 +248,7 @@ export default function BusPaymentTopSummary({
             </div>
           </div>
 
-          <div>
+          <div className="min-w-0">
             <SectionLabel>Traveller, Add-ons & Offer Summary</SectionLabel>
 
             <div className="grid gap-3 rounded-[10px] border border-[#d9e2ec] bg-white p-[14px]">

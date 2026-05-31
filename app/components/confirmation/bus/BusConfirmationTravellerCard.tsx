@@ -69,7 +69,7 @@ export default function BusConfirmationTravellerCard({
         </h3>
       </div>
 
-      <div style={{ padding: "22px" }}>
+      <div className="bus-confirmation-traveller-body" style={{ padding: "22px" }}>
         {leadTraveller ? (
           <div
             style={{
@@ -134,6 +134,7 @@ export default function BusConfirmationTravellerCard({
         ) : null}
 
         <div
+          className="bus-confirmation-traveller-grid"
           style={{
             display: "grid",
             gridTemplateColumns: "1.15fr 0.85fr",
@@ -164,6 +165,7 @@ export default function BusConfirmationTravellerCard({
               {travellers.length > 0 ? (
                 travellers.map((traveller, index) => (
                   <div
+                    className="bus-confirmation-traveller-row"
                     key={traveller.id || index}
                     style={{
                       border: "1px solid #e5e7eb",
@@ -216,6 +218,7 @@ export default function BusConfirmationTravellerCard({
                             fontWeight: 900,
                             color: "#111827",
                             lineHeight: "22px",
+                            wordBreak: "break-word",
                           }}
                         >
                           {getFullName(traveller)}
@@ -310,6 +313,32 @@ export default function BusConfirmationTravellerCard({
           </div>
         </div>
       </div>
+
+      <style jsx global>{`
+        @media (max-width: 767px) {
+          .bus-confirmation-traveller-body {
+            padding: 14px !important;
+          }
+
+          .bus-confirmation-traveller-grid {
+            grid-template-columns: 1fr !important;
+          }
+
+          .bus-confirmation-traveller-row {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+          }
+
+          .bus-confirmation-info-row {
+            flex-direction: column !important;
+            gap: 6px !important;
+          }
+
+          .bus-confirmation-info-row > div:last-child {
+            text-align: left !important;
+          }
+        }
+      `}</style>
     </section>
   );
 }
@@ -345,6 +374,7 @@ function InfoCard({
       <div style={{ display: "grid", gap: "12px" }}>
         {rows.map((row, index) => (
           <div
+            className="bus-confirmation-info-row"
             key={`${row.label}-${index}`}
             style={{
               display: "flex",
