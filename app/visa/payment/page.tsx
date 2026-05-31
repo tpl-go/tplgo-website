@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 import LoginModal from "@/app/components/common/LoginModal";
 import { AUTH_UPDATED_EVENT } from "@/app/lib/booking/guestAuth";
+import { getLoggedInDisplayName } from "@/app/lib/auth/displayName";
 
 import { applyPaymentMethod } from "@/app/data/booking/applyPaymentMethod";
 import { startPaymentProcess } from "@/app/data/booking/startPaymentProcess";
@@ -695,7 +696,7 @@ export default function VisaPaymentPage() {
                 ) : (
                   <div className="rounded-full bg-green-100 px-4 py-2 text-[12px] font-extrabold text-green-700">
                     Logged in as{" "}
-                    {activeUser?.name ||
+                    {getLoggedInDisplayName(activeUser) ||
                       `${storedPayload?.applicants?.[0]?.firstName || ""} ${
                         storedPayload?.applicants?.[0]?.lastName || ""
                       }`.trim() ||

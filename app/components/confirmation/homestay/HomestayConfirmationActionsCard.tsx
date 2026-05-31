@@ -31,12 +31,14 @@ export default function HomestayConfirmationActionsCard({
 }: Props) {
   return (
     <aside
+      className="homestay-confirmation-actions"
       style={{
         width: "100%",
         display: "flex",
       }}
     >
       <div
+        className="homestay-confirmation-actions-inner"
         style={{
           width: "100%",
           position: "sticky",
@@ -254,6 +256,14 @@ export default function HomestayConfirmationActionsCard({
           </div>
         </div>
       </div>
+      <style jsx>{`
+        @media (max-width: 1023px) {
+          .homestay-confirmation-actions-inner {
+            position: static !important;
+            top: auto !important;
+          }
+        }
+      `}</style>
     </aside>
   );
 }

@@ -58,7 +58,7 @@ export default function HotelBookingTripSecureSection({
   return (
     <section className="overflow-hidden rounded-xl border border-[#d9e2ec] bg-white">
       <div
-        className="flex min-h-[58px] cursor-pointer items-center justify-between gap-4 border-b border-[#d9e2ec] bg-[#fffdf4] px-5"
+        className="flex min-h-[58px] cursor-pointer items-center justify-between gap-3 border-b border-[#d9e2ec] bg-[#fffdf4] px-3 md:gap-4 md:px-5"
         onClick={() => setIsOpen((prev) => !prev)}
       >
         <div className="flex items-center gap-3">
@@ -70,7 +70,7 @@ export default function HotelBookingTripSecureSection({
             {isEnabled ? "✓" : "!"}
           </span>
 
-          <h3 className="text-[18px] font-extrabold text-[#1f2937]">
+          <h3 className="text-[17px] font-extrabold text-[#1f2937] md:text-[18px]">
             Trip Secure
           </h3>
         </div>
@@ -85,10 +85,10 @@ export default function HotelBookingTripSecureSection({
       </div>
 
       {isOpen && (
-        <div className="border-t border-[#e5e7eb] bg-white p-5">
+        <div className="border-t border-[#e5e7eb] bg-white p-3 md:p-5">
           {!isEnabled ? (
-            <div className="rounded-lg border border-[#f3d2d0] bg-[#fff7f7] p-5">
-              <div className="text-[18px] font-extrabold text-[#111827]">
+            <div className="rounded-lg border border-[#f3d2d0] bg-[#fff7f7] p-4 md:p-5">
+              <div className="text-[17px] font-extrabold text-[#111827] md:text-[18px]">
                 Trip Secure locked
               </div>
               <div className="mt-2 text-[14px] leading-6 text-[#6b7280]">
@@ -97,12 +97,12 @@ export default function HotelBookingTripSecureSection({
               </div>
             </div>
           ) : (
-            <div className="rounded-lg border border-[#d9e2ec] bg-[#f8fbff] p-5">
-              <div className="text-[22px] font-extrabold text-[#111827]">
+            <div className="rounded-lg border border-[#d9e2ec] bg-[#f8fbff] p-4 md:p-5">
+              <div className="text-[19px] font-extrabold text-[#111827] md:text-[22px]">
                 Protect Your Hotel Booking
               </div>
 
-              <div className="mt-2 text-[18px] font-extrabold text-[#111827]">
+              <div className="mt-2 text-[17px] font-extrabold text-[#111827] md:text-[18px]">
                 ₹499{" "}
                 <span className="text-[14px] font-semibold text-[#374151]">
                   / Booking
@@ -126,7 +126,7 @@ export default function HotelBookingTripSecureSection({
                   title="Booking Protection"
                   subtitle="Extra reassurance for stay confirmation"
                 />
-                <div className="flex min-h-[74px] items-center justify-center rounded-lg border border-[#d9e2ec] bg-white px-3 text-center text-[14px] font-bold text-[#0284c7]">
+                <div className="flex min-h-[64px] items-center justify-center rounded-lg border border-[#d9e2ec] bg-white px-3 text-center text-[14px] font-bold text-[#0284c7] md:min-h-[74px]">
                   View Benefits →
                 </div>
               </div>
@@ -172,8 +172,8 @@ function BenefitCard({
   subtitle: string;
 }) {
   return (
-    <div className="min-h-[74px] rounded-lg border border-[#d9e2ec] bg-white p-4">
-      <div className="text-[16px] font-bold text-[#111827]">{title}</div>
+    <div className="min-h-[64px] rounded-lg border border-[#d9e2ec] bg-white p-3 md:min-h-[74px] md:p-4">
+      <div className="text-[15px] font-bold text-[#111827] md:text-[16px]">{title}</div>
       <div className="mt-1 text-[13px] text-[#4b5563]">{subtitle}</div>
     </div>
   );

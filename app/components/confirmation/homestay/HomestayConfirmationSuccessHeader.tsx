@@ -35,8 +35,8 @@ function formatDateTime(value?: string | null) {
 function formatDate(value?: string | null) {
   if (!value) return "On Request";
 
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return value;
+  const parsed = parseLocalDate(value);
+  if (!parsed) return value;
 
   return parsed.toLocaleDateString("en-GB", {
     weekday: "short",
@@ -44,6 +44,15 @@ function formatDate(value?: string | null) {
     month: "short",
     year: "numeric",
   });
+}
+
+function parseLocalDate(value: string) {
+  const parts = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const date = parts
+    ? new Date(Number(parts[1]), Number(parts[2]) - 1, Number(parts[3]))
+    : new Date(value);
+
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
 export default function HomestayConfirmationSuccessHeader({
@@ -114,6 +123,7 @@ export default function HomestayConfirmationSuccessHeader({
 
   return (
     <section
+      className="homestay-confirmation-success"
       style={{
         border: "1px solid #d9e2ec",
         borderRadius: "24px",
@@ -124,6 +134,7 @@ export default function HomestayConfirmationSuccessHeader({
       }}
     >
       <div
+        className="homestay-confirmation-success-pad"
         style={{
           padding: "28px 26px 24px 26px",
           position: "relative",
@@ -131,6 +142,7 @@ export default function HomestayConfirmationSuccessHeader({
         }}
       >
         <div
+          className="homestay-confirmation-success-layout"
           style={{
             position: "absolute",
             top: "-42px",
@@ -203,6 +215,7 @@ export default function HomestayConfirmationSuccessHeader({
             </div>
 
             <h1
+              className="homestay-confirmation-success-title"
               style={{
                 margin: "16px 0 0 0",
                 fontSize: "34px",
@@ -216,6 +229,7 @@ export default function HomestayConfirmationSuccessHeader({
             </h1>
 
             <div
+              className="homestay-confirmation-success-copy"
               style={{
                 marginTop: "12px",
                 fontSize: "16px",
@@ -231,6 +245,7 @@ export default function HomestayConfirmationSuccessHeader({
             </div>
 
             <div
+              className="homestay-confirmation-property-title"
               style={{
                 marginTop: "22px",
                 fontSize: "28px",
@@ -297,6 +312,7 @@ export default function HomestayConfirmationSuccessHeader({
           </div>
 
           <div
+            className="homestay-confirmation-booking-card"
             style={{
               minWidth: "320px",
               maxWidth: "100%",
@@ -309,6 +325,7 @@ export default function HomestayConfirmationSuccessHeader({
             }}
           >
             <div
+              className="homestay-confirmation-booking-id"
               style={{
                 fontSize: "11px",
                 fontWeight: 900,
@@ -393,6 +410,52 @@ export default function HomestayConfirmationSuccessHeader({
           </div>
         </div>
       </div>
+      <style jsx>{`
+        @media (max-width: 767px) {
+          .homestay-confirmation-success {
+            border-radius: 18px !important;
+          }
+
+          .homestay-confirmation-success-pad {
+            padding: 18px 14px !important;
+          }
+
+          .homestay-confirmation-success-layout {
+            display: grid !important;
+            grid-template-columns: 1fr !important;
+            gap: 16px !important;
+          }
+
+          .homestay-confirmation-success-title {
+            font-size: 26px !important;
+            line-height: 32px !important;
+            letter-spacing: 0 !important;
+          }
+
+          .homestay-confirmation-success-copy {
+            font-size: 13px !important;
+            line-height: 21px !important;
+          }
+
+          .homestay-confirmation-property-title {
+            font-size: 21px !important;
+            line-height: 28px !important;
+            letter-spacing: 0 !important;
+          }
+
+          .homestay-confirmation-booking-card {
+            min-width: 0 !important;
+            width: 100% !important;
+            padding: 16px !important;
+            border-radius: 18px !important;
+          }
+
+          .homestay-confirmation-booking-id {
+            font-size: 22px !important;
+            line-height: 28px !important;
+          }
+        }
+      `}</style>
     </section>
   );
 }

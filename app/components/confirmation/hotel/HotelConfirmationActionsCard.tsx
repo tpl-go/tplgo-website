@@ -31,12 +31,14 @@ export default function HotelConfirmationActionsCard({
 }: Props) {
   return (
     <aside
+      className="hotel-confirmation-actions"
       style={{
         width: "100%",
         display: "flex",
       }}
     >
       <div
+        className="hotel-confirmation-actions-inner"
         style={{
           width: "100%",
           position: "sticky",
@@ -257,6 +259,14 @@ export default function HotelConfirmationActionsCard({
           </div>
         </div>
       </div>
+      <style jsx>{`
+        @media (max-width: 1023px) {
+          .hotel-confirmation-actions-inner {
+            position: static !important;
+            top: auto !important;
+          }
+        }
+      `}</style>
     </aside>
   );
 }

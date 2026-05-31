@@ -26,7 +26,7 @@ export default function HomestayManageContactDetails({
         subtitle="Update email and mobile number for this booking."
       />
 
-      <div className="rounded-[24px] border border-black/5 bg-[#f8f9fb] p-5">
+      <div className="min-w-0 rounded-[20px] border border-black/5 bg-[#f8f9fb] p-4 md:rounded-[24px] md:p-5">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <Input
             label="Mobile Number"

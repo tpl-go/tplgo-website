@@ -1,7 +1,8 @@
 "use client";
 
 import { Suspense, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { ArrowLeft, SlidersHorizontal } from "lucide-react";
 import HotelResultsSearchBar from "@/app/components/hotel/results/HotelResultsSearchBar";
 import HotelResultsTopStrip from "@/app/components/hotel/results/HotelResultsTopStrip";
 import HotelResultsSortBar from "@/app/components/hotel/results/HotelResultsSortBar";
@@ -67,12 +68,14 @@ function matchesPriceRange(price: number, range: string) {
 }
 
 function HotelResultsPageContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const city = searchParams.get("city") || "Goa";
 
   const [activeSort, setActiveSort] =
     useState<HotelSortOption>("popularity");
   const [filters, setFilters] = useState<HotelFilterState>(INITIAL_FILTERS);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   const cityHotels = useMemo(() => {
     return hotelResultsDummy.filter(
@@ -367,59 +370,132 @@ function HotelResultsPageContent() {
       case "tplLuxury":
         return setFilters((prev) => ({ ...prev, tplLuxury: false }));
       default:
-        return handleToggleArray(chip.type as any, (chip as any).value);
+        return handleToggleArray(chip.type, chip.value);
     }
   };
 
   const totalToShow = sortedHotels.length;
 
+  const filtersPanel = (
+    <HotelResultsFilters
+      city={city}
+      hotels={sourceHotels}
+      filters={filters}
+      chips={chips}
+      onToggleArray={handleToggleArray}
+      onSetField={handleSetField}
+      onToggleLuxury={() =>
+        setFilters((prev) => ({ ...prev, tplLuxury: !prev.tplLuxury }))
+      }
+      onClearAll={handleClearAll}
+      onRemoveChip={handleRemoveChip}
+    />
+  );
+
   return (
-    <main className="min-h-screen bg-[#f5f7fb] text-black">
-      <div className=" border-b border-[#d7dce3] bg-white px-6 py-2">
+    <main className="min-h-screen overflow-x-hidden bg-[#f5f7fb] text-black">
+      <div className="sticky top-0 z-40 border-b border-[#d7dce3] bg-white md:hidden">
+        <div className="flex h-12 items-center gap-3 px-3">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#e5e7eb] bg-white text-[#111827]"
+            aria-label="Go back"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-[14px] font-black text-[#111827]">
+              Hotel Search
+            </div>
+            <div className="text-[11px] font-semibold text-[#64748b]">
+              Modify destination, dates and guests
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="border-b border-[#d7dce3] bg-white px-3 py-3 md:px-6 md:py-2">
         <div className="mx-auto max-w-7xl">
           <HotelResultsSearchBar />
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 py-4">
-        <div className="flex gap-6">
+      <div className="border-b border-[#e5e7eb] bg-white px-3 py-3 md:hidden">
+        <div>
+          <div className="flex min-w-0 items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-[17px] font-black text-[#111827]">
+                Hotels in {city}
+              </div>
+              <div className="mt-0.5 text-[12px] font-semibold text-[#64748b]">
+                {totalToShow} properties available
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setMobileFiltersOpen(true)}
+              className="relative z-10 flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-[#bfdbfe] bg-[#eff6ff] px-3 text-[12px] font-extrabold text-[#0b74ff]"
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+              Filter
+              {chips.length > 0 ? (
+                <span className="ml-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#0b74ff] px-1 text-[10px] text-white">
+                  {chips.length}
+                </span>
+              ) : null}
+            </button>
+          </div>
+        </div>
+
+        {chips.length > 0 && (
+          <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+            {chips.map((chip, index) => (
+              <button
+                key={`${chip.label}-${index}`}
+                type="button"
+                onClick={() => handleRemoveChip(chip)}
+                className="inline-flex h-8 shrink-0 items-center gap-1 rounded-full border border-[#bfdbfe] bg-[#eff6ff] px-3 text-[12px] font-bold text-[#0b74ff]"
+              >
+                {chip.label}
+                <span className="text-[13px] leading-none">×</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="mx-auto max-w-7xl px-3 py-3 md:px-4 md:py-4">
+        <div className="flex gap-0 md:gap-6">
           {/* LEFT FILTER */}
-          <div className="w-[320px] shrink-0">
-            <HotelResultsFilters
-              city={city}
-              hotels={sourceHotels}
-              filters={filters}
-              chips={chips}
-              onToggleArray={handleToggleArray}
-              onSetField={handleSetField}
-              onToggleLuxury={() =>
-                setFilters((prev) => ({ ...prev, tplLuxury: !prev.tplLuxury }))
-              }
-              onClearAll={handleClearAll}
-              onRemoveChip={handleRemoveChip}
-            />
+          <div className="hidden w-[320px] shrink-0 md:block">
+            {filtersPanel}
           </div>
 
           {/* RIGHT CONTENT */}
           <div className="min-w-0 flex-1">
+            <HotelResultsTopStrip city={city} total={totalToShow} />
+
             <HotelResultsSortBar
-  activeSort={activeSort}
-  onChange={(value: HotelSortOption) => setActiveSort(value)}
-/>
+              activeSort={activeSort}
+              onChange={(value: HotelSortOption) => setActiveSort(value)}
+            />
 
-<SmartResultsOfferStrip
-  service="hotel"
-  destination={city}
-  bookingValue={
-    (sourceHotels[0]?.pricePerNight || 0) +
-    (sourceHotels[0]?.taxes || 0)
-  }
-  isInternational={false}
-/>
+            <SmartResultsOfferStrip
+              service="hotel"
+              destination={city}
+              bookingValue={
+                (sourceHotels[0]?.pricePerNight || 0) +
+                (sourceHotels[0]?.taxes || 0)
+              }
+              isInternational={false}
+            />
 
-<div className="mb-4 text-[20px] font-extrabold text-[#111827]">
-  Showing Properties in {city}
-</div>
+            <div className="mb-3 hidden text-[20px] font-extrabold text-[#111827] md:block">
+              Showing Properties in {city}
+            </div>
 
             {cityHotels.length === 0 && (
               <div className="mb-4 rounded-lg border border-[#f3e8a3] bg-[#fffbea] px-4 py-3 text-sm font-semibold text-[#92400e]">
@@ -455,6 +531,52 @@ function HotelResultsPageContent() {
           </div>
         </div>
       </div>
+
+      {mobileFiltersOpen && (
+        <div className="fixed inset-0 z-[1000] md:hidden">
+          <button
+            type="button"
+            aria-label="Close filters"
+            className="absolute inset-0 bg-black/45"
+            onClick={() => setMobileFiltersOpen(false)}
+          />
+
+          <div className="absolute inset-x-0 bottom-0 max-h-[88vh] overflow-hidden rounded-t-3xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-[#e5e7eb] px-4 py-3">
+              <div>
+                <div className="text-[17px] font-black text-[#111827]">
+                  Filters
+                </div>
+                <div className="text-[12px] font-semibold text-[#64748b]">
+                  {totalToShow} properties in {city}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setMobileFiltersOpen(false)}
+                className="h-10 rounded-full border border-[#e5e7eb] px-4 text-[13px] font-extrabold text-[#111827]"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="max-h-[calc(88vh-126px)] overflow-y-auto px-3 py-3">
+              {filtersPanel}
+            </div>
+
+            <div className="border-t border-[#e5e7eb] bg-white px-4 py-3">
+              <button
+                type="button"
+                onClick={() => setMobileFiltersOpen(false)}
+                className="h-12 w-full rounded-xl bg-[#0b74ff] text-[14px] font-black text-white"
+              >
+                Show {totalToShow} Properties
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

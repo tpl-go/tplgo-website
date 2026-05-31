@@ -56,7 +56,7 @@ export default function HomestayManageRoomAddons({
         subtitle="Select a stay option and review upgrade or refund settlement."
       />
 
-      <div className="rounded-[24px] border border-black/5 bg-[#f8f9fb] p-5">
+      <div className="min-w-0 rounded-[20px] border border-black/5 bg-[#f8f9fb] p-4 md:rounded-[24px] md:p-5">
         <p className="text-sm font-bold text-[#111827]">
           Current Stay: {roomName}
         </p>
@@ -68,14 +68,14 @@ export default function HomestayManageRoomAddons({
         </p>
 
         {selectedVariant ? (
-          <div className="mt-4 rounded-2xl border border-black/5 bg-white p-4">
+          <div className="mt-4 min-w-0 rounded-2xl border border-black/5 bg-white p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#6b7280]">
               Current Selected Variant
             </p>
             <p className="mt-1 text-sm font-bold text-[#111827]">
               {selectedVariant.name || roomName}
             </p>
-            <p className="mt-1 text-sm text-[#6b7280]">
+            <p className="mt-1 break-words text-sm leading-6 text-[#6b7280]">
               {formatPrice(Number(selectedVariant.price || 0))} +{" "}
               {formatPrice(Number(selectedVariant.taxes || 0))} taxes •{" "}
               {selectedVariant.mealPlan || "-"} •{" "}
@@ -85,7 +85,7 @@ export default function HomestayManageRoomAddons({
         ) : null}
       </div>
 
-      <div className="rounded-[24px] border border-black/5 bg-white p-5">
+      <div className="min-w-0 rounded-[20px] border border-black/5 bg-white p-4 md:rounded-[24px] md:p-5">
         <p className="text-base font-bold text-[#111827]">
           Available Stay Options
         </p>
@@ -109,24 +109,24 @@ export default function HomestayManageRoomAddons({
                   key={variant.id || variant.name}
                   type="button"
                   onClick={() => onVariantChange(variant)}
-                  className={`rounded-2xl border p-4 text-left transition ${
+                  className={`min-w-0 rounded-2xl border p-4 text-left transition ${
                     isSelected
                       ? "border-[#ff6b00] bg-[#fff7f2] shadow-[0_8px_24px_rgba(255,107,0,0.08)]"
                       : "border-black/5 bg-[#f8f9fb] hover:border-[#ff6b00]/30"
                   }`}
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-bold text-[#111827]">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0">
+                      <p className="break-words text-sm font-bold text-[#111827]">
                         {variant.name || "Stay Option"}
                       </p>
-                      <p className="mt-1 text-sm text-[#6b7280]">
+                      <p className="mt-1 break-words text-sm leading-6 text-[#6b7280]">
                         {formatPrice(perNight)} + {formatPrice(taxes)} taxes / night
                       </p>
                     </div>
 
                     {isCurrent ? (
-                      <span className="rounded-full bg-green-50 px-3 py-1 text-[11px] font-bold text-green-700">
+                      <span className="w-fit rounded-full bg-green-50 px-3 py-1 text-[11px] font-bold text-green-700">
                         Current
                       </span>
                     ) : null}
@@ -141,7 +141,7 @@ export default function HomestayManageRoomAddons({
                   </div>
 
                   {!!variant.amenities?.length && (
-                    <p className="mt-3 text-xs font-semibold text-[#6b7280]">
+                    <p className="mt-3 break-words text-xs font-semibold leading-5 text-[#6b7280]">
                       {variant.amenities.slice(0, 4).join(" • ")}
                     </p>
                   )}
@@ -169,7 +169,7 @@ export default function HomestayManageRoomAddons({
         </div>
       </div>
 
-      <div className="rounded-[24px] border border-black/5 bg-white p-5 shadow-sm">
+      <div className="min-w-0 rounded-[20px] border border-black/5 bg-white p-4 shadow-sm md:rounded-[24px] md:p-5">
         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#ff6b00]">
           Settlement Summary
         </p>
@@ -197,8 +197,8 @@ export default function HomestayManageRoomAddons({
 
         <div className="mt-5 rounded-2xl bg-[#fff7f2] p-4">
           {quote.settlementMode === "payment" && (
-            <div className="flex items-center justify-between gap-4">
-              <div>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b7280]">
                   Net Payable
                 </p>
@@ -210,7 +210,7 @@ export default function HomestayManageRoomAddons({
               <button
                 type="button"
                 onClick={onContinue}
-                className="rounded-full bg-[#ff6b00] px-5 py-3 text-sm font-semibold text-white"
+                className="min-h-12 w-full rounded-full bg-[#ff6b00] px-5 py-3 text-sm font-semibold text-white sm:w-auto"
               >
                 Continue to Payment
               </button>
@@ -218,8 +218,8 @@ export default function HomestayManageRoomAddons({
           )}
 
           {quote.settlementMode === "wallet_credit" && (
-            <div className="flex items-center justify-between gap-4">
-              <div>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b7280]">
                   Refund Wallet Credit
                 </p>
@@ -231,7 +231,7 @@ export default function HomestayManageRoomAddons({
               <button
                 type="button"
                 onClick={onContinue}
-                className="rounded-full bg-[#111827] px-5 py-3 text-sm font-semibold text-white"
+                className="min-h-12 w-full rounded-full bg-[#111827] px-5 py-3 text-sm font-semibold text-white sm:w-auto"
               >
                 Save Changes
               </button>
@@ -239,8 +239,8 @@ export default function HomestayManageRoomAddons({
           )}
 
           {quote.settlementMode === "save" && (
-            <div className="flex items-center justify-between gap-4">
-              <div>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
                 <p className="text-sm font-semibold text-[#111827]">
                   No payment required
                 </p>
@@ -252,7 +252,7 @@ export default function HomestayManageRoomAddons({
               <button
                 type="button"
                 onClick={onContinue}
-                className="rounded-full bg-[#111827] px-5 py-3 text-sm font-semibold text-white"
+                className="min-h-12 w-full rounded-full bg-[#111827] px-5 py-3 text-sm font-semibold text-white sm:w-auto"
               >
                 Save Changes
               </button>
@@ -266,7 +266,7 @@ export default function HomestayManageRoomAddons({
 
 function Pill({ label }: { label: string }) {
   return (
-    <span className="rounded-full border border-black/5 bg-white px-3 py-1 text-[11px] font-bold text-[#4b5563]">
+    <span className="max-w-full break-words rounded-full border border-black/5 bg-white px-3 py-1 text-[11px] font-bold text-[#4b5563]">
       {label}
     </span>
   );
@@ -274,9 +274,9 @@ function Pill({ label }: { label: string }) {
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between gap-4 rounded-2xl bg-[#f8f9fb] px-4 py-3">
-      <p className="text-sm text-[#4b5563]">{label}</p>
-      <p className="text-sm font-semibold text-[#111827]">{value}</p>
+    <div className="flex min-w-0 flex-col gap-1 rounded-2xl bg-[#f8f9fb] px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+      <p className="break-words text-sm text-[#4b5563]">{label}</p>
+      <p className="break-words text-sm font-semibold text-[#111827]">{value}</p>
     </div>
   );
 }

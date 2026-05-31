@@ -114,7 +114,7 @@ export default function HotelBookingAddonsSection({
   return (
     <section className="overflow-hidden rounded-xl border border-[#d9e2ec] bg-white">
       <div
-        className="flex min-h-[58px] cursor-pointer items-center justify-between gap-4 border-b border-[#d9e2ec] bg-[#fffdf4] px-5"
+        className="flex min-h-[58px] cursor-pointer items-center justify-between gap-3 border-b border-[#d9e2ec] bg-[#fffdf4] px-3 md:gap-4 md:px-5"
         onClick={() => setIsOpen((prev) => !prev)}
       >
         <div className="flex items-center gap-3">
@@ -126,7 +126,7 @@ export default function HotelBookingAddonsSection({
             {isEnabled ? "✓" : "!"}
           </span>
 
-          <h3 className="text-[18px] font-extrabold text-[#1f2937]">
+          <h3 className="text-[17px] font-extrabold text-[#1f2937] md:text-[18px]">
             Add-ons
           </h3>
         </div>
@@ -141,10 +141,10 @@ export default function HotelBookingAddonsSection({
       </div>
 
       {isOpen && (
-        <div className="border-t border-[#e5e7eb] bg-white p-5">
+        <div className="border-t border-[#e5e7eb] bg-white p-3 md:p-5">
           {!isEnabled ? (
-            <div className="rounded-lg border border-[#f3d2d0] bg-[#fff7f7] p-5">
-              <div className="text-[18px] font-extrabold text-[#111827]">
+            <div className="rounded-lg border border-[#f3d2d0] bg-[#fff7f7] p-4 md:p-5">
+              <div className="text-[17px] font-extrabold text-[#111827] md:text-[18px]">
                 Add-ons locked
               </div>
               <div className="mt-2 text-[14px] leading-6 text-[#6b7280]">
@@ -152,8 +152,8 @@ export default function HotelBookingAddonsSection({
               </div>
             </div>
           ) : (
-            <div className="rounded-lg border border-[#d9e2ec] bg-[#f8fbff] p-5">
-              <div className="text-[18px] font-extrabold text-[#111827]">
+            <div className="rounded-lg border border-[#d9e2ec] bg-[#f8fbff] p-4 md:p-5">
+              <div className="text-[17px] font-extrabold text-[#111827] md:text-[18px]">
                 Add more comfort
               </div>
 
@@ -174,7 +174,7 @@ export default function HotelBookingAddonsSection({
                 ))}
               </div>
 
-              <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+              <div className="mt-5 flex flex-col items-stretch justify-between gap-3 md:flex-row md:items-center">
                 <div className="text-[16px] font-extrabold text-[#111827]">
                   Add-ons Total: ₹{addonsTotal.toLocaleString("en-IN")}
                 </div>
@@ -216,7 +216,7 @@ function AddonCard({
 }) {
   return (
     <div
-      className={`min-h-[140px] rounded-lg p-4 ${
+      className={`min-h-[128px] rounded-lg p-4 md:min-h-[140px] ${
         checked
           ? "border-2 border-[#38bdf8] bg-[#eef8ff]"
           : "border border-[#d9e2ec] bg-white"

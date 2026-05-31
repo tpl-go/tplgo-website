@@ -91,7 +91,7 @@ export default function HomestayBookingCabSection({
     <>
       <section className="overflow-hidden rounded-xl border border-[#d9e2ec] bg-white">
         <div
-          className="flex min-h-[58px] cursor-pointer items-center justify-between gap-4 border-b border-[#d9e2ec] bg-[#fffdf4] px-5"
+          className="flex min-h-[58px] cursor-pointer items-center justify-between gap-3 border-b border-[#d9e2ec] bg-[#fffdf4] px-3 md:gap-4 md:px-5"
           onClick={() => setIsOpen((prev) => !prev)}
         >
           <div className="flex items-center gap-3">
@@ -103,7 +103,7 @@ export default function HomestayBookingCabSection({
               {isEnabled ? "✓" : "!"}
             </span>
 
-            <h3 className="text-[18px] font-extrabold text-[#1f2937]">Cab</h3>
+            <h3 className="text-[17px] font-extrabold text-[#1f2937] md:text-[18px]">Cab</h3>
           </div>
 
           <span
@@ -116,24 +116,24 @@ export default function HomestayBookingCabSection({
         </div>
 
         {isOpen && (
-          <div className="border-t border-[#e5e7eb] bg-white p-5">
+          <div className="border-t border-[#e5e7eb] bg-white p-3 md:p-5">
             {!isEnabled ? (
-              <div className="rounded-lg border border-[#f3d2d0] bg-[#fff7f7] p-5">
-                <div className="text-[18px] font-extrabold text-[#111827]">
+              <div className="rounded-lg border border-[#f3d2d0] bg-[#fff7f7] p-3 md:p-5">
+                <div className="text-[17px] font-extrabold text-[#111827] md:text-[18px]">
                   Cab locked
                 </div>
-                <div className="mt-2 text-[14px] leading-6 text-[#6b7280]">
+                <div className="mt-2 text-[13px] leading-6 text-[#6b7280] md:text-[14px]">
                   Please complete Trip Secure section first to continue with cab
                   selection.
                 </div>
               </div>
             ) : (
-              <div className="rounded-lg border border-[#d9e2ec] bg-[#f8fbff] p-5">
-                <div className="text-[18px] font-extrabold text-[#111827]">
+              <div className="rounded-lg border border-[#d9e2ec] bg-[#f8fbff] p-3 md:p-5">
+                <div className="text-[17px] font-extrabold text-[#111827] md:text-[18px]">
                   Travel with comfort
                 </div>
 
-                <div className="mt-2 text-[14px] leading-6 text-[#4b5563]">
+                <div className="mt-2 text-[13px] leading-6 text-[#4b5563] md:text-[14px]">
                   {summaryText}
                 </div>
 
@@ -172,9 +172,9 @@ export default function HomestayBookingCabSection({
 
       {showCabModal && (
         <ModalOverlay onClose={() => setShowCabModal(false)}>
-          <div className="w-full max-w-[860px] overflow-hidden rounded-xl bg-white shadow-[0_20px_60px_rgba(0,0,0,0.28)]">
-            <div className="flex items-center justify-between border-b border-[#e5e7eb] px-6 py-5">
-              <div className="text-[22px] font-extrabold text-[#111827]">
+          <div className="max-h-[92vh] w-full overflow-hidden rounded-t-3xl bg-white shadow-[0_20px_60px_rgba(0,0,0,0.28)] md:max-w-[860px] md:rounded-xl">
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[#e5e7eb] bg-white px-4 py-4 md:px-6 md:py-5">
+              <div className="text-[20px] font-extrabold text-[#111827] md:text-[22px]">
                 Select Cab
               </div>
 
@@ -187,7 +187,7 @@ export default function HomestayBookingCabSection({
               </button>
             </div>
 
-            <div className="p-5">
+            <div className="max-h-[calc(92vh-74px)] overflow-y-auto p-3 md:p-5">
               <div className="grid gap-4">
                 {CAB_OPTIONS.map((item) => {
                   const active =
@@ -198,7 +198,7 @@ export default function HomestayBookingCabSection({
                       key={item.key}
                       type="button"
                       onClick={() => handleSelectCab(item.key)}
-                      className={`rounded-lg p-5 text-left transition ${
+                      className={`rounded-lg p-3 text-left transition md:p-5 ${
                         active
                           ? "border-2 border-[#38bdf8] bg-[#eef8ff]"
                           : "border border-[#d9e2ec] bg-white"
@@ -206,15 +206,15 @@ export default function HomestayBookingCabSection({
                     >
                       <div className="flex items-center justify-between gap-3">
                         <div>
-                          <div className="text-[18px] font-extrabold text-[#111827]">
+                          <div className="text-[16px] font-extrabold text-[#111827] md:text-[18px]">
                             {item.title}
                           </div>
-                          <div className="mt-2 text-[14px] leading-6 text-[#4b5563]">
+                          <div className="mt-2 text-[13px] leading-6 text-[#4b5563] md:text-[14px]">
                             {item.subtitle}
                           </div>
                         </div>
 
-                        <div className="whitespace-nowrap text-[20px] font-extrabold text-[#111827]">
+                        <div className="whitespace-nowrap text-[17px] font-extrabold text-[#111827] md:text-[20px]">
                           ₹{item.price.toLocaleString("en-IN")}
                         </div>
                       </div>
@@ -223,7 +223,7 @@ export default function HomestayBookingCabSection({
                 })}
               </div>
 
-              <div className="mt-6 flex justify-end gap-3">
+              <div className="mt-6 flex flex-col gap-3 md:flex-row md:justify-end">
                 <button
                   type="button"
                   onClick={() => handleSelectCab("none")}
@@ -265,14 +265,14 @@ function CabCard({
     <button
       type="button"
       onClick={onClick}
-      className={`min-h-[150px] rounded-lg p-4 text-left transition ${
+      className={`min-h-[150px] rounded-lg p-3 text-left transition md:p-4 ${
         active
           ? "border-2 border-[#38bdf8] bg-[#eef8ff]"
           : "border border-[#d9e2ec] bg-white"
       }`}
     >
-      <div className="text-[17px] font-extrabold text-[#111827]">{title}</div>
-      <div className="mt-2 text-[14px] leading-6 text-[#4b5563]">
+      <div className="text-[16px] font-extrabold text-[#111827] md:text-[17px]">{title}</div>
+      <div className="mt-2 text-[13px] leading-6 text-[#4b5563] md:text-[14px]">
         {subtitle}
       </div>
       <div className="mt-4 text-[16px] font-extrabold text-[#111827]">
@@ -292,11 +292,11 @@ function ModalOverlay({
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/45 p-5"
+      className="fixed inset-0 z-[1000] flex items-end justify-center bg-black/45 p-0 md:items-center md:p-5"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="max-h-[90vh] overflow-y-auto"
+        className="w-full max-h-[90vh] overflow-y-auto md:w-auto"
       >
         {children}
       </div>

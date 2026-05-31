@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import LoginModal from "@/app/components/common/LoginModal";
 import HotelBookingTopNav from "@/app/components/booking/hotel/HotelBookingTopNav";
 import HotelBookingHotelDetailSection from "@/app/components/booking/hotel/HotelBookingHotelDetailSection";
@@ -86,14 +87,24 @@ type AddonsPayload = {
 };
 
 function calculateNights(checkIn: string, checkOut: string) {
-  const start = new Date(checkIn);
-  const end = new Date(checkOut);
+  const start = parseLocalDate(checkIn);
+  const end = parseLocalDate(checkOut);
 
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 1;
+  if (!start || !end) return 1;
 
   const diff = end.getTime() - start.getTime();
   const nights = Math.ceil(diff / (1000 * 60 * 60 * 24));
   return nights > 0 ? nights : 1;
+}
+
+function parseLocalDate(value: string) {
+  if (!value) return null;
+  const parts = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const date = parts
+    ? new Date(Number(parts[1]), Number(parts[2]) - 1, Number(parts[3]))
+    : new Date(value);
+
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
 const HOTEL_OFFERS: HotelOfferItem[] = [
@@ -419,8 +430,30 @@ export default function HotelBookPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f5f7fb] text-black">
-      <div className="sticky top-0 z-30 bg-[#f5f7fb]">
+    <main className="min-h-screen overflow-x-hidden bg-[#f5f7fb] pb-6 text-black">
+      <div className="sticky top-0 z-40 border-b border-[#d7dce3] bg-white md:hidden">
+        <div className="flex h-12 items-center gap-3 px-3">
+          <button
+            type="button"
+            onClick={() => router.push("/hotels/results")}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#e5e7eb] bg-white text-[#111827]"
+            aria-label="Go back"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-[14px] font-black text-[#111827]">
+              Hotel Booking
+            </div>
+            <div className="text-[11px] font-semibold text-[#64748b]">
+              Complete guest details and payment
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="sticky top-12 z-30 bg-[#f5f7fb] md:top-0">
         <HotelBookingTopNav
           timeLeft={formattedTime}
           isExpired={timeLeft === 0}
@@ -452,24 +485,24 @@ export default function HotelBookPage() {
         />
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 py-6">
-        <div className="mb-4 flex items-center justify-between gap-4">
+      <div className="mx-auto max-w-7xl px-3 py-3 md:px-4 md:py-6">
+        <div className="mb-3 flex items-start justify-between gap-3 md:mb-4 md:items-center md:gap-4">
           <button
             type="button"
             onClick={() => router.push("/hotels/results")}
-            className="text-[13px] font-bold text-[#0b74ff] hover:underline"
+            className="hidden text-[13px] font-bold text-[#0b74ff] hover:underline md:inline"
           >
             ← Modify Search
           </button>
 
-          <div className="text-[12px] font-semibold text-[#6b7280]">
+          <div className="min-w-0 text-[12px] font-semibold text-[#6b7280] md:text-right">
             {city
               ? `${city} • ${rooms} Room${rooms > 1 ? "s" : ""}`
               : "Booking flow in progress"}
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[2.6fr_0.9fr]">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[2.6fr_0.9fr] lg:gap-5">
           <div className="space-y-5">
             <div ref={hotelSummaryRef}>
               <HotelBookingHotelDetailSection
@@ -504,8 +537,8 @@ export default function HotelBookPage() {
               />
             </div>
 
-            <div className="rounded-xl border border-[#d9e2ec] bg-white p-4">
-              <div className="text-[20px] font-extrabold text-[#111827]">
+            <div className="rounded-xl border border-[#d9e2ec] bg-white p-3 md:p-4">
+              <div className="text-[18px] font-extrabold text-[#111827] md:text-[20px]">
                 Special Request
               </div>
 
@@ -513,7 +546,7 @@ export default function HotelBookPage() {
                 value={specialRequest}
                 onChange={(e) => setSpecialRequest(e.target.value)}
                 placeholder="Any special request for hotel? Example: early check-in, anniversary setup, high floor, etc."
-                className="mt-4 min-h-[120px] w-full rounded-xl border border-[#d9e2ec] p-4 text-[14px] font-medium text-[#111827] outline-none focus:border-[#0b74ff]"
+                className="mt-3 min-h-[110px] w-full rounded-xl border border-[#d9e2ec] p-3 text-[14px] font-medium text-[#111827] outline-none focus:border-[#0b74ff] md:mt-4 md:min-h-[120px] md:p-4"
               />
             </div>
 

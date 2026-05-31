@@ -227,10 +227,10 @@ export default function HotelResultsFilters({
 
   return (
     <>
-      <div className="sticky top-[90px] rounded-lg border border-[#d9e2ec] bg-white p-4">
+      <div className="rounded-2xl border border-[#d9e2ec] bg-white p-3 md:sticky md:top-[90px] md:rounded-lg md:p-4">
         {/* MAP */}
         <div className="mb-5 overflow-hidden rounded-xl border border-[#d9e2ec] bg-[#f8fbff]">
-          <div className="h-[140px] bg-[linear-gradient(135deg,#dbeafe_0%,#eef6ff_100%)] p-3">
+          <div className="h-[118px] bg-[linear-gradient(135deg,#dbeafe_0%,#eef6ff_100%)] p-3 md:h-[140px]">
             <div className="flex h-full flex-col justify-between rounded-lg border border-white/70 bg-[radial-gradient(circle_at_center,#ffffff_0%,#dbeafe_100%)] px-3 py-3">
               <div className="flex items-center gap-2 text-[12px] font-bold text-[#1e3a8a]">
                 <MapPinned className="h-4 w-4" />
@@ -511,8 +511,8 @@ export default function HotelResultsFilters({
 
       {/* MAP POPUP */}
       {showMap && (
-        <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/50">
-          <div className="relative h-[80vh] w-[90%] max-w-5xl overflow-hidden rounded-xl bg-white shadow-xl">
+        <div className="fixed inset-0 z-[1200] flex items-center justify-center bg-black/50 px-3">
+          <div className="relative h-[78vh] w-full max-w-5xl overflow-hidden rounded-xl bg-white shadow-xl md:h-[80vh] md:w-[90%]">
             <button
               onClick={() => setShowMap(false)}
               className="absolute right-3 top-3 z-10 rounded-full bg-white p-2 shadow hover:bg-gray-100"

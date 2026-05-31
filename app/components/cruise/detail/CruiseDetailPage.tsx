@@ -7,7 +7,7 @@ import LoginModal from "@/app/components/common/LoginModal";
 import MobileInnerBack from "@/app/components/common/mobile/MobileInnerBack";
 import { AUTH_UPDATED_EVENT } from "@/app/lib/booking/guestAuth";
 import { getWallet } from "@/app/lib/wallet/walletStorage";
-import { getSavedProfile } from "@/app/lib/account/profileStorage";
+import { getLoggedInDisplayName } from "@/app/lib/auth/displayName";
 
 import CruiseDetailHeader from "./CruiseDetailHeader";
 import CruiseDetailTabs from "./CruiseDetailTabs";
@@ -82,22 +82,7 @@ function getActiveUser(): ActiveUser | null {
 }
 
 function getDisplayNameFromUser(user: any) {
-  if (!user?.mobile) return "User";
-
-  const sessionName = String(user?.fullName || "").trim();
-  if (sessionName) return sessionName;
-
-  const profile = getSavedProfile(user.mobile);
-
-  const profileName = `${profile.firstName || ""} ${
-    profile.lastName || ""
-  }`.trim();
-
-  if (profileName && profileName.toLowerCase() !== "pk") {
-    return profileName;
-  }
-
-  return `User ${String(user.mobile).slice(-4)}`;
+  return getLoggedInDisplayName(user);
 }
 
 function formatPrice(value: number) {

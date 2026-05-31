@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import type { TrainTravellerItem } from "@/app/lib/train/trainBookingTypes";
 import { AUTH_UPDATED_EVENT } from "@/app/lib/booking/guestAuth";
-import { getSavedProfile } from "@/app/lib/account/profileStorage";
+import { getLoggedInDisplayName } from "@/app/lib/auth/displayName";
 
 type Props = {
   travellers: TrainTravellerItem[];
@@ -31,19 +31,7 @@ function getActiveUser() {
 }
 
 function getDisplayNameFromUser(user: any) {
-  if (!user?.mobile) return "";
-
-  const sessionName = String(user?.fullName || "").trim();
-  if (sessionName) return sessionName;
-
-  const profile = getSavedProfile(user.mobile);
-  const profileName = `${profile.firstName || ""} ${
-    profile.lastName || ""
-  }`.trim();
-
-  if (profileName && profileName.toLowerCase() !== "pk") return profileName;
-
-  return `User ${String(user.mobile).slice(-4)}`;
+  return getLoggedInDisplayName(user);
 }
 
 export default function TrainTravellerDetailsSection({

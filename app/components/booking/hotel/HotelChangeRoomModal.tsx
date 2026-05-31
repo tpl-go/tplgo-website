@@ -37,20 +37,20 @@ export default function HotelChangeRoomModal({
   return (
     <>
       <div
-        className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/70 px-4 py-6"
+        className="fixed inset-0 z-[9998] flex items-end justify-center bg-black/70 px-0 py-0 md:items-center md:px-4 md:py-6"
         onClick={onClose}
       >
         <div
-          className="max-h-[90vh] w-full max-w-5xl overflow-auto rounded-2xl bg-white shadow-2xl"
+          className="max-h-[92vh] w-full overflow-hidden rounded-t-3xl bg-white shadow-2xl md:max-h-[90vh] md:max-w-5xl md:overflow-auto md:rounded-2xl"
           onClick={(e) => e.stopPropagation()}
         >
           {/* HEADER */}
-          <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[#e5e7eb] bg-white px-5 py-4">
-            <div>
-              <div className="text-[22px] font-extrabold text-[#111827]">
+          <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[#e5e7eb] bg-white px-4 py-4 md:px-5">
+            <div className="min-w-0">
+              <div className="truncate text-[19px] font-extrabold text-[#111827] md:text-[22px]">
                 Change Room
               </div>
-              <div className="mt-1 text-[13px] font-medium text-[#6b7280]">
+              <div className="mt-1 text-[12px] font-medium text-[#6b7280] md:text-[13px]">
                 Select the room option that fits best for your stay
               </div>
             </div>
@@ -65,7 +65,7 @@ export default function HotelChangeRoomModal({
           </div>
 
           {/* ROOM LIST */}
-          <div className="space-y-4 p-5">
+          <div className="max-h-[calc(92vh-74px)] space-y-4 overflow-y-auto p-3 pb-5 md:max-h-none md:overflow-visible md:p-5">
             {hotel.variants?.map((variant, index) => {
               const isSelected = selectedVariant?.id === variant.id;
               const cardImage =
@@ -96,10 +96,10 @@ export default function HotelChangeRoomModal({
                           <img
                             src={cardImage}
                             alt={variant.name}
-                            className="h-[180px] w-full cursor-zoom-in object-cover transition hover:scale-[1.02]"
+                            className="h-[170px] w-full cursor-zoom-in object-cover transition hover:scale-[1.02] md:h-[180px]"
                           />
                         ) : (
-                          <div className="flex h-[180px] w-full items-center justify-center text-sm font-semibold text-[#2563eb]">
+                          <div className="flex h-[170px] w-full items-center justify-center text-sm font-semibold text-[#2563eb] md:h-[180px]">
                             Room Image
                           </div>
                         )}
@@ -107,9 +107,9 @@ export default function HotelChangeRoomModal({
                     </div>
 
                     {/* DETAILS */}
-                    <div className="p-5">
+                    <div className="p-4 md:p-5">
                       <div className="flex flex-wrap items-center gap-2">
-                        <div className="inline-flex items-center gap-2 text-[21px] font-extrabold text-[#111827]">
+                        <div className="inline-flex min-w-0 items-center gap-2 text-[18px] font-extrabold leading-tight text-[#111827] md:text-[21px]">
                           <BedDouble className="h-5 w-5 text-[#0b74ff]" />
                           {variant.name}
                         </div>
@@ -163,12 +163,12 @@ export default function HotelChangeRoomModal({
                     </div>
 
                     {/* PRICE */}
-                    <div className="border-t border-[#e5e7eb] bg-white p-5 lg:border-l lg:border-t-0">
+                    <div className="border-t border-[#e5e7eb] bg-white p-4 md:p-5 lg:border-l lg:border-t-0">
                       <div className="text-[12px] font-bold uppercase tracking-wide text-[#6b7280]">
                         Room Price / Night
                       </div>
 
-                      <div className="mt-2 text-[30px] font-extrabold leading-none text-[#111827]">
+                      <div className="mt-2 text-[26px] font-extrabold leading-none text-[#111827] md:text-[30px]">
                         {formatPrice(variant.price)}
                       </div>
 

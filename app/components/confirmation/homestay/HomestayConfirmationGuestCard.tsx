@@ -39,6 +39,7 @@ export default function HomestayConfirmationGuestCard({
 
   return (
     <section
+      className="homestay-confirmation-guest-card"
       style={{
         border: "1px solid #d9e2ec",
         borderRadius: "22px",
@@ -48,6 +49,7 @@ export default function HomestayConfirmationGuestCard({
       }}
     >
       <div
+        className="homestay-confirmation-card-title"
         style={{
           minHeight: "58px",
           padding: "0 22px",
@@ -70,7 +72,7 @@ export default function HomestayConfirmationGuestCard({
         </h3>
       </div>
 
-      <div style={{ padding: "22px" }}>
+      <div className="homestay-confirmation-card-body" style={{ padding: "22px" }}>
         {leadGuest ? (
           <div
             style={{
@@ -131,6 +133,7 @@ export default function HomestayConfirmationGuestCard({
         ) : null}
 
         <div
+          className="homestay-confirmation-guest-grid"
           style={{
             display: "grid",
             gridTemplateColumns: "1.15fr 0.85fr",
@@ -162,6 +165,7 @@ export default function HomestayConfirmationGuestCard({
                 travellers.map((traveller, index) => (
                   <div
                     key={traveller.id || index}
+                    className="homestay-confirmation-traveller-row"
                     style={{
                       border: "1px solid #e5e7eb",
                       borderRadius: "16px",
@@ -295,6 +299,32 @@ export default function HomestayConfirmationGuestCard({
           </div>
         </div>
       </div>
+      <style jsx>{`
+        @media (max-width: 767px) {
+          .homestay-confirmation-guest-card {
+            border-radius: 18px !important;
+          }
+
+          .homestay-confirmation-card-title {
+            min-height: 52px !important;
+            padding: 0 14px !important;
+          }
+
+          .homestay-confirmation-card-body {
+            padding: 14px !important;
+          }
+
+          .homestay-confirmation-guest-grid {
+            grid-template-columns: 1fr !important;
+            gap: 14px !important;
+          }
+
+          .homestay-confirmation-traveller-row {
+            align-items: flex-start !important;
+            flex-direction: column !important;
+          }
+        }
+      `}</style>
     </section>
   );
 }
@@ -308,6 +338,7 @@ function InfoCard({
 }) {
   return (
     <div
+      className="homestay-confirmation-info-card"
       style={{
         border: "1px solid #e5e7eb",
         borderRadius: "18px",
@@ -330,6 +361,7 @@ function InfoCard({
       <div style={{ display: "grid", gap: "12px" }}>
         {rows.map((row, index) => (
           <div
+            className="homestay-confirmation-info-row"
             key={`${row.label}-${index}`}
             style={{
               display: "flex",

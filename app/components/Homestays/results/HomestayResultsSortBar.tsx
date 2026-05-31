@@ -46,14 +46,14 @@ export default function HomestayResultsSortBar({
   };
 
   return (
-    <div className="mb-4 overflow-hidden rounded-md border border-[#e5e7eb] bg-white">
-      <div className="flex h-[46px] items-center">
+    <div className="mb-3 overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white shadow-[0_1px_8px_rgba(15,23,42,0.04)] md:mb-4 md:rounded-md md:shadow-none">
+      <div className="flex h-[44px] items-center md:h-[46px]">
         
         {/* LEFT ARROW */}
         <button
           type="button"
           onClick={() => handleScroll("left")}
-          className="flex h-[46px] w-[42px] shrink-0 items-center justify-center border-r border-[#eef2f7] text-[18px] font-bold text-[#4b5563] transition hover:bg-[#f8fbff] hover:text-[#111827]"
+          className="flex h-[44px] w-[34px] shrink-0 items-center justify-center border-r border-[#eef2f7] text-[18px] font-bold text-[#4b5563] transition hover:bg-[#f8fbff] hover:text-[#111827] md:h-[46px] md:w-[42px]"
         >
           ‹
         </button>
@@ -77,13 +77,15 @@ export default function HomestayResultsSortBar({
                 type="button"
                 onClick={() => onChange(option.key)}
                 className={[
-                  "relative flex h-[46px] w-[190px] shrink-0 items-center justify-center border-r border-[#eef2f7] px-4 text-center text-sm font-semibold transition-all duration-200 last:border-r-0",
+                  "relative flex h-[44px] w-[132px] shrink-0 items-center justify-center border-r border-[#eef2f7] px-3 text-center text-[12px] font-bold transition-all duration-200 last:border-r-0 md:h-[46px] md:w-[190px] md:px-4 md:text-sm md:font-semibold",
                   isActive
                     ? "bg-[#eaf4ff] text-[#0b74ff]"
                     : "bg-white text-[#4b5563] hover:bg-[#f8fbff] hover:text-[#111827]",
                 ].join(" ")}
               >
-                <span className="truncate">{option.label}</span>
+                <span className="relative z-10 block truncate">
+                  {option.label}
+                </span>
 
                 {isActive && (
                   <span className="absolute inset-x-0 bottom-0 h-[2.5px] bg-[#0b74ff]" />
@@ -97,7 +99,7 @@ export default function HomestayResultsSortBar({
         <button
           type="button"
           onClick={() => handleScroll("right")}
-          className="flex h-[46px] w-[42px] shrink-0 items-center justify-center border-l border-[#eef2f7] text-[18px] font-bold text-[#4b5563] transition hover:bg-[#f8fbff] hover:text-[#111827]"
+          className="flex h-[44px] w-[34px] shrink-0 items-center justify-center border-l border-[#eef2f7] text-[18px] font-bold text-[#4b5563] transition hover:bg-[#f8fbff] hover:text-[#111827] md:h-[46px] md:w-[42px]"
         >
           ›
         </button>

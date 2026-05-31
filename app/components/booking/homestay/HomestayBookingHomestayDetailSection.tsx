@@ -28,8 +28,8 @@ type Props = {
 function formatDateValue(dateStr: string) {
   if (!dateStr) return "Not selected";
 
-  const date = new Date(dateStr);
-  if (Number.isNaN(date.getTime())) return dateStr;
+  const date = parseLocalDate(dateStr);
+  if (!date) return dateStr;
 
   return date.toLocaleDateString("en-GB", {
     weekday: "short",
@@ -40,14 +40,24 @@ function formatDateValue(dateStr: string) {
 }
 
 function calculateNights(checkIn: string, checkOut: string) {
-  const start = new Date(checkIn);
-  const end = new Date(checkOut);
+  const start = parseLocalDate(checkIn);
+  const end = parseLocalDate(checkOut);
 
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 1;
+  if (!start || !end) return 1;
 
   const diff = end.getTime() - start.getTime();
   const nights = Math.ceil(diff / (1000 * 60 * 60 * 24));
   return nights > 0 ? nights : 1;
+}
+
+function parseLocalDate(value: string) {
+  if (!value) return null;
+  const parts = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const date = parts
+    ? new Date(Number(parts[1]), Number(parts[2]) - 1, Number(parts[3]))
+    : new Date(value);
+
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
 function getStayTypeLabel(value: Homestay["stayType"]) {
@@ -106,11 +116,11 @@ export default function HomestayBookingHomestayDetailSection({
   return (
     <>
       <div className="rounded-xl border border-[#d9e2ec] bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
-        <div className="border-b border-[#e5e7eb] p-5">
+        <div className="border-b border-[#e5e7eb] p-3 md:p-5">
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_240px]">
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-[28px] font-extrabold text-[#111827]">
+                <h1 className="text-[21px] font-extrabold leading-tight text-[#111827] md:text-[28px]">
                   {homestay.title}
                 </h1>
 
@@ -123,18 +133,18 @@ export default function HomestayBookingHomestayDetailSection({
                 </span>
               </div>
 
-              <div className="mt-2 text-[14px] font-semibold text-[#0b74ff]">
+              <div className="mt-2 text-[13px] font-semibold text-[#0b74ff] md:text-[14px]">
                 {homestay.area}, {homestay.city}
               </div>
 
               {!!homestay.locationHighlights?.length && (
-                <div className="mt-2 text-[13px] font-medium text-[#4b5563]">
+                <div className="mt-2 text-[12px] font-medium leading-5 text-[#4b5563] md:text-[13px]">
                   {homestay.locationHighlights.join(" • ")}
                 </div>
               )}
 
               {homestay.description ? (
-                <p className="mt-3 max-w-4xl text-[14px] leading-6 text-[#4b5563]">
+                <p className="mt-3 max-w-4xl text-[13px] leading-6 text-[#4b5563] md:text-[14px]">
                   {homestay.description}
                 </p>
               ) : null}
@@ -163,10 +173,10 @@ export default function HomestayBookingHomestayDetailSection({
                   <img
                     src={homestay.images[0]}
                     alt={homestay.title}
-                    className="h-[140px] w-full object-cover"
+                    className="h-[180px] w-full object-cover md:h-[140px]"
                   />
                 ) : (
-                  <div className="flex h-[140px] w-full items-center justify-center text-sm font-semibold text-[#2563eb]">
+                  <div className="flex h-[180px] w-full items-center justify-center text-sm font-semibold text-[#2563eb] md:h-[140px]">
                     Homestay Image
                   </div>
                 )}
@@ -183,7 +193,7 @@ export default function HomestayBookingHomestayDetailSection({
           </div>
         </div>
 
-        <div className="border-b border-[#e5e7eb] p-5">
+        <div className="border-b border-[#e5e7eb] p-3 md:p-5">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
             <div className="rounded-lg bg-[#f8fbff] p-3">
               <div className="flex items-center gap-2 text-[12px] font-bold uppercase text-[#6b7280]">
@@ -228,9 +238,9 @@ export default function HomestayBookingHomestayDetailSection({
           </div>
         </div>
 
-        <div className="p-5">
-          <div className="mb-4 flex items-center justify-between gap-4">
-            <div className="text-[22px] font-extrabold text-[#111827]">
+        <div className="p-3 md:p-5">
+          <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-4">
+            <div className="text-[20px] font-extrabold text-[#111827] md:text-[22px]">
               Selected Stay Option
             </div>
 
@@ -238,7 +248,7 @@ export default function HomestayBookingHomestayDetailSection({
               <button
                 type="button"
                 onClick={() => setShowRoomModal(true)}
-                className="rounded-lg border border-[#0b74ff] bg-[#f8fbff] px-4 py-2 text-[13px] font-bold text-[#0b74ff] transition hover:bg-[#eef6ff]"
+                className="h-10 rounded-lg border border-[#0b74ff] bg-[#f8fbff] px-4 text-[13px] font-bold text-[#0b74ff] transition hover:bg-[#eef6ff] md:py-2"
               >
                 Change Stay
               </button>
@@ -248,9 +258,9 @@ export default function HomestayBookingHomestayDetailSection({
           {activeVariant ? (
             <div className="overflow-hidden rounded-2xl border border-[#bfdbfe] bg-gradient-to-br from-[#f8fbff] via-white to-[#eef6ff] shadow-[0_8px_24px_rgba(11,116,255,0.08)]">
               <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_0.85fr]">
-                <div className="p-5">
+                <div className="p-3 md:p-5">
                   <div className="flex flex-wrap items-center gap-2">
-                    <div className="inline-flex items-center gap-2 text-[22px] font-extrabold text-[#111827]">
+                    <div className="inline-flex items-center gap-2 text-[18px] font-extrabold text-[#111827] md:text-[22px]">
                       <BedDouble className="h-5 w-5 text-[#0b74ff]" />
                       {activeVariant.name}
                     </div>
@@ -322,7 +332,7 @@ export default function HomestayBookingHomestayDetailSection({
                   </div>
                 </div>
 
-                <div className="border-t border-[#dbeafe] bg-white/85 p-5 lg:border-l lg:border-t-0">
+                <div className="border-t border-[#dbeafe] bg-white/85 p-3 md:p-5 lg:border-l lg:border-t-0">
                   <div className="rounded-2xl border border-[#d9e2ec] bg-white p-4 shadow-sm">
                     <div className="text-[12px] font-bold uppercase tracking-wide text-[#6b7280]">
                       Stay Price / Night
@@ -335,7 +345,7 @@ export default function HomestayBookingHomestayDetailSection({
                         </div>
                       ) : null}
 
-                      <div className="text-[32px] font-extrabold leading-none text-[#111827]">
+                      <div className="text-[28px] font-extrabold leading-none text-[#111827] md:text-[32px]">
                         ₹{Math.round(discountedStayPrice).toLocaleString("en-IN")}
                       </div>
                     </div>
@@ -387,16 +397,16 @@ export default function HomestayBookingHomestayDetailSection({
 
       {showGalleryModal && (
         <div
-          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 px-4 py-6"
+          className="fixed inset-0 z-[9999] flex items-end justify-center bg-black/70 px-0 py-0 md:items-center md:px-4 md:py-6"
           onClick={() => setShowGalleryModal(false)}
         >
           <div
-            className="max-h-[90vh] w-full max-w-6xl overflow-auto rounded-2xl bg-white p-5 shadow-2xl"
+            className="max-h-[88vh] w-full overflow-hidden rounded-t-3xl bg-white shadow-2xl md:max-h-[90vh] md:max-w-6xl md:overflow-auto md:rounded-2xl md:p-5"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <div className="text-[24px] font-extrabold text-[#111827]">
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[#e5e7eb] bg-white px-4 py-4 md:static md:mb-4 md:border-b-0 md:bg-transparent md:p-0">
+              <div className="min-w-0">
+                <div className="truncate text-[18px] font-extrabold text-[#111827] md:text-[24px]">
                   {homestay.title}
                 </div>
                 <div className="mt-1 text-[13px] font-semibold text-[#4b5563]">
@@ -407,33 +417,33 @@ export default function HomestayBookingHomestayDetailSection({
               <button
                 type="button"
                 onClick={() => setShowGalleryModal(false)}
-                className="rounded-full border border-[#d9e2ec] px-3 py-1.5 text-sm font-bold text-[#374151] hover:bg-[#f8fafc]"
+                className="ml-3 h-10 shrink-0 rounded-full border border-[#d9e2ec] px-4 text-sm font-bold text-[#374151] hover:bg-[#f8fafc] md:h-auto md:px-3 md:py-1.5"
               >
                 Close
               </button>
             </div>
 
-            <div className="mb-4 flex flex-wrap gap-5 border-b border-[#e5e7eb] pb-3 text-[14px] font-medium text-[#374151]">
-              <button className="font-bold text-[#111827]">Property Photos</button>
-              <button>Room</button>
-              <button>Experiences</button>
-              <button>Outdoors</button>
-              <button>Living Area</button>
-              <button>Facade</button>
-              <button>Dining</button>
+            <div className="mb-3 flex gap-2 overflow-x-auto border-b border-[#e5e7eb] px-4 py-3 text-[13px] font-bold text-[#374151] md:mb-4 md:flex-wrap md:gap-5 md:px-0 md:pb-3 md:pt-0 md:text-[14px] md:font-medium">
+              <button className="shrink-0 rounded-full bg-[#eff6ff] px-3 py-1.5 font-bold text-[#0b74ff] md:bg-transparent md:px-0 md:py-0 md:text-[#111827]">Property Photos</button>
+              <button className="shrink-0 rounded-full border border-[#e5e7eb] px-3 py-1.5 md:border-0 md:px-0 md:py-0">Room</button>
+              <button className="shrink-0 rounded-full border border-[#e5e7eb] px-3 py-1.5 md:border-0 md:px-0 md:py-0">Experiences</button>
+              <button className="shrink-0 rounded-full border border-[#e5e7eb] px-3 py-1.5 md:border-0 md:px-0 md:py-0">Outdoors</button>
+              <button className="shrink-0 rounded-full border border-[#e5e7eb] px-3 py-1.5 md:border-0 md:px-0 md:py-0">Living Area</button>
+              <button className="shrink-0 rounded-full border border-[#e5e7eb] px-3 py-1.5 md:border-0 md:px-0 md:py-0">Facade</button>
+              <button className="shrink-0 rounded-full border border-[#e5e7eb] px-3 py-1.5 md:border-0 md:px-0 md:py-0">Dining</button>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+            <div className="max-h-[calc(88vh-138px)] overflow-y-auto px-4 pb-5 md:max-h-none md:grid md:grid-cols-3 md:gap-3 md:overflow-visible md:px-0 md:pb-0">
               {galleryImages.map((img, index) => (
                 <div
                   key={`${homestay.id}-gallery-${index}`}
-                  className="overflow-hidden rounded-xl bg-[#dbeafe]"
+                  className="mb-3 overflow-hidden rounded-2xl bg-[#dbeafe] md:mb-0 md:rounded-xl"
                 >
                   {img ? (
                     <img
                       src={img}
                       alt={`${homestay.title} gallery ${index + 1}`}
-                      className="h-[220px] w-full cursor-zoom-in object-cover transition hover:scale-[1.01]"
+                      className="h-[210px] w-full cursor-zoom-in object-cover transition hover:scale-[1.01] md:h-[220px]"
                       onClick={() => setZoomImage(img)}
                     />
                   ) : (

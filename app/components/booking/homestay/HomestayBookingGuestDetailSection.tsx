@@ -10,6 +10,7 @@ import AddInternationalTravellerModal, {
 } from "@/app/components/booking/flight/AddInternationalTravellerModal";
 import { AUTH_UPDATED_EVENT } from "@/app/lib/booking/guestAuth";
 import { getSavedProfile } from "@/app/lib/account/profileStorage";
+import { getLoggedInDisplayName } from "@/app/lib/auth/displayName";
 
 type ContactDetails = {
   countryCode: string;
@@ -90,21 +91,7 @@ function splitFullName(fullName?: string) {
 }
 
 function getDisplayNameFromUser(user: any) {
-  if (!user?.mobile) return "User";
-
-  const sessionName = String(user?.fullName || "").trim();
-  if (sessionName) return sessionName;
-
-  const profile = getSavedProfile(user.mobile);
-  const profileName = `${profile.firstName || ""} ${
-    profile.lastName || ""
-  }`.trim();
-
-  if (profileName && profileName.toLowerCase() !== "pk") {
-    return profileName;
-  }
-
-  return `User ${String(user.mobile).slice(-4)}`;
+  return getLoggedInDisplayName(user);
 }
 
 function buildTravellerShells(
@@ -362,7 +349,7 @@ export default function HomestayBookingGuestDetailSection({
         className="overflow-hidden rounded-xl border border-[#d9e2ec] bg-white"
       >
         <div
-          className="flex min-h-[58px] cursor-pointer items-center justify-between gap-4 border-b border-[#d9e2ec] bg-[#fffdf4] px-5"
+          className="flex min-h-[58px] cursor-pointer items-start justify-between gap-3 border-b border-[#d9e2ec] bg-[#fffdf4] px-3 py-3 md:items-center md:gap-4 md:px-5 md:py-0"
           onClick={() => setIsOpen((prev) => !prev)}
         >
           <div className="flex flex-wrap items-center gap-3">
@@ -374,14 +361,14 @@ export default function HomestayBookingGuestDetailSection({
               {isValid ? "✓" : "!"}
             </span>
 
-            <h3 className="text-[18px] font-extrabold text-[#1f2937]">
+            <h3 className="text-[17px] font-extrabold text-[#1f2937] md:text-[18px]">
               Guest Detail
             </h3>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-2 md:gap-3">
             <span
-              className={`text-[13px] font-bold uppercase ${
+              className={`max-w-[110px] text-right text-[11px] font-bold uppercase leading-4 md:max-w-none md:text-[13px] ${
                 isValid ? "text-[#15803d]" : "text-[#9a4b55]"
               }`}
             >
@@ -400,8 +387,8 @@ export default function HomestayBookingGuestDetailSection({
 
         {isOpen && (
           <>
-            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#d9e2ec] bg-[#eef8ff] px-5 py-4">
-              <p className="m-0 text-[14px] font-medium text-[#4b5563]">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#d9e2ec] bg-[#eef8ff] px-3 py-3 md:gap-4 md:px-5 md:py-4">
+              <p className="m-0 text-[13px] font-medium leading-5 text-[#4b5563] md:text-[14px]">
                 {activeUser?.mobile ? (
                   <>
                     <span className="font-bold text-[#111827]">Logged in</span>{" "}
@@ -430,7 +417,7 @@ export default function HomestayBookingGuestDetailSection({
               ) : null}
             </div>
 
-            <div className="bg-white p-5">
+            <div className="bg-white p-3 md:p-5">
               <div className="grid gap-3">
                 {travellerCards.map((traveller) => {
                   const completed = isTravellerComplete(traveller);
@@ -438,7 +425,7 @@ export default function HomestayBookingGuestDetailSection({
                   return (
                     <div
                       key={traveller.id}
-                      className="flex items-center justify-between gap-4 border-b border-[#e5e7eb] py-4"
+                      className="flex items-start justify-between gap-3 border-b border-[#e5e7eb] py-4 md:items-center md:gap-4"
                     >
                       <div className="flex min-w-0 items-center gap-3">
                         <div
@@ -459,7 +446,7 @@ export default function HomestayBookingGuestDetailSection({
                           <button
                             type="button"
                             onClick={openTravellerModal}
-                            className="mt-1 border-0 bg-transparent p-0 text-left text-[16px] font-bold text-[#55b2ea]"
+                            className="mt-1 border-0 bg-transparent p-0 text-left text-[15px] font-bold text-[#55b2ea] md:text-[16px]"
                           >
                             {completed
                               ? `${traveller.firstName} ${traveller.lastName}`.trim()
@@ -469,7 +456,7 @@ export default function HomestayBookingGuestDetailSection({
                       </div>
 
                       <p
-                        className={`m-0 shrink-0 whitespace-nowrap text-[11px] font-bold ${
+                        className={`m-0 shrink-0 whitespace-nowrap text-[10px] font-bold md:text-[11px] ${
                           completed ? "text-[#16a34a]" : "text-[#9ca3af]"
                         }`}
                       >
@@ -481,11 +468,11 @@ export default function HomestayBookingGuestDetailSection({
               </div>
 
               <div className="mt-7">
-                <h3 className="m-0 text-[18px] font-extrabold text-[#111827]">
+                <h3 className="m-0 text-[17px] font-extrabold text-[#111827] md:text-[18px]">
                   Booking details will be sent to
                 </h3>
 
-                <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+                <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3 md:gap-4">
                   <Field label="Country Code">
                     <select
                       className="h-[44px] w-full rounded border border-[#d1d5db] bg-white px-3 text-[14px] text-[#111827] outline-none"
@@ -555,8 +542,8 @@ export default function HomestayBookingGuestDetailSection({
               </div>
 
               {gstDetails.hasGst && (
-                <div className="mt-5 rounded-lg border border-[#d9e2ec] bg-[#f8fbff] p-5">
-                  <h3 className="m-0 text-[18px] font-extrabold text-[#111827]">
+                <div className="mt-5 rounded-lg border border-[#d9e2ec] bg-[#f8fbff] p-3 md:p-5">
+                  <h3 className="m-0 text-[17px] font-extrabold text-[#111827] md:text-[18px]">
                     Your State
                   </h3>
 

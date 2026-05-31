@@ -13,40 +13,51 @@ export default function HomestayResultsTopStrip({ city, total }: Props) {
 
   return (
     <>
-      <div className="mb-3 flex items-center justify-between gap-3 border border-[#d9e2ec] bg-white px-4 py-2.5 text-sm shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
-        <div className="flex min-w-0 items-center gap-3 overflow-hidden">
-          <div className="shrink-0">
-            <span className="text-[15px] font-extrabold text-[#111827]">
-              {total} Homestays
-            </span>
-            <span className="ml-1 text-[14px] font-semibold text-[#4b5563]">
-              in {city}
+      <div className="mb-3 overflow-hidden rounded-2xl border border-[#d9e2ec] bg-white px-3 py-3 text-sm shadow-[0_1px_8px_rgba(16,24,40,0.05)] md:flex md:items-center md:justify-between md:gap-3 md:rounded-none md:px-4 md:py-2.5 md:shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+        <div className="min-w-0 border-b border-[#eef2f7] pb-2 md:flex md:items-center md:gap-3 md:overflow-hidden md:border-b-0 md:pb-0">
+          <div className="min-w-0 md:shrink-0">
+            <div className="truncate text-[15px] font-extrabold text-[#111827] md:inline">
+              Homestays in {city}
+            </div>
+            <span className="mt-0.5 block text-[12px] font-semibold text-[#64748b] md:ml-1 md:mt-0 md:inline md:text-[14px] md:text-[#4b5563]">
+              {total} homestays available
             </span>
           </div>
 
-          <span className="text-[#cbd5e1]">|</span>
+          <span className="hidden text-[#cbd5e1] md:inline">|</span>
 
+          <div className="mt-2 flex flex-wrap items-center gap-2 md:mt-0 md:flex-nowrap md:gap-3">
           <button
             type="button"
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[#dbeafe] bg-[#f8fbff] px-3 py-1 text-[13px] font-semibold text-[#0b74ff] transition hover:bg-[#eef6ff]"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[#dbeafe] bg-[#f8fbff] px-3 py-1 text-[12px] font-bold text-[#0b74ff] transition hover:bg-[#eef6ff] md:text-[13px] md:font-semibold"
           >
             <Sparkles className="h-3.5 w-3.5" />
-            Explore with TPL
+            TPL Picks
           </button>
 
           <button
             type="button"
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[#e5e7eb] bg-[#fcfcfd] px-3 py-1 text-[13px] font-semibold text-[#374151] transition hover:border-[#dbeafe] hover:bg-[#f8fbff] hover:text-[#0b74ff]"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[#e5e7eb] bg-[#fcfcfd] px-3 py-1 text-[12px] font-bold text-[#374151] transition hover:border-[#dbeafe] hover:bg-[#f8fbff] hover:text-[#0b74ff] md:text-[13px] md:font-semibold"
           >
             <Compass className="h-3.5 w-3.5" />
-            Explore Offbeat
+            Offbeat
           </button>
+
+          <button
+            type="button"
+            onClick={() => setShowVideoModal(true)}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[#dbeafe] bg-[#f8fbff] px-3 py-1 text-[12px] font-bold text-[#0b74ff] transition hover:bg-[#eef6ff] md:hidden"
+          >
+            <PlayCircle className="h-3.5 w-3.5" />
+            Explore with TPL
+          </button>
+          </div>
         </div>
 
         <button
           type="button"
           onClick={() => setShowVideoModal(true)}
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[#dbeafe] bg-[#f8fbff] px-3 py-1 text-[13px] font-semibold text-[#0b74ff] transition hover:bg-[#eef6ff]"
+          className="hidden shrink-0 items-center gap-1.5 rounded-full border border-[#dbeafe] bg-[#f8fbff] px-3 py-1 text-[13px] font-semibold text-[#0b74ff] transition hover:bg-[#eef6ff] md:inline-flex"
         >
           <PlayCircle className="h-4 w-4" />
           Watch Video
@@ -59,12 +70,12 @@ export default function HomestayResultsTopStrip({ city, total }: Props) {
           onClick={() => setShowVideoModal(false)}
         >
           <div
-            className="w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-2xl"
+            className="max-h-[90vh] w-full max-w-4xl overflow-auto rounded-2xl bg-white shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-[#e5e7eb] px-5 py-4">
-              <div>
-                <div className="text-[20px] font-extrabold text-[#111827]">
+              <div className="min-w-0">
+                <div className="truncate text-[18px] font-extrabold text-[#111827] md:text-[20px]">
                   Explore Homestays in {city} with TPL
                 </div>
                 <div className="mt-1 text-[13px] font-medium text-[#6b7280]">
@@ -98,7 +109,7 @@ export default function HomestayResultsTopStrip({ city, total }: Props) {
                 </div>
               </div>
 
-              <div className="mt-4 grid grid-cols-3 gap-3">
+              <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
                 <div className="rounded-xl border border-[#e5e7eb] bg-[#fcfcfd] px-4 py-3">
                   <div className="text-[12px] font-bold uppercase text-[#6b7280]">
                     Best For

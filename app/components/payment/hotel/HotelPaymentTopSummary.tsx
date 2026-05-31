@@ -57,8 +57,8 @@ type Props = {
 function formatDateLabel(dateStr?: string) {
   if (!dateStr) return "Not selected";
 
-  const date = new Date(dateStr);
-  if (Number.isNaN(date.getTime())) return dateStr;
+  const date = parseLocalDate(dateStr);
+  if (!date) return dateStr;
 
   return date.toLocaleDateString("en-GB", {
     weekday: "short",
@@ -69,14 +69,24 @@ function formatDateLabel(dateStr?: string) {
 }
 
 function calculateNights(checkIn?: string, checkOut?: string) {
-  const start = new Date(checkIn || "");
-  const end = new Date(checkOut || "");
+  const start = parseLocalDate(checkIn || "");
+  const end = parseLocalDate(checkOut || "");
 
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 1;
+  if (!start || !end) return 1;
 
   const diff = end.getTime() - start.getTime();
   const nights = Math.ceil(diff / (1000 * 60 * 60 * 24));
   return nights > 0 ? nights : 1;
+}
+
+function parseLocalDate(value: string) {
+  if (!value) return null;
+  const parts = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const date = parts
+    ? new Date(Number(parts[1]), Number(parts[2]) - 1, Number(parts[3]))
+    : new Date(value);
+
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
 function travellerFullName(traveller?: GuestItem) {
@@ -179,16 +189,16 @@ export default function HotelPaymentTopSummary({
       : "No offer applied";
 
   return (
-    <section className="overflow-hidden rounded-[18px] border border-[#d9e2ec] bg-[#eef6ff] shadow-[0_2px_8px_rgba(15,23,42,0.04)]">
-      <div className="flex items-start justify-between gap-4 px-5 py-[18px]">
+    <section className="overflow-hidden rounded-2xl border border-[#d9e2ec] bg-[#eef6ff] shadow-[0_2px_8px_rgba(15,23,42,0.04)] md:rounded-[18px]">
+      <div className="flex flex-col gap-3 px-4 py-4 md:flex-row md:items-start md:justify-between md:gap-4 md:px-5 md:py-[18px]">
         <div className="min-w-0 flex-1">
           <div className="mb-2 text-[28px] leading-none">🏨</div>
 
-          <h2 className="m-0 text-[22px] font-extrabold leading-[30px] text-[#1f2937]">
+          <h2 className="m-0 text-[20px] font-extrabold leading-[27px] text-[#1f2937] md:text-[22px] md:leading-[30px]">
             {hotel.title}
           </h2>
 
-          <div className="mt-2 flex flex-wrap items-center gap-2 text-[14px] font-semibold text-[#4b5563]">
+          <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[12px] font-semibold leading-5 text-[#4b5563] md:gap-2 md:text-[14px]">
             <span>
               {hotel.area}, {hotel.city}
             </span>
@@ -208,13 +218,13 @@ export default function HotelPaymentTopSummary({
         <button
           type="button"
           onClick={() => setShowDetails((prev) => !prev)}
-          className="whitespace-nowrap border-0 bg-transparent pt-[6px] text-[14px] font-extrabold text-[#1d9bf0]"
+          className="self-start whitespace-nowrap border-0 bg-transparent text-[13px] font-extrabold text-[#1d9bf0] md:pt-[6px] md:text-[14px]"
         >
           {showDetails ? "HIDE DETAILS ▲" : "VIEW DETAILS ▼"}
         </button>
       </div>
 
-      <div className="flex flex-wrap justify-between gap-[18px] border-t border-[#d9e2ec] bg-white px-5 py-4">
+      <div className="flex flex-col gap-4 border-t border-[#d9e2ec] bg-white px-4 py-4 md:flex-row md:flex-wrap md:justify-between md:gap-[18px] md:px-5">
         <div className="min-w-0">
           <div className="mb-1 text-[13px] font-bold text-[#6b7280]">
             Booking details will be sent to:
@@ -229,7 +239,7 @@ export default function HotelPaymentTopSummary({
           </div>
         </div>
 
-        <div className="min-w-[260px]">
+        <div className="min-w-0 md:min-w-[260px]">
           <div className="mb-1 text-[13px] font-bold text-[#6b7280]">
             Hotel Stay Summary
           </div>
@@ -245,7 +255,7 @@ export default function HotelPaymentTopSummary({
       </div>
 
       {showDetails && (
-        <div className="grid grid-cols-[1.2fr_1fr] gap-[18px] border-t border-[#d9e2ec] bg-[#f8fbff] px-5 py-4">
+        <div className="grid grid-cols-1 gap-4 border-t border-[#d9e2ec] bg-[#f8fbff] px-4 py-4 md:grid-cols-[1.2fr_1fr] md:gap-[18px] md:px-5">
           <div>
             <SectionLabel>Hotel Booking Summary</SectionLabel>
 

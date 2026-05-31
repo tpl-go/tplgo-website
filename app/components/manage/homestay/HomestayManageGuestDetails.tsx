@@ -32,7 +32,7 @@ export default function HomestayManageGuestDetails({
       {guests.map((guest, index) => (
         <div
           key={guest.id || index}
-          className="rounded-[24px] border border-black/5 bg-[#f8f9fb] p-5"
+          className="min-w-0 rounded-[20px] border border-black/5 bg-[#f8f9fb] p-4 md:rounded-[24px] md:p-5"
         >
           <p className="text-sm font-bold text-[#111827]">
             Guest {index + 1}

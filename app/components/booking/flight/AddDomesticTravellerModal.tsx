@@ -162,11 +162,13 @@ export default function AddDomesticTravellerModal({
 
   useEffect(() => {
     if (isOpen) {
-      setTravellers(
-        initialTravellers?.length
-          ? initialTravellers
-          : buildDefaultTravellers(adults, children, infants)
-      );
+      queueMicrotask(() => {
+        setTravellers(
+          initialTravellers?.length
+            ? initialTravellers
+            : buildDefaultTravellers(adults, children, infants)
+        );
+      });
     }
   }, [isOpen, adults, children, infants, initialTravellers]);
 
@@ -268,7 +270,7 @@ export default function AddDomesticTravellerModal({
           </button>
         </div>
 
-        <div className="max-md:min-h-0 max-md:flex-1 max-md:overflow-y-auto max-md:p-4" style={{ padding: "18px 20px 22px 20px" }}>
+        <div className="max-md:min-h-0 max-md:flex-1 max-md:overflow-y-auto max-md:p-4 max-md:pb-5" style={{ padding: "18px 20px 22px 20px" }}>
           <div
             style={{
               background: "#f7d7cf",
@@ -571,54 +573,55 @@ export default function AddDomesticTravellerModal({
             })}
           </div>
 
-          <div
-            className="max-md:sticky max-md:bottom-0 max-md:flex-col max-md:border-t max-md:border-[#e5e7eb] max-md:bg-white max-md:py-3"
+        </div>
+
+        <div
+          className="max-md:shrink-0 max-md:flex-col max-md:border-t max-md:border-[#e5e7eb] max-md:bg-white max-md:px-4 max-md:py-3"
+          style={{
+            padding: "0 20px 20px 20px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "flex-end",
+            gap: "12px",
+          }}
+        >
+          <button
+            type="button"
+            onClick={onClose}
+            className="max-md:w-full"
             style={{
-              marginTop: "18px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "flex-end",
-              gap: "12px",
+              height: "46px",
+              padding: "0 18px",
+              borderRadius: "8px",
+              border: "1px solid #d1d5db",
+              background: "#ffffff",
+              fontSize: "14px",
+              fontWeight: 700,
+              cursor: "pointer",
             }}
           >
-            <button
-              type="button"
-              onClick={onClose}
-              className="max-md:w-full"
-              style={{
-                height: "46px",
-                padding: "0 18px",
-                borderRadius: "8px",
-                border: "1px solid #d1d5db",
-                background: "#ffffff",
-                fontSize: "14px",
-                fontWeight: 700,
-                cursor: "pointer",
-              }}
-            >
-              Cancel
-            </button>
+            Cancel
+          </button>
 
-            <button
-              type="button"
-              disabled={!allCompleted}
-              onClick={() => onSave(travellers)}
-              className="max-md:w-full"
-              style={{
-                height: "46px",
-                padding: "0 22px",
-                borderRadius: "8px",
-                border: "none",
-                background: allCompleted ? "#0ea5e9" : "#cbd5e1",
-                color: allCompleted ? "#ffffff" : "#64748b",
-                fontSize: "14px",
-                fontWeight: 800,
-                cursor: allCompleted ? "pointer" : "not-allowed",
-              }}
-            >
-              Save Travellers
-            </button>
-          </div>
+          <button
+            type="button"
+            disabled={!allCompleted}
+            onClick={() => onSave(travellers)}
+            className="max-md:w-full"
+            style={{
+              height: "46px",
+              padding: "0 22px",
+              borderRadius: "8px",
+              border: "none",
+              background: allCompleted ? "#0ea5e9" : "#cbd5e1",
+              color: allCompleted ? "#ffffff" : "#64748b",
+              fontSize: "14px",
+              fontWeight: 800,
+              cursor: allCompleted ? "pointer" : "not-allowed",
+            }}
+          >
+            Save Travellers
+          </button>
         </div>
       </div>
     </div>

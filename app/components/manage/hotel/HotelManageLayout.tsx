@@ -2,6 +2,7 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
+import MobileInnerBack from "@/app/components/common/mobile/MobileInnerBack";
 
 export type HotelManageTab =
   | "summary"
@@ -48,12 +49,16 @@ export default function HotelManageLayout({
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#f8f9fb]">
+      <div className="bg-[#f8f9fb] px-3 pt-3 lg:hidden">
+        <MobileInnerBack title="Hotel Manage" />
+      </div>
+
       <div className="mx-auto w-full max-w-[1440px] px-3 py-4 md:px-6 md:py-5 lg:px-8 lg:py-6">
         <div className="mb-4 rounded-[20px] border border-black/5 bg-white p-4 shadow-[0_10px_40px_rgba(0,0,0,0.04)] md:mb-5 md:rounded-[28px] md:p-5 lg:p-6">
           <button
             type="button"
             onClick={() => router.push("/account/bookings")}
-            className="inline-flex min-h-10 items-center gap-2 rounded-full border border-[#d9e2ec] bg-white px-4 py-2 text-[12px] font-extrabold text-[#111827] shadow-[0_6px_18px_rgba(15,23,42,0.06)] transition hover:border-[#bfd3ea] hover:bg-[#f8fbff] md:px-5 md:text-[13px]"
+            className="hidden min-h-10 items-center gap-2 rounded-full border border-[#d9e2ec] bg-white px-4 py-2 text-[12px] font-extrabold text-[#111827] shadow-[0_6px_18px_rgba(15,23,42,0.06)] transition hover:border-[#bfd3ea] hover:bg-[#f8fbff] md:inline-flex md:px-5 md:text-[13px]"
           >
             <span style={{ fontSize: "14px", lineHeight: 1 }}>←</span>
             <span>Back to My Bookings</span>
@@ -93,6 +98,9 @@ export default function HotelManageLayout({
               </div>
 
               <div className="p-3 lg:hidden">
+                <label className="mb-2 block text-[11px] font-black uppercase tracking-[0.16em] text-[#ff6b00]">
+                  Manage Action
+                </label>
                 <select
                   value={activeTab}
                   onChange={(event) =>

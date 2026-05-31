@@ -12,15 +12,17 @@ export function SectionTitle({
       <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#ff6b00]">
         Hotel Manage
       </p>
-      <h2 className="mt-1 text-xl font-bold text-[#111827]">{title}</h2>
-      <p className="mt-1 text-sm text-[#6b7280]">{subtitle}</p>
+      <h2 className="mt-1 break-words text-lg font-bold leading-6 text-[#111827] md:text-xl">
+        {title}
+      </h2>
+      <p className="mt-1 text-sm leading-6 text-[#6b7280]">{subtitle}</p>
     </div>
   );
 }
 
 export function InfoCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-black/5 bg-white px-4 py-3">
+    <div className="min-w-0 rounded-2xl border border-black/5 bg-white px-4 py-3">
       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#6b7280]">
         {label}
       </p>
@@ -41,7 +43,7 @@ export function Input({
   onChange: (value: string) => void;
 }) {
   return (
-    <label className="block">
+    <label className="block min-w-0">
       <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#6b7280]">
         {label}
       </span>
@@ -65,7 +67,7 @@ export function PrimaryButton({
     <button
       type="button"
       onClick={onClick}
-      className="rounded-full bg-[#ff6b00] px-6 py-3 text-sm font-bold text-white transition hover:opacity-90"
+      className="min-h-12 w-full rounded-full bg-[#ff6b00] px-6 py-3 text-sm font-bold text-white transition hover:opacity-90 sm:w-auto"
     >
       {label}
     </button>

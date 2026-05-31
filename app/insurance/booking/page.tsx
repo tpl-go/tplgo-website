@@ -32,6 +32,7 @@ import { InsurancePlan } from "@/app/lib/insurance/insuranceDummyData";
 
 import { getWallet } from "@/app/lib/wallet/walletStorage";
 import { getSavedProfile } from "@/app/lib/account/profileStorage";
+import { getLoggedInDisplayName } from "@/app/lib/auth/displayName";
 import { applyBenefitPricing } from "@/app/lib/pricing/applyBenefitPricing";
 import {
   calculateSmartOfferDiscount,
@@ -813,7 +814,7 @@ export default function InsuranceBookingPage() {
               <div>
                 <p className="text-sm font-extrabold text-gray-950">
                   Logged in as{" "}
-                  {activeUser?.name || activeUser?.mobile || "Traveller"}
+                  {getLoggedInDisplayName(activeUser)}
                 </p>
 
                 <p className="text-xs font-semibold text-gray-500">

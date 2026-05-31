@@ -19,15 +19,17 @@ export default function HomestayPaymentTripSecureCard({
   const [selected, setSelected] = useState(defaultSelected);
 
   useEffect(() => {
-    onSelectionChange?.({
-      selected,
-      totalAmount: selected ? defaultAmount : 0,
+    queueMicrotask(() => {
+      onSelectionChange?.({
+        selected,
+        totalAmount: selected ? defaultAmount : 0,
+      });
     });
   }, [selected, defaultAmount, onSelectionChange]);
 
   return (
     <section className="overflow-hidden rounded-2xl border border-[#d9e2ec] bg-white shadow-[0_2px_8px_rgba(15,23,42,0.04)]">
-      <div className="border-b border-[#e5e7eb] bg-[#f7fcff] px-[18px] py-4">
+      <div className="border-b border-[#e5e7eb] bg-[#f7fcff] px-4 py-4 md:px-[18px]">
         <div className="mb-[10px] inline-block rounded-full bg-[#dff6ff] px-2 py-1 text-[12px] font-extrabold text-[#0891b2]">
           Recommended Protection
         </div>
@@ -42,13 +44,13 @@ export default function HomestayPaymentTripSecureCard({
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-4 px-[18px] py-4">
-        <div className="flex items-center gap-[14px]">
+      <div className="flex flex-col gap-4 px-4 py-4 md:flex-row md:flex-wrap md:items-center md:justify-between md:px-[18px]">
+        <div className="flex items-start gap-[14px] md:items-center">
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#eef6ff] text-[24px]">
             🛡️
           </div>
 
-          <div>
+          <div className="min-w-0">
             <div className="text-[13px] font-semibold text-[#6b7280]">
               homestay booking protection
             </div>
@@ -65,7 +67,7 @@ export default function HomestayPaymentTripSecureCard({
 
         <button
           onClick={() => setSelected((prev) => !prev)}
-          className={`min-w-[150px] h-[44px] rounded-full px-[18px] text-[14px] font-extrabold ${
+          className={`h-[44px] w-full rounded-xl px-[18px] text-[14px] font-extrabold md:w-auto md:min-w-[150px] md:rounded-full ${
             selected
               ? "border border-[#ef4444] bg-[#fff1f2] text-[#ef4444]"
               : "border border-[#1d9bf0] bg-[#1d9bf0] text-white"

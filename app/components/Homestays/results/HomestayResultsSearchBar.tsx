@@ -15,6 +15,17 @@ type Room = {
   children: number;
 };
 
+type DateRangeChange = {
+  selection: {
+    startDate?: Date;
+    endDate?: Date;
+  };
+};
+
+type RoomGuestAction =
+  | { type: "SET_ROOMS"; payload: Room[] }
+  | { type: string; payload?: unknown };
+
 const cities = [
   "Delhi",
   "Mumbai",
@@ -48,15 +59,26 @@ function getTomorrow(base?: Date) {
 
 function safeDate(value: string | null, fallback: Date) {
   if (!value) return fallback;
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? fallback : d;
+  const parts = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const date = parts
+    ? new Date(Number(parts[1]), Number(parts[2]) - 1, Number(parts[3]))
+    : new Date(value);
+
+  return Number.isNaN(date.getTime()) ? fallback : date;
+}
+
+function toQueryDate(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 export default function HomestayResultsSearchBar() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const today = getToday();
+  const today = useMemo(() => getToday(), []);
 
   const [city, setCity] = useState("");
   const [checkIn, setCheckIn] = useState<Date>(today);
@@ -91,15 +113,17 @@ export default function HomestayResultsSearchBar() {
       children: 0,
     }));
 
-    setCity(incomingCity);
-    setCheckIn(incomingCheckIn);
-    setCheckOut(
-      incomingCheckOut > incomingCheckIn
-        ? incomingCheckOut
-        : getTomorrow(incomingCheckIn)
-    );
-    setRooms(safeRooms);
-  }, [searchParams]);
+    queueMicrotask(() => {
+      setCity(incomingCity);
+      setCheckIn(incomingCheckIn);
+      setCheckOut(
+        incomingCheckOut > incomingCheckIn
+          ? incomingCheckOut
+          : getTomorrow(incomingCheckIn)
+      );
+      setRooms(safeRooms);
+    });
+  }, [searchParams, today]);
 
   useEffect(() => {
     function handleOutside(e: MouseEvent) {
@@ -144,8 +168,8 @@ export default function HomestayResultsSearchBar() {
 
     const query = new URLSearchParams({
       city,
-      checkIn: checkIn.toString(),
-      checkOut: checkOut.toString(),
+      checkIn: toQueryDate(checkIn),
+      checkOut: toQueryDate(checkOut),
       rooms: String(rooms.length),
       adults: String(totalAdults),
     });
@@ -154,11 +178,11 @@ export default function HomestayResultsSearchBar() {
   };
 
   return (
-    <div className="relative w-full rounded-2xl border border-white/10 bg-gradient-to-r from-[#0f172a] via-[#111827] to-[#0b1220] shadow-[0_18px_45px_rgba(2,6,23,0.35)]">
-      <div className="grid grid-cols-[2.2fr_1.1fr_1.1fr_1.2fr_155px] items-stretch overflow-visible">
+    <div className="relative w-full overflow-visible rounded-2xl border border-white/10 bg-gradient-to-r from-[#0f172a] via-[#111827] to-[#0b1220] shadow-[0_18px_45px_rgba(2,6,23,0.35)]">
+      <div className="grid grid-cols-1 items-stretch overflow-visible md:grid-cols-[2.2fr_1.1fr_1.1fr_1.2fr_155px]">
         <div
           ref={cityRef}
-          className="relative border-r border-white/10 bg-white/[0.035] px-3 py-2 transition hover:bg-white/[0.07]"
+          className="relative border-b border-white/10 bg-white/[0.035] px-3 py-2 transition hover:bg-white/[0.07] md:border-b-0 md:border-r"
         >
           <div className="text-[10px] font-black uppercase tracking-[0.14em] text-cyan-300">
             City, Area or Property
@@ -208,7 +232,7 @@ export default function HomestayResultsSearchBar() {
 
         <div
           ref={checkInRef}
-          className="relative border-r border-white/10 bg-white/[0.035] px-3 py-2 transition hover:bg-white/[0.07]"
+          className="relative border-b border-white/10 bg-white/[0.035] px-3 py-2 transition hover:bg-white/[0.07] md:border-b-0 md:border-r"
         >
           <button
             type="button"
@@ -233,7 +257,7 @@ export default function HomestayResultsSearchBar() {
           </button>
 
           {checkInOpen && (
-            <div className="absolute left-0 top-full z-50 mt-1 rounded-2xl bg-white shadow-2xl">
+            <div className="absolute left-0 top-full z-50 mt-1 max-w-[calc(100vw-24px)] overflow-auto rounded-2xl bg-white shadow-2xl md:max-w-none">
               <DateRange
                 ranges={[
                   {
@@ -247,7 +271,7 @@ export default function HomestayResultsSearchBar() {
                 moveRangeOnFirstSelection={false}
                 showDateDisplay={false}
                 minDate={today}
-                onChange={(item: any) => {
+                onChange={(item: DateRangeChange) => {
                   const start = item.selection.startDate || today;
                   const nextDay = addDays(start, 1);
 
@@ -262,7 +286,7 @@ export default function HomestayResultsSearchBar() {
 
         <div
           ref={checkOutRef}
-          className="relative border-r border-white/10 bg-white/[0.035] px-3 py-2 transition hover:bg-white/[0.07]"
+          className="relative border-b border-white/10 bg-white/[0.035] px-3 py-2 transition hover:bg-white/[0.07] md:border-b-0 md:border-r"
         >
           <button
             type="button"
@@ -287,7 +311,7 @@ export default function HomestayResultsSearchBar() {
           </button>
 
           {checkOutOpen && (
-            <div className="absolute left-0 top-full z-50 mt-1 rounded-2xl bg-white shadow-2xl">
+            <div className="absolute left-0 top-full z-50 mt-1 max-w-[calc(100vw-24px)] overflow-auto rounded-2xl bg-white shadow-2xl md:max-w-none">
               <DateRange
                 ranges={[
                   {
@@ -301,7 +325,7 @@ export default function HomestayResultsSearchBar() {
                 moveRangeOnFirstSelection={false}
                 showDateDisplay={false}
                 minDate={addDays(checkIn, 1)}
-                onChange={(item: any) => {
+                onChange={(item: DateRangeChange) => {
                   const end = item.selection.endDate || addDays(checkIn, 1);
 
                   if (end > checkIn) {
@@ -314,11 +338,11 @@ export default function HomestayResultsSearchBar() {
           )}
         </div>
 
-        <div className="border-r border-white/10 bg-white/[0.035] px-0 py-0 transition hover:bg-white/[0.07]">
-          <div className="[&>div]:!w-full [&>div>button:first-child]:!h-[78px] [&>div>button:first-child]:!w-full [&>div>button:first-child]:!rounded-none [&>div>button:first-child]:!border-0 [&>div>button:first-child]:!bg-transparent [&>div>button:first-child]:!text-white [&>div>button:first-child]:!shadow-none [&>div>button:first-child_*]:!text-white [&>div>button:first-child_*:first-child]:!text-cyan-300">
+        <div className="border-b border-white/10 bg-white/[0.035] px-0 py-0 transition hover:bg-white/[0.07] md:border-b-0 md:border-r">
+          <div className="[&>div]:!w-full [&>div>button:first-child]:!min-h-[72px] [&>div>button:first-child]:!w-full [&>div>button:first-child]:!rounded-none [&>div>button:first-child]:!border-0 [&>div>button:first-child]:!bg-transparent [&>div>button:first-child]:!px-3 [&>div>button:first-child]:!py-2.5 [&>div>button:first-child]:!text-white [&>div>button:first-child]:!shadow-none [&>div>button:first-child_*]:!text-white [&>div>button:first-child_*:first-child]:!text-cyan-300 [&>div>button:first-child>p]:!whitespace-normal [&>div>button:first-child>p]:!break-words [&>div>button:first-child>p]:!pr-7 [&>div>button:first-child>p]:!text-[14px] [&>div>button:first-child>p]:!leading-[18px] md:[&>div>button:first-child]:!h-[78px] md:[&>div>button:first-child]:!min-h-0 md:[&>div>button:first-child>p]:!truncate md:[&>div>button:first-child>p]:!text-lg md:[&>div>button:first-child>p]:!leading-[22px]">
             <HomestayRoomGuestSelector
               state={{ rooms }}
-              dispatch={(action: any) => {
+              dispatch={(action: RoomGuestAction) => {
                 if (action.type === "SET_ROOMS") {
                   setRooms(action.payload);
                 }

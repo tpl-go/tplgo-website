@@ -23,6 +23,7 @@ import {
 } from "@/app/lib/wallet/walletStorage";
 
 import { getSavedProfile } from "@/app/lib/account/profileStorage";
+import { getLoggedInDisplayName } from "@/app/lib/auth/displayName";
 import { applyBenefitPricing } from "@/app/lib/pricing/applyBenefitPricing";
 
 import InsurancePaymentTopSummary from "@/app/components/payment/insurance/InsurancePaymentTopSummary";
@@ -790,7 +791,7 @@ export default function InsurancePaymentPage() {
                 ) : (
                   <div className="rounded-full bg-green-100 px-4 py-2 text-[12px] font-extrabold text-green-700">
                     Logged in as{" "}
-                    {activeUser?.name || activeUser?.mobile || "Traveller"}
+                    {getLoggedInDisplayName(activeUser)}
                   </div>
                 )}
               </div>

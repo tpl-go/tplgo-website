@@ -138,18 +138,18 @@ export default function HotelBookingFareSummaryCard({
 
   return (
     <aside className="w-full">
-      <div className="sticky top-[88px] z-20">
-        <div className="overflow-hidden rounded-[24px] border border-[#d9e2ec] bg-white shadow-[0_12px_34px_rgba(15,23,42,0.08)]">
+      <div className="md:sticky md:top-[88px] md:z-20">
+        <div className="overflow-hidden rounded-2xl border border-[#d9e2ec] bg-white shadow-[0_12px_34px_rgba(15,23,42,0.08)] md:rounded-[24px]">
           {/* HEADER */}
-          <div className="border-b border-[#e5e7eb] bg-white px-4 py-4">
-            <div className="text-[22px] font-extrabold text-[#1f2937]">
+          <div className="border-b border-[#e5e7eb] bg-white px-3 py-3 md:px-4 md:py-4">
+            <div className="text-[20px] font-extrabold text-[#1f2937] md:text-[22px]">
               Fare Summary
             </div>
           </div>
 
           {/* SMART OFFER */}
           {finalAppliedOffer > 0 ? (
-            <div className="relative overflow-hidden border-b border-[#fed7aa] bg-[linear-gradient(135deg,#fff7ed_0%,#ffffff_50%,#fff1e6_100%)] px-4 py-4">
+            <div className="relative overflow-hidden border-b border-[#fed7aa] bg-[linear-gradient(135deg,#fff7ed_0%,#ffffff_50%,#fff1e6_100%)] px-3 py-3 md:px-4 md:py-4">
               <div className="absolute right-0 top-0 h-24 w-24 rounded-full bg-[#fb923c]/10 blur-3xl" />
 
               <div className="relative flex items-start gap-3">
@@ -189,7 +189,7 @@ export default function HotelBookingFareSummaryCard({
           ) : null}
 
           {/* BODY */}
-          <div className="border-b border-[#eef2f7] px-4 py-4">
+          <div className="border-b border-[#eef2f7] px-3 py-3 md:px-4 md:py-4">
             <FareRow label="Room Price / Night" value={roomPrice} />
 
             <FareRow
@@ -311,25 +311,25 @@ export default function HotelBookingFareSummaryCard({
           </div>
 
           {/* TOTAL */}
-          <div className="border-b border-[#e5e7eb] bg-white px-4 py-4">
+          <div className="border-b border-[#e5e7eb] bg-white px-3 py-3 md:px-4 md:py-4">
             <div className="flex items-center justify-between gap-3">
-              <div className="text-[20px] font-extrabold text-[#111827]">
+              <div className="text-[18px] font-extrabold text-[#111827] md:text-[20px]">
                 Total Amount
               </div>
 
-              <div className="whitespace-nowrap text-[30px] font-extrabold text-[#111827]">
+              <div className="whitespace-nowrap text-[25px] font-extrabold text-[#111827] md:text-[30px]">
                 ₹{finalTotal.toLocaleString("en-IN")}
               </div>
             </div>
           </div>
 
           {/* CTA */}
-          <div className="bg-white px-4 py-4">
+          <div className="bg-white px-3 py-3 md:px-4 md:py-4">
             <button
               type="button"
               disabled={!canProceed}
               onClick={onProceed}
-              className={`h-[50px] w-full rounded-full text-[16px] font-extrabold transition ${
+              className={`h-[50px] w-full rounded-xl text-[15px] font-extrabold transition md:rounded-full md:text-[16px] ${
                 canProceed
                   ? "bg-[#ef4444] text-white shadow-[0_10px_24px_rgba(239,68,68,0.25)] hover:opacity-95"
                   : "cursor-not-allowed bg-[#cfd8e3] text-white"
@@ -369,9 +369,9 @@ function FareRow({
 
   return (
     <div className="mb-3 flex items-start justify-between gap-3 last:mb-0">
-      <div>
+      <div className="min-w-0">
         <div
-          className={`text-[15px] font-bold ${
+          className={`text-[14px] font-bold md:text-[15px] ${
             positiveGreen
               ? "text-[#ea580c]"
               : "text-[#1f2937]"
@@ -388,7 +388,7 @@ function FareRow({
       </div>
 
       <div
-        className={`whitespace-nowrap text-[15px] font-bold ${
+        className={`shrink-0 whitespace-nowrap text-[14px] font-bold md:text-[15px] ${
           positiveGreen
             ? "text-[#ea580c]"
             : "text-[#1f2937]"
@@ -430,11 +430,11 @@ function StatusRow({
 }) {
   return (
     <div className="mb-3 flex items-center justify-between gap-3 last:mb-0">
-      <div className="text-[15px] font-bold text-[#1f2937]">
+      <div className="min-w-0 text-[14px] font-bold text-[#1f2937] md:text-[15px]">
         {label}
       </div>
 
-      <div className="whitespace-nowrap text-[15px] font-bold text-[#6b7280]">
+      <div className="shrink-0 whitespace-nowrap text-[14px] font-bold text-[#6b7280] md:text-[15px]">
         {value}
       </div>
     </div>

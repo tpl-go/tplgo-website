@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import LoginModal from "@/app/components/common/LoginModal";
 
 import HomestayConfirmationSuccessHeader from "@/app/components/confirmation/homestay/HomestayConfirmationSuccessHeader";
@@ -511,17 +512,39 @@ export default function HomestayConfirmationPage() {
   const handlePrint = () => window.print();
 
   return (
-    <main className="min-h-screen bg-[#eef3f8] text-black">
-      <div className="bg-green-50 border-b border-green-200 text-center py-4">
-        <div className="font-black text-green-700 text-lg">
+    <main className="min-h-screen overflow-x-hidden bg-[#eef3f8] pb-6 text-black">
+      <div className="sticky top-0 z-40 border-b border-[#d7dce3] bg-white md:hidden">
+        <div className="flex h-12 items-center gap-3 px-3">
+          <button
+            type="button"
+            onClick={() => router.push("/")}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#e5e7eb] bg-white text-[#111827]"
+            aria-label="Go home"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-[14px] font-black text-[#111827]">
+              Homestay Confirmed
+            </div>
+            <div className="text-[11px] font-semibold text-[#64748b]">
+              Booking voucher generated
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="border-b border-green-200 bg-green-50 px-3 py-3 text-center md:py-4">
+        <div className="text-[16px] font-black text-green-700 md:text-lg">
           🎉 Homestay Booking Confirmed
         </div>
-        <div className="text-sm text-green-600">
+        <div className="text-[12px] font-semibold text-green-600 md:text-sm">
           Your homestay voucher is successfully generated
         </div>
 
         {finalEarnedCreditAmount > 0 ? (
-          <div className="mt-2 text-sm font-bold text-green-700">
+          <div className="mt-2 text-[12px] font-bold text-green-700 md:text-sm">
             🎁 You earned ₹
             {Number(finalEarnedCreditAmount).toLocaleString("en-IN")} TPL
             Earned Credit on this booking.
@@ -529,8 +552,8 @@ export default function HomestayConfirmationPage() {
         ) : null}
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-6 flex gap-4">
-        <div className="w-[72%] flex flex-col gap-4">
+      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-4 px-3 py-3 md:px-4 md:py-6 lg:grid-cols-[minmax(0,1fr)_minmax(300px,0.39fr)]">
+        <div className="flex min-w-0 flex-col gap-4">
           <HomestayConfirmationSuccessHeader
             bookingId={bookingId}
             homestayName={homestayName}
@@ -548,7 +571,7 @@ export default function HomestayConfirmationPage() {
           />
 
           {finalEarnedCreditAmount > 0 ? (
-            <div className="rounded-2xl border border-green-200 bg-green-50 px-5 py-4 text-[14px] font-bold text-green-700">
+            <div className="rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-[13px] font-bold leading-5 text-green-700 md:px-5 md:py-4 md:text-[14px]">
               🎉 You earned ₹
               {Number(finalEarnedCreditAmount).toLocaleString("en-IN")} TPL
               Earned Credit. This has been added to your wallet.
@@ -563,7 +586,7 @@ export default function HomestayConfirmationPage() {
             checkOut={checkOut}
             rooms={rooms}
             adults={adults}
-            children={children}
+            childCount={children}
             roomName={roomName}
             specialRequest={data?.specialRequest || ""}
           />
@@ -595,7 +618,7 @@ export default function HomestayConfirmationPage() {
           />
         </div>
 
-        <div className="w-[28%]">
+        <div className="min-w-0">
           <HomestayConfirmationActionsCard
             bookingId={bookingId}
             email={contactDetails.email || undefined}

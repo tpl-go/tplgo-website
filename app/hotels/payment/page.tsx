@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import LoginModal from "@/app/components/common/LoginModal";
 import { AUTH_UPDATED_EVENT } from "@/app/lib/booking/guestAuth";
 
@@ -163,6 +164,16 @@ function getHotelAddress(hotel: any, searchMeta: any) {
   );
 }
 
+function parseLocalDate(value: string) {
+  if (!value) return null;
+  const parts = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const date = parts
+    ? new Date(Number(parts[1]), Number(parts[2]) - 1, Number(parts[3]))
+    : new Date(value);
+
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
 export default function HotelPaymentPage() {
   const router = useRouter();
 
@@ -307,9 +318,9 @@ export default function HotelPaymentPage() {
   const taxesPerNight = selectedVariant?.taxes || hotel.taxes || 0;
   const rooms = storedPayload.fareBreakup?.rooms || searchMeta.rooms || 1;
 
-  const start = new Date(searchMeta.checkIn);
-  const end = new Date(searchMeta.checkOut);
-  const diff = end.getTime() - start.getTime();
+  const start = parseLocalDate(searchMeta.checkIn);
+  const end = parseLocalDate(searchMeta.checkOut);
+  const diff = start && end ? end.getTime() - start.getTime() : Number.NaN;
   const nights =
     storedPayload.fareBreakup?.nights ||
     searchMeta.nights ||
@@ -645,15 +656,37 @@ const priceBreakup = {
   };
 
   return (
-    <main className="min-h-screen bg-[#eef3f8] text-black">
-      <div className="h-[72px] border-b border-[#d9e2ec] bg-white px-7 flex items-center justify-between">
-        <div className="text-[26px] font-black tracking-[-0.4px] text-[#111827]">
+    <main className="min-h-screen overflow-x-hidden bg-[#eef3f8] pb-6 text-black">
+      <div className="sticky top-0 z-40 border-b border-[#d7dce3] bg-white md:hidden">
+        <div className="flex h-12 items-center gap-3 px-3">
+          <button
+            type="button"
+            onClick={() => router.push("/hotels/booking")}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#e5e7eb] bg-white text-[#111827]"
+            aria-label="Go back"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-[14px] font-black text-[#111827]">
+              Hotel Payment
+            </div>
+            <div className="text-[11px] font-semibold text-[#64748b]">
+              Select payment method
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex h-[56px] items-center justify-between border-b border-[#d9e2ec] bg-white px-3 md:h-[72px] md:px-7">
+        <div className="hidden text-[26px] font-black tracking-[-0.4px] text-[#111827] md:block">
           TPL
         </div>
 
-        <div className="flex items-center gap-3 text-[13px] font-extrabold">
+        <div className="ml-auto flex items-center gap-2 text-[12px] font-extrabold md:gap-3 md:text-[13px]">
           <span
-            className={`inline-flex min-w-[64px] items-center justify-center rounded-full border border-[#d9e2ec] bg-white px-3 h-[30px] ${
+            className={`inline-flex h-[30px] min-w-[64px] items-center justify-center rounded-full border border-[#d9e2ec] bg-white px-3 ${
               timeLeft < 120 ? "text-[#dc2626]" : "text-[#111827]"
             }`}
           >
@@ -666,9 +699,9 @@ const priceBreakup = {
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 py-6">
-        <div className="flex items-start gap-[18px]">
-          <div className="w-[72%] min-w-0 flex flex-col gap-4">
+      <div className="mx-auto max-w-7xl px-3 py-3 md:px-4 md:py-6">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(300px,0.39fr)] lg:items-start lg:gap-[18px]">
+          <div className="flex min-w-0 flex-col gap-4">
             <HotelPaymentTopSummary
               hotel={hotel}
               selectedVariant={selectedVariant}
@@ -700,10 +733,10 @@ const priceBreakup = {
               specialRequest={storedPayload.specialRequest || ""}
             />
 
-            <div className="rounded-2xl border border-[#d9e2ec] bg-white shadow-[0_2px_8px_rgba(15,23,42,0.04)] overflow-hidden">
-              <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#e5e7eb] px-5 py-4">
-                <div>
-                  <div className="text-[16px] font-extrabold text-[#111827]">
+            <div className="overflow-hidden rounded-2xl border border-[#d9e2ec] bg-white shadow-[0_2px_8px_rgba(15,23,42,0.04)]">
+              <div className="flex flex-col gap-3 border-b border-[#e5e7eb] px-4 py-4 md:flex-row md:flex-wrap md:items-center md:justify-between md:gap-4 md:px-5">
+                <div className="min-w-0">
+                  <div className="text-[15px] font-extrabold text-[#111827] md:text-[16px]">
                     Additional discounts and saved payment options
                   </div>
                   <div className="mt-1 text-[13px] text-[#6b7280]">
@@ -716,7 +749,7 @@ const priceBreakup = {
                 {!activeUser?.mobile ? (
                   <button
                     onClick={() => setShowLoginModal(true)}
-                    className="h-[42px] min-w-[110px] rounded-[10px] bg-[#1d9bf0] px-4 text-[14px] font-extrabold text-white"
+                    className="h-[42px] w-full min-w-[110px] rounded-[10px] bg-[#1d9bf0] px-4 text-[14px] font-extrabold text-white md:w-auto"
                   >
                     LOGIN
                   </button>
@@ -734,6 +767,7 @@ const priceBreakup = {
             />
 
             <HotelPaymentOptionSection
+              payableAmount={finalPayable}
               onPaymentMethodChange={(method) => {
                 setSelectedPaymentMethod(method);
                 applyPaymentMethod(method);
@@ -741,7 +775,7 @@ const priceBreakup = {
             />
           </div>
 
-          <div className="w-[28%] min-w-0">
+          <div className="min-w-0">
             <HotelPaymentPriceCard
               priceBreakup={priceBreakup}
               selectedPaymentMethod={selectedPaymentMethod}

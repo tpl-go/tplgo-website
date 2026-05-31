@@ -49,19 +49,19 @@ export default function HomestayPaymentPriceCard({
 
   return (
     <aside className="flex h-full w-full">
-      <div className="sticky top-[110px] z-20 flex w-full flex-col gap-4 bg-[#eef3f8]">
+      <div className="flex w-full flex-col gap-3 bg-[#eef3f8] md:sticky md:top-[110px] md:z-20 md:gap-4">
         <div className="overflow-hidden rounded-2xl border border-[#d9e2ec] bg-white shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
-          <div className="border-b border-[#e5e7eb] px-[18px] pb-[14px] pt-[18px]">
-            <div className="mb-[10px] text-[16px] font-extrabold text-[#111827]">
+          <div className="border-b border-[#e5e7eb] px-4 pb-3 pt-4 md:px-[18px] md:pb-[14px] md:pt-[18px]">
+            <div className="mb-2 text-[15px] font-extrabold text-[#111827] md:mb-[10px] md:text-[16px]">
               Total Due
             </div>
 
-            <div className="text-[30px] font-black leading-none text-[#111827]">
+            <div className="text-[28px] font-black leading-none text-[#111827] md:text-[30px]">
               ₹ {priceBreakup.totalAmount.toLocaleString("en-IN")}
             </div>
           </div>
 
-          <div className="px-[18px] pb-[18px] pt-[14px]">
+          <div className="px-4 pb-4 pt-3 md:px-[18px] md:pb-[18px] md:pt-[14px]">
             <PriceRow
               label="Stay Price / Night"
               value={`₹ ${priceBreakup.stayPrice.toLocaleString("en-IN")}`}
@@ -176,7 +176,7 @@ export default function HomestayPaymentPriceCard({
               !selectedPaymentMethod ||
               paymentActionState === "processing"
             }
-            className={`h-12 w-full rounded-full text-[15px] font-extrabold text-white ${
+            className={`h-12 w-full rounded-xl text-[15px] font-extrabold text-white md:rounded-full ${
               isExpired ||
               !selectedPaymentMethod ||
               paymentActionState === "processing"
@@ -189,9 +189,11 @@ export default function HomestayPaymentPriceCard({
               : paymentActionState === "processing"
               ? "Processing..."
               : paymentActionState === "success"
-              ? "Payment Success ✅"
+              ? "Payment Success"
               : paymentActionState === "failure"
               ? "Retry Payment"
+              : selectedPaymentMethod === "qr"
+              ? "Confirm Payment"
               : "Proceed to Payment"}
           </button>
 
@@ -228,10 +230,10 @@ function PriceRow({
   valueColor?: string;
 }) {
   return (
-    <div className="mb-[10px] flex items-center justify-between gap-3">
-      <span className="text-[14px] font-medium text-[#374151]">{label}</span>
+    <div className="mb-[10px] flex items-start justify-between gap-3">
+      <span className="min-w-0 text-[14px] font-medium text-[#374151]">{label}</span>
       <span
-        className="whitespace-nowrap text-[14px] font-bold"
+        className="shrink-0 whitespace-nowrap text-[14px] font-bold"
         style={{ color: valueColor }}
       >
         {value}

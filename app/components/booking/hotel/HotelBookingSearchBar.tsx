@@ -16,6 +16,18 @@ type Room = {
   children: number;
 };
 
+type DateRangeChange = {
+  selection: {
+    startDate?: Date;
+    endDate?: Date;
+  };
+};
+
+type RoomAction = {
+  type: string;
+  payload?: Room[];
+};
+
 type Props = {
   hotel: Hotel;
 };
@@ -53,15 +65,25 @@ function getTomorrow(base?: Date) {
 
 function safeDate(value: string | null, fallback: Date) {
   if (!value) return fallback;
-  const d = new Date(value);
+  const parts = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const d = parts
+    ? new Date(Number(parts[1]), Number(parts[2]) - 1, Number(parts[3]))
+    : new Date(value);
   return Number.isNaN(d.getTime()) ? fallback : d;
+}
+
+function toQueryDate(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 export default function HotelBookingSearchBar({ hotel }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const today = getToday();
+  const today = useMemo(() => getToday(), []);
 
   const defaultPropertyText = `${hotel.title}, ${hotel.city}, India`;
 
@@ -97,15 +119,17 @@ export default function HotelBookingSearchBar({ hotel }: Props) {
       children: 0,
     }));
 
-    setCity(defaultPropertyText);
-    setCheckIn(incomingCheckIn);
-    setCheckOut(
-      incomingCheckOut > incomingCheckIn
-        ? incomingCheckOut
-        : getTomorrow(incomingCheckIn)
-    );
-    setRooms(safeRooms);
-  }, [searchParams, defaultPropertyText]);
+    queueMicrotask(() => {
+      setCity(defaultPropertyText);
+      setCheckIn(incomingCheckIn);
+      setCheckOut(
+        incomingCheckOut > incomingCheckIn
+          ? incomingCheckOut
+          : getTomorrow(incomingCheckIn)
+      );
+      setRooms(safeRooms);
+    });
+  }, [searchParams, defaultPropertyText, today]);
 
   useEffect(() => {
     function handleOutside(e: MouseEvent) {
@@ -154,8 +178,8 @@ export default function HotelBookingSearchBar({ hotel }: Props) {
     if (normalizedInput === normalizedCurrent) {
       const query = new URLSearchParams({
         city: hotel.city,
-        checkIn: checkIn.toString(),
-        checkOut: checkOut.toString(),
+        checkIn: toQueryDate(checkIn),
+        checkOut: toQueryDate(checkOut),
         rooms: String(rooms.length),
         adults: String(totalAdults),
       });
@@ -164,8 +188,8 @@ export default function HotelBookingSearchBar({ hotel }: Props) {
     } else {
       const query = new URLSearchParams({
         city: city.trim(),
-        checkIn: checkIn.toString(),
-        checkOut: checkOut.toString(),
+        checkIn: toQueryDate(checkIn),
+        checkOut: toQueryDate(checkOut),
         rooms: String(rooms.length),
         adults: String(totalAdults),
       });
@@ -266,7 +290,7 @@ export default function HotelBookingSearchBar({ hotel }: Props) {
                 moveRangeOnFirstSelection={false}
                 showDateDisplay={false}
                 minDate={today}
-                onChange={(item: any) => {
+                onChange={(item: DateRangeChange) => {
                   const start = item.selection.startDate || today;
                   const nextDay = addDays(start, 1);
 
@@ -318,7 +342,7 @@ export default function HotelBookingSearchBar({ hotel }: Props) {
                 moveRangeOnFirstSelection={false}
                 showDateDisplay={false}
                 minDate={addDays(checkIn, 1)}
-                onChange={(item: any) => {
+                onChange={(item: DateRangeChange) => {
                   const end = item.selection.endDate || addDays(checkIn, 1);
 
                   if (end > checkIn) {
@@ -336,8 +360,8 @@ export default function HotelBookingSearchBar({ hotel }: Props) {
           <div className="[&>div]:!w-full [&>div>button:first-child]:!h-[72px] [&>div>button:first-child]:!w-full [&>div>button:first-child]:!rounded-none [&>div>button:first-child]:!border-0 [&>div>button:first-child]:!bg-transparent [&>div>button:first-child]:!text-black [&>div>button:first-child]:!shadow-none">
             <RoomGuestSelector
               state={{ rooms }}
-              dispatch={(action: any) => {
-                if (action.type === "SET_ROOMS") {
+              dispatch={(action: RoomAction) => {
+                if (action.type === "SET_ROOMS" && action.payload) {
                   setRooms(action.payload);
                 }
               }}

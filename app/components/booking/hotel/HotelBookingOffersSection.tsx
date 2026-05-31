@@ -171,13 +171,13 @@ export default function HotelBookingOffersSection({
 
   return (
     <div className="overflow-hidden rounded-xl border border-[#d9e2ec] bg-white shadow-sm">
-      <div className="border-b border-[#e5e7eb] bg-[#fff7ed] px-4 py-4">
-        <div className="text-[20px] font-extrabold text-[#111827]">
+      <div className="border-b border-[#e5e7eb] bg-[#fff7ed] px-3 py-3 md:px-4 md:py-4">
+        <div className="text-[18px] font-extrabold text-[#111827] md:text-[20px]">
           Coupons & Offers
         </div>
       </div>
 
-      <div className="px-4 py-4">
+      <div className="px-3 py-3 md:px-4 md:py-4">
         {appliedOffer && appliedOfferCode ? (
           <div className="mb-4 rounded-lg border border-[#bae6fd] bg-[#f0f9ff] p-4">
             <div className="text-[14px] font-extrabold text-[#0369a1]">
@@ -207,7 +207,7 @@ export default function HotelBookingOffersSection({
                 : "border border-[#fed7aa] bg-gradient-to-br from-[#fff7ed] to-white"
             }`}
           >
-            <div className="flex items-start justify-between gap-3">
+            <div className="flex flex-col items-start gap-3 md:flex-row md:justify-between">
               <div>
                 <div
                   className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-black tracking-wide ${
@@ -245,7 +245,7 @@ export default function HotelBookingOffersSection({
                 <button
                   type="button"
                   onClick={() => onApplyOffer(smartOfferCard)}
-                  className="min-w-[92px] rounded-lg bg-[#f97316] px-3 py-2 text-[13px] font-extrabold text-white shadow-[0_6px_14px_rgba(249,115,22,0.25)]"
+                  className="h-10 w-full rounded-lg bg-[#f97316] px-3 py-2 text-[13px] font-extrabold text-white shadow-[0_6px_14px_rgba(249,115,22,0.25)] md:w-auto md:min-w-[92px]"
                 >
                   APPLY
                 </button>
@@ -253,7 +253,7 @@ export default function HotelBookingOffersSection({
                 <button
                   type="button"
                   disabled
-                  className="min-w-[92px] cursor-not-allowed rounded-lg bg-[#f97316] px-3 py-2 text-[13px] font-extrabold text-white opacity-90"
+                  className="h-10 w-full cursor-not-allowed rounded-lg bg-[#f97316] px-3 py-2 text-[13px] font-extrabold text-white opacity-90 md:w-auto md:min-w-[92px]"
                 >
                   APPLIED
                 </button>
@@ -282,7 +282,7 @@ export default function HotelBookingOffersSection({
                     : "border border-[#d9e2ec] bg-white"
                 }`}
               >
-                <div className="flex items-start justify-between gap-3">
+                <div className="flex flex-col items-start gap-3 md:flex-row md:justify-between">
                   <div>
                     <div className="text-[15px] font-extrabold text-[#111827]">
                       {offer.code}
@@ -306,7 +306,7 @@ export default function HotelBookingOffersSection({
                     type="button"
                     disabled={active}
                     onClick={() => onApplyOffer(offer)}
-                    className={`min-w-[92px] rounded-lg px-3 py-2 text-[13px] font-extrabold ${
+                    className={`h-10 w-full rounded-lg px-3 py-2 text-[13px] font-extrabold md:w-auto md:min-w-[92px] ${
                       active
                         ? "cursor-not-allowed bg-[#38bdf8] text-white"
                         : "border border-[#d1d5db] bg-white text-[#111827]"

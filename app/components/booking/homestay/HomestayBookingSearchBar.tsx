@@ -55,8 +55,19 @@ function getTomorrow(base?: Date) {
 
 function safeDate(value: string | null, fallback: Date) {
   if (!value) return fallback;
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? fallback : d;
+  const parts = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const date = parts
+    ? new Date(Number(parts[1]), Number(parts[2]) - 1, Number(parts[3]))
+    : new Date(value);
+
+  return Number.isNaN(date.getTime()) ? fallback : date;
+}
+
+function toQueryDate(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 export default function HomestayBookingSearchBar({ homestay }: Props) {
@@ -164,8 +175,8 @@ export default function HomestayBookingSearchBar({ homestay }: Props) {
     if (normalizedInput === normalizedCurrent) {
       const query = new URLSearchParams({
         city: homestay.city,
-        checkIn: checkIn.toISOString(),
-        checkOut: checkOut.toISOString(),
+        checkIn: toQueryDate(checkIn),
+        checkOut: toQueryDate(checkOut),
         rooms: String(rooms.length),
         adults: String(totalAdults),
         children: String(totalChildren),
@@ -175,8 +186,8 @@ export default function HomestayBookingSearchBar({ homestay }: Props) {
     } else {
       const query = new URLSearchParams({
         city: city.trim(),
-        checkIn: checkIn.toISOString(),
-        checkOut: checkOut.toISOString(),
+        checkIn: toQueryDate(checkIn),
+        checkOut: toQueryDate(checkOut),
         rooms: String(rooms.length),
         adults: String(totalAdults),
         children: String(totalChildren),
