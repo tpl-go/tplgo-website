@@ -14,10 +14,9 @@ type TopHeaderProps = {
 export default function TopHeader({ onChatWithAI }: TopHeaderProps) {
   const router = useRouter();
 
-  const [openMenu, setOpenMenu] = useState<"ai" | "account" | null>(null);
+  const [openMenu, setOpenMenu] = useState<"account" | null>(null);
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [mobileAiOpen, setMobileAiOpen] = useState(false);
 
   const menuRef = useRef<HTMLDivElement | null>(null);
 
@@ -26,23 +25,12 @@ export default function TopHeader({ onChatWithAI }: TopHeaderProps) {
   const closeMenus = () => {
     setOpenMenu(null);
     setMobileMenuOpen(false);
-    setMobileAiOpen(false);
   };
 
   const handleLogout = () => {
     logout();
     closeMenus();
     router.push("/");
-  };
-
-  const handleOpenAI = () => {
-    closeMenus();
-    onChatWithAI?.();
-  };
-
-  const handleComingSoon = (message: string) => {
-    alert(message);
-    closeMenus();
   };
 
   const handleOpenPrintModal = () => {
@@ -72,7 +60,9 @@ export default function TopHeader({ onChatWithAI }: TopHeaderProps) {
 
   useEffect(() => {
     const handleOpenAITravelExpert = () => {
-      handleOpenAI();
+      setOpenMenu(null);
+      setMobileMenuOpen(false);
+      onChatWithAI?.();
     };
 
     window.addEventListener("TPL_OPEN_AI_TRAVEL_EXPERT", handleOpenAITravelExpert);
@@ -109,61 +99,32 @@ export default function TopHeader({ onChatWithAI }: TopHeaderProps) {
               🏠 <span>Home</span>
             </Link>
 
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setOpenMenu((prev) => (prev === "ai" ? null : "ai"))}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-full border border-orange-400 text-black font-semibold bg-orange-100 hover:bg-orange-100 transition"
-              >
-                🤖 <span>AI Travel Expert</span>
-              </button>
-
-              {openMenu === "ai" && (
-                <div className="absolute top-full left-0 mt-3 w-72 bg-white border border-gray-200 rounded-xl shadow-lg p-2 z-50">
-                  <button
-                    type="button"
-                    onClick={handleOpenAI}
-                    className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 text-sm text-gray-700"
-                  >
-                    💬 Chat with AI
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleComingSoon("Voice AI coming soon")}
-                    className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 text-sm text-gray-700 whitespace-nowrap"
-                  >
-                    🎤 Speak to AI
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleComingSoon("Plan My Trip coming soon")}
-                    className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 text-sm text-gray-700"
-                  >
-                    🧳 Plan My Trip
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      handleComingSoon("Best Package Suggestions coming soon")
-                    }
-                    className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 text-sm text-gray-700"
-                  >
-                    🌍 Best Package Suggestions
-                  </button>
-                </div>
-              )}
-            </div>
+            <Link
+              href="/smart-planner"
+              onClick={closeMenus}
+              className="group relative flex items-center gap-2 overflow-hidden rounded-full border border-blue-500/25 bg-gradient-to-r from-blue-50 via-white to-cyan-50 px-3 py-1.5 text-black shadow-[0_0_18px_rgba(37,99,235,0.12)] transition hover:border-blue-500/45 hover:shadow-[0_0_22px_rgba(14,165,233,0.18)]"
+            >
+              <span className="pointer-events-none absolute inset-y-0 -left-8 w-8 bg-white/40 opacity-0 blur-sm transition group-hover:left-full group-hover:opacity-100" />
+              <span className="relative flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-700 via-blue-500 to-cyan-400 text-[10px] font-black text-white shadow-[0_0_12px_rgba(37,99,235,0.28)]">
+                AI
+              </span>
+              <span className="relative flex items-center gap-1.5 leading-none">
+                <span className="bg-gradient-to-r from-blue-950 via-blue-800 to-blue-600 bg-clip-text font-serif text-[17px] font-black italic tracking-normal text-transparent">
+                  Tiya
+                </span>
+                <span className="flex flex-col leading-none">
+                  <span className="text-[11px] font-extrabold text-slate-800">
+                    Smart Planner
+                  </span>
+                </span>
+              </span>
+            </Link>
 
             <Link
-              href="/explore"
+              href="/creators"
               className="group relative flex items-center gap-1.5 rounded-full border border-blue-500/30 bg-gradient-to-r from-blue-700 via-blue-600 to-cyan-500 px-3.5 py-1.5 text-white font-semibold shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
             >
-              <span className="absolute -top-2 -right-2 rounded-full bg-orange-500 px-1.5 py-0.5 text-[9px] font-bold leading-none text-white shadow-sm">
-                Soon
-              </span>
+              
               🎬 <span>TPL Creators</span>
             </Link>
 
@@ -269,7 +230,6 @@ export default function TopHeader({ onChatWithAI }: TopHeaderProps) {
               type="button"
               onClick={() => {
                 setMobileMenuOpen((prev) => !prev);
-                setMobileAiOpen(false);
                 setOpenMenu(null);
               }}
               className="md:hidden flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 transition"
@@ -287,52 +247,25 @@ export default function TopHeader({ onChatWithAI }: TopHeaderProps) {
         {/* MOBILE MENU */}
         {mobileMenuOpen && (
           <div className="md:hidden bg-white border-t border-gray-100 shadow-lg px-4 py-3 flex flex-col gap-1">
-            <button
-              type="button"
-              onClick={() => setMobileAiOpen((prev) => !prev)}
-              className="flex items-center justify-between gap-2 px-2 py-2.5 rounded-lg hover:bg-orange-50 text-sm font-semibold text-black text-left"
+            <Link
+              href="/smart-planner"
+              onClick={closeMenus}
+              className="relative flex items-center gap-2 overflow-hidden rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50 via-white to-cyan-50 px-3 py-2.5 text-black shadow-[0_0_16px_rgba(37,99,235,0.12)]"
             >
-              <span>🤖 AI Travel Expert</span>
-              <span>{mobileAiOpen ? "−" : "+"}</span>
-            </button>
-
-            {mobileAiOpen && (
-              <div className="ml-3 mb-1 border-l border-orange-200 pl-3 flex flex-col gap-1">
-                <button
-                  type="button"
-                  onClick={handleOpenAI}
-                  className="px-2 py-2 rounded-lg hover:bg-gray-50 text-sm text-gray-700 text-left"
-                >
-                  💬 Chat with AI
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleComingSoon("Voice AI coming soon")}
-                  className="px-2 py-2 rounded-lg hover:bg-gray-50 text-sm text-gray-700 text-left"
-                >
-                  🎤 Speak to AI
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleComingSoon("Plan My Trip coming soon")}
-                  className="px-2 py-2 rounded-lg hover:bg-gray-50 text-sm text-gray-700 text-left"
-                >
-                  🧳 Plan My Trip
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    handleComingSoon("Best Package Suggestions coming soon")
-                  }
-                  className="px-2 py-2 rounded-lg hover:bg-gray-50 text-sm text-gray-700 text-left"
-                >
-                  🌍 Best Package Suggestions
-                </button>
-              </div>
-            )}
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-700 via-blue-500 to-cyan-400 text-[10px] font-black text-white shadow-[0_0_12px_rgba(37,99,235,0.25)]">
+                AI
+              </span>
+              <span className="flex items-center gap-2 leading-none">
+                <span className="bg-gradient-to-r from-blue-950 via-blue-800 to-blue-600 bg-clip-text font-serif text-[19px] font-black italic tracking-normal text-transparent">
+                  Tiya
+                </span>
+                <span className="flex flex-col leading-none">
+                  <span className="text-[13px] font-extrabold text-slate-800">
+                    Smart Planner
+                  </span>
+                </span>
+              </span>
+            </Link>
 
             <Link
               href="/explore"
