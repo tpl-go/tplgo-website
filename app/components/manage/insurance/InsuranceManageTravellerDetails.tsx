@@ -38,13 +38,13 @@ export default function InsuranceManageTravellerDetails({
   };
 
   return (
-    <div className="rounded-[30px] border border-black/5 bg-white p-6 shadow-sm">
-      <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <h2 className="text-xl font-black text-[#111827]">
+    <div className="min-w-0 rounded-[20px] border border-black/5 bg-white p-4 shadow-sm md:rounded-[30px] md:p-6">
+      <div className="mb-4 flex flex-col gap-3 md:mb-5 lg:flex-row lg:items-center lg:justify-between">
+        <div className="min-w-0">
+          <h2 className="break-words text-lg font-black text-[#111827] md:text-xl">
             Traveller Details
           </h2>
-          <p className="text-sm font-semibold text-[#6b7280]">
+          <p className="break-words text-sm font-semibold leading-5 text-[#6b7280]">
             Correct traveller details for insurance support.
           </p>
         </div>
@@ -52,14 +52,14 @@ export default function InsuranceManageTravellerDetails({
         <button
           type="button"
           onClick={onSave}
-          className="h-11 rounded-2xl bg-orange-500 px-5 text-sm font-black text-white hover:bg-orange-600"
+          className="h-11 w-full rounded-2xl bg-orange-500 px-5 text-sm font-black text-white hover:bg-orange-600 sm:w-auto"
         >
           Save Traveller Details
         </button>
       </div>
 
       {isPassportRequired && (
-        <div className="mb-5 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs font-bold text-blue-800">
+        <div className="mb-4 break-words rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs font-bold leading-5 text-blue-800 md:mb-5">
           Passport number and expiry are required for international policies.
         </div>
       )}
@@ -68,13 +68,13 @@ export default function InsuranceManageTravellerDetails({
         {travellers.map((traveller, index) => (
           <div
             key={traveller.id || index}
-            className="rounded-2xl border border-orange-100 bg-orange-50/40 p-4"
+            className="min-w-0 rounded-2xl border border-orange-100 bg-orange-50/40 p-4"
           >
-            <p className="mb-4 text-sm font-black text-[#111827]">
+            <p className="mb-4 break-words text-sm font-black text-[#111827]">
               Traveller {index + 1}
             </p>
 
-            <div className="grid gap-3 md:grid-cols-4">
+            <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-4">
               <InputBox
                 label="Title"
                 value={traveller.title || ""}
@@ -145,8 +145,8 @@ function InputBox({
   onChange: (value: string) => void;
 }) {
   return (
-    <div>
-      <label className="mb-1 block text-xs font-bold text-gray-600">
+    <div className="min-w-0">
+      <label className="mb-1 block break-words text-xs font-bold text-gray-600">
         {label}
       </label>
 

@@ -23,11 +23,11 @@ export default function VisaPassportDetailsCard({
   };
 
   return (
-    <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-      <h2 className="text-xl font-extrabold text-gray-950">
+    <div className="min-w-0 rounded-[22px] border border-gray-200 bg-white p-4 shadow-sm md:rounded-3xl md:p-6">
+      <h2 className="break-words text-[19px] font-extrabold leading-6 text-gray-950 md:text-xl">
         Applicant {applicantIndex + 1} Passport Details
       </h2>
-      <p className="mt-1 text-sm font-semibold text-gray-600">
+      <p className="mt-1 break-words text-sm font-semibold leading-5 text-gray-600">
         Passport should be valid as per destination visa rules.
       </p>
 
@@ -39,7 +39,7 @@ export default function VisaPassportDetailsCard({
           <input
             value={passport.passportNumber}
             onChange={(e) => update("passportNumber", e.target.value)}
-            className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm font-bold uppercase text-gray-950 outline-none focus:border-orange-500"
+            className="w-full min-w-0 rounded-xl border border-gray-300 px-4 py-3 text-sm font-bold uppercase text-gray-950 outline-none focus:border-orange-500"
             placeholder="Passport number"
           />
         </div>
@@ -51,7 +51,7 @@ export default function VisaPassportDetailsCard({
           <input
             value={passport.issuePlace}
             onChange={(e) => update("issuePlace", e.target.value)}
-            className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm font-bold text-gray-950 outline-none focus:border-orange-500"
+            className="w-full min-w-0 rounded-xl border border-gray-300 px-4 py-3 text-sm font-bold text-gray-950 outline-none focus:border-orange-500"
             placeholder="Issue place"
           />
         </div>
@@ -64,7 +64,7 @@ export default function VisaPassportDetailsCard({
             type="date"
             value={passport.issueDate}
             onChange={(e) => update("issueDate", e.target.value)}
-            className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm font-bold text-gray-950 outline-none focus:border-orange-500"
+            className="w-full min-w-0 rounded-xl border border-gray-300 px-4 py-3 text-sm font-bold text-gray-950 outline-none focus:border-orange-500"
           />
         </div>
 
@@ -76,7 +76,7 @@ export default function VisaPassportDetailsCard({
             type="date"
             value={passport.expiryDate}
             onChange={(e) => update("expiryDate", e.target.value)}
-            className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm font-bold text-gray-950 outline-none focus:border-orange-500"
+            className="w-full min-w-0 rounded-xl border border-gray-300 px-4 py-3 text-sm font-bold text-gray-950 outline-none focus:border-orange-500"
           />
         </div>
       </div>

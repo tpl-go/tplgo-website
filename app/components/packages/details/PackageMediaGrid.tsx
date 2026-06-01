@@ -3,6 +3,8 @@
 import React, { useMemo, useState } from "react";
 import PackageMapModal from "./PackageMapModal";
 import dynamic from "next/dynamic";
+import TPLDynamicImage from "@/app/components/common/TPLDynamicImage";
+import { getSmartPackageImage } from "@/app/lib/images/smartPackageImageResolver";
 
 const MiniRouteMap = dynamic(() => import("./MiniRouteMap"), {
   ssr: false,
@@ -206,7 +208,13 @@ export default function PackageMediaGrid({
 }: Props) {
   const [mapOpen, setMapOpen] = useState(false);
 
-  const coverImage = media?.coverImage || "/demo/kerala-cover.jpg";
+  const smartCoverImage = getSmartPackageImage({
+    routeId: packageId,
+    title: packageTitle,
+    coverImage: media?.coverImage,
+    route: Array.isArray(route) ? route.join(" ") : "",
+    cities: route,
+  });
   const videoUrl = media?.videoUrl || "";
   const packageHighlights = media?.packageHighlights || [];
   const activitiesLabel = media?.activitiesLabel || "Activities";
@@ -259,10 +267,17 @@ export default function PackageMediaGrid({
           className="col-span-1 lg:col-span-3 rounded-2xl overflow-hidden border bg-gray-100 cursor-pointer relative h-[180px] sm:h-[220px] lg:h-[200px]"
           onClick={() => goGallery("gallery")}
         >
-          <img
-            src={coverImage}
-            alt="Package cover"
-            className="w-full h-full object-cover"
+          <TPLDynamicImage
+            src={smartCoverImage.src}
+            imageQuery={smartCoverImage.imageQuery}
+            fallbackSrc={smartCoverImage.fallbackSrc}
+            fallbackQuery={smartCoverImage.fallbackQuery}
+            alt={smartCoverImage.alt || "Package cover"}
+            className="absolute inset-0 h-full w-full"
+            imgClassName="h-full w-full object-cover"
+            sizes="(max-width: 1024px) 100vw, 25vw"
+            priority
+            preferDynamic={smartCoverImage.preferDynamic}
           />
           <div className="absolute left-3 bottom-3">
             <button className="bg-black/70 text-white text-xs font-semibold px-3 py-2 rounded-lg hover:bg-black/80 transition">

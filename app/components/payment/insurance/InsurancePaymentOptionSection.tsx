@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo, useState, type ReactNode } from "react";
 import {
   CreditCard,
   Landmark,
@@ -12,88 +13,246 @@ type Props = {
   onPaymentMethodChange: (method: string) => void;
 };
 
-const PAYMENT_METHODS = [
-  {
-    id: "upi",
-    title: "UPI",
-    description: "Pay using PhonePe, Google Pay, Paytm or any UPI app",
-    icon: Smartphone,
-  },
-  {
-    id: "card",
-    title: "Credit / Debit Card",
-    description: "Visa, Mastercard, RuPay and Amex cards accepted",
-    icon: CreditCard,
-  },
-  {
-    id: "netbanking",
-    title: "Net Banking",
-    description: "Pay securely using your bank account",
-    icon: Landmark,
-  },
-  {
-    id: "wallet",
-    title: "Wallet / Other",
-    description: "Use supported payment wallets and other payment options",
-    icon: WalletCards,
-  },
-];
-
 export default function InsurancePaymentOptionSection({
   selectedMethod,
   onPaymentMethodChange,
 }: Props) {
+  const [selectedUpiMethod, setSelectedUpiMethod] = useState("");
+
+  const activeMethod = useMemo(() => selectedMethod || "", [selectedMethod]);
+
+  const handleSelect = (method: string) => {
+    onPaymentMethodChange(method);
+  };
+
   return (
-    <div className="rounded-2xl border border-[#d9e2ec] bg-white p-5 shadow-[0_2px_8px_rgba(15,23,42,0.04)]">
-      <div>
-        <h2 className="text-[18px] font-black text-[#111827]">
-          Choose Payment Method
+    <section className="overflow-hidden rounded-2xl border border-[#d9e2ec] bg-white shadow-[0_2px_8px_rgba(15,23,42,0.04)]">
+      <div className="border-b border-[#e5e7eb] px-4 py-4 md:px-5">
+        <h2 className="text-[22px] font-black leading-7 text-[#111827] md:text-[26px]">
+          Payment Options
         </h2>
-        <p className="mt-1 text-[13px] font-semibold text-[#64748b]">
-          Select a secure payment option to issue your insurance policy.
-        </p>
       </div>
 
-      <div className="mt-5 grid gap-3 md:grid-cols-2">
-        {PAYMENT_METHODS.map((method) => {
-          const Icon = method.icon;
-          const active = selectedMethod === method.id;
+      <PaymentRow
+        icon={<Smartphone size={20} />}
+        title="UPI Options"
+        subtitle="Pay directly from your bank account"
+        isActive={activeMethod === "upi"}
+        onClick={() => handleSelect("upi")}
+      />
 
-          return (
-            <button
-              key={method.id}
-              type="button"
-              onClick={() => onPaymentMethodChange(method.id)}
-              className={`rounded-2xl border p-4 text-left transition ${
-                active
-                  ? "border-orange-500 bg-orange-50 shadow-sm"
-                  : "border-[#e5e7eb] bg-white hover:border-orange-200 hover:bg-orange-50/40"
-              }`}
-            >
-              <div className="flex items-start gap-3">
-                <div
-                  className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${
-                    active
-                      ? "bg-orange-500 text-white"
-                      : "bg-[#f8fafc] text-[#475569]"
-                  }`}
-                >
-                  <Icon size={20} />
-                </div>
+      {activeMethod === "upi" ? (
+        <ExpandedBox>
+          <div className="text-[15px] font-extrabold text-[#111827]">
+            Choose UPI Method
+          </div>
 
-                <div>
-                  <p className="text-[14px] font-black text-[#111827]">
-                    {method.title}
-                  </p>
-                  <p className="mt-1 text-[12px] font-semibold text-[#64748b]">
-                    {method.description}
-                  </p>
-                </div>
-              </div>
-            </button>
-          );
-        })}
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            {["Google Pay", "PhonePe", "Paytm", "BHIM UPI"].map((item) => (
+              <SelectableMiniCard
+                key={item}
+                label={item}
+                isSelected={selectedUpiMethod === item}
+                onClick={() => setSelectedUpiMethod(item)}
+              />
+            ))}
+          </div>
+
+          <div className="mt-4">
+            <label className="mb-2 block text-[13px] font-bold text-[#374151]">
+              Enter UPI ID
+            </label>
+            <input
+              placeholder="example@upi"
+              className="h-11 w-full rounded-[10px] border border-[#d1d5db] bg-white px-3.5 text-[14px] font-semibold text-[#111827] outline-none focus:border-[#0ea5e9]"
+            />
+          </div>
+        </ExpandedBox>
+      ) : null}
+
+      <PaymentRow
+        icon={<CreditCard size={20} />}
+        title="Credit & Debit Cards"
+        subtitle="Visa, Mastercard, RuPay, Amex and more"
+        isActive={activeMethod === "card"}
+        onClick={() => handleSelect("card")}
+      />
+
+      {activeMethod === "card" ? (
+        <ExpandedBox>
+          <div className="text-[15px] font-extrabold text-[#111827]">
+            Card Details
+          </div>
+          <div className="mt-4">
+            <label className="mb-2 block text-[13px] font-bold text-[#374151]">
+              Card Number
+            </label>
+            <input
+              placeholder="1234 5678 9012 3456"
+              className="h-11 w-full rounded-[10px] border border-[#d1d5db] bg-white px-3.5 text-[14px] font-semibold text-[#111827] outline-none focus:border-[#0ea5e9]"
+            />
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-2 block text-[13px] font-bold text-[#374151]">
+                Expiry
+              </label>
+              <input
+                placeholder="MM/YY"
+                className="h-11 w-full rounded-[10px] border border-[#d1d5db] bg-white px-3.5 text-[14px] font-semibold text-[#111827] outline-none focus:border-[#0ea5e9]"
+              />
+            </div>
+            <div>
+              <label className="mb-2 block text-[13px] font-bold text-[#374151]">
+                CVV
+              </label>
+              <input
+                placeholder="123"
+                className="h-11 w-full rounded-[10px] border border-[#d1d5db] bg-white px-3.5 text-[14px] font-semibold text-[#111827] outline-none focus:border-[#0ea5e9]"
+              />
+            </div>
+          </div>
+          <div className="mt-3">
+            <label className="mb-2 block text-[13px] font-bold text-[#374151]">
+              Name on Card
+            </label>
+            <input
+              placeholder="Enter card holder name"
+              className="h-11 w-full rounded-[10px] border border-[#d1d5db] bg-white px-3.5 text-[14px] font-semibold text-[#111827] outline-none focus:border-[#0ea5e9]"
+            />
+          </div>
+        </ExpandedBox>
+      ) : null}
+
+      <PaymentRow
+        icon={<Landmark size={20} />}
+        title="Net Banking"
+        subtitle="Pay securely using your bank account"
+        isActive={activeMethod === "netbanking"}
+        onClick={() => handleSelect("netbanking")}
+      />
+
+      {activeMethod === "netbanking" ? (
+        <ExpandedBox>
+          <div className="text-[15px] font-extrabold text-[#111827]">
+            Select Your Bank
+          </div>
+          <select className="mt-3 h-11 w-full rounded-[10px] border border-[#d1d5db] bg-white px-3.5 text-[14px] font-semibold text-[#111827] outline-none focus:border-[#0ea5e9]">
+            <option>Select Bank</option>
+            <option>HDFC Bank</option>
+            <option>ICICI Bank</option>
+            <option>SBI</option>
+            <option>Axis Bank</option>
+          </select>
+        </ExpandedBox>
+      ) : null}
+
+      <PaymentRow
+        icon={<WalletCards size={20} />}
+        title="Wallet / Other"
+        subtitle="Use supported payment wallets and other payment options"
+        isActive={activeMethod === "wallet"}
+        onClick={() => handleSelect("wallet")}
+      />
+
+      {activeMethod === "wallet" ? (
+        <ExpandedBox>
+          <div className="text-[15px] font-extrabold text-[#111827]">
+            Wallet Options
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            {["Paytm Wallet", "Mobikwik", "Amazon Pay", "Other Wallet"].map(
+              (item) => (
+                <SelectableMiniCard key={item} label={item} />
+              )
+            )}
+          </div>
+        </ExpandedBox>
+      ) : null}
+    </section>
+  );
+}
+
+function PaymentRow({
+  icon,
+  title,
+  subtitle,
+  isActive,
+  onClick,
+}: {
+  icon: ReactNode;
+  title: string;
+  subtitle: string;
+  isActive?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex w-full items-center justify-between gap-3 border-b border-[#e5e7eb] px-4 py-4 text-left transition md:px-5 ${
+        isActive
+          ? "bg-[#f8fbff] shadow-[inset_0_0_0_1.5px_#7dd3fc]"
+          : "bg-white hover:bg-[#f8fafc]"
+      }`}
+    >
+      <div className="flex min-w-0 items-center gap-3.5">
+        <div
+          className={`flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[10px] ${
+            isActive ? "bg-[#dff2ff] text-[#0ea5e9]" : "bg-[#eef6ff] text-[#475569]"
+          }`}
+        >
+          {icon}
+        </div>
+
+        <div className="min-w-0">
+          <div className="break-words text-[16px] font-extrabold leading-5 text-[#111827]">
+            {title}
+          </div>
+          <div className="mt-1 break-words text-[13px] font-semibold leading-[18px] text-[#64748b]">
+            {subtitle}
+          </div>
+        </div>
       </div>
+
+      <span className={`shrink-0 text-[20px] font-black ${isActive ? "text-[#0ea5e9]" : "text-[#60a5fa]"}`}>
+        ›
+      </span>
+    </button>
+  );
+}
+
+function ExpandedBox({ children }: { children: ReactNode }) {
+  return (
+    <div className="border-b border-[#e5e7eb] bg-white px-4 py-4 md:px-5 lg:pl-[76px]">
+      {children}
     </div>
+  );
+}
+
+function SelectableMiniCard({
+  label,
+  isSelected,
+  onClick,
+}: {
+  label: string;
+  isSelected?: boolean;
+  onClick?: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={(event) => {
+        event.stopPropagation();
+        onClick?.();
+      }}
+      className={`min-h-[46px] rounded-[10px] px-3 py-2 text-[13px] font-bold transition ${
+        isSelected
+          ? "border border-[#7dd3fc] bg-[#f8fbff] text-[#0f172a]"
+          : "border border-[#d1d5db] bg-white text-[#1f2937] hover:border-[#7dd3fc]"
+      }`}
+    >
+      {label}
+    </button>
   );
 }

@@ -78,8 +78,8 @@ export default function TrainManageSeatAddons({
         subtitle="Upgrade class, berth preference or train add-ons."
       />
 
-      <div className="rounded-[24px] border border-black/5 bg-[#f8f9fb] p-5">
-        <p className="text-sm font-bold text-[#111827]">
+      <div className="min-w-0 rounded-[20px] border border-black/5 bg-[#f8f9fb] p-4 md:rounded-[24px] md:p-5">
+        <p className="break-words text-sm font-bold text-[#111827]">
           Current Class:{" "}
           {currentClassName}
         </p>
@@ -90,17 +90,17 @@ export default function TrainManageSeatAddons({
         </p>
 
         {selectedSeat ? (
-          <div className="mt-4 rounded-2xl border border-black/5 bg-white p-4">
+          <div className="mt-4 min-w-0 rounded-2xl border border-black/5 bg-white p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#6b7280]">
               Current Selected Option
             </p>
 
-            <p className="mt-1 text-sm font-bold text-[#111827]">
+            <p className="mt-1 break-words text-sm font-bold text-[#111827]">
               {selectedSeat.className ||
                 currentClassName}
             </p>
 
-            <p className="mt-1 text-sm text-[#6b7280]">
+            <p className="mt-1 break-words text-sm text-[#6b7280]">
               {selectedSeat.berthType ||
                 "-"}{" "}
               •{" "}
@@ -111,8 +111,8 @@ export default function TrainManageSeatAddons({
         ) : null}
       </div>
 
-      <div className="rounded-[24px] border border-black/5 bg-white p-5">
-        <p className="text-base font-bold text-[#111827]">
+      <div className="min-w-0 rounded-[20px] border border-black/5 bg-white p-4 md:rounded-[24px] md:p-5">
+        <p className="break-words text-base font-bold text-[#111827]">
           Available Options
         </p>
 
@@ -157,20 +157,20 @@ export default function TrainManageSeatAddons({
                         variant
                       )
                     }
-                    className={`rounded-2xl border p-4 text-left transition ${
+                    className={`min-w-0 rounded-2xl border p-4 text-left transition ${
                       isSelected
                         ? "border-[#ff6b00] bg-[#fff7f2] shadow-[0_8px_24px_rgba(255,107,0,0.08)]"
                         : "border-black/5 bg-[#f8f9fb] hover:border-[#ff6b00]/30"
                     }`}
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-bold text-[#111827]">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="break-words text-sm font-bold text-[#111827]">
                           {variant.className ||
                             "Train Class"}
                         </p>
 
-                        <p className="mt-1 text-sm text-[#6b7280]">
+                        <p className="mt-1 break-words text-sm text-[#6b7280]">
                           {variant.berthType ||
                             "-"}{" "}
                           •{" "}
@@ -180,7 +180,7 @@ export default function TrainManageSeatAddons({
                       </div>
 
                       {isCurrent ? (
-                        <span className="rounded-full bg-green-50 px-3 py-1 text-[11px] font-bold text-green-700">
+                        <span className="shrink-0 rounded-full bg-green-50 px-3 py-1 text-[11px] font-bold text-green-700">
                           Current
                         </span>
                       ) : null}
@@ -210,18 +210,18 @@ export default function TrainManageSeatAddons({
         </div>
       </div>
 
-      <div className="rounded-[24px] border border-black/5 bg-white p-5 shadow-sm">
+      <div className="min-w-0 rounded-[20px] border border-black/5 bg-white p-4 shadow-sm md:rounded-[24px] md:p-5">
         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#ff6b00]">
           Settlement Summary
         </p>
 
-        <h3 className="mt-1 text-lg font-bold text-[#111827]">
+        <h3 className="mt-1 break-words text-lg font-bold text-[#111827]">
           {getSettlementTitle(
             quote.settlementMode
           )}
         </h3>
 
-        <p className="mt-2 text-sm text-[#6b7280]">
+        <p className="mt-2 break-words text-sm leading-5 text-[#6b7280]">
           {getSettlementDescription(
             quote.settlementMode
           )}
@@ -259,13 +259,13 @@ export default function TrainManageSeatAddons({
         </div>
 
         <div className="mt-5 rounded-2xl bg-[#fff7f2] p-4">
-          <div className="flex items-center justify-between gap-4">
-            <div>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#6b7280]">
                 Settlement
               </p>
 
-              <p className="mt-1 text-xl font-bold text-[#111827]">
+              <p className="mt-1 break-words text-xl font-bold text-[#111827]">
                 {quote.settlementMode ===
                 "wallet_credit"
                   ? formatPrice(
@@ -282,7 +282,7 @@ export default function TrainManageSeatAddons({
             <button
               type="button"
               onClick={onContinue}
-              className={`rounded-full px-5 py-3 text-sm font-semibold text-white ${
+              className={`min-h-12 w-full rounded-full px-5 py-3 text-sm font-semibold text-white sm:w-auto ${
                 quote.settlementMode ===
                 "payment"
                   ? "bg-[#ff6b00]"
@@ -309,12 +309,12 @@ function Row({
   value: string;
 }) {
   return (
-    <div className="flex items-center justify-between gap-4 rounded-2xl bg-[#f8f9fb] px-4 py-3">
-      <p className="text-sm text-[#4b5563]">
+    <div className="flex min-w-0 items-start justify-between gap-4 rounded-2xl bg-[#f8f9fb] px-4 py-3">
+      <p className="min-w-0 break-words text-sm text-[#4b5563]">
         {label}
       </p>
 
-      <p className="text-sm font-semibold text-[#111827]">
+      <p className="shrink-0 whitespace-nowrap text-sm font-semibold text-[#111827]">
         {value}
       </p>
     </div>

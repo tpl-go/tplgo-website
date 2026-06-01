@@ -2,8 +2,51 @@
 
 import { formatTrainDate } from "@/app/lib/train/trainConfirmationHelpers";
 
+type TicketTraveller = {
+  fullName?: string;
+  age?: string | number;
+  gender?: string;
+  berthPreference?: string;
+};
+
+type TicketData = {
+  pnr?: string;
+  bookingStatus?: string;
+  bookingPayload: {
+    departureTime?: string;
+    arrivalTime?: string;
+    fromCity?: string;
+    fromCode?: string;
+    toCity?: string;
+    toCode?: string;
+    trainName?: string;
+    trainNumber?: string;
+    duration?: string;
+    travelDate?: string;
+    classCode?: string;
+    quota?: string;
+    bookingType?: string;
+  };
+  travellers?: TicketTraveller[];
+  irctcAccount?: {
+    username?: string;
+  };
+  contactDetails?: {
+    email?: string;
+    mobile?: string;
+  };
+  pricing?: {
+    baseFare?: number;
+    convenienceFee?: number;
+    gatewayFee?: number;
+    offerApplied?: number;
+    tplCredit?: number;
+    totalAmount?: number;
+  };
+};
+
 type Props = {
-  data: any;
+  data: TicketData;
 };
 
 export default function TrainTicketPrintCard({ data }: Props) {
@@ -12,7 +55,7 @@ export default function TrainTicketPrintCard({ data }: Props) {
   return (
     <div
       id="train-ticket-pdf"
-      className="mx-auto w-[900px] bg-white p-8 text-black"
+      className="mx-auto w-full max-w-[900px] bg-white p-4 text-black md:p-8"
       style={{ backgroundColor: "#ffffff", color: "#000000" }}
     >
       <div
@@ -20,15 +63,15 @@ export default function TrainTicketPrintCard({ data }: Props) {
         style={{ borderColor: "#cbd5e1", backgroundColor: "#ffffff" }}
       >
         <div
-          className="border-b px-8 py-6"
+          className="border-b px-4 py-5 md:px-8 md:py-6"
           style={{
             backgroundColor: "#eff6ff",
             borderColor: "#cbd5e1",
           }}
         >
-          <div className="flex items-start justify-between gap-6">
-            <div>
-              <div className="text-[28px] font-black tracking-tight text-black">
+          <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:gap-6">
+            <div className="min-w-0">
+              <div className="break-words text-[22px] font-black tracking-tight text-black md:text-[28px]">
                 TPL Train E-Ticket
               </div>
               <div className="mt-1 text-[14px]" style={{ color: "#475569" }}>
@@ -36,11 +79,11 @@ export default function TrainTicketPrintCard({ data }: Props) {
               </div>
             </div>
 
-            <div className="text-right">
+            <div className="text-left md:text-right">
               <div className="text-[13px] font-bold" style={{ color: "#64748b" }}>
                 PNR
               </div>
-              <div className="text-[24px] font-black" style={{ color: "#15803d" }}>
+              <div className="break-words text-[20px] font-black md:text-[24px]" style={{ color: "#15803d" }}>
                 {data.pnr}
               </div>
               <div className="mt-1 text-[13px] font-bold" style={{ color: "#15803d" }}>
@@ -50,22 +93,57 @@ export default function TrainTicketPrintCard({ data }: Props) {
           </div>
         </div>
 
-        <div className="px-8 py-6 bg-white">
+        <div className="bg-white px-4 py-5 md:px-8 md:py-6">
+          <div className="border-b pb-5 md:hidden" style={{ borderColor: "#cbd5e1" }}>
+            <div className="break-words text-[15px] font-black leading-5 text-black">
+              {booking.trainName}
+            </div>
+            <div className="mt-1 text-[12px] font-bold" style={{ color: "#64748b" }}>
+              #{booking.trainNumber} • {booking.duration}
+            </div>
+
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <div className="rounded-xl border px-3 py-3" style={{ borderColor: "#cbd5e1" }}>
+                <div className="text-[11px] font-bold uppercase tracking-wide" style={{ color: "#64748b" }}>
+                  Departure
+                </div>
+                <div className="mt-1 text-[22px] font-black text-black">
+                  {booking.departureTime}
+                </div>
+                <div className="mt-1 break-words text-[12px] font-bold text-black">
+                  {booking.fromCity} ({booking.fromCode})
+                </div>
+              </div>
+
+              <div className="rounded-xl border px-3 py-3 text-right" style={{ borderColor: "#cbd5e1" }}>
+                <div className="text-[11px] font-bold uppercase tracking-wide" style={{ color: "#64748b" }}>
+                  Arrival
+                </div>
+                <div className="mt-1 text-[22px] font-black text-black">
+                  {booking.arrivalTime}
+                </div>
+                <div className="mt-1 break-words text-[12px] font-bold text-black">
+                  {booking.toCity} ({booking.toCode})
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div
-            className="grid grid-cols-[1fr_auto_1fr] items-center gap-6 pb-6 border-b"
+            className="hidden grid-cols-[1fr_auto_1fr] items-center gap-3 border-b pb-6 md:grid md:gap-6"
             style={{ borderColor: "#cbd5e1" }}
           >
             <div>
-              <div className="text-[32px] font-black text-black">
+              <div className="text-[24px] font-black text-black md:text-[32px]">
                 {booking.departureTime}
               </div>
-              <div className="mt-1 text-[16px] font-bold text-black">
+              <div className="mt-1 break-words text-[13px] font-bold text-black md:text-[16px]">
                 {booking.fromCity} ({booking.fromCode})
               </div>
             </div>
 
             <div className="text-center">
-              <div className="text-[15px] font-bold text-black">
+              <div className="break-words text-[13px] font-bold text-black md:text-[15px]">
                 {booking.trainName}
               </div>
               <div className="mt-1 text-[13px]" style={{ color: "#64748b" }}>
@@ -77,17 +155,17 @@ export default function TrainTicketPrintCard({ data }: Props) {
             </div>
 
             <div className="text-right">
-              <div className="text-[32px] font-black text-black">
+              <div className="text-[24px] font-black text-black md:text-[32px]">
                 {booking.arrivalTime}
               </div>
-              <div className="mt-1 text-[16px] font-bold text-black">
+              <div className="mt-1 break-words text-[13px] font-bold text-black md:text-[16px]">
                 {booking.toCity} ({booking.toCode})
               </div>
             </div>
           </div>
 
           <div
-            className="grid grid-cols-4 gap-4 py-6 border-b"
+            className="grid grid-cols-2 gap-4 border-b py-6 md:grid-cols-4"
             style={{ borderColor: "#cbd5e1" }}
           >
             <Info label="Journey Date" value={formatTrainDate(booking.travelDate)} />
@@ -101,10 +179,10 @@ export default function TrainTicketPrintCard({ data }: Props) {
               Passenger Details
             </div>
             <div className="space-y-3">
-              {data.travellers?.map((traveller: any, index: number) => (
+              {data.travellers?.map((traveller, index) => (
                 <div
                   key={index}
-                  className="grid grid-cols-4 gap-4 rounded-xl border px-4 py-3 bg-white"
+                  className="grid grid-cols-1 gap-4 rounded-xl border bg-white px-4 py-3 md:grid-cols-4"
                   style={{ borderColor: "#cbd5e1" }}
                 >
                   <Info label={`Passenger ${index + 1}`} value={traveller.fullName || "N/A"} />
@@ -125,7 +203,7 @@ export default function TrainTicketPrintCard({ data }: Props) {
             </div>
           </div>
 
-          <div className="grid grid-cols-[1.2fr_0.8fr] gap-6 py-6">
+          <div className="grid grid-cols-1 gap-6 py-6 md:grid-cols-[1.2fr_0.8fr]">
             <div>
               <div className="mb-3 text-[18px] font-extrabold text-black">Contact</div>
               <div className="space-y-2 text-[14px] text-black">
@@ -179,7 +257,7 @@ function Info({
   value,
 }: {
   label: string;
-  value: string;
+  value?: string;
 }) {
   return (
     <div>
@@ -189,7 +267,7 @@ function Info({
       >
         {label}
       </div>
-      <div className="mt-1 text-[14px] font-bold text-black">{value}</div>
+      <div className="mt-1 break-words text-[14px] font-bold text-black">{value}</div>
     </div>
   );
 }
@@ -199,7 +277,7 @@ function Price({
   value,
 }: {
   label: string;
-  value: number;
+  value?: number;
 }) {
   const formatted =
     value < 0

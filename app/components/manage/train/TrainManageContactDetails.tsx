@@ -34,7 +34,7 @@ export default function TrainManageContactDetails({
         subtitle="Update train booking communication details."
       />
 
-      <div className="rounded-[24px] border border-black/5 bg-white p-5 shadow-[0_10px_30px_rgba(0,0,0,0.04)]">
+      <div className="min-w-0 rounded-[20px] border border-black/5 bg-white p-4 shadow-[0_10px_30px_rgba(0,0,0,0.04)] md:rounded-[24px] md:p-5">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <Input
             label="Country Code"

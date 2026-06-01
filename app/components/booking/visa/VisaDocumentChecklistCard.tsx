@@ -56,12 +56,12 @@ export default function VisaDocumentChecklistCard({
   };
 
   return (
-    <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-      <h2 className="text-xl font-extrabold text-gray-950">
+    <div className="min-w-0 rounded-[22px] border border-gray-200 bg-white p-4 shadow-sm md:rounded-3xl md:p-6">
+      <h2 className="break-words text-[19px] font-extrabold leading-6 text-gray-950 md:text-xl">
         Applicant {applicantIndex + 1} Document Upload
       </h2>
 
-      <p className="mt-1 text-sm font-semibold text-gray-600">
+      <p className="mt-1 break-words text-sm font-semibold leading-5 text-gray-600">
         Upload required documents for this applicant.
       </p>
 
@@ -79,10 +79,10 @@ export default function VisaDocumentChecklistCard({
               }`}
             >
               <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="font-extrabold text-gray-950">{doc}</p>
+                <div className="min-w-0">
+                  <p className="break-words font-extrabold leading-5 text-gray-950">{doc}</p>
 
-                  <p className="mt-1 text-xs font-semibold text-gray-600">
+                  <p className="mt-1 break-words text-xs font-semibold leading-4 text-gray-600">
                     PDF, JPG or PNG preferred
                   </p>
                 </div>
@@ -95,12 +95,12 @@ export default function VisaDocumentChecklistCard({
               </div>
 
               {uploaded ? (
-                <div className="mt-4 flex items-center justify-between rounded-xl border border-green-200 bg-white px-4 py-3">
-                  <div className="flex items-center gap-2">
+                <div className="mt-4 flex items-start justify-between gap-3 rounded-xl border border-green-200 bg-white px-4 py-3">
+                  <div className="flex min-w-0 items-start gap-2">
                     <FileText size={18} className="text-green-700" />
 
-                    <div>
-                      <p className="text-sm font-extrabold text-gray-950">
+                    <div className="min-w-0">
+                      <p className="break-words text-sm font-extrabold leading-5 text-gray-950">
                         {uploaded.fileName}
                       </p>
 
@@ -113,13 +113,13 @@ export default function VisaDocumentChecklistCard({
                   <button
                     type="button"
                     onClick={() => removeUploadedDoc(doc)}
-                    className="rounded-full p-2 text-red-500 hover:bg-red-50"
+                    className="min-h-10 min-w-10 rounded-full p-2 text-red-500 hover:bg-red-50"
                   >
                     <X size={17} />
                   </button>
                 </div>
               ) : (
-                <label className="mt-4 flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-gray-300 bg-white px-4 py-3 text-sm font-extrabold text-orange-600 hover:border-orange-400 hover:bg-orange-50">
+                <label className="mt-4 flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-gray-300 bg-white px-4 py-3 text-sm font-extrabold text-orange-600 hover:border-orange-400 hover:bg-orange-50">
                   <UploadCloud size={18} />
 
                   Upload Document

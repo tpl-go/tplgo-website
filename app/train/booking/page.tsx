@@ -479,17 +479,17 @@ export default function TrainBookingPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f5f7fb] text-black">
+    <main className="min-w-0 overflow-x-hidden bg-[#f5f7fb] pb-28 text-black lg:min-h-screen lg:pb-0">
       <TrainBookingTopBar timerLabel={timerLabel} />
 
-      <div className="mx-auto max-w-[1400px] px-4 py-6">
-        <div className="flex items-start gap-5">
-          <div className="w-[74%] min-w-0 space-y-5">
+      <div className="mx-auto max-w-[1400px] px-3 py-3 md:px-4 lg:py-6">
+        <div className="flex min-w-0 flex-col items-stretch gap-4 lg:flex-row lg:items-start lg:gap-5">
+          <div className="min-w-0 space-y-4 lg:w-[74%] lg:space-y-5">
             <TrainBookingSummaryCard bookingPayload={bookingPayload} />
 
             <section className="rounded-2xl border border-[#f3d7c7] bg-[#fff7ed] px-5 py-3 shadow-sm">
-              <div className="flex items-center justify-between gap-4">
-                <div>
+              <div className="flex min-w-0 flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-4">
+                <div className="min-w-0">
                   <div className="text-[15px] font-extrabold text-slate-900">
                     {activeUser?.mobile
                       ? `Logged in as ${getDisplayNameFromUser(activeUser)}`
@@ -507,7 +507,7 @@ export default function TrainBookingPage() {
                   <button
                     type="button"
                     onClick={() => setShowLoginModal(true)}
-                    className="h-[40px] rounded-xl border border-slate-300 bg-white px-5 text-[13px] font-extrabold text-slate-900 transition hover:border-sky-400 hover:text-sky-600"
+                    className="h-[40px] w-full rounded-xl border border-slate-300 bg-white px-5 text-[13px] font-extrabold text-slate-900 transition hover:border-sky-400 hover:text-sky-600 md:w-auto"
                   >
                     LOGIN
                   </button>
@@ -530,10 +530,43 @@ export default function TrainBookingPage() {
               onChange={updateIrctcAccount}
             />
 
+            <div className="lg:hidden">
+              <TrainBookingOffersSection
+                appliedOfferCode={finalSelectedOffer?.code || ""}
+                bookingValue={baseFare || 1200}
+                onApplyOffer={applyOffer}
+                onRemoveOffer={removeOffer}
+              />
+            </div>
+
             <TrainBookingImportantInfo />
+
+            <div className="lg:hidden">
+              <TrainBookingFareSummaryCard
+                baseFare={baseFare}
+                convenienceFee={convenienceFee}
+                gatewayFee={gatewayFee}
+                offerApplied={offerApplied}
+                appliedOfferCode={finalSelectedOffer?.code || ""}
+                appliedOfferTitle={finalSelectedOffer?.title || ""}
+                tplCredit={tplCredit}
+                walletBreakdown={{
+                  promoUsed: walletCalc.promoUsed,
+                  earnedUsed: walletCalc.earnedUsed,
+                  refundUsed: walletCalc.refundUsed,
+                }}
+                earnedOnThisBooking={earnedOnThisBooking}
+                refundWalletAvailable={wallet.refundableBalance}
+                useRefundWallet={true}
+                totalAmount={totalAmount}
+                canProceed={canProceed}
+                blockerMessage={blockerMessage}
+                onProceed={handleProceed}
+              />
+            </div>
           </div>
 
-          <div className="w-[26%] min-w-0 self-start">
+          <div className="hidden w-[26%] min-w-0 self-start lg:block">
             <TrainBookingFareSummaryCard
               baseFare={baseFare}
               convenienceFee={convenienceFee}

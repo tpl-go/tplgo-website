@@ -525,9 +525,9 @@ export default function TrainResultCard({
 
   return (
     <>
-      <div className="overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:shadow-md">
+      <div className="min-w-0 overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:shadow-md">
         <div className="px-4 py-4">
-          <div className="grid grid-cols-[1.25fr_0.85fr_0.65fr_0.85fr] items-start gap-4">
+          <div className="grid min-w-0 grid-cols-1 items-start gap-4 md:grid-cols-[1.25fr_0.85fr_0.65fr_0.85fr]">
             <div className="min-w-0">
               <div className="mb-2 flex flex-wrap items-center gap-2">
                 {train.offerTag ? (
@@ -543,7 +543,7 @@ export default function TrainResultCard({
                 ) : null}
               </div>
 
-              <div className="truncate text-[18px] font-extrabold uppercase leading-tight text-slate-900">
+              <div className="break-words text-[18px] font-extrabold uppercase leading-tight text-slate-900 md:truncate">
                 {train.trainName}
               </div>
 
@@ -559,7 +559,7 @@ export default function TrainResultCard({
 
               <div className="mt-2 text-[12px] text-slate-500">
                 Depart on:{" "}
-                <span className="font-semibold tracking-[0.15em] text-slate-700">
+                <span className="font-semibold tracking-[0.08em] text-slate-700 md:tracking-[0.15em]">
                   {Array.isArray(train.runDays)
                     ? train.runDays.join(" ")
                     : train.runDays}
@@ -567,45 +567,47 @@ export default function TrainResultCard({
               </div>
             </div>
 
-            <div className="text-center">
-              <div className="text-[16px] font-extrabold text-slate-900">
-                {train.departureTime}
+            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 rounded-2xl bg-slate-50 px-3 py-3 md:contents">
+              <div className="text-left md:text-center">
+                <div className="text-[18px] font-extrabold text-slate-900 md:text-[16px]">
+                  {train.departureTime}
+                </div>
+                <div className="mt-1 text-[12px] text-slate-500">
+                  {train.departureDateLabel}
+                </div>
+                <div className="mt-1 text-[13px] font-bold text-slate-700">
+                  {train.fromStationCode}
+                </div>
               </div>
-              <div className="mt-1 text-[12px] text-slate-500">
-                {train.departureDateLabel}
-              </div>
-              <div className="mt-1 text-[13px] font-bold text-slate-700">
-                {train.fromStationCode}
-              </div>
-            </div>
 
-            <div className="pt-1 text-center">
-              <div className="text-[15px] font-bold text-slate-700">
-                {train.duration}
+              <div className="pt-1 text-center">
+                <div className="text-[13px] font-bold text-slate-700 md:text-[15px]">
+                  {train.duration}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowRouteModal(true)}
+                  className="mt-2 min-h-9 rounded-full bg-white px-3 text-[13px] font-bold text-sky-600 shadow-sm ring-1 ring-slate-200 transition hover:text-sky-700 md:min-h-0 md:rounded-none md:bg-transparent md:px-0 md:shadow-none md:ring-0"
+                >
+                  View Route
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => setShowRouteModal(true)}
-                className="mt-2 text-[13px] font-bold text-sky-600 transition hover:text-sky-700"
-              >
-                View Route
-              </button>
-            </div>
 
-            <div className="text-center">
-              <div className="text-[16px] font-extrabold text-slate-900">
-                {train.arrivalTime}
-              </div>
-              <div className="mt-1 text-[12px] text-slate-500">
-                {train.arrivalDateLabel}
-              </div>
-              <div className="mt-1 text-[13px] font-bold text-slate-700">
-                {train.toStationCode}
+              <div className="text-right md:text-center">
+                <div className="text-[18px] font-extrabold text-slate-900 md:text-[16px]">
+                  {train.arrivalTime}
+                </div>
+                <div className="mt-1 text-[12px] text-slate-500">
+                  {train.arrivalDateLabel}
+                </div>
+                <div className="mt-1 text-[13px] font-bold text-slate-700">
+                  {train.toStationCode}
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="mt-4 overflow-hidden rounded-[18px] train-class-scroll-container">
+          <div className="mt-4 min-w-0 overflow-hidden rounded-[18px] train-class-scroll-container">
             <div className="flex gap-3 overflow-x-auto overflow-y-hidden pb-0 train-class-scroll">
               {train.classes.map((item) => {
                 const active = isExpanded && selectedClassCode === item.classCode;
@@ -616,14 +618,14 @@ export default function TrainResultCard({
                     key={item.classCode}
                     type="button"
                     onClick={() => handleToggleClass(item.classCode)}
-                    className={`min-w-[210px] shrink-0 rounded-[18px] border px-4 py-4 text-left transition ${
+                    className={`min-w-[172px] shrink-0 rounded-[18px] border px-3 py-3 text-left transition md:min-w-[210px] md:px-4 md:py-4 ${
                       active
                         ? "border-sky-400 bg-sky-50 shadow-sm"
                         : "border-slate-200 bg-white hover:border-sky-200"
                     }`}
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <div className="text-[16px] font-extrabold text-slate-900">
+                      <div className="text-[15px] font-extrabold text-slate-900 md:text-[16px]">
                         {item.classCode}
                       </div>
 
@@ -669,8 +671,8 @@ export default function TrainResultCard({
         </div>
 
         {isExpanded && selectedClass && (
-          <div className="border-t border-slate-200 bg-slate-50 px-4 py-4">
-            <div className="flex items-center gap-6 overflow-x-auto border-b border-slate-200">
+          <div className="border-t border-slate-200 bg-slate-50 px-3 py-4 md:px-4">
+            <div className="flex items-center gap-4 overflow-x-auto border-b border-slate-200 md:gap-6">
               {QUOTA_TABS.map((tab) => {
                 const active = activeQuota === tab.value;
 
@@ -679,7 +681,7 @@ export default function TrainResultCard({
                     key={tab.value}
                     type="button"
                     onClick={() => setActiveQuota(tab.value)}
-                    className={`whitespace-nowrap border-b-[3px] px-1 py-3 text-[15px] font-medium transition ${
+                    className={`min-h-11 whitespace-nowrap border-b-[3px] px-1 py-3 text-[14px] font-medium transition md:text-[15px] ${
                       active
                         ? "border-emerald-700 text-slate-900"
                         : "border-transparent text-slate-700"
@@ -703,20 +705,20 @@ export default function TrainResultCard({
                   return (
                     <div
                       key={`${row.date}-${index}`}
-                      className="grid grid-cols-[0.85fr_1fr_0.9fr_0.9fr] items-center gap-4 px-4 py-3"
+                      className="grid grid-cols-1 gap-3 px-3 py-3 md:grid-cols-[0.85fr_1fr_0.9fr_0.9fr] md:items-center md:gap-4 md:px-4"
                     >
-                      <div>
-                        <div className="text-[15px] font-semibold text-slate-900">
-                          {formatDateShort(row.date)}
+                      <div className="flex items-start justify-between gap-3 md:block">
+                        <div>
+                          <div className="text-[15px] font-semibold text-slate-900">
+                            {formatDateShort(row.date)}
+                          </div>
+                          <div className="text-[12px] text-slate-500">
+                            {row.dayLabel}
+                          </div>
                         </div>
-                        <div className="text-[12px] text-slate-500">
-                          {row.dayLabel}
-                        </div>
-                      </div>
 
-                      <div>
                         <div
-                          className={`text-[15px] font-semibold ${
+                          className={`text-right text-[15px] font-semibold md:text-left ${
                             row.statusType === "AVAILABLE"
                               ? "text-emerald-700"
                               : row.statusType === "RAC"
@@ -729,7 +731,7 @@ export default function TrainResultCard({
                           {row.statusText}
                         </div>
 
-                        <div className="text-[12px] text-slate-500">
+                        <div className="text-right text-[12px] text-slate-500 md:text-left">
                           {row.statusType === "WL" ? "Waitlist" : ""}
                         </div>
                       </div>
@@ -737,7 +739,7 @@ export default function TrainResultCard({
                       <button
                         type="button"
                         onClick={() => handleBookRegular(row)}
-                        className="mx-auto min-w-[118px] rounded-lg border border-slate-300 bg-white px-4 py-2 text-[15px] font-medium leading-tight text-slate-800 transition hover:border-slate-500"
+                        className="min-h-12 w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-[15px] font-medium leading-tight text-slate-800 transition hover:border-slate-500 md:mx-auto md:min-w-[118px] md:w-auto"
                       >
                         <div>Book</div>
 
@@ -772,7 +774,7 @@ export default function TrainResultCard({
                                 statusType: row.statusType,
                               })
                             }
-                            className="min-w-[118px] rounded-lg border border-slate-300 bg-white px-4 py-2 text-[14px] font-medium leading-tight text-slate-700 transition hover:border-emerald-400 hover:text-emerald-700"
+                            className="min-h-12 w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-[14px] font-medium leading-tight text-slate-700 transition hover:border-emerald-400 hover:text-emerald-700 md:min-w-[118px] md:w-auto"
                           >
                             <div>{row.confirmChance}% Chance</div>
 

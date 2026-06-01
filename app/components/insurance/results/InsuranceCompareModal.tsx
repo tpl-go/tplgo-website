@@ -69,15 +69,15 @@ export default function InsuranceCompareModal({
   ];
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-black/45 px-4 py-6 backdrop-blur-sm">
-      <div className="mx-auto max-h-[92vh] max-w-6xl overflow-y-auto rounded-3xl bg-white shadow-2xl">
-        <div className="sticky top-0 z-10 border-b border-gray-100 bg-white p-5">
+    <div className="fixed inset-0 z-[9999] bg-black/45 px-3 py-4 backdrop-blur-sm md:px-4 md:py-6">
+      <div className="mx-auto flex max-h-[92vh] max-w-6xl flex-col overflow-hidden rounded-[24px] bg-white shadow-2xl md:rounded-3xl">
+        <div className="shrink-0 border-b border-gray-100 bg-white p-4 md:p-5">
           <div className="flex items-start justify-between gap-4">
-            <div>
+            <div className="min-w-0">
               <p className="text-xs font-extrabold uppercase text-orange-600">
                 Compare Plans
               </p>
-              <h2 className="mt-1 text-2xl font-extrabold text-gray-950">
+              <h2 className="mt-1 break-words text-[20px] font-extrabold leading-6 text-gray-950 md:text-2xl">
                 Side-by-side Insurance Comparison
               </h2>
             </div>
@@ -85,14 +85,14 @@ export default function InsuranceCompareModal({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-full border border-gray-200 px-4 py-2 text-sm font-bold text-gray-600 hover:bg-gray-50"
+              className="shrink-0 rounded-full border border-gray-200 px-4 py-2 text-sm font-bold text-gray-600 hover:bg-gray-50"
             >
               Close
             </button>
           </div>
         </div>
 
-        <div className="p-5">
+        <div className="min-h-0 overflow-y-auto p-4 md:p-5">
           <div className="overflow-x-auto rounded-2xl border border-gray-100">
             <table className="w-full min-w-[820px] border-collapse text-left">
               <thead>
@@ -156,7 +156,7 @@ export default function InsuranceCompareModal({
             </table>
           </div>
 
-          <p className="mt-3 text-xs font-semibold text-gray-500">
+          <p className="mt-3 break-words text-xs font-semibold text-gray-500">
             Final terms, exclusions and premium may change after insurer API
             validation.
           </p>

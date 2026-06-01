@@ -38,7 +38,6 @@ export default function TrainBookingFareSummaryCard({
   convenienceFee,
   gatewayFee,
   offerApplied = 0,
-  tplCredit = 0,
   appliedOfferCode = "",
   appliedOfferTitle = "Best Train Offer Activated",
 
@@ -63,10 +62,10 @@ export default function TrainBookingFareSummaryCard({
 
   return (
     <aside className="w-full">
-      <div className="sticky top-[110px] z-20">
+      <div className="lg:sticky lg:top-[110px] lg:z-20">
         <div className="overflow-hidden rounded-[24px] border border-[#d9e2ec] bg-white shadow-[0_12px_34px_rgba(15,23,42,0.08)]">
           <div className="border-b border-[#e5e7eb] bg-white px-4 py-4">
-            <div className="text-[22px] font-extrabold text-[#1f2937]">
+            <div className="text-[20px] font-extrabold text-[#1f2937] md:text-[22px]">
               Fare Summary
             </div>
 
@@ -214,9 +213,9 @@ export default function TrainBookingFareSummaryCard({
           </div>
 
           <div className="border-b border-[#e5e7eb] bg-white px-4 py-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="text-[20px] font-extrabold text-[#111827]">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-[18px] font-extrabold text-[#111827] md:text-[20px]">
                   Total Amount
                 </div>
 
@@ -225,13 +224,13 @@ export default function TrainBookingFareSummaryCard({
                 </div>
               </div>
 
-              <div className="whitespace-nowrap text-[30px] font-extrabold text-[#111827]">
+              <div className="whitespace-nowrap text-[24px] font-extrabold text-[#111827] md:text-[30px]">
                 ₹{Number(totalAmount || 0).toLocaleString("en-IN")}
               </div>
             </div>
           </div>
 
-          <div className="bg-white px-4 py-4">
+          <div className="hidden bg-white px-4 py-4 lg:block">
             <button
               type="button"
               disabled={!canProceed}
@@ -257,6 +256,38 @@ export default function TrainBookingFareSummaryCard({
           </div>
         </div>
       </div>
+
+      <div className="fixed inset-x-0 bottom-0 z-[240] border-t border-slate-200 bg-white px-4 pb-[calc(env(safe-area-inset-bottom)+12px)] pt-3 shadow-[0_-12px_32px_rgba(15,23,42,0.14)] lg:hidden">
+        <div className="mx-auto flex max-w-[480px] items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
+              Payable
+            </div>
+            <div className="text-[20px] font-black text-slate-900">
+              ₹{Number(totalAmount || 0).toLocaleString("en-IN")}
+            </div>
+          </div>
+
+          <button
+            type="button"
+            disabled={!canProceed}
+            onClick={onProceed}
+            className={`min-h-12 min-w-[178px] rounded-full px-5 text-[14px] font-extrabold transition ${
+              canProceed
+                ? "bg-[#ef4444] text-white shadow-[0_10px_24px_rgba(239,68,68,0.25)]"
+                : "cursor-not-allowed bg-[#cfd8e3] text-white"
+            }`}
+          >
+            Proceed to Payment
+          </button>
+        </div>
+
+        {!canProceed && blockerMessage ? (
+          <div className="mx-auto mt-2 max-w-[480px] text-[11px] font-bold leading-[16px] text-[#dc2626]">
+            {blockerMessage}
+          </div>
+        ) : null}
+      </div>
     </aside>
   );
 }
@@ -273,9 +304,9 @@ function FareRow({
   const isNegative = value < 0;
 
   return (
-    <div className="mb-3 flex items-start justify-between gap-3 last:mb-0">
+    <div className="mb-3 flex min-w-0 items-start justify-between gap-3 last:mb-0">
       <div
-        className={`text-[15px] font-bold ${
+        className={`min-w-0 text-[14px] font-bold md:text-[15px] ${
           positiveGreen ? "text-[#ea580c]" : "text-[#1f2937]"
         }`}
       >

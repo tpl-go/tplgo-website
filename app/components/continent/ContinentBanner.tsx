@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import TPLDynamicImage from "@/app/components/common/TPLDynamicImage";
+import { getSmartContinentBannerImage } from "@/app/lib/images/smartPackageImageResolver";
 
 interface Props {
   slug: string;
@@ -30,6 +32,7 @@ slug === "oceania"
   ];
 
   const [index, setIndex] = useState(0);
+  const smartImage = getSmartContinentBannerImage(slug);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -43,10 +46,17 @@ slug === "oceania"
     <section className="relative w-full h-[240px] sm:h-[300px] lg:h-[400px] flex items-center justify-center overflow-hidden">
 
       {/* Background Image Slider */}
-      <img
-        src={images[index]}
+      <TPLDynamicImage
+        src={smartImage.src || images[index]}
+        imageQuery={smartImage.imageQuery}
+        fallbackSrc={smartImage.fallbackSrc || images[index]}
+        fallbackQuery={smartImage.fallbackQuery}
         alt={displayName}
-        className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1000"
+        className="absolute inset-0 h-full w-full"
+        imgClassName="h-full w-full object-cover transition-opacity duration-1000"
+        sizes="100vw"
+        priority
+        preferDynamic={smartImage.preferDynamic}
       />
 
       {/* Dark Overlay */}

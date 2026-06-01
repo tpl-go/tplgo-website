@@ -8,6 +8,13 @@ type WalletCalc = {
   refundUsed?: number;
 };
 
+type OfferData = {
+  discountAmount?: number;
+  code?: string;
+  couponCode?: string;
+  title?: string;
+};
+
 type Props = {
   bookingId: string;
   paymentId: string;
@@ -24,7 +31,7 @@ type Props = {
   appliedOffer?: number;
   appliedOfferCode?: string;
   appliedOfferTitle?: string;
-  offerData?: any;
+  offerData?: OfferData;
 
   totalAmount: number;
   paymentMethod?: string;
@@ -118,10 +125,10 @@ export default function TrainConfirmationFareCard({
 
   return (
     <div className="overflow-hidden rounded-[24px] border border-[#d9e2ec] bg-white shadow-[0_12px_34px_rgba(15,23,42,0.08)]">
-      <div className="border-b border-[#e5e7eb] bg-white px-5 py-4">
+      <div className="border-b border-[#e5e7eb] bg-white px-4 py-4 md:px-5">
         <div className="flex items-center gap-2">
           <CreditCard size={20} className="text-[#ea580c]" />
-          <h2 className="text-[22px] font-black text-[#111827]">
+          <h2 className="text-[19px] font-black text-[#111827] md:text-[22px]">
             Fare & Payment Details
           </h2>
         </div>
@@ -132,7 +139,7 @@ export default function TrainConfirmationFareCard({
       </div>
 
       {offerAmount > 0 ? (
-        <div className="relative overflow-hidden border-b border-[#fed7aa] bg-[linear-gradient(135deg,#fff7ed_0%,#ffffff_50%,#fff1e6_100%)] px-5 py-4">
+        <div className="relative overflow-hidden border-b border-[#fed7aa] bg-[linear-gradient(135deg,#fff7ed_0%,#ffffff_50%,#fff1e6_100%)] px-4 py-4 md:px-5">
           <div className="absolute right-0 top-0 h-24 w-24 rounded-full bg-[#fb923c]/10 blur-3xl" />
 
           <div className="relative flex items-start gap-3">
@@ -169,7 +176,7 @@ export default function TrainConfirmationFareCard({
         </div>
       ) : null}
 
-      <div className="px-5 py-5">
+      <div className="px-4 py-4 md:px-5 md:py-5">
         <div className="mb-4 rounded-[16px] border border-[#e5e7eb] bg-[#f8fafc] p-4">
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <InfoItem label="Booking ID" value={bookingId} />
@@ -241,9 +248,9 @@ export default function TrainConfirmationFareCard({
           ) : null}
 
           <div className="border-t border-dashed border-[#d1d5db] pt-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="text-[20px] font-black text-[#111827]">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-[18px] font-black text-[#111827] md:text-[20px]">
                   Total Paid
                 </div>
 
@@ -252,7 +259,7 @@ export default function TrainConfirmationFareCard({
                 </div>
               </div>
 
-              <div className="whitespace-nowrap text-[30px] font-black text-[#111827]">
+              <div className="whitespace-nowrap text-[24px] font-black text-[#111827] md:text-[30px]">
                 ₹{Number(totalAmount || 0).toLocaleString("en-IN")}
               </div>
             </div>
@@ -291,9 +298,9 @@ function FareRow({
   const isNegative = value < 0;
 
   return (
-    <div className="flex items-start justify-between gap-3">
+    <div className="flex min-w-0 items-start justify-between gap-3">
       <div
-        className={`text-[15px] font-bold ${
+        className={`min-w-0 text-[14px] font-bold md:text-[15px] ${
           orange ? "text-[#ea580c]" : "text-[#1f2937]"
         }`}
       >

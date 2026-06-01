@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import TPLDynamicImage from "@/app/components/common/TPLDynamicImage";
+import { getSmartDestinationImage } from "@/app/lib/images/smartPackageImageResolver";
 
 interface Props {
   slug?: string;
@@ -18,6 +20,11 @@ export default function IndiaBanner({ slug = "india" }: Props) {
   ];
 
   const [index, setIndex] = useState(0);
+  const smartImage = getSmartDestinationImage({
+    title: displayName,
+    route: slug,
+    country: "India",
+  });
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -30,10 +37,17 @@ export default function IndiaBanner({ slug = "india" }: Props) {
   return (
     <section className="relative w-full h-[240px] sm:h-[300px] lg:h-[400px] flex items-center justify-center overflow-hidden">
       {/* Background Image Slider */}
-      <img
-        src={images[index]}
+      <TPLDynamicImage
+        src={smartImage.src || images[index]}
+        imageQuery={smartImage.imageQuery}
+        fallbackSrc={smartImage.fallbackSrc || images[index]}
+        fallbackQuery={smartImage.fallbackQuery}
         alt={displayName}
-        className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1000"
+        className="absolute inset-0 h-full w-full"
+        imgClassName="h-full w-full object-cover transition-opacity duration-1000"
+        sizes="100vw"
+        priority
+        preferDynamic={smartImage.preferDynamic}
       />
 
       {/* Dark Overlay */}

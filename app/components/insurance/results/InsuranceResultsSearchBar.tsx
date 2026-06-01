@@ -53,6 +53,7 @@ const DESTINATIONS = [
 ];
 
 type FieldKey = "insuranceType" | "destination" | "dates" | "travellers";
+type FormValue = string | number | string[];
 
 function getTravellerCount(value: string) {
   const match = value.match(/\d+/);
@@ -104,7 +105,7 @@ export default function InsuranceResultsSearchBar({
     return () => document.removeEventListener("mousedown", close);
   }, []);
 
-  const update = (key: keyof typeof form, value: any) => {
+  const update = (key: keyof typeof form, value: FormValue) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
@@ -173,13 +174,13 @@ export default function InsuranceResultsSearchBar({
   };
 
   return (
-    <div className=" z-40 border-b border-slate-200/10 bg-[#07111f]/95 px-6 py-3 shadow-[0_12px_32px_rgba(15,23,42,0.28)] backdrop-blur-xl">
+    <div className="z-30 border-b border-slate-200/10 bg-[#07111f]/95 px-3 py-3 shadow-[0_12px_32px_rgba(15,23,42,0.28)] backdrop-blur-xl md:px-6">
       <div className="mx-auto max-w-7xl">
         <div
           ref={boxRef}
-          className="overflow-visible rounded-2xl border border-white/10 bg-gradient-to-r from-[#0f172a] via-[#111827] to-[#0b1220] shadow-[0_18px_45px_rgba(2,6,23,0.35)]"
+          className="overflow-visible rounded-[22px] border border-white/10 bg-gradient-to-r from-[#0f172a] via-[#111827] to-[#0b1220] shadow-[0_18px_45px_rgba(2,6,23,0.35)] md:rounded-2xl"
         >
-          <div className="grid grid-cols-1 overflow-visible lg:grid-cols-[1.15fr_1.15fr_1.35fr_1.2fr_155px]">
+          <div className="grid grid-cols-1 overflow-visible sm:grid-cols-2 lg:grid-cols-[1.15fr_1.15fr_1.35fr_1.2fr_155px]">
             <SearchFieldBox
               label="Insurance Type"
               value={form.insuranceType}
@@ -192,7 +193,7 @@ export default function InsuranceResultsSearchBar({
               }
             >
               {activeField === "insuranceType" && (
-                <div className="absolute left-0 top-[64px] z-50 w-72 rounded-2xl border border-white/10 bg-[#0f172a] p-2 shadow-2xl scrollbar-hide">
+                <div className="fixed inset-x-3 top-[156px] z-50 max-h-[65vh] overflow-y-auto rounded-2xl border border-white/10 bg-[#0f172a] p-2 shadow-2xl scrollbar-hide sm:absolute sm:inset-x-auto sm:left-0 sm:top-[64px] sm:w-72">
                   {INSURANCE_TYPES.map((item) => (
                     <button
                       key={item}
@@ -226,7 +227,7 @@ export default function InsuranceResultsSearchBar({
               }
             >
               {activeField === "destination" && (
-                <div className="absolute left-0 top-[64px] z-50 max-h-80 w-80 overflow-y-auto rounded-2xl border border-white/10 bg-[#0f172a] p-2 shadow-2xl">
+                <div className="fixed inset-x-3 top-[156px] z-50 max-h-[65vh] overflow-y-auto rounded-2xl border border-white/10 bg-[#0f172a] p-2 shadow-2xl sm:absolute sm:inset-x-auto sm:left-0 sm:top-[64px] sm:max-h-80 sm:w-80">
                   {DESTINATIONS.map((item) => (
                     <button
                       key={item}
@@ -258,8 +259,8 @@ export default function InsuranceResultsSearchBar({
               }
             >
               {activeField === "dates" && (
-                <div className="absolute left-0 top-[64px] z-50 w-[420px] rounded-2xl border border-white/10 bg-[#0f172a] p-4 shadow-2xl">
-                  <div className="grid grid-cols-2 gap-3">
+                <div className="fixed inset-x-3 top-[156px] z-50 max-h-[65vh] overflow-y-auto rounded-2xl border border-white/10 bg-[#0f172a] p-4 shadow-2xl sm:absolute sm:inset-x-auto sm:left-0 sm:top-[64px] sm:w-[420px]">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div>
                       <label className="mb-1 block text-[11px] font-bold uppercase text-cyan-300">
                         From Date
@@ -308,7 +309,7 @@ export default function InsuranceResultsSearchBar({
               }
             >
               {activeField === "travellers" && (
-                <div className="absolute right-0 top-[64px] z-50 w-[380px] rounded-2xl border border-white/10 bg-[#0f172a] p-4 shadow-2xl">
+                <div className="fixed inset-x-3 top-[156px] z-50 max-h-[65vh] overflow-y-auto rounded-2xl border border-white/10 bg-[#0f172a] p-4 shadow-2xl sm:absolute sm:inset-x-auto sm:right-0 sm:top-[64px] sm:w-[380px]">
                   <div className="mb-4 flex items-center justify-between rounded-2xl bg-white/5 p-3">
                     <div>
                       <p className="text-sm font-extrabold text-white">
@@ -355,7 +356,7 @@ export default function InsuranceResultsSearchBar({
                       (_, index) => (
                         <div
                           key={index}
-                          className="grid grid-cols-[1fr_110px] items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-3"
+                          className="grid grid-cols-1 gap-3 rounded-xl border border-white/10 bg-white/5 p-3 sm:grid-cols-[1fr_110px] sm:items-center"
                         >
                           <div>
                             <p className="text-sm font-bold text-white">
@@ -391,11 +392,11 @@ export default function InsuranceResultsSearchBar({
               )}
             </SearchFieldBox>
 
-            <div className="flex items-center justify-center border-l border-white/10 bg-white/[0.04] px-3 py-2">
+            <div className="flex items-center justify-center border-t border-white/10 bg-white/[0.04] px-3 py-3 sm:col-span-2 lg:col-span-1 lg:border-l lg:border-t-0 lg:py-2">
               <button
                 type="button"
                 onClick={handleSearch}
-                className="h-[46px] w-full rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 px-4 text-[14px] font-black text-white shadow-[0_10px_24px_rgba(14,165,233,0.35)] transition hover:scale-[1.02] hover:from-cyan-300 hover:to-blue-500"
+                className="h-[48px] w-full rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 px-4 text-[14px] font-black text-white shadow-[0_10px_24px_rgba(14,165,233,0.35)] transition hover:scale-[1.02] hover:from-cyan-300 hover:to-blue-500 lg:h-[46px]"
               >
                 Modify Search
               </button>
@@ -423,11 +424,11 @@ function SearchFieldBox({
   children?: React.ReactNode;
 }) {
   return (
-    <div className="relative min-w-0 overflow-visible border-r border-white/10 bg-white/[0.035] transition hover:bg-white/[0.07]">
+    <div className="relative min-w-0 overflow-visible border-b border-white/10 bg-white/[0.035] transition hover:bg-white/[0.07] sm:border-r lg:border-b-0">
       <button
         type="button"
         onClick={onClick}
-        className={`h-[62px] w-full px-3 py-2 text-left transition ${
+        className={`min-h-[66px] w-full px-3 py-2.5 text-left transition lg:h-[62px] lg:min-h-0 lg:py-2 ${
           active ? "bg-white/[0.08]" : ""
         }`}
       >
@@ -435,11 +436,11 @@ function SearchFieldBox({
           {label}
         </p>
 
-        <p className="truncate text-[15px] font-extrabold text-white">
+        <p className="break-words text-[15px] font-extrabold leading-5 text-white sm:truncate">
           {value}
         </p>
 
-        <p className="mt-0.5 truncate text-[11px] font-medium text-slate-300">
+        <p className="mt-0.5 break-words text-[11px] font-medium leading-4 text-slate-300 sm:truncate">
           {helper}
         </p>
       </button>

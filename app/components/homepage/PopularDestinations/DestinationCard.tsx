@@ -1,5 +1,9 @@
 "use client";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+import TPLDynamicImage from "@/app/components/common/TPLDynamicImage";
+
 export default function DestinationCard({ d, onClick }: any) {
   return (
     <div
@@ -18,15 +22,20 @@ export default function DestinationCard({ d, onClick }: any) {
           group-hover:animate-[swingRotate_0.6s_ease-in-out_infinite]
         "
       >
-        <img
-          src={d.img}
-          alt={d.name}
-          className="
+        <TPLDynamicImage
+          src={d.imageUrl || d.img}
+          imageQuery={d.imageQuery}
+          fallbackSrc={d.fallbackImage || d.img}
+          alt={d.imageAlt || d.name}
+          className="h-full w-full"
+          imgClassName="
             h-full w-full
             object-contain
             transition duration-300
             group-hover:-rotate-[30deg]
           "
+          sizes="160px"
+          preferDynamic
         />
       </div>
 

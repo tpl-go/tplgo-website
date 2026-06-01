@@ -217,8 +217,8 @@ export default function TrainBookingOffersSection({
             <Sparkles className="h-5 w-5 text-white" />
           </div>
 
-          <div>
-            <div className="text-[20px] font-extrabold text-[#111827]">
+          <div className="min-w-0">
+            <div className="text-[18px] font-extrabold text-[#111827] md:text-[20px]">
               Smart Coupons & Offers
             </div>
 
@@ -234,7 +234,7 @@ export default function TrainBookingOffersSection({
           <div className="relative mb-4 overflow-hidden rounded-[18px] border border-[#fed7aa] bg-[linear-gradient(135deg,#fff7ed,#ffffff)] p-4">
             <div className="absolute right-0 top-0 h-20 w-20 rounded-full bg-[#fb923c]/10 blur-3xl" />
 
-            <div className="relative flex items-start justify-between gap-3">
+            <div className="relative flex min-w-0 flex-col gap-3 md:flex-row md:items-start md:justify-between">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <div className="flex items-center gap-1 rounded-full bg-[linear-gradient(135deg,#f97316,#ea580c)] px-3 py-1 shadow-[0_6px_18px_rgba(249,115,22,0.3)]">
@@ -263,7 +263,7 @@ export default function TrainBookingOffersSection({
               <button
                 type="button"
                 onClick={onRemoveOffer}
-                className="h-[38px] shrink-0 rounded-full border border-[#fed7aa] bg-white px-4 text-[12px] font-black text-[#ea580c]"
+                className="h-[38px] w-full shrink-0 rounded-full border border-[#fed7aa] bg-white px-4 text-[12px] font-black text-[#ea580c] md:w-auto"
               >
                 Remove
               </button>
@@ -290,7 +290,7 @@ export default function TrainBookingOffersSection({
               >
                 <div className="absolute right-0 top-0 h-16 w-16 rounded-full bg-[#fb923c]/5 blur-2xl" />
 
-                <div className="relative flex items-start justify-between gap-3">
+                <div className="relative flex min-w-0 flex-col gap-3 md:flex-row md:items-start md:justify-between">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <div className="rounded-full bg-[#111827] px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-white">
@@ -332,7 +332,7 @@ export default function TrainBookingOffersSection({
                     type="button"
                     disabled={active || offer.discountAmount <= 0}
                     onClick={() => onApplyOffer(offer)}
-                    className={`min-w-[100px] rounded-full px-4 py-2 text-[12px] font-black transition-all ${
+                    className={`min-h-10 w-full rounded-full px-4 py-2 text-[12px] font-black transition-all md:min-w-[100px] md:w-auto ${
                       active
                         ? "cursor-not-allowed bg-[linear-gradient(135deg,#f97316,#ea580c)] text-white shadow-[0_8px_18px_rgba(249,115,22,0.3)]"
                         : offer.discountAmount <= 0

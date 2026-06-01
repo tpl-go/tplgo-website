@@ -29,11 +29,11 @@ const trainOffers: OfferCard[] = [
 
 export default function TrainOffersStrip({ fromCity, toCity }: Props) {
   return (
-    <div className="grid grid-cols-3 gap-3">
+    <div className="flex min-w-0 gap-3 overflow-x-auto pb-1 md:grid md:grid-cols-3 md:overflow-visible md:pb-0">
       {trainOffers.map((offer, index) => (
         <div
           key={offer.id}
-          className={`rounded-xl border border-slate-200 px-4 py-2 shadow-sm ${
+          className={`min-w-[235px] rounded-xl border border-slate-200 px-4 py-2 shadow-sm md:min-w-0 ${
             index === 0
               ? "bg-[linear-gradient(135deg,#e0f2fe,#ffffff)]"
               : index === 1

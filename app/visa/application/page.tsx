@@ -25,7 +25,42 @@ import {
   getSmartActiveOfferItem,
 } from "@/app/lib/smartOffers";
 
-function getActiveUser() {
+type ActiveUser = {
+  name?: string;
+  email?: string;
+  mobile?: string;
+};
+
+type SavedTraveller = {
+  firstName?: string;
+  lastName?: string;
+};
+
+type SelectedVisaOption = {
+  id?: string;
+  title?: string;
+  country?: string;
+  visaType?: string;
+  processingTime?: string;
+  validity?: string;
+  stayDuration?: string;
+  documents?: string[];
+  embassyFee?: number;
+  serviceFee?: number;
+  totalPrice?: number;
+  pricingSnapshot?: Record<string, unknown>;
+};
+
+type SelectedVisaData = {
+  option?: SelectedVisaOption;
+  searchData?: {
+    travellers?: number;
+    [key: string]: unknown;
+  };
+  pricingSnapshot?: Record<string, unknown>;
+};
+
+function getActiveUser(): ActiveUser | null {
   if (typeof window === "undefined") return null;
 
   try {
@@ -36,7 +71,7 @@ function getActiveUser() {
   }
 }
 
-function safeNumber(value: any, fallback = 0) {
+function safeNumber(value: unknown, fallback = 0) {
   const num = Number(value);
   return Number.isFinite(num) ? num : fallback;
 }
@@ -53,7 +88,7 @@ function joinName(firstName?: string, lastName?: string) {
   return `${String(firstName || "").trim()} ${String(lastName || "").trim()}`.trim();
 }
 
-function resolveVisaLoggedInDisplayName(user: any) {
+function resolveVisaLoggedInDisplayName(user: ActiveUser | null) {
   const mobile = cleanMobile(user?.mobile);
   if (!mobile) return "";
 
@@ -63,7 +98,7 @@ function resolveVisaLoggedInDisplayName(user: any) {
   if (profileName) return profileName;
 
   const savedTravellers = getSavedTravellers(mobile);
-  const leadTraveller = savedTravellers.find((traveller: any) =>
+  const leadTraveller = savedTravellers.find((traveller: SavedTraveller) =>
     joinName(traveller?.firstName, traveller?.lastName)
   );
 
@@ -119,11 +154,11 @@ export default function VisaApplicationPage() {
   const router = useRouter();
 
   const [showLoginModal, setShowLoginModal] = useState(false);
-const [activeUser, setActiveUser] = useState<any>(null);
+const [activeUser, setActiveUser] = useState<ActiveUser | null>(null);
 const [displayUserName, setDisplayUserName] = useState("");
 const [appliedOffer, setAppliedOffer] = useState<VisaOfferItem | null>(null);
 
-  const [selectedData, setSelectedData] = useState<any>(null);
+  const [selectedData, setSelectedData] = useState<SelectedVisaData | null>(null);
   const [loading, setLoading] = useState(true);
 
   const [applicants, setApplicants] = useState<Applicant[]>([]);
@@ -190,6 +225,8 @@ if (user?.mobile) {
       const parsed = JSON.parse(raw);
       const user = getActiveUser();
 
+      // Existing session payload hydration; keep timing and routing behavior intact.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedData(parsed);
 
       const travellerCount = Math.max(
@@ -545,9 +582,32 @@ if (user?.mobile) {
   }
 
   return (
-    <main className="min-h-screen bg-[#f5f7fb] text-black">
-      <div className="mx-auto max-w-7xl px-4 py-6">
-        <div className="mb-4 flex items-center justify-between gap-4">
+    <main className="min-h-screen overflow-x-hidden bg-[#f5f7fb] pb-8 text-black lg:pb-0">
+      <div className="sticky top-0 z-40 border-b border-gray-100 bg-white/95 px-3 py-3 shadow-sm backdrop-blur lg:hidden">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white text-xl font-black text-gray-800 shadow-sm"
+            aria-label="Go back"
+          >
+            ‹
+          </button>
+
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-[16px] font-black text-gray-950">
+              Visa Application
+            </div>
+            <div className="truncate text-[12px] font-semibold text-gray-500">
+              {option?.country || "Selected country"} • {option?.visaType || "Visa"} •{" "}
+              {travellers} Applicant{travellers > 1 ? "s" : ""}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-7xl px-3 py-4 md:px-4 md:py-6">
+        <div className="mb-4 hidden items-center justify-between gap-4 lg:flex">
           <button
             type="button"
             onClick={() => router.push("/visa/results")}
@@ -565,7 +625,7 @@ if (user?.mobile) {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[2.6fr_0.9fr]">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,2.6fr)_minmax(320px,0.9fr)]">
           <div className="space-y-5">
             <VisaApplicationSummaryCard
               option={option}
@@ -607,7 +667,7 @@ if (user?.mobile) {
             />
           </div>
 
-          <div className="space-y-4">
+          <div className="min-w-0 space-y-4">
             <VisaFareSummaryCard
               option={{
                 ...option,

@@ -41,8 +41,8 @@ import {
 
 type InsurancePlanWithPricing = InsurancePlan & {
   originalPremium?: number;
-  pricingSnapshot?: any;
-  benefitPricing?: any;
+  pricingSnapshot?: PricingSnapshot;
+  benefitPricing?: PricingSnapshot | null;
   baseAfterOffer?: number;
   nonBenefitAmount?: number;
   grossAmount?: number;
@@ -59,12 +59,54 @@ type InsurancePlanWithPricing = InsurancePlan & {
   finalTotal?: number;
 };
 
+type PricingSnapshot = Record<string, unknown>;
+
+type SmartOffer = {
+  service?: string;
+  code?: string;
+  couponCode?: string;
+  offerCode?: string;
+  slug?: string;
+  title?: string;
+  name?: string;
+  offerTitle?: string;
+  description?: string;
+  subtitle?: string;
+  discountAmount?: number;
+};
+
+type ActiveUser = {
+  name: string;
+  email: string;
+  mobile: string;
+};
+
+type InsuranceSearchData = {
+  destination?: string;
+  insuranceType?: string;
+  travellerAges?: string[];
+  [key: string]: unknown;
+};
+
+type InsurancePlanChargeExtras = {
+  gst?: number;
+  taxes?: number;
+  medicalSurcharge?: number;
+  adventureSportsAddon?: number;
+  adventureSportsCharge?: number;
+  seniorCitizenSurcharge?: number;
+  convenienceFee?: number;
+  gatewayFee?: number;
+  markup?: number;
+  visaLinkedSurcharge?: number;
+};
+
 type BookingPayload = {
   plan: InsurancePlanWithPricing;
-  search?: any;
+  search?: InsuranceSearchData;
   selectedAt?: string;
-  pricingSnapshot?: any;
-  benefitPricing?: any;
+  pricingSnapshot?: PricingSnapshot;
+  benefitPricing?: PricingSnapshot | null;
   baseAfterOffer?: number;
   nonBenefitAmount?: number;
   grossAmount?: number;
@@ -98,24 +140,16 @@ const insuranceAddOnPricing: Record<string, number> = {
   covidUpgrade: 599,
 };
 
-function toAmount(value: any, fallback = 0) {
+function toAmount(value: unknown, fallback = 0) {
   const amount = Number(value);
   return Number.isFinite(amount) && amount > 0 ? Math.round(amount) : fallback;
 }
 
-function resolveAmount(source: any, keys: string[], fallback = 0) {
-  for (const key of keys) {
-    const value = source?.[key];
-
-    if (Number.isFinite(Number(value))) {
-      return Math.round(Number(value));
-    }
-  }
-
-  return fallback;
-}
-
-function resolveUsedAmount(source: any, keys: string[], fallback = 0) {
+function resolveUsedAmount(
+  source: PricingSnapshot | null,
+  keys: string[],
+  fallback = 0
+) {
   for (const key of keys) {
     const value = Number(source?.[key]);
 
@@ -164,6 +198,10 @@ function getActiveUser() {
 
 function getPlanPricingBase(plan?: InsurancePlanWithPricing | null) {
   const snapshot = plan?.pricingSnapshot || {};
+  const chargePlan = plan as
+    | (InsurancePlanWithPricing & InsurancePlanChargeExtras)
+    | null
+    | undefined;
 
   const snapshotBase = toAmount(
     snapshot.baseAmount || snapshot.premium || plan?.originalPremium,
@@ -184,11 +222,11 @@ function getPlanPricingBase(plan?: InsurancePlanWithPricing | null) {
 
   const premiumValue = toAmount(plan?.originalPremium || plan?.premium, 0);
   const explicitGst = toAmount(
-    snapshot.gstAmount ||
+      snapshot.gstAmount ||
       snapshot.gst ||
       snapshot.taxes ||
-      (plan as any)?.gst ||
-      (plan as any)?.taxes,
+      chargePlan?.gst ||
+      chargePlan?.taxes,
     0
   );
 
@@ -208,7 +246,7 @@ function getPlanPricingBase(plan?: InsurancePlanWithPricing | null) {
   };
 }
 
-function getOfferIdentity(offer: any) {
+function getOfferIdentity(offer: SmartOffer | null) {
   return {
     code: offer?.code || offer?.couponCode || offer?.offerCode || offer?.slug || "",
     title: offer?.title || offer?.name || offer?.offerTitle || "",
@@ -228,7 +266,7 @@ function buildPricing({
 }: {
   plan: InsurancePlanWithPricing;
   addOnTotal: number;
-  selectedOffer: any;
+  selectedOffer: SmartOffer | null;
   wallet: {
     promoCredit: number;
     earnedCredit: number;
@@ -237,17 +275,23 @@ function buildPricing({
   hasUser: boolean;
 }) {
   const { basePremium, gstAmount } = getPlanPricingBase(plan);
+  const chargePlan = (plan ?? {}) as Partial<
+    InsurancePlanWithPricing & InsurancePlanChargeExtras
+  >;
 
-  const medicalSurcharge = toAmount((plan as any)?.medicalSurcharge, 0);
+  const medicalSurcharge = toAmount(chargePlan.medicalSurcharge ?? 0, 0);
   const adventureSportsAddon = toAmount(
-    (plan as any)?.adventureSportsAddon || (plan as any)?.adventureSportsCharge,
+    chargePlan.adventureSportsAddon ?? chargePlan.adventureSportsCharge ?? 0,
     0
   );
-  const seniorCitizenSurcharge = toAmount((plan as any)?.seniorCitizenSurcharge, 0);
-  const convenienceFee = toAmount((plan as any)?.convenienceFee, 0);
-  const gatewayFee = toAmount((plan as any)?.gatewayFee, 0);
-  const markup = toAmount((plan as any)?.markup, 0);
-  const visaLinkedSurcharge = toAmount((plan as any)?.visaLinkedSurcharge, 0);
+  const seniorCitizenSurcharge = toAmount(
+    chargePlan.seniorCitizenSurcharge ?? 0,
+    0
+  );
+  const convenienceFee = toAmount(chargePlan.convenienceFee ?? 0, 0);
+  const gatewayFee = toAmount(chargePlan.gatewayFee ?? 0, 0);
+  const markup = toAmount(chargePlan.markup ?? 0, 0);
+  const visaLinkedSurcharge = toAmount(chargePlan.visaLinkedSurcharge ?? 0, 0);
 
   const nonBenefitAmount =
     gstAmount +
@@ -262,10 +306,10 @@ function buildPricing({
 
   const offerIdentity = getOfferIdentity(selectedOffer);
 
-  let benefitPricing: any = null;
+  let benefitPricing: PricingSnapshot | null = null;
 
   try {
-    benefitPricing = (applyBenefitPricing as any)({
+    benefitPricing = applyBenefitPricing({
       baseAmount: basePremium,
       nonBenefitAmount,
       offerData: selectedOffer,
@@ -410,7 +454,7 @@ export default function InsuranceBookingPage() {
 
   const [loading, setLoading] = useState(true);
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [activeUser, setActiveUser] = useState<any>(null);
+  const [activeUser, setActiveUser] = useState<ActiveUser | null>(null);
 
   const [payload, setPayload] = useState<BookingPayload | null>(null);
   const [travellers, setTravellers] = useState<InsuranceTraveller[]>([]);
@@ -638,10 +682,6 @@ export default function InsuranceBookingPage() {
     };
   }, [payload?.plan, pricing]);
 
-  const offerApplied = Number(pricing?.appliedOfferAmount || 0);
-  const grossAmount = Number(pricing?.grossAmount || 0);
-  const totalBeforeWallet = Number(pricing?.totalBeforeWallet || 0);
-
   const walletBreakup = activeUser && pricing
     ? {
         promoUsed: pricing.promoUsed,
@@ -801,23 +841,45 @@ export default function InsuranceBookingPage() {
   if (!payload?.plan || !pricing || !normalizedPlan) return null;
 
   return (
-    <main className="min-h-screen bg-gray-50">
-      <section className="mx-auto max-w-7xl px-4 py-6">
+    <main className="min-h-screen overflow-x-hidden bg-gray-50 pb-8 lg:pb-0">
+      <div className="sticky top-0 z-40 border-b border-gray-100 bg-white/95 px-3 py-3 shadow-sm backdrop-blur lg:hidden">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white text-xl font-black text-gray-800 shadow-sm"
+            aria-label="Go back"
+          >
+            ‹
+          </button>
+
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-[16px] font-black text-gray-950">
+              Insurance Booking
+            </div>
+            <div className="truncate text-[12px] font-semibold text-gray-500">
+              {normalizedPlan.provider} • {normalizedPlan.planName}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <section className="mx-auto max-w-7xl px-3 py-4 md:px-4 md:py-6">
         <InsuranceBookingHeader
           plan={normalizedPlan}
           searchData={payload.search}
         />
 
-        <div className="mt-5 rounded-3xl border border-orange-100 bg-gradient-to-r from-orange-50 to-white p-4 shadow-sm">
+        <div className="mt-4 rounded-[22px] border border-orange-100 bg-gradient-to-r from-orange-50 to-white p-4 shadow-sm md:mt-5 md:rounded-3xl">
           {activeUser ? (
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <p className="text-sm font-extrabold text-gray-950">
+              <div className="min-w-0">
+                <p className="break-words text-sm font-extrabold text-gray-950">
                   Logged in as{" "}
                   {getLoggedInDisplayName(activeUser)}
                 </p>
 
-                <p className="text-xs font-semibold text-gray-500">
+                <p className="break-words text-xs font-semibold leading-5 text-gray-500">
                   Wallet benefits and faster insurance booking enabled.
                 </p>
               </div>
@@ -853,12 +915,12 @@ export default function InsuranceBookingPage() {
             </div>
           ) : (
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <p className="text-sm font-extrabold text-gray-950">
+              <div className="min-w-0">
+                <p className="break-words text-sm font-extrabold text-gray-950">
                   Login to unlock wallet benefits
                 </p>
 
-                <p className="text-xs font-semibold text-gray-500">
+                <p className="break-words text-xs font-semibold leading-5 text-gray-500">
                   Use Promo Credit, Earned Credit and Refund Wallet during
                   payment.
                 </p>
@@ -867,7 +929,7 @@ export default function InsuranceBookingPage() {
               <button
                 type="button"
                 onClick={() => setShowLoginModal(true)}
-                className="flex h-11 items-center justify-center rounded-2xl bg-orange-500 px-5 text-sm font-extrabold text-white transition hover:bg-orange-600"
+                className="flex h-11 w-full items-center justify-center rounded-2xl bg-orange-500 px-5 text-sm font-extrabold text-white transition hover:bg-orange-600 sm:w-auto"
               >
                 Login / Signup
               </button>
@@ -875,7 +937,7 @@ export default function InsuranceBookingPage() {
           )}
         </div>
 
-        <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_360px]">
+        <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
           <div className="space-y-5">
             <InsuranceTravellerForm
               travellers={travellers}
@@ -893,7 +955,7 @@ export default function InsuranceBookingPage() {
             <InsuranceAddOns value={addOns} onChange={setAddOns} />
           </div>
 
-          <div>
+          <div className="min-w-0">
             <InsuranceFareSummary
   plan={normalizedPlan}
   addOns={addOns}

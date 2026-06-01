@@ -39,12 +39,12 @@ export default function TrainConfirmOptionModal({
 
   return (
     <div
-      className="fixed inset-0 z-[180] flex items-center justify-center bg-black/45 px-4 py-4 backdrop-blur-[2px]"
+      className="fixed inset-0 z-[180] flex items-end justify-center bg-black/45 px-3 py-0 backdrop-blur-[2px] md:items-center md:px-4 md:py-4"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="relative w-full max-w-[620px] overflow-hidden rounded-[20px] border border-emerald-100 bg-white shadow-[0_20px_60px_rgba(15,23,42,0.22)]">
+      <div className="relative max-h-[88vh] w-full max-w-[620px] overflow-hidden rounded-t-[22px] border border-emerald-100 bg-white shadow-[0_20px_60px_rgba(15,23,42,0.22)] md:rounded-[20px]">
         <button
           type="button"
           onClick={onClose}
@@ -61,75 +61,77 @@ export default function TrainConfirmOptionModal({
             </div>
 
             <div className="min-w-0">
-              <div className="text-[20px] font-extrabold leading-tight text-slate-900">
+              <div className="text-[18px] font-extrabold leading-tight text-slate-900 md:text-[20px]">
                 Confirmed Alternate Option
               </div>
-              <div className="mt-1 text-[13px] text-slate-600">
+              <div className="mt-1 break-words text-[13px] text-slate-600">
                 {travelDate} • {trainName}
               </div>
             </div>
           </div>
         </div>
 
-        {/* Top tags */}
-        <div className="px-5 pt-4">
-          <div className="flex flex-wrap gap-2 rounded-[16px] border border-emerald-100 bg-emerald-50/60 px-3 py-3">
-            <Tag icon={<ShieldCheck size={13} />}>Confirm or 3X Refund</Tag>
-            <Tag icon={<TrainFront size={13} />}>{classCode}</Tag>
-            <Tag icon={<Lightbulb size={13} />}>
-              {confirmChance ? `${confirmChance}% Chance` : "Confirmed"}
-            </Tag>
+        <div className="max-h-[calc(88vh-152px)] overflow-y-auto">
+          {/* Top tags */}
+          <div className="px-4 pt-4 md:px-5">
+            <div className="flex gap-2 overflow-x-auto rounded-[16px] border border-emerald-100 bg-emerald-50/60 px-3 py-3 md:flex-wrap md:overflow-visible">
+              <Tag icon={<ShieldCheck size={13} />}>Confirm or 3X Refund</Tag>
+              <Tag icon={<TrainFront size={13} />}>{classCode}</Tag>
+              <Tag icon={<Lightbulb size={13} />}>
+                {confirmChance ? `${confirmChance}% Chance` : "Confirmed"}
+              </Tag>
+            </div>
           </div>
-        </div>
 
-        {/* Info cards */}
-        <div className="grid grid-cols-3 gap-2 px-5 py-3">
-          <InfoBlock
-            icon={<TrainFront size={16} />}
-            title="Book From"
-            value="Alternate boarding option"
-            subValue="Optimized boarding possibility"
-          />
-          <InfoBlock
-            icon={<MapPin size={16} />}
-            title="Board From"
-            value="Near-origin station"
-            subValue="Smarter pickup alignment"
-          />
-          <InfoBlock
-            icon={<MapPin size={16} />}
-            title="Get Down"
-            value="Near-destination station"
-            subValue="Flexible confirmed travel plan"
-          />
-        </div>
+          {/* Info cards */}
+          <div className="grid grid-cols-1 gap-2 px-4 py-3 md:grid-cols-3 md:px-5">
+            <InfoBlock
+              icon={<TrainFront size={16} />}
+              title="Book From"
+              value="Alternate boarding option"
+              subValue="Optimized boarding possibility"
+            />
+            <InfoBlock
+              icon={<MapPin size={16} />}
+              title="Board From"
+              value="Near-origin station"
+              subValue="Smarter pickup alignment"
+            />
+            <InfoBlock
+              icon={<MapPin size={16} />}
+              title="Get Down"
+              value="Near-destination station"
+              subValue="Flexible confirmed travel plan"
+            />
+          </div>
 
-        {/* Assured box */}
-        <div className="px-5 pb-4">
-          <div className="mx-auto max-w-[270px] rounded-[18px] border border-emerald-100 bg-[linear-gradient(180deg,#ffffff,#f0fdf4)] px-4 py-4 text-center shadow-sm">
-            <div className="text-[12px] font-extrabold uppercase tracking-wide text-emerald-600">
-              Assured Alternate
-            </div>
+          {/* Assured box */}
+          <div className="px-4 pb-4 md:px-5">
+            <div className="mx-auto max-w-[270px] rounded-[18px] border border-emerald-100 bg-[linear-gradient(180deg,#ffffff,#f0fdf4)] px-4 py-4 text-center shadow-sm">
+              <div className="text-[12px] font-extrabold uppercase tracking-wide text-emerald-600">
+                Assured Alternate
+              </div>
 
-            <div className="mt-1 text-[22px] font-extrabold text-slate-900">
-              {classCode}
-            </div>
+              <div className="mt-1 text-[22px] font-extrabold text-slate-900">
+                {classCode}
+              </div>
 
-            <div className="mt-1 text-[13px] font-semibold text-slate-700">
-              {confirmChance
-                ? `${confirmChance}% confirmation chance`
-                : "Confirmed option"}
-            </div>
+              <div className="mt-1 text-[13px] font-semibold text-slate-700">
+                {confirmChance
+                  ? `${confirmChance}% confirmation chance`
+                  : "Confirmed option"}
+              </div>
 
-            <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-slate-600 ring-1 ring-slate-200">
-              <ShieldCheck size={12} className="text-emerald-600" />
-              Safer option on same train
+              <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-slate-600 ring-1 ring-slate-200">
+                <ShieldCheck size={12} className="text-emerald-600" />
+                Safer option on same train
+              </div>
             </div>
           </div>
         </div>
 
         {/* CTA */}
-        <div className="px-5 pb-5">
+        <div className="border-t border-slate-100 bg-white px-4 pb-5 pt-3 md:px-5">
           <button
             type="button"
             onClick={onBookConfirmTicket}
@@ -156,7 +158,7 @@ function Tag({
   icon?: React.ReactNode;
 }) {
   return (
-    <div className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-slate-700 shadow-sm">
+    <div className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-slate-700 shadow-sm">
       {icon}
       <span>{children}</span>
     </div>

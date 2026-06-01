@@ -121,9 +121,11 @@ export default function TrainConfirmationSuccessHeader({
           <div style={{ minWidth: 0, flex: 1 }}>
             <h1
               style={{
-                fontSize: "34px",
+                fontSize: "clamp(26px, 8vw, 34px)",
                 fontWeight: 900,
                 color: "#0f172a",
+                lineHeight: 1.1,
+                wordBreak: "break-word",
               }}
             >
               {bookingStatusText}
@@ -136,9 +138,11 @@ export default function TrainConfirmationSuccessHeader({
             <div
               style={{
                 marginTop: "22px",
-                fontSize: "28px",
+                fontSize: "clamp(21px, 6vw, 28px)",
                 fontWeight: 900,
                 color: "#111827",
+                lineHeight: 1.15,
+                wordBreak: "break-word",
               }}
             >
               {trainName}
@@ -172,7 +176,7 @@ export default function TrainConfirmationSuccessHeader({
               </div>
             )}
 
-            <div style={{ marginTop: "16px", display: "flex", gap: "8px" }}>
+            <div style={{ marginTop: "16px", display: "flex", gap: "8px", flexWrap: "wrap" }}>
               <span style={{ ...statusPillBase, ...bookingStatusStyle }}>
                 {bookingStatusText}
               </span>
@@ -199,6 +203,7 @@ export default function TrainConfirmationSuccessHeader({
 /* styles */
 const rightCard: CSSProperties = {
   minWidth: "320px",
+  maxWidth: "100%",
   border: "1px solid #dbe4ee",
   borderRadius: "22px",
   background: "#fff",
@@ -213,8 +218,9 @@ const label: CSSProperties = {
 };
 
 const value: CSSProperties = {
-  fontSize: "28px",
+  fontSize: "clamp(22px, 7vw, 28px)",
   fontWeight: 900,
+  wordBreak: "break-word",
 };
 
 const pnrBlock: CSSProperties = {
@@ -224,9 +230,10 @@ const pnrBlock: CSSProperties = {
 };
 
 const pnrValue: CSSProperties = {
-  fontSize: "22px",
+  fontSize: "clamp(19px, 6vw, 22px)",
   fontWeight: 900,
   color: "#111827",
+  wordBreak: "break-word",
 };
 
 const statusPillBase: CSSProperties = {

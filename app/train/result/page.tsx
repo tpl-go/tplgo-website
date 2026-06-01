@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import TrainResultTopSearchBar from "@/app/components/train/result/TrainResultTopSearchBar";
 import TrainResultRouteSummary from "@/app/components/train/result/TrainResultRouteSummary";
@@ -124,6 +124,7 @@ function toggleStringValue(list: string[], value: string) {
 }
 
 function TrainResultsPageContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
 
   const fromCity = searchParams.get("fromCity") || "Ujjain";
@@ -135,6 +136,7 @@ function TrainResultsPageContent() {
   const sort = (searchParams.get("sort") as TrainSortOption) || "relevance";
 
   const [expandedTrainId, setExpandedTrainId] = useState<string | null>(null);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [filters, setFilters] =
     useState<TrainFilterState>(INITIAL_TRAIN_FILTERS);
 
@@ -186,6 +188,23 @@ function TrainResultsPageContent() {
 
     return prices.length > 0 ? Math.min(...prices) : 1200;
   }, [sortedTrains]);
+
+  const dateFareMap = useMemo(() => {
+    const fares: Record<string, number> = {};
+
+    sourceTrains.forEach((train) => {
+      train.classes.forEach((trainClass) => {
+        trainClass.dateWiseAvailability.general.forEach((row) => {
+          if (!row.date || !row.price) return;
+          fares[row.date] = fares[row.date]
+            ? Math.min(fares[row.date], row.price)
+            : row.price;
+        });
+      });
+    });
+
+    return fares;
+  }, [sourceTrains]);
 
   const isInternational = useMemo(() => {
     const fromIndian = isIndianTrainLocation(fromCity, fromCode);
@@ -416,9 +435,33 @@ function TrainResultsPageContent() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f5f7fb] text-black">
-      <div className=" border-b border-slate-200 bg-white px-4 py-3">
-        <div className="mx-auto max-w-[1400px]">
+    <main className="min-w-0 overflow-x-hidden bg-[#f5f7fb] text-black md:min-h-screen">
+      <div className="border-b border-slate-200 bg-white px-3 py-3 md:px-4">
+        <div className="mx-auto max-w-[1400px] space-y-3">
+          <div className="flex items-center gap-3 md:hidden">
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-xl font-bold text-slate-700 shadow-sm"
+              aria-label="Go back"
+            >
+              ‹
+            </button>
+
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-[15px] font-black text-slate-900">
+                {fromCity || "From"} → {toCity || "To"}
+              </div>
+              <div className="mt-0.5 text-[12px] font-semibold text-slate-500">
+                {formatMobileDate(date)}
+              </div>
+            </div>
+
+            <div className="rounded-full bg-sky-50 px-3 py-2 text-[12px] font-black text-sky-700">
+              Modify
+            </div>
+          </div>
+
           <TrainResultTopSearchBar
             initialSearch={{
               fromCity,
@@ -432,9 +475,9 @@ function TrainResultsPageContent() {
         </div>
       </div>
 
-      <div className="mx-auto max-w-[1400px] px-4 py-4">
-        <div className="flex items-start gap-5">
-          <div className="w-[320px] shrink-0">
+      <div className="mx-auto max-w-[1400px] px-3 py-3 md:px-4 md:py-4">
+        <div className="flex min-w-0 items-start gap-5">
+          <div className="hidden w-[320px] shrink-0 lg:block">
             <TrainResultsFilters
               fromCity={fromCity}
               toCity={toCity}
@@ -454,7 +497,54 @@ function TrainResultsPageContent() {
             />
           </div>
 
-          <div className="min-w-0 flex-1 space-y-4">
+          {mobileFiltersOpen && (
+            <div className="fixed inset-0 z-[280] bg-black/45 lg:hidden">
+              <div className="absolute inset-x-0 bottom-0 max-h-[86vh] overflow-hidden rounded-t-[28px] bg-white shadow-2xl">
+                <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+                  <div>
+                    <p className="text-[11px] font-black uppercase tracking-[0.16em] text-sky-600">
+                      Train Filters
+                    </p>
+                    <h2 className="text-lg font-black text-slate-900">
+                      Refine results
+                    </h2>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setMobileFiltersOpen(false)}
+                    className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-xl font-bold text-slate-600"
+                    aria-label="Close filters"
+                  >
+                    ×
+                  </button>
+                </div>
+
+                <div className="max-h-[calc(86vh-66px)] overflow-y-auto px-3 py-3">
+                  <TrainResultsFilters
+                    fromCity={fromCity}
+                    toCity={toCity}
+                    trains={sourceTrains}
+                    filters={filters}
+                    chips={chips}
+                    onToggleQuick={handleToggleQuick}
+                    onToggleTicketType={handleToggleTicketType}
+                    onToggleQuota={handleToggleQuota}
+                    onToggleClass={handleToggleClass}
+                    onToggleArrivalTime={handleToggleArrivalTime}
+                    onToggleDepartureTime={handleToggleDepartureTime}
+                    onToggleTrainType={handleToggleTrainType}
+                    onToggleFromStation={handleToggleFromStation}
+                    onToggleToStation={handleToggleToStation}
+                    onClearAll={handleClearAll}
+                    className="w-full"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="min-w-0 flex-1 space-y-3 md:space-y-4">
             <TrainResultRouteSummary
               fromCity={fromCity}
               toCity={toCity}
@@ -469,7 +559,25 @@ function TrainResultsPageContent() {
               isInternational={isInternational}
             />
 
-            <TrainDateStripSection selectedDate={date} />
+            <TrainDateStripSection
+              selectedDate={date}
+              dateFares={dateFareMap}
+            />
+
+            <div className="grid min-w-0 grid-cols-1 gap-3 lg:hidden">
+              <button
+                type="button"
+                onClick={() => setMobileFiltersOpen(true)}
+                className="min-h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-left text-sm font-black text-slate-900 shadow-sm"
+              >
+                Filter Trains
+                {chips.length > 0 ? (
+                  <span className="ml-2 rounded-full bg-sky-100 px-2 py-1 text-[11px] text-sky-700">
+                    {chips.length}
+                  </span>
+                ) : null}
+              </button>
+            </div>
 
             <TrainSortBar
               fromCity={fromCity}
@@ -523,6 +631,19 @@ function TrainResultsPageContent() {
       </div>
     </main>
   );
+}
+
+function formatMobileDate(date: string) {
+  if (!date) return "Date not selected";
+
+  const parsed = new Date(date);
+  if (Number.isNaN(parsed.getTime())) return date;
+
+  return parsed.toLocaleDateString("en-IN", {
+    weekday: "short",
+    day: "2-digit",
+    month: "short",
+  });
 }
 
 export default function TrainResultsPage() {

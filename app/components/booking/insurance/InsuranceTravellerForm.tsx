@@ -52,18 +52,18 @@ export default function InsuranceTravellerForm({
   };
 
   return (
-    <section className="rounded-3xl border border-gray-100 bg-white p-5 shadow-sm">
+    <section className="min-w-0 rounded-[22px] border border-gray-100 bg-white p-4 shadow-sm md:rounded-3xl md:p-5">
       <div className="mb-5">
-        <h2 className="text-lg font-extrabold text-gray-950">
+        <h2 className="break-words text-lg font-extrabold text-gray-950">
           Traveller Details
         </h2>
-        <p className="text-sm font-semibold text-gray-500">
+        <p className="break-words text-sm font-semibold leading-5 text-gray-500">
           Enter details exactly as per passport or government ID.
         </p>
 
         {isPassportRequired && (
           <div className="mt-3 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3">
-            <p className="text-xs font-extrabold text-blue-800">
+            <p className="break-words text-xs font-extrabold leading-5 text-blue-800">
               Passport details are required for international / foreign travel insurance.
             </p>
           </div>
@@ -74,11 +74,11 @@ export default function InsuranceTravellerForm({
         {travellers.map((traveller, index) => (
           <div
             key={traveller.id}
-            className="rounded-2xl border border-orange-100 bg-orange-50/40 p-4"
+            className="min-w-0 rounded-2xl border border-orange-100 bg-orange-50/40 p-4"
           >
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <p className="text-base font-extrabold text-gray-950">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="break-words text-base font-extrabold text-gray-950">
                   Traveller {index + 1}
                 </p>
                 <p className="text-xs font-semibold text-gray-500">
@@ -87,7 +87,7 @@ export default function InsuranceTravellerForm({
               </div>
 
               {Number(traveller.age) >= 60 && (
-                <span className="rounded-full bg-purple-50 px-3 py-1 text-xs font-bold text-purple-700">
+                <span className="shrink-0 rounded-full bg-purple-50 px-3 py-1 text-xs font-bold text-purple-700">
                   Senior Traveller
                 </span>
               )}
@@ -103,7 +103,7 @@ export default function InsuranceTravellerForm({
                   onChange={(e) =>
                     updateTraveller(index, "title", e.target.value)
                   }
-                  className="h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm font-bold text-gray-900 outline-none focus:border-orange-400"
+                  className="h-11 w-full min-w-0 rounded-xl border border-gray-200 bg-white px-3 text-sm font-bold text-gray-900 outline-none focus:border-orange-400"
                 >
                   <option>Mr</option>
                   <option>Ms</option>
@@ -122,7 +122,7 @@ export default function InsuranceTravellerForm({
                   onChange={(e) =>
                     updateTraveller(index, "firstName", e.target.value)
                   }
-                  className="h-11 w-full rounded-xl border border-gray-200 px-3 text-sm font-bold text-gray-900 outline-none focus:border-orange-400"
+                  className="h-11 w-full min-w-0 rounded-xl border border-gray-200 px-3 text-sm font-bold text-gray-900 outline-none focus:border-orange-400"
                   placeholder="First name"
                 />
               </div>
@@ -136,7 +136,7 @@ export default function InsuranceTravellerForm({
                   onChange={(e) =>
                     updateTraveller(index, "lastName", e.target.value)
                   }
-                  className="h-11 w-full rounded-xl border border-gray-200 px-3 text-sm font-bold text-gray-900 outline-none focus:border-orange-400"
+                  className="h-11 w-full min-w-0 rounded-xl border border-gray-200 px-3 text-sm font-bold text-gray-900 outline-none focus:border-orange-400"
                   placeholder="Last name"
                 />
               </div>
@@ -150,7 +150,7 @@ export default function InsuranceTravellerForm({
                   onChange={(e) =>
                     updateTraveller(index, "gender", e.target.value)
                   }
-                  className="h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm font-bold text-gray-900 outline-none focus:border-orange-400"
+                  className="h-11 w-full min-w-0 rounded-xl border border-gray-200 bg-white px-3 text-sm font-bold text-gray-900 outline-none focus:border-orange-400"
                 >
                   <option>Male</option>
                   <option>Female</option>
@@ -168,7 +168,7 @@ export default function InsuranceTravellerForm({
                   onChange={(e) =>
                     updateTraveller(index, "dob", e.target.value)
                   }
-                  className="h-11 w-full rounded-xl border border-gray-200 px-3 text-sm font-bold text-gray-900 outline-none focus:border-orange-400"
+                  className="h-11 w-full min-w-0 rounded-xl border border-gray-200 px-3 text-sm font-bold text-gray-900 outline-none focus:border-orange-400"
                 />
               </div>
 
@@ -184,7 +184,7 @@ export default function InsuranceTravellerForm({
                   onChange={(e) =>
                     updateTraveller(index, "age", e.target.value)
                   }
-                  className="h-11 w-full rounded-xl border border-gray-200 px-3 text-sm font-bold text-gray-900 outline-none focus:border-orange-400"
+                  className="h-11 w-full min-w-0 rounded-xl border border-gray-200 px-3 text-sm font-bold text-gray-900 outline-none focus:border-orange-400"
                   placeholder="Age"
                 />
               </div>
@@ -201,7 +201,7 @@ export default function InsuranceTravellerForm({
                   onChange={(e) =>
                     updateTraveller(index, "passportNumber", e.target.value)
                   }
-                  className={`h-11 w-full rounded-xl border px-3 text-sm font-bold text-gray-900 outline-none focus:border-orange-400 ${
+                  className={`h-11 w-full min-w-0 rounded-xl border px-3 text-sm font-bold text-gray-900 outline-none focus:border-orange-400 ${
                     isPassportRequired && !traveller.passportNumber
                       ? "border-red-200 bg-red-50"
                       : "border-gray-200 bg-white"
@@ -227,7 +227,7 @@ export default function InsuranceTravellerForm({
                   onChange={(e) =>
                     updateTraveller(index, "passportExpiry", e.target.value)
                   }
-                  className={`h-11 w-full rounded-xl border px-3 text-sm font-bold text-gray-900 outline-none focus:border-orange-400 ${
+                  className={`h-11 w-full min-w-0 rounded-xl border px-3 text-sm font-bold text-gray-900 outline-none focus:border-orange-400 ${
                     isPassportRequired && !traveller.passportExpiry
                       ? "border-red-200 bg-red-50"
                       : "border-gray-200 bg-white"

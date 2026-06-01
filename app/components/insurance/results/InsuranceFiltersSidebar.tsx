@@ -112,7 +112,7 @@ export default function InsuranceFiltersSidebar({
   ];
 
   return (
-    <aside className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+    <aside className="min-w-0 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
       <div className="mb-4 flex items-center justify-between">
         <div>
           <h2 className="text-base font-extrabold text-gray-900">Filters</h2>
@@ -172,7 +172,7 @@ export default function InsuranceFiltersSidebar({
             {providers.map((provider) => (
               <label
                 key={provider}
-                className="flex cursor-pointer items-center gap-2 text-sm text-gray-700"
+                className="flex cursor-pointer items-start gap-2 text-sm leading-5 text-gray-700"
               >
                 <input
                   type="checkbox"
@@ -187,7 +187,7 @@ export default function InsuranceFiltersSidebar({
                   }
                   className="h-4 w-4 accent-blue-600"
                 />
-                {provider}
+                <span className="min-w-0 break-words">{provider}</span>
               </label>
             ))}
           </div>
@@ -202,7 +202,7 @@ export default function InsuranceFiltersSidebar({
             {coverageOptions.map((coverage) => (
               <label
                 key={coverage}
-                className="flex cursor-pointer items-center gap-2 text-sm text-gray-700"
+                className="flex cursor-pointer items-start gap-2 text-sm leading-5 text-gray-700"
               >
                 <input
                   type="checkbox"
@@ -217,7 +217,9 @@ export default function InsuranceFiltersSidebar({
                   }
                   className="h-4 w-4 accent-blue-600"
                 />
-                {formatCoverageAmount(Number(coverage))}
+                <span className="min-w-0 break-words">
+                  {formatCoverageAmount(Number(coverage))}
+                </span>
               </label>
             ))}
           </div>
@@ -236,7 +238,7 @@ export default function InsuranceFiltersSidebar({
             ].map(([key, label]) => (
               <label
                 key={key}
-                className="flex cursor-pointer items-center gap-2 text-sm text-gray-700"
+                className="flex cursor-pointer items-start gap-2 text-sm leading-5 text-gray-700"
               >
                 <input
                   type="checkbox"
@@ -248,7 +250,7 @@ export default function InsuranceFiltersSidebar({
                   }
                   className="h-4 w-4 accent-blue-600"
                 />
-                {label}
+                <span className="min-w-0 break-words">{label}</span>
               </label>
             ))}
           </div>

@@ -5,9 +5,13 @@ import TrainDateStrip from "./TrainDateStrip";
 
 type Props = {
   selectedDate: string;
+  dateFares?: Record<string, number>;
 };
 
-export default function TrainDateStripSection({ selectedDate }: Props) {
+export default function TrainDateStripSection({
+  selectedDate,
+  dateFares,
+}: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -30,6 +34,7 @@ export default function TrainDateStripSection({ selectedDate }: Props) {
     <TrainDateStrip
       selectedDate={selected}
       onDateSelect={handleDateSelect}
+      dateFares={dateFares}
     />
   );
 }

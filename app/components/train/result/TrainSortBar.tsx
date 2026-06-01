@@ -50,17 +50,17 @@ export default function TrainSortBar({
 
   return (
     <div className="rounded-[20px] border border-slate-200 bg-white px-4 py-3 shadow-sm">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex min-w-0 flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-4">
         <div className="text-[14px] font-bold text-slate-800">
           {resultsCount} trains found
         </div>
 
-        <div className="flex items-center gap-5">
-          <div className="text-[13px] font-bold uppercase tracking-wide text-slate-500">
+        <div className="flex min-w-0 flex-col gap-2 md:flex-row md:items-center md:gap-5">
+          <div className="text-[12px] font-bold uppercase tracking-wide text-slate-500 md:text-[13px]">
             Sort By
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 gap-2 overflow-x-auto pb-1 md:items-center md:overflow-visible md:pb-0">
             {SORT_OPTIONS.map((item) => {
               const active = item.value === activeSort;
 
@@ -69,7 +69,7 @@ export default function TrainSortBar({
                   key={item.value}
                   type="button"
                   onClick={() => handleSortChange(item.value)}
-                  className={`rounded-xl px-3 py-2 text-[14px] font-semibold transition ${
+                  className={`min-h-10 shrink-0 rounded-xl px-3 py-2 text-[14px] font-semibold transition ${
                     active
                       ? "bg-sky-100 text-sky-700"
                       : "text-slate-700 hover:bg-slate-50"

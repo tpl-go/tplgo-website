@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { BadgeCheck, CreditCard, Sparkles, Tag } from "lucide-react";
 
 type Props = {
@@ -71,22 +73,22 @@ export default function InsuranceConfirmationFareCard({
   );
 
   return (
-    <div className="overflow-hidden rounded-[24px] border border-[#d9e2ec] bg-white shadow-[0_12px_34px_rgba(15,23,42,0.08)]">
-      <div className="border-b border-[#e5e7eb] bg-white px-5 py-4">
-        <div className="flex items-center gap-2">
+    <div className="min-w-0 overflow-hidden rounded-[22px] border border-[#d9e2ec] bg-white shadow-[0_12px_34px_rgba(15,23,42,0.08)] md:rounded-[24px]">
+      <div className="border-b border-[#e5e7eb] bg-white px-4 py-4 md:px-5">
+        <div className="flex min-w-0 items-center gap-2">
           <CreditCard size={20} className="text-[#ea580c]" />
-          <h2 className="text-[22px] font-black text-[#111827]">
+          <h2 className="break-words text-[20px] font-black leading-7 text-[#111827] md:text-[22px]">
             Payment & Fare Details
           </h2>
         </div>
 
-        <div className="mt-1 text-[12px] font-semibold text-[#6b7280]">
+        <div className="mt-1 break-words text-[12px] font-semibold leading-5 text-[#6b7280]">
           Premium, add-ons, offer, wallet and paid amount
         </div>
       </div>
 
       {offerAmount > 0 ? (
-        <div className="relative overflow-hidden border-b border-[#fed7aa] bg-[linear-gradient(135deg,#fff7ed_0%,#ffffff_50%,#fff1e6_100%)] px-5 py-4">
+        <div className="relative overflow-hidden border-b border-[#fed7aa] bg-[linear-gradient(135deg,#fff7ed_0%,#ffffff_50%,#fff1e6_100%)] px-4 py-4 md:px-5">
           <div className="absolute right-0 top-0 h-24 w-24 rounded-full bg-[#fb923c]/10 blur-3xl" />
 
           <div className="relative flex items-start gap-3">
@@ -110,20 +112,22 @@ export default function InsuranceConfirmationFareCard({
                 ) : null}
               </div>
 
-              <div className="mt-2 text-[16px] font-black leading-tight text-[#111827]">
+              <div className="mt-2 break-words text-[16px] font-black leading-tight text-[#111827]">
                 {offerTitle}
               </div>
 
-              <div className="mt-1 flex items-center gap-2 text-[13px] font-bold text-[#ea580c]">
+              <div className="mt-1 flex items-start gap-2 text-[13px] font-bold leading-5 text-[#ea580c]">
                 <Tag className="h-4 w-4" />
-                <span>You saved {formatPrice(offerAmount)} instantly</span>
+                <span className="min-w-0 break-words">
+                  You saved {formatPrice(offerAmount)} instantly
+                </span>
               </div>
             </div>
           </div>
         </div>
       ) : null}
 
-      <div className="px-5 py-5">
+      <div className="px-4 py-4 md:px-5 md:py-5">
         <div className="space-y-3">
           <FareRow label="Base Premium" value={basePremium} />
           <FareRow label="GST" value={gst} />
@@ -162,36 +166,38 @@ export default function InsuranceConfirmationFareCard({
           ) : null}
 
           {earnedOnThisBooking > 0 ? (
-            <div className="rounded-[14px] border border-[#fed7aa] bg-[linear-gradient(135deg,#fff7ed,#ffffff)] p-3 text-[12px] font-extrabold leading-[18px] text-[#ea580c]">
+            <div className="break-words rounded-[14px] border border-[#fed7aa] bg-[linear-gradient(135deg,#fff7ed,#ffffff)] p-3 text-[12px] font-extrabold leading-[18px] text-[#ea580c]">
               🎉 You earned {formatPrice(earnedOnThisBooking)} TPL Earned Credit
               on this policy booking.
             </div>
           ) : null}
 
           <div className="border-t border-dashed border-[#d1d5db] pt-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="text-[20px] font-black text-[#111827]">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="break-words text-[20px] font-black text-[#111827]">
                   Total Paid
                 </div>
 
-                <div className="mt-1 text-[12px] font-semibold text-[#6b7280]">
+                <div className="mt-1 break-words text-[12px] font-semibold leading-5 text-[#6b7280]">
                   Final paid amount after offer and wallet benefits
                 </div>
               </div>
 
-              <div className="whitespace-nowrap text-[30px] font-black text-[#111827]">
+              <div className="shrink-0 whitespace-nowrap text-[25px] font-black text-[#111827] md:text-[30px]">
                 ₹{Number(totalPaid || 0).toLocaleString("en-IN")}
               </div>
             </div>
           </div>
 
-          <div className="rounded-[16px] bg-[#f8fafc] p-4 text-[12px] font-semibold leading-[20px] text-[#64748b]">
+          <div className="break-words rounded-[16px] bg-[#f8fafc] p-4 text-[12px] font-semibold leading-[20px] text-[#64748b]">
             Payment ID:{" "}
-            <span className="font-black text-[#111827]">{paymentId}</span>
+            <span className="break-words font-black text-[#111827]">
+              {paymentId}
+            </span>
             <br />
             Method:{" "}
-            <span className="font-black text-[#111827]">
+            <span className="break-words font-black text-[#111827]">
               {data?.paymentMethod || data?.paymentData?.method || "Online Payment"}
             </span>
           </div>
@@ -217,7 +223,7 @@ function FareRow({
   return (
     <div className="flex items-start justify-between gap-3">
       <div
-        className={`text-[15px] font-bold ${
+        className={`min-w-0 break-words text-[15px] font-bold ${
           orange ? "text-[#ea580c]" : "text-[#1f2937]"
         }`}
       >
@@ -225,7 +231,7 @@ function FareRow({
       </div>
 
       <div
-        className={`whitespace-nowrap text-[15px] font-bold ${
+        className={`shrink-0 whitespace-nowrap text-[15px] font-bold ${
           orange ? "text-[#ea580c]" : "text-[#1f2937]"
         }`}
       >
@@ -239,9 +245,9 @@ function FareRow({
 function WalletRow({ label, value }: { label: string; value: number }) {
   return (
     <div className="mt-1.5 flex items-center justify-between gap-3">
-      <span className="text-[12px] font-bold text-[#475569]">{label}</span>
+      <span className="min-w-0 break-words text-[12px] font-bold text-[#475569]">{label}</span>
 
-      <span className="whitespace-nowrap text-[12px] font-extrabold text-[#ea580c]">
+      <span className="shrink-0 whitespace-nowrap text-[12px] font-extrabold text-[#ea580c]">
         -₹{Number(value || 0).toLocaleString("en-IN")}
       </span>
     </div>
@@ -251,8 +257,8 @@ function WalletRow({ label, value }: { label: string; value: number }) {
 function MiniInfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="mt-1 flex items-center justify-between gap-3 first:mt-0">
-      <span className="text-[12px] font-bold text-[#64748b]">{label}</span>
-      <span className="text-[12px] font-extrabold text-[#475569]">{value}</span>
+      <span className="min-w-0 break-words text-[12px] font-bold text-[#64748b]">{label}</span>
+      <span className="shrink-0 whitespace-nowrap text-[12px] font-extrabold text-[#475569]">{value}</span>
     </div>
   );
 }

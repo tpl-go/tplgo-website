@@ -109,11 +109,11 @@ export default function TrainPaymentTopSummary({
 
   return (
     <section className="overflow-hidden rounded-[18px] border border-[#d9e2ec] bg-[#eef6ff] shadow-[0_2px_8px_rgba(15,23,42,0.04)]">
-      <div className="flex items-start justify-between gap-4 px-5 py-[18px]">
+      <div className="flex min-w-0 flex-col gap-3 px-4 py-4 md:flex-row md:items-start md:justify-between md:gap-4 md:px-5 md:py-[18px]">
         <div className="min-w-0 flex-1">
           <div className="mb-2 text-[24px] leading-none">🚆</div>
 
-          <h2 className="m-0 text-[20px] font-extrabold leading-[28px] text-[#1f2937]">
+          <h2 className="m-0 break-words text-[18px] font-extrabold leading-[25px] text-[#1f2937] md:text-[20px] md:leading-[28px]">
             {bookingPayload.trainName}
           </h2>
 
@@ -135,13 +135,13 @@ export default function TrainPaymentTopSummary({
         <button
           type="button"
           onClick={() => setShowDetails((prev) => !prev)}
-          className="whitespace-nowrap border-0 bg-transparent pt-[6px] text-[13px] font-extrabold text-[#1d9bf0]"
+          className="min-h-10 self-start whitespace-nowrap border-0 bg-transparent pt-[6px] text-[13px] font-extrabold text-[#1d9bf0] md:self-auto"
         >
           {showDetails ? "HIDE DETAILS ▲" : "VIEW DETAILS ▼"}
         </button>
       </div>
 
-      <div className="flex flex-wrap justify-between gap-[18px] border-t border-[#d9e2ec] bg-white px-5 py-4">
+      <div className="flex min-w-0 flex-col gap-4 border-t border-[#d9e2ec] bg-white px-4 py-4 md:flex-row md:flex-wrap md:justify-between md:gap-[18px] md:px-5">
         <div className="min-w-0">
           <div className="mb-1 text-[12px] font-bold text-[#6b7280]">
             Booking details will be sent to:
@@ -156,7 +156,7 @@ export default function TrainPaymentTopSummary({
           </div>
         </div>
 
-        <div className="min-w-[260px]">
+        <div className="min-w-0 md:min-w-[260px]">
           <div className="mb-1 text-[12px] font-bold text-[#6b7280]">
             Train Journey Summary
           </div>
@@ -172,7 +172,7 @@ export default function TrainPaymentTopSummary({
       </div>
 
       {showDetails && (
-        <div className="grid grid-cols-[1.2fr_1fr] gap-[18px] border-t border-[#d9e2ec] bg-[#f8fbff] px-5 py-4">
+        <div className="grid grid-cols-1 gap-4 border-t border-[#d9e2ec] bg-[#f8fbff] px-4 py-4 md:grid-cols-[1.2fr_1fr] md:gap-[18px] md:px-5">
           <div>
             <SectionLabel>Train Booking Summary</SectionLabel>
 

@@ -71,8 +71,8 @@ export default function TrainContactDetailsSection({
 
   return (
     <section className="overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-sm">
-      <div className="border-b border-slate-200 px-5 py-4">
-        <div className="text-[20px] font-extrabold text-slate-900">
+      <div className="border-b border-slate-200 px-4 py-4 md:px-5">
+        <div className="text-[19px] font-extrabold text-slate-900 md:text-[20px]">
           Contact Details
         </div>
         <div className="mt-1 text-[13px] text-slate-500">
@@ -80,7 +80,7 @@ export default function TrainContactDetailsSection({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 px-5 py-5">
+      <div className="grid grid-cols-1 gap-4 px-4 py-4 md:grid-cols-2 md:px-5 md:py-5">
         <label className="block">
           <div className="mb-2 text-[13px] font-bold text-slate-700">
             Mobile Number

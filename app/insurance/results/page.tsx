@@ -22,6 +22,7 @@ import {
   defaultInsuranceFilters,
   type InsuranceFilterState,
 } from "@/app/lib/insurance/insuranceFilters";
+import { formatCoverageAmount } from "@/app/lib/insurance/insurancePricing";
 
 import { applyBenefitPricing } from "@/app/lib/pricing/applyBenefitPricing";
 import {
@@ -33,8 +34,8 @@ type SortKey = "recommended" | "premiumLow" | "coverageHigh" | "claimHigh";
 
 type InsurancePlanWithPricing = InsurancePlan & {
   originalPremium?: number;
-  pricingSnapshot?: any;
-  benefitPricing?: any;
+  pricingSnapshot?: PricingSnapshot;
+  benefitPricing?: PricingSnapshot | null;
   baseAfterOffer?: number;
   nonBenefitAmount?: number;
   grossAmount?: number;
@@ -51,6 +52,33 @@ type InsurancePlanWithPricing = InsurancePlan & {
   finalTotal?: number;
 };
 
+type PricingSnapshot = Record<string, unknown>;
+
+type SmartOffer = {
+  service?: string;
+  couponCode?: string;
+  code?: string;
+  offerCode?: string;
+  slug?: string;
+  title?: string;
+  name?: string;
+  offerTitle?: string;
+};
+
+type InsurancePlanChargeExtras = {
+  gst?: number;
+  taxes?: number;
+  medicalSurcharge?: number;
+  adventureSportsAddon?: number;
+  adventureSportsCharge?: number;
+  seniorCitizenSurcharge?: number;
+  convenienceFee?: number;
+  gatewayFee?: number;
+  markup?: number;
+  visaLinkedSurcharge?: number;
+  addonCoverCharges?: number;
+};
+
 function getSearchValue(params: URLSearchParams, keys: string[], fallback = "") {
   for (const key of keys) {
     const value = params.get(key);
@@ -60,12 +88,12 @@ function getSearchValue(params: URLSearchParams, keys: string[], fallback = "") 
   return fallback;
 }
 
-function toAmount(value: any, fallback = 0) {
+function toAmount(value: unknown, fallback = 0) {
   const amount = Number(value);
   return Number.isFinite(amount) && amount > 0 ? Math.round(amount) : fallback;
 }
 
-function resolveOfferCode(activeOffer: any) {
+function resolveOfferCode(activeOffer: SmartOffer | null) {
   return (
     activeOffer?.couponCode ||
     activeOffer?.code ||
@@ -75,17 +103,18 @@ function resolveOfferCode(activeOffer: any) {
   );
 }
 
-function resolveOfferTitle(activeOffer: any) {
+function resolveOfferTitle(activeOffer: SmartOffer | null) {
   return activeOffer?.title || activeOffer?.name || activeOffer?.offerTitle || "";
 }
 
 function buildInsuranceBenefitPricing(
   plan: InsurancePlan,
-  activeOffer: any
+  activeOffer: SmartOffer | null
 ): Omit<InsurancePlanWithPricing, keyof InsurancePlan> {
+  const chargePlan = plan as InsurancePlan & InsurancePlanChargeExtras;
   const premiumWithGst = toAmount(plan?.premium, 0);
 
-const explicitGst = toAmount((plan as any)?.gst || (plan as any)?.taxes, 0);
+const explicitGst = toAmount(chargePlan.gst || chargePlan.taxes, 0);
 
 const baseAmount =
   explicitGst > 0
@@ -96,20 +125,20 @@ const autoGstAmount =
   explicitGst > 0 ? explicitGst : Math.max(premiumWithGst - baseAmount, 0);
 
   const gstAmount = autoGstAmount;
-  const medicalSurcharge = toAmount((plan as any)?.medicalSurcharge, 0);
+  const medicalSurcharge = toAmount(chargePlan.medicalSurcharge, 0);
   const adventureSportsAddon = toAmount(
-    (plan as any)?.adventureSportsAddon || (plan as any)?.adventureSportsCharge,
+    chargePlan.adventureSportsAddon || chargePlan.adventureSportsCharge,
     0
   );
   const seniorCitizenSurcharge = toAmount(
-    (plan as any)?.seniorCitizenSurcharge,
+    chargePlan.seniorCitizenSurcharge,
     0
   );
-  const convenienceFee = toAmount((plan as any)?.convenienceFee, 0);
-  const gatewayFee = toAmount((plan as any)?.gatewayFee, 0);
-  const markup = toAmount((plan as any)?.markup, 0);
-  const visaLinkedSurcharge = toAmount((plan as any)?.visaLinkedSurcharge, 0);
-  const addonCoverCharges = toAmount((plan as any)?.addonCoverCharges, 0);
+  const convenienceFee = toAmount(chargePlan.convenienceFee, 0);
+  const gatewayFee = toAmount(chargePlan.gatewayFee, 0);
+  const markup = toAmount(chargePlan.markup, 0);
+  const visaLinkedSurcharge = toAmount(chargePlan.visaLinkedSurcharge, 0);
+  const addonCoverCharges = toAmount(chargePlan.addonCoverCharges, 0);
 
   const nonBenefitAmount =
     gstAmount +
@@ -139,10 +168,10 @@ const autoGstAmount =
   const finalPayable = payableBeforeRefundWallet;
   const earnedOnThisBooking = Math.round(baseAfterOffer * 0.02);
 
-  let benefitPricing: any = null;
+  let benefitPricing: PricingSnapshot | null = null;
 
   try {
-    benefitPricing = (applyBenefitPricing as any)({
+    benefitPricing = applyBenefitPricing({
       baseAmount,
       nonBenefitAmount,
       offerData: activeOffer,
@@ -301,6 +330,7 @@ function InsuranceResultsPageContent() {
     []
   );
   const [compareOpen, setCompareOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [offerVersion, setOfferVersion] = useState(0);
 
   useEffect(() => {
@@ -382,8 +412,8 @@ function InsuranceResultsPageContent() {
   }, [intentPlans, filters, sortKey]);
 
   const activeOffer = useMemo(() => {
-    offerVersion;
-    return getSmartActiveOfferItem();
+    void offerVersion;
+    return getSmartActiveOfferItem() as SmartOffer | null;
   }, [offerVersion]);
 
   const pricedPlans = useMemo<InsurancePlanWithPricing[]>(() => {
@@ -474,8 +504,129 @@ function InsuranceResultsPageContent() {
     router.push("/insurance/booking");
   };
 
+  const appliedFilterCount =
+    filters.providers.length +
+    filters.coverageAmounts.length +
+    Number(filters.medicalCovered) +
+    Number(filters.adventureSportsCovered) +
+    Number(filters.cashlessHospitals) +
+    Number(filters.covidCover) +
+    Number(filters.visaCompliant) +
+    Number(filters.minClaimRatio > 0) +
+    Number(filters.premiumRange[1] < 10000);
+
+  const appliedFilterChips: { label: string; onRemove: () => void }[] = [
+    ...filters.providers.map((provider) => ({
+      label: provider,
+      onRemove: () =>
+        setFilters((prev) => ({
+          ...prev,
+          providers: prev.providers.filter((item) => item !== provider),
+        })),
+    })),
+    ...filters.coverageAmounts.map((coverage) => ({
+      label: formatCoverageAmount(Number(coverage)),
+      onRemove: () =>
+        setFilters((prev) => ({
+          ...prev,
+          coverageAmounts: prev.coverageAmounts.filter(
+            (item) => item !== coverage
+          ),
+        })),
+    })),
+    ...(filters.medicalCovered
+      ? [
+          {
+            label: "Medical Covered",
+            onRemove: () =>
+              setFilters((prev) => ({ ...prev, medicalCovered: false })),
+          },
+        ]
+      : []),
+    ...(filters.adventureSportsCovered
+      ? [
+          {
+            label: "Adventure Sports",
+            onRemove: () =>
+              setFilters((prev) => ({
+                ...prev,
+                adventureSportsCovered: false,
+              })),
+          },
+        ]
+      : []),
+    ...(filters.cashlessHospitals
+      ? [
+          {
+            label: "Cashless Hospitals",
+            onRemove: () =>
+              setFilters((prev) => ({ ...prev, cashlessHospitals: false })),
+          },
+        ]
+      : []),
+    ...(filters.covidCover
+      ? [
+          {
+            label: "Covid Cover",
+            onRemove: () =>
+              setFilters((prev) => ({ ...prev, covidCover: false })),
+          },
+        ]
+      : []),
+    ...(filters.visaCompliant
+      ? [
+          {
+            label: "Visa Compliant",
+            onRemove: () =>
+              setFilters((prev) => ({ ...prev, visaCompliant: false })),
+          },
+        ]
+      : []),
+    ...(filters.minClaimRatio > 0
+      ? [
+          {
+            label: `${filters.minClaimRatio}%+ Claim Ratio`,
+            onRemove: () =>
+              setFilters((prev) => ({ ...prev, minClaimRatio: 0 })),
+          },
+        ]
+      : []),
+    ...(filters.premiumRange[1] < 10000
+      ? [
+          {
+            label: `Under ₹${filters.premiumRange[1].toLocaleString("en-IN")}`,
+            onRemove: () =>
+              setFilters((prev) => ({ ...prev, premiumRange: [0, 10000] })),
+          },
+        ]
+      : []),
+  ];
+
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="min-h-screen overflow-x-hidden bg-gray-50 pb-28 lg:pb-0">
+      <div className="sticky top-0 z-40 border-b border-gray-100 bg-white/95 px-3 py-3 shadow-sm backdrop-blur lg:hidden">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white text-xl font-black text-gray-800 shadow-sm"
+            aria-label="Go back"
+          >
+            ‹
+          </button>
+
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-[16px] font-black text-gray-950">
+              Insurance Results
+            </div>
+            <div className="truncate text-[12px] font-semibold text-gray-500">
+              {destination || "Destination"} • {insuranceType}
+            </div>
+          </div>
+
+        </div>
+      </div>
+
       <InsuranceResultsSearchBar
         insuranceType={insuranceType}
         destination={destination}
@@ -500,27 +651,27 @@ function InsuranceResultsPageContent() {
         }}
       />
 
-      <section className="mx-auto max-w-7xl px-4 py-6">
-        <div className="mb-5 rounded-3xl bg-gradient-to-r from-[#0f3cc9] via-[#2563eb] to-[#3b82f6] p-5 text-white shadow-[0_12px_35px_rgba(37,99,235,0.28)]">
+      <section className="mx-auto max-w-7xl px-3 py-4 md:px-4 md:py-6">
+        <div className="mb-4 rounded-[22px] bg-gradient-to-r from-[#0f3cc9] via-[#2563eb] to-[#3b82f6] p-4 text-white shadow-[0_12px_35px_rgba(37,99,235,0.28)] md:mb-5 md:rounded-3xl md:p-5">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div>
+            <div className="min-w-0">
               <p className="text-sm font-semibold text-white/90">
                 TPL Insurance Protect
               </p>
-              <h1 className="mt-1 text-2xl font-extrabold">
+              <h1 className="mt-1 break-words text-[21px] font-extrabold leading-7 md:text-2xl">
                 Smart insurance plans for your trip
               </h1>
-              <p className="mt-1 text-sm text-white/90">
+              <p className="mt-1 break-words text-sm leading-5 text-white/90">
                 Compare coverage, claim ratio, medical benefits and visa-ready
                 plans before booking.
               </p>
             </div>
 
-            <div className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3 backdrop-blur">
+            <div className="min-w-0 rounded-2xl border border-white/15 bg-white/10 px-4 py-3 backdrop-blur">
               <p className="text-xs font-semibold text-white/80">
                 Recommended for
               </p>
-              <p className="text-sm font-extrabold">
+              <p className="break-words text-sm font-extrabold">
                 {destination || "International"} • {insuranceType}
               </p>
             </div>
@@ -528,7 +679,7 @@ function InsuranceResultsPageContent() {
         </div>
 
         <div className="grid gap-5 lg:grid-cols-[280px_1fr]">
-          <div className="lg:sticky lg:top-28 lg:self-start">
+          <div className="hidden lg:sticky lg:top-28 lg:block lg:self-start">
             <InsuranceFiltersSidebar
               plans={intentPlans}
               filters={filters}
@@ -536,7 +687,52 @@ function InsuranceResultsPageContent() {
             />
           </div>
 
-          <div>
+          <div className="min-w-0">
+            <div className="mb-3 lg:hidden">
+              <div className="flex items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={() => setFiltersOpen(true)}
+                  className="inline-flex min-h-11 items-center justify-center rounded-full border border-orange-200 bg-white px-4 text-sm font-black text-gray-900 shadow-[0_8px_22px_rgba(15,23,42,0.08)]"
+                >
+                  Filter Plans
+                  {appliedFilterCount > 0 ? (
+                    <span className="ml-2 rounded-full bg-orange-500 px-2 py-0.5 text-[11px] text-white">
+                      {appliedFilterCount}
+                    </span>
+                  ) : null}
+                </button>
+                <div className="min-w-0 truncate text-right text-xs font-bold text-gray-500">
+                  {travelDates} • {travellers}
+                </div>
+              </div>
+
+              {appliedFilterChips.length > 0 ? (
+                <div className="-mx-3 mt-3 overflow-x-auto px-3 pb-1">
+                  <div className="flex w-max min-w-full gap-2">
+                    {appliedFilterChips.map((chip) => (
+                      <button
+                        key={chip.label}
+                        type="button"
+                        onClick={chip.onRemove}
+                        className="inline-flex shrink-0 items-center gap-1 rounded-full border border-orange-200 bg-orange-50 px-3 py-1.5 text-[12px] font-black text-orange-700 shadow-sm"
+                      >
+                        <span>{chip.label}</span>
+                        <span className="text-sm leading-none">×</span>
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setFilters(defaultInsuranceFilters)}
+                      className="inline-flex shrink-0 items-center rounded-full border border-gray-200 bg-white px-3 py-1.5 text-[12px] font-black text-gray-600 shadow-sm"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
             <InsuranceResultsSortBar
               total={pricedPlans.length}
               sortKey={sortKey}
@@ -613,6 +809,38 @@ function InsuranceResultsPageContent() {
           onBuyNow={handleBuyNow}
         />
       )}
+
+      {filtersOpen ? (
+        <div className="fixed inset-0 z-[9999] bg-black/45 backdrop-blur-sm lg:hidden">
+          <div className="absolute inset-x-0 bottom-0 max-h-[86vh] overflow-hidden rounded-t-[28px] bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+              <div>
+                <div className="text-base font-black text-gray-950">
+                  Filters
+                </div>
+                <div className="text-xs font-semibold text-gray-500">
+                  Refine insurance plans
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setFiltersOpen(false)}
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-lg font-black text-gray-700"
+                aria-label="Close filters"
+              >
+                ×
+              </button>
+            </div>
+            <div className="max-h-[calc(86vh-68px)] overflow-y-auto p-3">
+              <InsuranceFiltersSidebar
+                plans={intentPlans}
+                filters={filters}
+                onChange={setFilters}
+              />
+            </div>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }

@@ -13,8 +13,8 @@ export default function TrainIrctcAccountSection({
 }: Props) {
   return (
     <section className="overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-sm">
-      <div className="border-b border-slate-200 px-5 py-4">
-        <div className="text-[20px] font-extrabold text-slate-900">
+      <div className="border-b border-slate-200 px-4 py-4 md:px-5">
+        <div className="text-[19px] font-extrabold text-slate-900 md:text-[20px]">
           IRCTC Account Details
         </div>
         <div className="mt-1 text-[13px] text-slate-500">
@@ -22,7 +22,7 @@ export default function TrainIrctcAccountSection({
         </div>
       </div>
 
-      <div className="px-5 py-5">
+      <div className="px-4 py-4 md:px-5 md:py-5">
         <div className="rounded-[18px] border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] font-medium text-amber-800">
           Use the correct IRCTC username linked to the account from which final train authentication will be completed.
         </div>
@@ -33,7 +33,7 @@ export default function TrainIrctcAccountSection({
               IRCTC Username
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center">
               <input
                 type="text"
                 value={irctcAccount.username}
@@ -44,12 +44,12 @@ export default function TrainIrctcAccountSection({
                   })
                 }
                 placeholder="Enter IRCTC username"
-                className="h-[46px] flex-1 rounded-xl border border-slate-300 bg-white px-3 text-[14px] font-medium text-slate-900 outline-none"
+                className="h-[46px] w-full rounded-xl border border-slate-300 bg-white px-3 text-[14px] font-medium text-slate-900 outline-none md:flex-1"
               />
 
               <button
                 type="button"
-                className="h-[46px] min-w-[110px] rounded-xl border border-sky-200 bg-sky-50 px-4 text-[13px] font-extrabold text-sky-700 transition hover:border-sky-300 hover:bg-sky-100"
+                className="h-[46px] w-full rounded-xl border border-sky-200 bg-sky-50 px-4 text-[13px] font-extrabold text-sky-700 transition hover:border-sky-300 hover:bg-sky-100 md:min-w-[110px] md:w-auto"
               >
                 VERIFY
               </button>

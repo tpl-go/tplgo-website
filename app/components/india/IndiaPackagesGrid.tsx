@@ -7,6 +7,8 @@ import { packageIndex } from "@/app/data/packages";
 import { resolvePackageByRouteId } from "@/app/data/packages/resolvePackage";
 import { advancedSmartPackageSearch } from "@/app/lib/holidays/advancedSmartPackageSearch";
 import { getPackageOfferPreview } from "@/app/lib/smartOffers/getPackageOfferPreview";
+import TPLDynamicImage from "@/app/components/common/TPLDynamicImage";
+import { getSmartPackageImage } from "@/app/lib/images/smartPackageImageResolver";
 
 interface Props {
   selectedFilters: string[];
@@ -561,6 +563,18 @@ const offerTitle =
   bestOfferPreview?.offer?.title ||
   bestOfferPreview?.label ||
   "";
+const smartImage = getSmartPackageImage({
+  routeId: pkg.routeId,
+  title: pkg.title,
+  route: pkg.route,
+  country: pkg.country,
+  continent: pkg.continent,
+  cities: pkg.cities,
+  themes: pkg.themes,
+  subThemes: pkg.subThemes,
+  tags: pkg.tags,
+  category: pkg.category,
+});
 
 return (
             <div
@@ -573,12 +587,24 @@ return (
               className="border rounded-xl shadow-sm hover:shadow-md transition bg-white cursor-pointer overflow-hidden lg:overflow-visible"
             >
               <div className="h-40 sm:h-48 lg:h-52 bg-gray-200 relative cursor-pointer lg:rounded-t-xl">
-                <span className="absolute top-3 left-3 bg-black text-white text-xs px-3 py-1 rounded-full">
+                <TPLDynamicImage
+                  src={smartImage.src}
+                  imageQuery={smartImage.imageQuery}
+                  fallbackSrc={smartImage.fallbackSrc}
+                  fallbackQuery={smartImage.fallbackQuery}
+                  alt={smartImage.alt || pkg.title}
+                  className="absolute inset-0 h-full w-full"
+                  imgClassName="h-full w-full object-cover"
+                  sizes="(max-width: 1024px) 100vw, 50vw"
+                  preferDynamic={smartImage.preferDynamic}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent" />
+                <span className="absolute top-3 left-3 z-10 bg-black text-white text-xs px-3 py-1 rounded-full">
   {offerTitle || "Best Deal"}
 </span>
 
 {offerCode ? (
-  <span className="absolute top-3 right-3 rounded-full bg-orange-500 px-3 py-1 text-xs font-bold text-white">
+  <span className="absolute top-3 right-3 z-10 rounded-full bg-orange-500 px-3 py-1 text-xs font-bold text-white">
     {offerCode}
   </span>
 ) : null}

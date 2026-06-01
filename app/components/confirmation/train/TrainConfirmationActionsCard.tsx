@@ -33,16 +33,16 @@ export default function TrainConfirmationActionsCard({
 }: Props) {
   return (
     <aside
+      className="min-w-0"
       style={{
         width: "100%",
         display: "flex",
       }}
     >
       <div
+        className="lg:sticky lg:top-24"
         style={{
           width: "100%",
-          position: "sticky",
-          top: "96px",
           display: "flex",
           flexDirection: "column",
           gap: "16px",

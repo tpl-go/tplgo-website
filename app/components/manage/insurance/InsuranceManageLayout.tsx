@@ -37,7 +37,7 @@ export default function InsuranceManageLayout({
   children,
 }: Props) {
   return (
-    <main className="min-h-screen overflow-x-hidden bg-[#f8f9fb] px-3 py-4 text-black md:px-4 md:py-8">
+    <main className="min-h-screen overflow-x-hidden bg-[#f8f9fb] px-3 py-4 pb-8 text-black md:px-4 md:py-8">
       <div className="mx-auto max-w-[1440px]">
         <div className="mb-4 rounded-[20px] border border-black/5 bg-white p-4 shadow-sm md:mb-5 md:rounded-[30px] md:p-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -59,7 +59,7 @@ export default function InsuranceManageLayout({
             <button
               type="button"
               onClick={() => window.history.back()}
-              className="h-11 rounded-2xl border border-gray-200 bg-white px-5 text-sm font-black text-gray-700 hover:bg-gray-50"
+              className="h-11 w-full rounded-2xl border border-gray-200 bg-white px-5 text-sm font-black text-gray-700 hover:bg-gray-50 sm:w-auto"
             >
               Back
             </button>
@@ -67,7 +67,7 @@ export default function InsuranceManageLayout({
         </div>
 
         <div className="grid gap-4 lg:grid-cols-[280px_1fr] lg:gap-5">
-          <aside className="h-fit rounded-[20px] border border-black/5 bg-white p-3 shadow-sm md:rounded-[28px]">
+          <aside className="h-fit min-w-0 rounded-[20px] border border-black/5 bg-white p-3 shadow-sm md:rounded-[28px]">
             <div className="lg:hidden">
               <select
                 value={activeTab}

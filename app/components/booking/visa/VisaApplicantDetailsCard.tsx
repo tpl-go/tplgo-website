@@ -34,13 +34,13 @@ export default function VisaApplicantDetailsCard({
   };
 
   return (
-    <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-      <div className="mb-5 flex items-start justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-extrabold text-gray-950">
+    <div className="min-w-0 rounded-[22px] border border-gray-200 bg-white p-4 shadow-sm md:rounded-3xl md:p-6">
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h2 className="break-words text-[19px] font-extrabold leading-6 text-gray-950 md:text-xl">
             Applicant {applicantIndex + 1} Details
           </h2>
-          <p className="mt-1 text-sm font-semibold text-gray-600">
+          <p className="mt-1 break-words text-sm font-semibold leading-5 text-gray-600">
             Enter details as per passport.
           </p>
         </div>
@@ -48,14 +48,14 @@ export default function VisaApplicantDetailsCard({
         {showLoginBox && (
           <>
             {isAuthenticated ? (
-              <div className="rounded-full bg-green-100 px-4 py-2 text-xs font-extrabold text-green-700">
+              <div className="break-words rounded-full bg-green-100 px-4 py-2 text-xs font-extrabold text-green-700">
                 Logged in{userName ? ` as ${userName}` : ""}
               </div>
             ) : (
               <button
                 type="button"
                 onClick={onLoginClick}
-                className="rounded-full bg-blue-600 px-4 py-2 text-xs font-extrabold text-white hover:bg-blue-700"
+                className="min-h-10 rounded-full bg-blue-600 px-4 py-2 text-xs font-extrabold text-white hover:bg-blue-700"
               >
                 Login / Signup
               </button>
@@ -72,7 +72,7 @@ export default function VisaApplicantDetailsCard({
           <select
             value={applicant.title}
             onChange={(e) => update("title", e.target.value)}
-            className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm font-bold text-gray-950 outline-none focus:border-orange-500"
+            className="w-full min-w-0 rounded-xl border border-gray-300 px-4 py-3 text-sm font-bold text-gray-950 outline-none focus:border-orange-500"
           >
             <option>Mr</option>
             <option>Ms</option>
@@ -89,7 +89,7 @@ export default function VisaApplicantDetailsCard({
           <select
             value={applicant.gender}
             onChange={(e) => update("gender", e.target.value)}
-            className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm font-bold text-gray-950 outline-none focus:border-orange-500"
+            className="w-full min-w-0 rounded-xl border border-gray-300 px-4 py-3 text-sm font-bold text-gray-950 outline-none focus:border-orange-500"
           >
             <option>Male</option>
             <option>Female</option>
@@ -104,7 +104,7 @@ export default function VisaApplicantDetailsCard({
           <input
             value={applicant.firstName}
             onChange={(e) => update("firstName", e.target.value)}
-            className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm font-bold text-gray-950 outline-none focus:border-orange-500"
+            className="w-full min-w-0 rounded-xl border border-gray-300 px-4 py-3 text-sm font-bold text-gray-950 outline-none focus:border-orange-500"
             placeholder="First name"
           />
         </div>
@@ -116,7 +116,7 @@ export default function VisaApplicantDetailsCard({
           <input
             value={applicant.lastName}
             onChange={(e) => update("lastName", e.target.value)}
-            className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm font-bold text-gray-950 outline-none focus:border-orange-500"
+            className="w-full min-w-0 rounded-xl border border-gray-300 px-4 py-3 text-sm font-bold text-gray-950 outline-none focus:border-orange-500"
             placeholder="Last name"
           />
         </div>
@@ -129,7 +129,7 @@ export default function VisaApplicantDetailsCard({
             type="date"
             value={applicant.dob}
             onChange={(e) => update("dob", e.target.value)}
-            className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm font-bold text-gray-950 outline-none focus:border-orange-500"
+            className="w-full min-w-0 rounded-xl border border-gray-300 px-4 py-3 text-sm font-bold text-gray-950 outline-none focus:border-orange-500"
           />
         </div>
 
@@ -140,7 +140,7 @@ export default function VisaApplicantDetailsCard({
           <input
             value={applicant.mobile}
             onChange={(e) => update("mobile", e.target.value)}
-            className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm font-bold text-gray-950 outline-none focus:border-orange-500"
+            className="w-full min-w-0 rounded-xl border border-gray-300 px-4 py-3 text-sm font-bold text-gray-950 outline-none focus:border-orange-500"
             placeholder="Mobile number"
           />
         </div>
@@ -152,7 +152,7 @@ export default function VisaApplicantDetailsCard({
           <input
             value={applicant.email}
             onChange={(e) => update("email", e.target.value)}
-            className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm font-bold text-gray-950 outline-none focus:border-orange-500"
+            className="w-full min-w-0 rounded-xl border border-gray-300 px-4 py-3 text-sm font-bold text-gray-950 outline-none focus:border-orange-500"
             placeholder="Email address"
           />
         </div>

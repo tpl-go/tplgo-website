@@ -1,6 +1,6 @@
 "use client";
 
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 type Traveller = {
   id?: string;
@@ -82,7 +82,132 @@ export default function TrainConfirmationTravellerCard({
         </h3>
       </div>
 
-      <div style={{ padding: "22px" }}>
+      <div className="p-4 md:p-[22px]">
+        <div className="md:hidden">
+          {leadTraveller ? (
+            <div className="mb-4 rounded-[20px] border border-[#dbeafe] bg-[linear-gradient(135deg,#eff6ff_0%,#ffffff_70%)] p-4 shadow-[0_8px_22px_rgba(37,99,235,0.06)]">
+              <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#1d4ed8]">
+                Lead Passenger
+              </div>
+              <div className="mt-1 break-words text-[19px] font-black leading-6 text-[#111827]">
+                {getFullName(leadTraveller)}
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <MobileBadge>{getGenderText(leadTraveller.gender)}</MobileBadge>
+                {leadTraveller.age ? (
+                  <MobileBadge>{leadTraveller.age} yrs</MobileBadge>
+                ) : null}
+                {contactDetails?.mobile ? (
+                  <MobileBadge>
+                    {contactDetails.countryCode || "+91"} {contactDetails.mobile}
+                  </MobileBadge>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
+
+          <div className="rounded-[20px] border border-[#e5e7eb] bg-white p-4 shadow-[0_8px_22px_rgba(15,23,42,0.05)]">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-[16px] font-black text-[#111827]">
+                  Passenger Ticket List
+                </div>
+                <div className="mt-1 text-[12px] font-semibold text-[#64748b]">
+                  {travellers.length || 0} passenger{travellers.length === 1 ? "" : "s"}
+                </div>
+              </div>
+              {pnrNumber ? (
+                <div className="shrink-0 rounded-full border border-[#bbf7d0] bg-[#f0fdf4] px-3 py-1 text-[11px] font-black text-[#15803d]">
+                  PNR {pnrNumber}
+                </div>
+              ) : null}
+            </div>
+
+            <div className="mt-4 grid gap-3">
+              {travellers.length > 0 ? (
+                travellers.map((traveller, index) => (
+                  <div
+                    key={traveller.id || index}
+                    className="overflow-hidden rounded-[18px] border border-[#dbe4ee] bg-[#f8fafc]"
+                  >
+                    <div className="flex items-start gap-3 bg-white p-4">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[#dbeafe] bg-[#eff6ff] text-[15px] font-black text-[#1d4ed8]">
+                        {index + 1}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="break-words text-[15px] font-black leading-5 text-[#111827]">
+                          {getFullName(traveller)}
+                        </div>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          <MobileBadge>{getGenderText(traveller.gender)}</MobileBadge>
+                          {traveller.age ? (
+                            <MobileBadge>{traveller.age} yrs</MobileBadge>
+                          ) : null}
+                          {index === 0 ? <MobileBadge>Lead</MobileBadge> : null}
+                        </div>
+                      </div>
+                      <div className="shrink-0 rounded-full bg-[#dcfce7] px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.08em] text-[#15803d]">
+                        {traveller.status || "Confirmed"}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 p-3">
+                      <MobileTicketRow
+                        label="Coach"
+                        value={traveller.coach || coachClass || "NA"}
+                      />
+                      <MobileTicketRow
+                        label="Seat"
+                        value={traveller.seatNumber || "NA"}
+                      />
+                      <MobileTicketRow
+                        label="Berth"
+                        value={traveller.berth || "No Preference"}
+                      />
+                      <MobileTicketRow
+                        label="Quota"
+                        value={traveller.quota || "General"}
+                      />
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-2xl border border-dashed border-[#dbe4ee] bg-[#f8fafc] p-4 text-sm font-semibold text-[#64748b]">
+                  No passenger data available
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-3">
+            <MobileInfoPanel
+              title="Contact Details"
+              rows={[
+                {
+                  label: "Email",
+                  value: contactDetails?.email || "Not provided",
+                },
+                {
+                  label: "Mobile",
+                  value: contactDetails?.mobile
+                    ? `${contactDetails?.countryCode || "+91"} ${contactDetails.mobile}`
+                    : "Not provided",
+                },
+              ]}
+            />
+            <MobileInfoPanel
+              title="Ticket Snapshot"
+              rows={[
+                { label: "PNR Number", value: pnrNumber || "Not available" },
+                { label: "Train Number", value: trainNumber || "Not available" },
+                { label: "Coach/Class", value: coachClass || "Not available" },
+                { label: "Passengers", value: `${travellers.length || 0}` },
+              ]}
+            />
+          </div>
+        </div>
+
+        <div className="hidden md:block">
         {leadTraveller ? (
           <div
             style={{
@@ -110,10 +235,11 @@ export default function TrainConfirmationTravellerCard({
 
             <div
               style={{
-                fontSize: "22px",
+                fontSize: "clamp(19px, 6vw, 22px)",
                 fontWeight: 900,
                 color: "#111827",
                 lineHeight: "30px",
+                wordBreak: "break-word",
               }}
             >
               {getFullName(leadTraveller)}
@@ -149,7 +275,7 @@ export default function TrainConfirmationTravellerCard({
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "1.15fr 0.85fr",
+            gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
             gap: "16px",
           }}
         >
@@ -190,6 +316,7 @@ export default function TrainConfirmationTravellerCard({
                       justifyContent: "space-between",
                       alignItems: "flex-start",
                       gap: "14px",
+                      flexWrap: "wrap",
                     }}
                   >
                     <div
@@ -230,6 +357,7 @@ export default function TrainConfirmationTravellerCard({
                             fontWeight: 900,
                             color: "#111827",
                             lineHeight: "22px",
+                            wordBreak: "break-word",
                           }}
                         >
                           {getFullName(traveller)}
@@ -278,7 +406,7 @@ export default function TrainConfirmationTravellerCard({
                             background: "#ffffff",
                             padding: "10px 12px",
                             display: "grid",
-                            gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                            gridTemplateColumns: "repeat(auto-fit, minmax(92px, 1fr))",
                             gap: "8px 12px",
                           }}
                         >
@@ -351,8 +479,57 @@ export default function TrainConfirmationTravellerCard({
             />
           </div>
         </div>
+        </div>
       </div>
     </section>
+  );
+}
+
+function MobileBadge({ children }: { children: ReactNode }) {
+  return (
+    <span className="inline-flex items-center rounded-full border border-[#e5e7eb] bg-white px-2.5 py-1 text-[11px] font-black text-[#475569]">
+      {children}
+    </span>
+  );
+}
+
+function MobileTicketRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0 rounded-2xl border border-[#e5e7eb] bg-white px-3 py-2.5">
+      <div className="text-[10px] font-black uppercase tracking-[0.12em] text-[#64748b]">
+        {label}
+      </div>
+      <div className="mt-1 break-words text-[12px] font-black leading-4 text-[#111827]">
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function MobileInfoPanel({
+  title,
+  rows,
+}: {
+  title: string;
+  rows: { label: string; value: string }[];
+}) {
+  return (
+    <div className="rounded-[18px] border border-[#e5e7eb] bg-white p-4 shadow-[0_6px_18px_rgba(15,23,42,0.04)]">
+      <div className="text-[15px] font-black text-[#111827]">{title}</div>
+      <div className="mt-3 grid gap-2">
+        {rows.map((row) => (
+          <div
+            key={row.label}
+            className="flex min-w-0 items-start justify-between gap-3 rounded-2xl bg-[#f8fafc] px-3 py-2.5"
+          >
+            <div className="text-[12px] font-bold text-[#64748b]">{row.label}</div>
+            <div className="min-w-0 break-words text-right text-[12px] font-black leading-4 text-[#111827]">
+              {row.value}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -438,6 +615,7 @@ function InfoCard({
                 fontWeight: 800,
                 color: "#64748b",
                 minWidth: "110px",
+                maxWidth: "45%",
               }}
             >
               {row.label}
@@ -451,6 +629,7 @@ function InfoCard({
                 lineHeight: "20px",
                 textAlign: "right",
                 wordBreak: "break-word",
+                minWidth: 0,
               }}
             >
               {row.value}

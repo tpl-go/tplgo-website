@@ -670,8 +670,8 @@ function TrainManagePageContent() {
 
   if (isLoading) {
     return (
-      <main className="min-h-screen bg-[#f8f9fb] px-4 py-10">
-        <div className="mx-auto max-w-[1440px] rounded-[28px] border border-black/5 bg-white p-8 text-sm text-[#6b7280]">
+      <main className="min-h-screen bg-[#f8f9fb] px-3 py-6 md:px-4 md:py-10">
+        <div className="mx-auto max-w-[1440px] rounded-[20px] border border-black/5 bg-white p-4 text-sm font-semibold text-[#6b7280] shadow-[0_10px_34px_rgba(15,23,42,0.05)] md:rounded-[28px] md:p-8">
           Loading train
           manage booking...
         </div>
@@ -684,9 +684,9 @@ function TrainManagePageContent() {
     !payload
   ) {
     return (
-      <main className="min-h-screen bg-[#f8f9fb] px-4 py-10">
-        <div className="mx-auto max-w-[1440px] rounded-[28px] border border-black/5 bg-white p-8">
-          <h1 className="text-xl font-bold text-[#111827]">
+      <main className="min-h-screen bg-[#f8f9fb] px-3 py-6 md:px-4 md:py-10">
+        <div className="mx-auto max-w-[1440px] rounded-[20px] border border-black/5 bg-white p-4 shadow-[0_10px_34px_rgba(15,23,42,0.05)] md:rounded-[28px] md:p-8">
+          <h1 className="break-words text-xl font-bold text-[#111827]">
             Train booking not
             found
           </h1>
@@ -707,6 +707,9 @@ function TrainManagePageContent() {
       journeyDateLabel={formatDateOnly(
         journeyDate
       )}
+      pnrLabel={pnrNumber}
+      classLabel={coachClass}
+      travellersLabel={`${travellers.length} Traveller`}
     >
       {activeTab ===
         "summary" && (

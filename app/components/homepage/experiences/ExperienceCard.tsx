@@ -1,5 +1,6 @@
 "use client";
 
+import TPLDynamicImage from "@/app/components/common/TPLDynamicImage";
 import { Experience } from "./types";
 
 interface Props {
@@ -14,12 +15,18 @@ export default function ExperienceCard({ item, colSpan, onClick }: Props) {
       onClick={() => onClick(item.slug)}
       className={`${colSpan} group relative min-h-[180px] overflow-hidden rounded-2xl cursor-pointer md:min-h-0 md:rounded-3xl`}
     >
-      <img
+      <TPLDynamicImage
         src={item.image}
-        alt={item.name}
-        className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
+        imageQuery={item.imageQuery}
+        fallbackSrc={item.fallbackImage || item.image}
+        alt={item.imageAlt || item.name}
+        className="h-full w-full"
+        imgClassName="h-full w-full object-cover transition duration-700 group-hover:scale-105"
+        sizes="(max-width: 768px) 50vw, 33vw"
+        preferDynamic
       />
 
+      <div className="absolute inset-0 bg-black/10"></div>
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
 
       <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/75 via-black/40 to-transparent px-3 pb-3 pt-10 md:px-6 md:pb-6">

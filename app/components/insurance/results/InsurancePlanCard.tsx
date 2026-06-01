@@ -11,8 +11,8 @@ import { getSmartActiveOfferItem } from "@/app/lib/smartOffers";
 
 type InsurancePlanWithPricing = InsurancePlan & {
   originalPremium?: number;
-  pricingSnapshot?: any;
-  benefitPricing?: any;
+  pricingSnapshot?: PricingSnapshot;
+  benefitPricing?: PricingSnapshot | null;
   baseAfterOffer?: number;
   nonBenefitAmount?: number;
   grossAmount?: number;
@@ -29,6 +29,31 @@ type InsurancePlanWithPricing = InsurancePlan & {
   finalTotal?: number;
 };
 
+type PricingSnapshot = Record<string, unknown>;
+
+type InsurancePlanChargeExtras = {
+  gst?: number;
+  taxes?: number;
+  medicalSurcharge?: number;
+  adventureSportsAddon?: number;
+  adventureSportsCharge?: number;
+  seniorCitizenSurcharge?: number;
+  convenienceFee?: number;
+  gatewayFee?: number;
+  markup?: number;
+  visaLinkedSurcharge?: number;
+  addonCoverCharges?: number;
+};
+
+type SmartOffer = {
+  couponCode?: string;
+  code?: string;
+  offerCode?: string;
+  slug?: string;
+  title?: string;
+  name?: string;
+};
+
 type Props = {
   plan: InsurancePlanWithPricing;
   isCompared?: boolean;
@@ -38,12 +63,12 @@ type Props = {
   onBuyNow?: (plan: InsurancePlanWithPricing) => void;
 };
 
-function toAmount(value: any, fallback = 0) {
+function toAmount(value: unknown, fallback = 0) {
   const amount = Number(value);
   return Number.isFinite(amount) && amount > 0 ? Math.round(amount) : fallback;
 }
 
-function resolveBenefitValue(source: any, keys: string[], fallback = 0) {
+function resolveBenefitValue(source: PricingSnapshot, keys: string[], fallback = 0) {
   for (const key of keys) {
     const value = source?.[key];
 
@@ -57,6 +82,7 @@ function resolveBenefitValue(source: any, keys: string[], fallback = 0) {
 
 function getPlanBaseAndCharges(plan: InsurancePlanWithPricing) {
   const snapshot = plan.pricingSnapshot || {};
+  const chargePlan = plan as InsurancePlanWithPricing & InsurancePlanChargeExtras;
 
   const premiumWithGst = toAmount(
     plan.originalPremium ||
@@ -72,47 +98,47 @@ function getPlanBaseAndCharges(plan: InsurancePlanWithPricing) {
     snapshot.gstAmount ||
       snapshot.gst ||
       snapshot.taxes ||
-      (plan as any)?.gst ||
-      (plan as any)?.taxes,
+      chargePlan.gst ||
+      chargePlan.taxes,
     0
   );
 
   const medicalSurcharge = toAmount(
-    snapshot.medicalSurcharge || (plan as any)?.medicalSurcharge,
+    snapshot.medicalSurcharge || chargePlan.medicalSurcharge,
     0
   );
 
   const adventureSportsAddon = toAmount(
     snapshot.adventureSportsAddon ||
-      (plan as any)?.adventureSportsAddon ||
-      (plan as any)?.adventureSportsCharge,
+      chargePlan.adventureSportsAddon ||
+      chargePlan.adventureSportsCharge,
     0
   );
 
   const seniorCitizenSurcharge = toAmount(
-    snapshot.seniorCitizenSurcharge || (plan as any)?.seniorCitizenSurcharge,
+    snapshot.seniorCitizenSurcharge || chargePlan.seniorCitizenSurcharge,
     0
   );
 
   const convenienceFee = toAmount(
-    snapshot.convenienceFee || (plan as any)?.convenienceFee,
+    snapshot.convenienceFee || chargePlan.convenienceFee,
     0
   );
 
   const gatewayFee = toAmount(
-    snapshot.gatewayFee || (plan as any)?.gatewayFee,
+    snapshot.gatewayFee || chargePlan.gatewayFee,
     0
   );
 
-  const markup = toAmount(snapshot.markup || (plan as any)?.markup, 0);
+  const markup = toAmount(snapshot.markup || chargePlan.markup, 0);
 
   const visaLinkedSurcharge = toAmount(
-    snapshot.visaLinkedSurcharge || (plan as any)?.visaLinkedSurcharge,
+    snapshot.visaLinkedSurcharge || chargePlan.visaLinkedSurcharge,
     0
   );
 
   const addonCoverCharges = toAmount(
-    snapshot.addonCoverCharges || (plan as any)?.addonCoverCharges,
+    snapshot.addonCoverCharges || chargePlan.addonCoverCharges,
     0
   );
 
@@ -151,15 +177,15 @@ function getPlanBaseAndCharges(plan: InsurancePlanWithPricing) {
   };
 }
 
-function buildFallbackPricing(plan: InsurancePlanWithPricing, smartOffer: any) {
+function buildFallbackPricing(plan: InsurancePlanWithPricing, smartOffer: SmartOffer | null) {
   const charges = getPlanBaseAndCharges(plan);
   const baseAmount = charges.baseAmount;
   const nonBenefitAmount = charges.nonBenefitAmount;
 
-  let benefitPricing: any = null;
+  let benefitPricing: PricingSnapshot | null = null;
 
   try {
-    benefitPricing = (applyBenefitPricing as any)({
+    benefitPricing = applyBenefitPricing({
       baseAmount,
       nonBenefitAmount,
       offerData: smartOffer,
@@ -173,7 +199,7 @@ function buildFallbackPricing(plan: InsurancePlanWithPricing, smartOffer: any) {
   }
 
   const appliedOfferAmount = resolveBenefitValue(
-    benefitPricing,
+    benefitPricing || {},
     [
       "appliedOfferAmount",
       "offerDiscount",
@@ -185,13 +211,13 @@ function buildFallbackPricing(plan: InsurancePlanWithPricing, smartOffer: any) {
   );
 
   const baseAfterOffer = resolveBenefitValue(
-    benefitPricing,
+    benefitPricing || {},
     ["baseAfterOffer", "benefitEligibleAfterOffer", "netBaseAmount"],
     Math.max(baseAmount - appliedOfferAmount, 0)
   );
 
   const finalPayable = resolveBenefitValue(
-    benefitPricing,
+    benefitPricing || {},
     ["finalPayable", "finalTotal", "payableAmount", "grandTotal"],
     Math.max(baseAfterOffer + nonBenefitAmount, 0)
   );
@@ -231,12 +257,6 @@ export default function InsurancePlanCard({
   onBuyNow,
 }: Props) {
   const [refreshKey, setRefreshKey] = useState(0);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
   useEffect(() => {
     const update = () => setRefreshKey((prev) => prev + 1);
 
@@ -256,9 +276,10 @@ export default function InsurancePlanCard({
   }, []);
 
   const smartOffer = useMemo(() => {
-    if (!mounted) return null;
-    return getSmartActiveOfferItem();
-  }, [mounted, refreshKey]);
+    void refreshKey;
+    if (typeof window === "undefined") return null;
+    return getSmartActiveOfferItem() as SmartOffer | null;
+  }, [refreshKey]);
 
   const pricing = useMemo(() => {
     const snapshot = plan.pricingSnapshot || {};
@@ -349,16 +370,16 @@ export default function InsurancePlanCard({
   }, [plan, pricing]);
 
   return (
-    <article className="rounded-3xl border border-gray-100 bg-white p-4 shadow-sm transition hover:shadow-md">
+    <article className="min-w-0 rounded-[22px] border border-gray-100 bg-white p-4 shadow-sm transition hover:shadow-md md:rounded-3xl">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="flex flex-1 gap-4">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-orange-100 text-lg font-extrabold text-orange-700">
+        <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:gap-4">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-orange-100 text-base font-extrabold text-orange-700 md:h-14 md:w-14 md:text-lg">
             {plan.logoText}
           </div>
 
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h3 className="text-xl font-extrabold text-gray-900">
+              <h3 className="min-w-0 break-words text-[19px] font-extrabold leading-6 text-gray-900 md:text-xl">
                 {plan.provider}
               </h3>
 
@@ -381,7 +402,7 @@ export default function InsurancePlanCard({
               )}
             </div>
 
-            <p className="mt-1 text-sm font-semibold text-gray-700">
+            <p className="mt-1 break-words text-sm font-semibold leading-5 text-gray-700">
               {plan.planName}
             </p>
 
@@ -390,7 +411,7 @@ export default function InsurancePlanCard({
                 <p className="text-[11px] font-semibold text-gray-500">
                   Coverage
                 </p>
-                <p className="text-sm font-extrabold text-gray-900">
+                <p className="break-words text-sm font-extrabold text-gray-900">
                   {formatCoverageAmount(plan.coverageAmount)}
                 </p>
               </div>
@@ -399,7 +420,7 @@ export default function InsurancePlanCard({
                 <p className="text-[11px] font-semibold text-gray-500">
                   Claim Ratio
                 </p>
-                <p className="text-sm font-extrabold text-gray-900">
+                <p className="break-words text-sm font-extrabold text-gray-900">
                   {plan.claimSettlementRatio}%
                 </p>
               </div>
@@ -408,7 +429,7 @@ export default function InsurancePlanCard({
                 <p className="text-[11px] font-semibold text-gray-500">
                   Medical
                 </p>
-                <p className="text-sm font-extrabold text-gray-900">
+                <p className="break-words text-sm font-extrabold text-gray-900">
                   {plan.medicalCovered ? "Covered" : "Not Covered"}
                 </p>
               </div>
@@ -417,7 +438,7 @@ export default function InsurancePlanCard({
                 <p className="text-[11px] font-semibold text-gray-500">
                   Covid
                 </p>
-                <p className="text-sm font-extrabold text-gray-900">
+                <p className="break-words text-sm font-extrabold text-gray-900">
                   {plan.covidCover ? "Included" : "No"}
                 </p>
               </div>
@@ -427,7 +448,7 @@ export default function InsurancePlanCard({
               {plan.features.slice(0, 4).map((feature) => (
                 <span
                   key={feature}
-                  className="rounded-full border border-gray-200 px-3 py-1 text-xs font-semibold text-gray-600"
+                  className="break-words rounded-full border border-gray-200 px-3 py-1 text-xs font-semibold text-gray-600"
                 >
                   {feature}
                 </span>
@@ -438,7 +459,7 @@ export default function InsurancePlanCard({
               type="button"
               disabled={compareDisabled && !isCompared}
               onClick={() => onCompareToggle?.(displayPlan)}
-              className={`mt-4 rounded-full border px-4 py-2 text-xs font-extrabold transition ${
+              className={`mt-4 min-h-10 rounded-full border px-4 py-2 text-xs font-extrabold transition ${
                 isCompared
                   ? "border-orange-500 bg-orange-500 text-white"
                   : compareDisabled
@@ -451,7 +472,7 @@ export default function InsurancePlanCard({
           </div>
         </div>
 
-        <div className="rounded-2xl border border-orange-100 bg-orange-50 p-4 lg:w-56">
+        <div className="min-w-0 rounded-2xl border border-orange-100 bg-orange-50 p-4 lg:w-56">
           <p className="text-xs font-semibold text-gray-500">Premium starts</p>
 
           <div className="mt-1">
@@ -461,18 +482,18 @@ export default function InsurancePlanCard({
                   {formatInsuranceMoney(pricing.baseAmount)}
                 </p>
 
-                <p className="text-2xl font-extrabold text-gray-900">
+                <p className="break-words text-2xl font-extrabold text-gray-900">
                   {formatInsuranceMoney(pricing.baseAfterOffer)}
                 </p>
               </>
             ) : (
-              <p className="text-2xl font-extrabold text-gray-900">
+              <p className="break-words text-2xl font-extrabold text-gray-900">
                 {formatInsuranceMoney(pricing.baseAmount)}
               </p>
             )}
           </div>
 
-          <p className="text-xs text-gray-500">
+          <p className="break-words text-xs text-gray-500">
             Total {formatInsuranceMoney(pricing.finalPayable)} incl. GST
           </p>
 
@@ -497,7 +518,7 @@ export default function InsurancePlanCard({
             <button
               type="button"
               onClick={() => onBuyNow?.(displayPlan)}
-              className="w-full rounded-xl bg-orange-500 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-orange-600"
+              className="min-h-11 w-full rounded-xl bg-orange-500 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-orange-600"
             >
               Buy Now
             </button>
@@ -505,7 +526,7 @@ export default function InsurancePlanCard({
             <button
               type="button"
               onClick={() => onViewDetails?.(displayPlan)}
-              className="w-full rounded-xl border border-orange-200 bg-white px-4 py-2.5 text-sm font-bold text-orange-600 transition hover:border-orange-400"
+              className="min-h-11 w-full rounded-xl border border-orange-200 bg-white px-4 py-2.5 text-sm font-bold text-orange-600 transition hover:border-orange-400"
             >
               View Details
             </button>

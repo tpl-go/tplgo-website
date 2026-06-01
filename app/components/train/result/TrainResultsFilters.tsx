@@ -22,6 +22,7 @@ type Props = {
   onToggleFromStation: (value: string) => void;
   onToggleToStation: (value: string) => void;
   onClearAll: () => void;
+  className?: string;
 };
 
 function Section({
@@ -51,21 +52,21 @@ function CheckboxRow({
   onChange: () => void;
 }) {
   return (
-    <label className="flex cursor-pointer items-center justify-between gap-3">
-      <div className="flex items-center gap-3">
+    <label className="flex min-w-0 cursor-pointer items-center justify-between gap-3">
+      <div className="flex min-w-0 items-center gap-3">
         <input
           type="checkbox"
           checked={checked}
           onChange={onChange}
-          className="h-5 w-5 rounded border-slate-300"
+          className="h-5 w-5 shrink-0 rounded border-slate-300"
         />
-        <span className="text-[15px] font-medium leading-5 text-slate-800">
+        <span className="min-w-0 break-words text-[15px] font-medium leading-5 text-slate-800">
           {label}
         </span>
       </div>
 
       {typeof count === "number" ? (
-        <span className="text-[14px] font-semibold text-slate-600">{count}</span>
+        <span className="shrink-0 text-[14px] font-semibold text-slate-600">{count}</span>
       ) : null}
     </label>
   );
@@ -212,7 +213,6 @@ export default function TrainResultsFilters({
   toCity,
   trains,
   filters,
-  chips,
   onToggleQuick,
   onToggleTicketType,
   onToggleQuota,
@@ -223,12 +223,13 @@ export default function TrainResultsFilters({
   onToggleFromStation,
   onToggleToStation,
   onClearAll,
+  className = "",
 }: Props) {
   const fromStations = uniqueFromStations(trains);
   const toStations = uniqueToStations(trains);
 
   return (
-    <div className="space-y-4">
+    <div className={`min-w-0 space-y-4 ${className}`}>
       <div className="rounded-[20px] border border-slate-200 bg-white px-4 py-4 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="text-[18px] font-extrabold text-slate-900">Filters</div>

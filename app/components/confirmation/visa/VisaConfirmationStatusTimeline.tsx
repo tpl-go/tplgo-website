@@ -48,31 +48,34 @@ export default function VisaConfirmationStatusTimeline({
   );
 
   return (
-    <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-      <h2 className="text-xl font-black text-gray-950">
+    <div className="min-w-0 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm md:rounded-3xl md:p-6">
+      <h2 className="break-words text-lg font-black text-gray-950 md:text-xl">
         Visa Status Tracker
       </h2>
 
-      <p className="mt-1 text-sm font-semibold text-gray-600">
+      <p className="mt-1 break-words text-sm font-semibold leading-5 text-gray-600">
         Track the application journey from submission to final decision.
       </p>
 
-      <div className="mt-6 space-y-4">
+      <div className="mt-5 space-y-1 md:mt-6 md:space-y-4">
         {steps.map((step, index) => {
           const Icon = step.icon;
           const completed = index <= activeIndex;
+          const current = index === activeIndex;
 
           return (
-            <div key={step.key} className="flex gap-4">
+            <div key={step.key} className="flex min-w-0 gap-3 md:gap-4">
               <div className="flex flex-col items-center">
                 <div
-                  className={`flex h-10 w-10 items-center justify-center rounded-full ${
-                    completed
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full md:h-10 md:w-10 ${
+                    current
+                      ? "bg-orange-100 text-orange-700 ring-4 ring-orange-50"
+                      : completed
                       ? "bg-green-100 text-green-700"
                       : "bg-gray-100 text-gray-400"
                   }`}
                 >
-                  <Icon size={20} />
+                  <Icon size={18} />
                 </div>
 
                 {index !== steps.length - 1 && (
@@ -84,16 +87,20 @@ export default function VisaConfirmationStatusTimeline({
                 )}
               </div>
 
-              <div className="pb-4">
+              <div className="min-w-0 pb-4">
                 <h3
-                  className={`text-sm font-black ${
-                    completed ? "text-gray-950" : "text-gray-500"
+                  className={`break-words text-sm font-black ${
+                    current
+                      ? "text-orange-700"
+                      : completed
+                      ? "text-gray-950"
+                      : "text-gray-500"
                   }`}
                 >
                   {step.title}
                 </h3>
 
-                <p className="mt-1 text-xs font-semibold text-gray-600">
+                <p className="mt-1 break-words text-xs font-semibold leading-5 text-gray-600">
                   {step.desc}
                 </p>
               </div>

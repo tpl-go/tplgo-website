@@ -11,7 +11,15 @@ import {
 type PaymentState = "idle" | "processing" | "success" | "failure";
 
 type Props = {
-  payload: any;
+  payload: {
+    fareBreakup?: Record<string, unknown>;
+    walletBreakdown?: Record<string, unknown>;
+    appliedOffer?: Record<string, unknown> | null;
+    offerData?: Record<string, unknown> | null;
+    offerApplied?: number;
+    appliedOfferCode?: string;
+    appliedOfferTitle?: string;
+  };
   selectedPaymentMethod: string;
   paymentActionState: PaymentState;
   isExpired: boolean;
@@ -102,17 +110,17 @@ export default function InsurancePaymentPriceCard({
     isExpired;
 
   return (
-    <div className="sticky top-24 overflow-hidden rounded-[24px] border border-[#d9e2ec] bg-white shadow-[0_12px_34px_rgba(15,23,42,0.08)]">
+    <div className="min-w-0 overflow-hidden rounded-[22px] border border-[#d9e2ec] bg-white shadow-[0_12px_34px_rgba(15,23,42,0.08)] md:rounded-[24px] lg:sticky lg:top-24">
       <div className="border-b border-[#e5e7eb] bg-white px-5 py-4">
         <div className="flex items-center gap-2">
           <ShieldCheck size={20} className="text-[#ea580c]" />
 
-          <h2 className="text-[22px] font-black text-[#111827]">
+          <h2 className="text-[20px] font-black text-[#111827] md:text-[22px]">
             Payment Summary
           </h2>
         </div>
 
-        <div className="mt-1 text-[12px] font-semibold text-[#6b7280]">
+        <div className="mt-1 break-words text-[12px] font-semibold leading-4 text-[#6b7280]">
           Premium, offer, wallet and final payable
         </div>
       </div>
@@ -142,7 +150,7 @@ export default function InsurancePaymentPriceCard({
                 ) : null}
               </div>
 
-              <div className="mt-2 text-[15px] font-black leading-tight text-[#111827]">
+              <div className="mt-2 break-words text-[15px] font-black leading-tight text-[#111827]">
                 {offerTitle}
               </div>
 
@@ -206,18 +214,18 @@ export default function InsurancePaymentPriceCard({
           ) : null}
 
           <div className="border-t border-dashed border-[#d1d5db] pt-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="text-[20px] font-black text-[#111827]">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-[18px] font-black text-[#111827] md:text-[20px]">
                   Pay Now
                 </div>
 
-                <div className="mt-1 text-[12px] font-semibold text-[#6b7280]">
+                <div className="mt-1 break-words text-[12px] font-semibold leading-4 text-[#6b7280]">
                   Final amount after offer and wallet benefits
                 </div>
               </div>
 
-              <div className="whitespace-nowrap text-[30px] font-black text-[#111827]">
+              <div className="whitespace-nowrap text-[24px] font-black text-[#111827] md:text-[30px]">
                 {money(finalPayable)}
               </div>
             </div>
@@ -292,9 +300,9 @@ function SummaryRow({
   const isNegative = value < 0;
 
   return (
-    <div className="flex items-start justify-between gap-3">
+    <div className="flex min-w-0 items-start justify-between gap-3">
       <span
-        className={`text-[15px] font-bold ${
+        className={`min-w-0 break-words text-[14px] font-bold md:text-[15px] ${
           orange ? "text-[#ea580c]" : "text-[#1f2937]"
         }`}
       >
@@ -329,7 +337,7 @@ function MiniInfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="mt-1 flex items-center justify-between gap-3 first:mt-0">
       <span className="text-[12px] font-bold text-[#64748b]">{label}</span>
-      <span className="text-[12px] font-extrabold text-[#475569]">{value}</span>
+      <span className="min-w-0 break-words text-right text-[12px] font-extrabold text-[#475569]">{value}</span>
     </div>
   );
 }

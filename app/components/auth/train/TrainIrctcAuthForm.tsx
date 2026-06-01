@@ -40,8 +40,8 @@ export default function TrainIrctcAuthForm({
 
   return (
     <section className="overflow-hidden rounded-[20px] border border-slate-200 bg-white shadow-sm">
-      <div className="border-b border-slate-200 px-5 py-4">
-        <div className="text-[19px] font-extrabold text-slate-900">
+      <div className="border-b border-slate-200 px-4 py-4 md:px-5">
+        <div className="text-[18px] font-extrabold text-slate-900 md:text-[19px]">
           IRCTC Authentication
         </div>
         <div className="mt-1 text-[13px] text-slate-500">
@@ -49,7 +49,7 @@ export default function TrainIrctcAuthForm({
         </div>
       </div>
 
-      <div className="space-y-4 px-5 py-5">
+      <div className="space-y-4 px-4 py-4 md:px-5 md:py-5">
         <label className="block">
           <div className="mb-2 text-[13px] font-bold text-slate-700">
             IRCTC Username
@@ -80,7 +80,7 @@ export default function TrainIrctcAuthForm({
             Captcha Verification
           </div>
 
-          <div className="mb-3 flex h-[54px] items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white text-[18px] font-black tracking-[0.3em] text-slate-700">
+          <div className="mb-3 flex h-[54px] items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white text-[18px] font-black tracking-[0.2em] text-slate-700 md:tracking-[0.3em]">
             X7K9P
           </div>
 
@@ -97,7 +97,7 @@ export default function TrainIrctcAuthForm({
           type="button"
           onClick={handleAction}
           disabled={isExpired || isProcessing}
-          className={`h-[48px] w-full rounded-full text-[15px] font-extrabold text-white transition ${
+          className={`min-h-12 w-full rounded-full px-4 text-[15px] font-extrabold text-white transition ${
             isExpired || isProcessing
               ? "cursor-not-allowed bg-slate-300"
               : isSuccess

@@ -57,7 +57,7 @@ export default function TrainPaymentPage() {
   const [showLoginModal, setShowLoginModal] = useState(false);
 
   const [activeUser, setActiveUser] = useState<any>(null);
-  const [wallet, setWallet] = useState<Wallet>({
+  const [, setWallet] = useState<Wallet>({
     promoCredit: 0,
     earnedCredit: 0,
     refundableBalance: 0,
@@ -646,9 +646,9 @@ export default function TrainPaymentPage() {
 
   if (!paymentData) {
     return (
-      <main className="min-h-screen bg-[#f5f7fb]">
+    <main className="min-h-screen bg-[#f5f7fb]">
         <TrainBookingTopBar timerLabel="15:00" />
-        <div className="mx-auto max-w-[1400px] px-4 py-6">
+        <div className="mx-auto max-w-[1400px] px-3 py-4 md:px-4 md:py-6">
           <div className="rounded-2xl border border-slate-200 bg-white p-8 text-[18px] font-bold text-slate-700">
             No payment data found.
           </div>
@@ -666,12 +666,12 @@ export default function TrainPaymentPage() {
   } = paymentData;
 
   return (
-    <main className="min-h-screen bg-[#f5f7fb] text-black">
+    <main className="min-w-0 overflow-x-hidden bg-[#f5f7fb] pb-28 text-black lg:min-h-screen lg:pb-0">
       <TrainBookingTopBar timerLabel={timerLabel} />
 
-      <div className="mx-auto max-w-[1400px] px-4 py-6">
-        <div className="flex items-start gap-5">
-          <div className="w-[74%] min-w-0 space-y-5">
+      <div className="mx-auto max-w-[1400px] px-3 py-4 md:px-4 lg:py-6">
+        <div className="flex min-w-0 flex-col items-stretch gap-4 lg:flex-row lg:items-start lg:gap-5">
+          <div className="min-w-0 space-y-4 lg:w-[74%] lg:space-y-5">
             <TrainPaymentTopSummary
               paymentPayload={{
                 bookingPayload,
@@ -683,8 +683,8 @@ export default function TrainPaymentPage() {
             />
 
             <section className="rounded-2xl border border-[#d9e2ec] bg-white px-5 py-4 shadow-sm">
-              <div className="flex items-center justify-between gap-4">
-                <div>
+              <div className="flex min-w-0 flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-4">
+                <div className="min-w-0">
                   <div className="text-[16px] font-extrabold text-[#111827]">
                     {activeUser?.mobile
                       ? "Wallet benefits applied automatically"
@@ -696,7 +696,7 @@ export default function TrainPaymentPage() {
                   <button
                     type="button"
                     onClick={() => setShowLoginModal(true)}
-                    className="h-[42px] min-w-[110px] rounded-xl bg-[#1d9bf0] px-5 text-[13px] font-extrabold text-white"
+                    className="h-[42px] w-full rounded-xl bg-[#1d9bf0] px-5 text-[13px] font-extrabold text-white md:min-w-[110px] md:w-auto"
                   >
                     LOGIN
                   </button>
@@ -706,11 +706,15 @@ export default function TrainPaymentPage() {
 
             <TrainPaymentOptionSection
               defaultOption={null}
+              payableAmount={
+                walletPriceBreakup?.totalAmount ||
+                paymentData.pricing.totalAmount
+              }
               onPaymentMethodChange={setSelectedPaymentMethod}
             />
           </div>
 
-          <div className="w-[26%] min-w-0 self-start">
+          <div className="min-w-0 self-stretch lg:w-[26%] lg:self-start">
             <TrainPaymentPriceCard
               priceBreakup={{
                 baseFare:

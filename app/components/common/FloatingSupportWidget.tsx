@@ -18,8 +18,6 @@ export default function FloatingSupportWidget() {
     pathname.startsWith(route)
   );
 
-  if (shouldHide) return null;
-
   const [showPopup, setShowPopup] = useState(false);
 
   const popupRef = useRef<HTMLDivElement | null>(null);
@@ -49,13 +47,15 @@ export default function FloatingSupportWidget() {
     };
   }, [showPopup]);
 
+  if (shouldHide) return null;
+
   return (
     <>
       {/* FLOATING BUTTON */}
       <button
         ref={buttonRef}
         onClick={() => setShowPopup((prev) => !prev)}
-        className="fixed bottom-2 right-[125px] bg-purple-600 text-white px-4 py-3 rounded-full shadow-lg z-50 hover:bg-purple-700 transition"
+        className="fixed bottom-4 left-1/2 z-50 min-h-11 -translate-x-1/2 rounded-full bg-purple-600 px-4 py-2.5 text-sm font-black text-white shadow-lg transition hover:bg-purple-700 md:bottom-2 md:left-auto md:right-[125px] md:translate-x-0 md:px-4 md:py-3 md:font-medium"
       >
         Customise My Trip
       </button>
@@ -64,7 +64,7 @@ export default function FloatingSupportWidget() {
       {showPopup && (
         <div
           ref={popupRef}
-          className="fixed bottom-18 right-[125px] bg-white shadow-xl rounded-xl w-72 p-4 space-y-4 z-50 border border-gray-200"
+          className="fixed bottom-20 left-1/2 z-50 w-[calc(100vw-24px)] max-w-72 -translate-x-1/2 space-y-4 rounded-xl border border-gray-200 bg-white p-4 shadow-xl md:bottom-18 md:left-auto md:right-[125px] md:w-72 md:translate-x-0"
         >
           {/* GET A QUOTE */}
           <button

@@ -74,8 +74,88 @@ export default function TrainConfirmationJourneyCard({
         </h3>
       </div>
 
-      <div style={{ padding: "22px" }}>
+      <div className="p-4 md:p-[22px]">
+        <div className="md:hidden">
+          <div className="overflow-hidden rounded-[20px] border border-[#dbe4ee] bg-white shadow-[0_10px_26px_rgba(15,23,42,0.06)]">
+            <div className="border-b border-[#e5e7eb] bg-[linear-gradient(135deg,#f8fbff_0%,#ffffff_100%)] p-4">
+              <div className="min-w-0">
+                <div className="break-words text-[19px] font-black leading-6 text-[#111827]">
+                  {trainName}
+                </div>
+                {trainNumber ? (
+                  <div className="mt-1 text-[13px] font-extrabold text-[#64748b]">
+                    Train No. {trainNumber}
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <span className="rounded-full border border-[#bbf7d0] bg-[#f0fdf4] px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.1em] text-[#15803d]">
+                  Confirmed
+                </span>
+                {coachClass ? (
+                  <span className="rounded-full border border-[#dbeafe] bg-[#eff6ff] px-3 py-1.5 text-[11px] font-black text-[#1d4ed8]">
+                    {coachClass}
+                  </span>
+                ) : null}
+                {quota ? (
+                  <span className="rounded-full border border-[#e5e7eb] bg-[#f8fafc] px-3 py-1.5 text-[11px] font-black text-[#475569]">
+                    {quota}
+                  </span>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="p-4">
+              <div className="rounded-2xl border border-[#dbeafe] bg-[#f8fbff] px-4 py-3">
+                <div className="text-[10px] font-black uppercase tracking-[0.14em] text-[#64748b]">
+                  Route
+                </div>
+                <div className="mt-1 break-words text-[15px] font-black leading-5 text-[#111827]">
+                  {boardingStation || "Boarding"} →{" "}
+                  {destinationStation || "Destination"}
+                </div>
+                {route ? (
+                  <div className="mt-1 break-words text-[12px] font-bold leading-4 text-[#2563eb]">
+                    {route}
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="my-4 flex items-center gap-3 text-[#64748b]">
+                <div className="h-px flex-1 bg-[#dbe4ee]" />
+                <div className="rounded-full border border-[#dbeafe] bg-white px-3 py-1 text-[11px] font-black">
+                  Train Journey
+                </div>
+                <div className="h-px flex-1 bg-[#dbe4ee]" />
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <MobileTimeCard
+                  label="Departure"
+                  time={departureTime || "--:--"}
+                  station={boardingStation || "Boarding"}
+                  date={formatDate(journeyDate)}
+                />
+                <MobileTimeCard
+                  label="Arrival"
+                  time={arrivalTime || "--:--"}
+                  station={destinationStation || "Destination"}
+                  date={formatDate(journeyDate)}
+                  alignRight
+                />
+              </div>
+
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                <MobileMiniCard label="Journey Date" value={formatDate(journeyDate)} />
+                <MobileMiniCard label="Train Number" value={trainNumber || "N/A"} />
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div
+          className="hidden md:block"
           style={{
             border: "1px solid #e5e7eb",
             borderRadius: "20px",
@@ -99,10 +179,11 @@ export default function TrainConfirmationJourneyCard({
             <div style={{ minWidth: 0, flex: 1 }}>
               <div
                 style={{
-                  fontSize: "22px",
+                  fontSize: "clamp(18px, 5vw, 22px)",
                   fontWeight: 900,
                   color: "#111827",
                   lineHeight: "30px",
+                  wordBreak: "break-word",
                 }}
               >
                 {trainName}
@@ -138,12 +219,12 @@ export default function TrainConfirmationJourneyCard({
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "1fr auto 1fr",
+                  gridTemplateColumns: "minmax(0,1fr) auto minmax(0,1fr)",
                   gap: "14px",
                   alignItems: "center",
                 }}
               >
-                <div>
+                <div style={{ minWidth: 0 }}>
                   <div
                     style={{
                       fontSize: "13px",
@@ -159,7 +240,7 @@ export default function TrainConfirmationJourneyCard({
                   <div
                     style={{
                       marginTop: "6px",
-                      fontSize: "28px",
+                      fontSize: "clamp(22px, 7vw, 28px)",
                       fontWeight: 900,
                       color: "#0f172a",
                       lineHeight: "30px",
@@ -171,10 +252,11 @@ export default function TrainConfirmationJourneyCard({
                   <div
                     style={{
                       marginTop: "8px",
-                      fontSize: "18px",
+                      fontSize: "clamp(14px, 4.5vw, 18px)",
                       fontWeight: 900,
                       color: "#111827",
                       lineHeight: "24px",
+                      wordBreak: "break-word",
                     }}
                   >
                     {boardingStation || "Boarding"}
@@ -199,7 +281,7 @@ export default function TrainConfirmationJourneyCard({
                     flexDirection: "column",
                     alignItems: "center",
                     gap: "8px",
-                    minWidth: "110px",
+                    minWidth: "72px",
                   }}
                 >
                   <div
@@ -236,7 +318,7 @@ export default function TrainConfirmationJourneyCard({
                   />
                 </div>
 
-                <div style={{ textAlign: "right" }}>
+                <div style={{ textAlign: "right", minWidth: 0 }}>
                   <div
                     style={{
                       fontSize: "13px",
@@ -252,7 +334,7 @@ export default function TrainConfirmationJourneyCard({
                   <div
                     style={{
                       marginTop: "6px",
-                      fontSize: "28px",
+                      fontSize: "clamp(22px, 7vw, 28px)",
                       fontWeight: 900,
                       color: "#0f172a",
                       lineHeight: "30px",
@@ -264,10 +346,11 @@ export default function TrainConfirmationJourneyCard({
                   <div
                     style={{
                       marginTop: "8px",
-                      fontSize: "18px",
+                      fontSize: "clamp(14px, 4.5vw, 18px)",
                       fontWeight: 900,
                       color: "#111827",
                       lineHeight: "24px",
+                      wordBreak: "break-word",
                     }}
                   >
                     {destinationStation || "Destination"}
@@ -310,7 +393,7 @@ export default function TrainConfirmationJourneyCard({
               style={{
                 marginTop: "16px",
                 display: "grid",
-                gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
                 gap: "14px",
               }}
             >
@@ -329,6 +412,50 @@ export default function TrainConfirmationJourneyCard({
         </div>
       </div>
     </section>
+  );
+}
+
+function MobileTimeCard({
+  label,
+  time,
+  station,
+  date,
+  alignRight = false,
+}: {
+  label: string;
+  time: string;
+  station: string;
+  date: string;
+  alignRight?: boolean;
+}) {
+  return (
+    <div className={`rounded-2xl border border-[#e5e7eb] bg-white p-4 ${alignRight ? "sm:text-right" : ""}`}>
+      <div className="text-[11px] font-black uppercase tracking-[0.14em] text-[#64748b]">
+        {label}
+      </div>
+      <div className="mt-2 text-[25px] font-black leading-7 text-[#0f172a]">
+        {time}
+      </div>
+      <div className="mt-2 break-words text-[14px] font-black leading-5 text-[#111827]">
+        {station}
+      </div>
+      <div className="mt-1 break-words text-[12px] font-bold leading-4 text-[#64748b]">
+        {date}
+      </div>
+    </div>
+  );
+}
+
+function MobileMiniCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0 rounded-2xl border border-[#e5e7eb] bg-[#f8fafc] px-3 py-3">
+      <div className="text-[10px] font-black uppercase tracking-[0.12em] text-[#64748b]">
+        {label}
+      </div>
+      <div className="mt-1 break-words text-[12px] font-black leading-4 text-[#111827]">
+        {value}
+      </div>
+    </div>
   );
 }
 

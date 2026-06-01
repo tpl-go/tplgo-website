@@ -52,21 +52,21 @@ export default function TrainManageTravellerDetails({
             key={
               traveller.id || index
             }
-            className="rounded-[24px] border border-black/5 bg-white p-5 shadow-[0_10px_30px_rgba(0,0,0,0.04)]"
+            className="min-w-0 rounded-[20px] border border-black/5 bg-white p-4 shadow-[0_10px_30px_rgba(0,0,0,0.04)] md:rounded-[24px] md:p-5"
           >
-            <div className="flex items-center justify-between">
-              <div>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="min-w-0">
                 <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#ff6b00]">
                   Traveller
                 </p>
 
-                <h3 className="mt-1 text-lg font-black text-[#111827]">
+                <h3 className="mt-1 break-words text-lg font-black text-[#111827]">
                   Passenger{" "}
                   {index + 1}
                 </h3>
               </div>
 
-              <div className="rounded-full bg-[#fff4ec] px-4 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-[#ff6b00]">
+              <div className="shrink-0 rounded-full bg-[#fff4ec] px-4 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-[#ff6b00]">
                 Editable
               </div>
             </div>

@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { BadgeCheck, Sparkles, Tag } from "lucide-react";
 
 type Props = {
@@ -133,14 +135,14 @@ export default function VisaPaymentPriceCard({
 
   return (
     <aside className="w-full">
-      <div className="sticky top-5">
-        <div className="overflow-hidden rounded-[24px] border border-[#d9e2ec] bg-white shadow-[0_12px_34px_rgba(15,23,42,0.08)]">
+      <div className="lg:sticky lg:top-5">
+        <div className="min-w-0 overflow-hidden rounded-[22px] border border-[#d9e2ec] bg-white shadow-[0_12px_34px_rgba(15,23,42,0.08)] md:rounded-[24px]">
           <div className="border-b border-[#e5e7eb] bg-white px-4 py-4">
-            <div className="text-[22px] font-extrabold text-[#1f2937]">
+            <div className="break-words text-[20px] font-extrabold text-[#1f2937] md:text-[22px]">
               Payment Summary
             </div>
 
-            <div className="mt-1 text-[12px] font-semibold text-[#6b7280]">
+            <div className="mt-1 break-words text-[12px] font-semibold leading-5 text-[#6b7280]">
               Visa fees, service fees, offers and final payable amount
             </div>
           </div>
@@ -171,13 +173,15 @@ export default function VisaPaymentPriceCard({
                     ) : null}
                   </div>
 
-                  <div className="mt-2 text-[16px] font-black leading-tight text-[#111827]">
+                  <div className="mt-2 break-words text-[16px] font-black leading-tight text-[#111827]">
                     {offerTitle}
                   </div>
 
-                  <div className="mt-1 flex items-center gap-2 text-[13px] font-bold text-[#ea580c]">
+                  <div className="mt-1 flex items-start gap-2 text-[13px] font-bold leading-5 text-[#ea580c]">
                     <Tag className="h-4 w-4" />
-                    <span>You saved {formatPrice(offerAmount)} instantly</span>
+                    <span className="min-w-0 break-words">
+                      You saved {formatPrice(offerAmount)} instantly
+                    </span>
                   </div>
                 </div>
               </div>
@@ -258,18 +262,18 @@ export default function VisaPaymentPriceCard({
           </div>
 
           <div className="border-b border-[#e5e7eb] bg-white px-4 py-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="text-[20px] font-extrabold text-[#111827]">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="break-words text-[20px] font-extrabold text-[#111827]">
                   Pay Now
                 </div>
 
-                <div className="mt-1 text-[12px] font-semibold text-[#6b7280]">
+                <div className="mt-1 break-words text-[12px] font-semibold leading-5 text-[#6b7280]">
                   Final amount after offer and wallet benefits
                 </div>
               </div>
 
-              <div className="whitespace-nowrap text-[30px] font-extrabold text-[#111827]">
+              <div className="shrink-0 whitespace-nowrap text-[25px] font-extrabold text-[#111827] md:text-[30px]">
                 ₹{finalTotal.toLocaleString("en-IN")}
               </div>
             </div>

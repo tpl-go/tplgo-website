@@ -25,8 +25,8 @@ type WalletBreakup = {
 
 type Props = {
   plan: InsurancePlan & {
-    pricingSnapshot?: any;
-    benefitPricing?: any;
+    pricingSnapshot?: Record<string, unknown>;
+    benefitPricing?: Record<string, unknown>;
     baseAfterOffer?: number;
     nonBenefitAmount?: number;
     grossAmount?: number;
@@ -55,7 +55,7 @@ function formatPrice(value: number) {
   return `₹${Math.abs(Number(value || 0)).toLocaleString("en-IN")}`;
 }
 
-function safeNumber(value: any, fallback = 0) {
+function safeNumber(value: unknown, fallback = 0) {
   const num = Number(value);
   return Number.isFinite(num) ? Math.round(num) : fallback;
 }
@@ -208,14 +208,14 @@ export default function InsuranceFareSummary({
 
   return (
     <aside className="w-full">
-      <div className="sticky top-[96px] z-20">
-        <div className="overflow-hidden rounded-[24px] border border-[#d9e2ec] bg-white shadow-[0_12px_34px_rgba(15,23,42,0.08)]">
+      <div className="lg:sticky lg:top-[96px] lg:z-20">
+        <div className="min-w-0 overflow-hidden rounded-[22px] border border-[#d9e2ec] bg-white shadow-[0_12px_34px_rgba(15,23,42,0.08)] md:rounded-[24px]">
           <div className="border-b border-[#e5e7eb] bg-white px-4 py-4">
-            <div className="text-[22px] font-extrabold text-[#1f2937]">
+            <div className="break-words text-[20px] font-extrabold leading-6 text-[#1f2937] md:text-[22px]">
               Fare Summary
             </div>
 
-            <div className="mt-1 text-[12px] font-semibold text-[#6b7280]">
+            <div className="mt-1 break-words text-[12px] font-semibold leading-4 text-[#6b7280]">
               Insurance premium, GST, add-ons, offers and wallet benefits
             </div>
           </div>
@@ -246,7 +246,7 @@ export default function InsuranceFareSummary({
                     ) : null}
                   </div>
 
-                  <div className="mt-2 text-[17px] font-black leading-tight text-[#111827]">
+                  <div className="mt-2 break-words text-[16px] font-black leading-tight text-[#111827] md:text-[17px]">
                     {finalOfferTitle}
                   </div>
 
@@ -310,8 +310,7 @@ export default function InsuranceFareSummary({
               <MiniInfoRow
                 label="Coverage"
                 value={String(
-                  (plan as any)?.coverage ||
-                    (plan as any)?.coverageAmount ||
+                    plan.coverageAmount ||
                     "Standard"
                 )}
               />
@@ -385,18 +384,18 @@ export default function InsuranceFareSummary({
           </div>
 
           <div className="border-b border-[#e5e7eb] bg-white px-4 py-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="text-[20px] font-extrabold text-[#111827]">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="break-words text-[18px] font-extrabold text-[#111827] md:text-[20px]">
                   Total Amount
                 </div>
 
-                <div className="mt-1 text-[12px] font-semibold text-[#6b7280]">
+                <div className="mt-1 break-words text-[12px] font-semibold leading-4 text-[#6b7280]">
                   Payable amount after offer and wallet benefits
                 </div>
               </div>
 
-              <div className="whitespace-nowrap text-[30px] font-extrabold text-[#111827]">
+              <div className="whitespace-nowrap text-[24px] font-extrabold text-[#111827] md:text-[30px]">
                 ₹{finalPayable.toLocaleString("en-IN")}
               </div>
             </div>
@@ -407,7 +406,7 @@ export default function InsuranceFareSummary({
               type="button"
               onClick={handleContinue}
               disabled={!canProceed}
-              className={`h-[50px] w-full rounded-full text-[16px] font-extrabold transition ${
+              className={`h-[52px] w-full rounded-full text-[16px] font-extrabold transition ${
                 canProceed
                   ? "bg-[#ef4444] text-white shadow-[0_10px_24px_rgba(239,68,68,0.25)] hover:opacity-95"
                   : "cursor-not-allowed bg-[#cfd8e3] text-white"
@@ -446,9 +445,9 @@ function FareRow({
   const isNegative = value < 0;
 
   return (
-    <div className="mb-3 flex items-start justify-between gap-3 last:mb-0">
+    <div className="mb-3 flex min-w-0 items-start justify-between gap-3 last:mb-0">
       <div
-        className={`text-[15px] font-bold ${
+        className={`min-w-0 break-words text-[14px] font-bold md:text-[15px] ${
           positiveGreen ? "text-[#ea580c]" : "text-[#1f2937]"
         }`}
       >
@@ -495,7 +494,7 @@ function MiniInfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="mt-1 flex items-center justify-between gap-3 first:mt-0">
       <span className="text-[12px] font-bold text-[#64748b]">{label}</span>
-      <span className="text-[12px] font-extrabold text-[#475569]">{value}</span>
+      <span className="min-w-0 break-words text-right text-[12px] font-extrabold text-[#475569]">{value}</span>
     </div>
   );
 }

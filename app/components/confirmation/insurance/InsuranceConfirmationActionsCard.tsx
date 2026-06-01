@@ -36,92 +36,92 @@ export default function InsuranceConfirmationActionsCard({
   onGoHome,
 }: Props) {
   return (
-    <aside className="sticky top-6 rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
-      <div className="mb-5">
+    <aside className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm md:rounded-3xl md:p-5 lg:sticky lg:top-6">
+      <div className="mb-4 md:mb-5">
         <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-100 text-orange-700">
           <ShieldCheck size={24} />
         </div>
 
-        <h2 className="mt-3 text-lg font-black text-gray-950">
+        <h2 className="mt-3 break-words text-lg font-black text-gray-950">
           Policy Actions
         </h2>
 
-        <p className="mt-1 break-all text-xs font-semibold text-gray-500">
+        <p className="mt-1 break-words text-xs font-semibold leading-5 text-gray-500">
           Policy No: {policyNumber}
         </p>
       </div>
 
-      <div className="space-y-3">
+      <div className="grid gap-3 sm:grid-cols-2 lg:block lg:space-y-3">
         <button
           type="button"
           onClick={onDownloadPolicy}
-          className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-orange-500 text-sm font-black text-white hover:bg-orange-600"
+          className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-orange-500 px-3 py-2 text-sm font-black text-white hover:bg-orange-600"
         >
           <Download size={17} />
-          Download Policy
+          <span className="break-words text-center">Download Policy</span>
         </button>
 
         <button
           type="button"
           onClick={onDownloadInvoice}
-          className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-orange-200 bg-orange-50 text-sm font-black text-orange-700 hover:bg-orange-100"
+          className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 text-sm font-black text-orange-700 hover:bg-orange-100"
         >
           <Download size={17} />
-          Download Invoice
+          <span className="break-words text-center">Download Invoice</span>
         </button>
 
         <button
           type="button"
           onClick={onPrintPolicy}
-          className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white text-sm font-black text-gray-700 hover:bg-gray-50"
+          className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-black text-gray-700 hover:bg-gray-50"
         >
           <Printer size={17} />
-          Print Policy
+          <span className="break-words text-center">Print Policy</span>
         </button>
 
         <button
           type="button"
           onClick={onEmailPolicy}
-          className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white text-sm font-black text-gray-700 hover:bg-gray-50"
+          className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-black text-gray-700 hover:bg-gray-50"
         >
           <Mail size={17} />
-          Email Policy
+          <span className="break-words text-center">Email Policy</span>
         </button>
 
         <button
           type="button"
           onClick={onWhatsAppPolicy}
-          className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-green-200 bg-green-50 text-sm font-black text-green-700 hover:bg-green-100"
+          className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-green-200 bg-green-50 px-3 py-2 text-sm font-black text-green-700 hover:bg-green-100"
         >
           <MessageCircle size={17} />
-          WhatsApp Policy
+          <span className="break-words text-center">WhatsApp Policy</span>
         </button>
 
         <button
           type="button"
           onClick={onGoToMyBookings}
-          className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-blue-200 bg-blue-50 text-sm font-black text-blue-700 hover:bg-blue-100"
+          className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-black text-blue-700 hover:bg-blue-100"
         >
           <UserRound size={17} />
-          Go to My Bookings
+          <span className="break-words text-center">Go to My Bookings</span>
         </button>
 
         <button
           type="button"
           onClick={onGoHome}
-          className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white text-sm font-black text-gray-700 hover:bg-gray-50"
+          className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-black text-gray-700 hover:bg-gray-50"
         >
           <Home size={17} />
-          Go Home
+          <span className="break-words text-center">Go Home</span>
         </button>
       </div>
 
-      <div className="mt-5 rounded-2xl bg-gray-50 p-4">
+      <div className="mt-4 rounded-2xl bg-gray-50 p-4 md:mt-5">
         <p className="text-xs font-black text-gray-700">Delivery Details</p>
-        <p className="mt-2 text-xs font-semibold text-gray-500">
+        <p className="mt-2 break-words text-xs font-semibold leading-5 text-gray-500">
           {email ? `Email: ${email}` : "Email not available"}
         </p>
-        <p className="mt-1 text-xs font-semibold text-gray-500">
+        <p className="mt-1 break-words text-xs font-semibold leading-5 text-gray-500">
           {mobile ? `Mobile: ${mobile}` : "Mobile not available"}
         </p>
       </div>

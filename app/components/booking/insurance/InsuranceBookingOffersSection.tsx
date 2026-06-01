@@ -24,12 +24,12 @@ type Props = {
   onRemoveOffer: () => void;
 };
 
-function normalizeCode(value: any) {
+function normalizeCode(value: unknown) {
   return String(value || "").trim().toUpperCase();
 }
 
 function isInsuranceOffer(offer: SmartOfferItem) {
-  const service = String((offer as any)?.service || "").toLowerCase();
+  const service = String(offer.service || "").toLowerCase();
   return service === "insurance" || service === "all";
 }
 
@@ -37,8 +37,8 @@ function buildOfferItem(
   offer: SmartOfferItem,
   bookingValue: number
 ): InsuranceOfferItem | null {
-  const code = String((offer as any)?.couponCode || (offer as any)?.slug || "");
-  const title = String((offer as any)?.title || "Smart Insurance Offer");
+  const code = String(offer.couponCode || offer.slug || "");
+  const title = String(offer.title || "Smart Insurance Offer");
 
   const discountAmount = Math.round(
     Math.max(0, calculateSmartOfferDiscount(offer, bookingValue || 0))
@@ -50,8 +50,8 @@ function buildOfferItem(
     code,
     title,
     description:
-      (offer as any)?.description ||
-      (offer as any)?.subtitle ||
+      offer.description ||
+      offer.subtitle ||
       "Smart insurance offer available.",
     discountAmount,
   };
@@ -87,7 +87,7 @@ export default function InsuranceBookingOffersSection({
 
   const masterOffers = useMemo<InsuranceOfferItem[]>(() => {
     const list = SMART_OFFERS_DATA.filter((item) => {
-      if (!(item as any)?.active) return false;
+      if (!item.active) return false;
       return isInsuranceOffer(item);
     })
       .map((offer) => buildOfferItem(offer, safeBookingValue))
@@ -119,18 +119,18 @@ export default function InsuranceBookingOffersSection({
   }, [masterOffers, appliedOfferCode]);
 
   return (
-    <div className="overflow-hidden rounded-[24px] border border-[#d9e2ec] bg-white shadow-[0_12px_34px_rgba(15,23,42,0.08)]">
+    <div className="min-w-0 overflow-hidden rounded-[22px] border border-[#d9e2ec] bg-white shadow-[0_12px_34px_rgba(15,23,42,0.08)] md:rounded-[24px]">
       <div className="border-b border-[#e5e7eb] bg-[linear-gradient(135deg,#fff7ed_0%,#ffffff_50%,#fff1e6_100%)] px-4 py-4">
         <div className="flex items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#f97316,#ea580c)] shadow-[0_10px_24px_rgba(249,115,22,0.35)]">
             <Sparkles className="h-5 w-5 text-white" />
           </div>
 
-          <div>
-            <div className="text-[20px] font-extrabold text-[#111827]">
+          <div className="min-w-0">
+            <div className="break-words text-[18px] font-extrabold leading-6 text-[#111827] md:text-[20px]">
               Smart Coupons & Offers
             </div>
-            <div className="mt-0.5 text-[12px] font-semibold text-[#6b7280]">
+            <div className="mt-0.5 break-words text-[12px] font-semibold leading-4 text-[#6b7280]">
               AI matched insurance savings on base premium
             </div>
           </div>
@@ -142,7 +142,7 @@ export default function InsuranceBookingOffersSection({
           <div className="relative mb-4 overflow-hidden rounded-[18px] border border-[#fed7aa] bg-[linear-gradient(135deg,#fff7ed,#ffffff)] p-4">
             <div className="absolute right-0 top-0 h-20 w-20 rounded-full bg-[#fb923c]/10 blur-3xl" />
 
-            <div className="relative flex items-start justify-between gap-3">
+            <div className="relative flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <div className="flex items-center gap-1 rounded-full bg-[linear-gradient(135deg,#f97316,#ea580c)] px-3 py-1 shadow-[0_6px_18px_rgba(249,115,22,0.3)]">
@@ -157,7 +157,7 @@ export default function InsuranceBookingOffersSection({
                   </div>
                 </div>
 
-                <div className="mt-3 text-[16px] font-black text-[#111827]">
+                <div className="mt-3 break-words text-[16px] font-black leading-5 text-[#111827]">
                   {appliedOffer.title}
                 </div>
 
@@ -169,7 +169,7 @@ export default function InsuranceBookingOffersSection({
               <button
                 type="button"
                 onClick={onRemoveOffer}
-                className="h-[38px] shrink-0 rounded-full border border-[#fed7aa] bg-white px-4 text-[12px] font-black text-[#ea580c]"
+                className="h-[42px] w-full shrink-0 rounded-full border border-[#fed7aa] bg-white px-4 text-[12px] font-black text-[#ea580c] sm:w-auto"
               >
                 Remove
               </button>
@@ -183,9 +183,9 @@ export default function InsuranceBookingOffersSection({
               normalizeCode(appliedOfferCode) === normalizeCode(offer.code);
 
             const isSmart =
-              normalizeCode((smartOffer as any)?.couponCode) ===
+              normalizeCode(smartOffer?.couponCode) ===
                 normalizeCode(offer.code) ||
-              normalizeCode((smartOffer as any)?.slug) === normalizeCode(offer.code);
+              normalizeCode(smartOffer?.slug) === normalizeCode(offer.code);
 
             return (
               <div
@@ -198,7 +198,7 @@ export default function InsuranceBookingOffersSection({
               >
                 <div className="absolute right-0 top-0 h-16 w-16 rounded-full bg-[#fb923c]/5 blur-2xl" />
 
-                <div className="relative flex items-start justify-between gap-3">
+                <div className="relative flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <div className="rounded-full bg-[#111827] px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-white">
@@ -212,11 +212,11 @@ export default function InsuranceBookingOffersSection({
                       ) : null}
                     </div>
 
-                    <div className="mt-3 text-[15px] font-black text-[#111827]">
+                    <div className="mt-3 break-words text-[15px] font-black leading-5 text-[#111827]">
                       {offer.title}
                     </div>
 
-                    <div className="mt-2 text-[13px] leading-[20px] text-[#6b7280]">
+                    <div className="mt-2 break-words text-[13px] leading-[20px] text-[#6b7280]">
                       {offer.description}
                     </div>
 
@@ -232,7 +232,7 @@ export default function InsuranceBookingOffersSection({
                     type="button"
                     disabled={active}
                     onClick={() => onApplyOffer(offer)}
-                    className={`min-w-[100px] rounded-full px-4 py-2 text-[12px] font-black transition-all ${
+                    className={`min-h-10 w-full rounded-full px-4 py-2 text-[12px] font-black transition-all sm:w-auto sm:min-w-[100px] ${
                       active
                         ? "cursor-not-allowed bg-[linear-gradient(135deg,#f97316,#ea580c)] text-white shadow-[0_8px_18px_rgba(249,115,22,0.3)]"
                         : "border border-[#fdba74] bg-white text-[#ea580c] hover:bg-[#fff7ed]"

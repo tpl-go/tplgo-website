@@ -30,15 +30,17 @@ export default function InsuranceManageSummary({
   totalAmount,
 }: Props) {
   return (
-    <div className="rounded-[30px] border border-black/5 bg-white p-6 shadow-sm">
-      <div className="mb-5">
-        <h2 className="text-xl font-black text-[#111827]">Policy Summary</h2>
-        <p className="text-sm font-semibold text-[#6b7280]">
+    <div className="min-w-0 rounded-[20px] border border-black/5 bg-white p-4 shadow-sm md:rounded-[30px] md:p-6">
+      <div className="mb-4 md:mb-5">
+        <h2 className="break-words text-lg font-black text-[#111827] md:text-xl">
+          Policy Summary
+        </h2>
+        <p className="break-words text-sm font-semibold leading-5 text-[#6b7280]">
           Current policy and booking details.
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 md:gap-4">
         <InfoBox label="Policy Status" value={bookingStatus || "Active"} />
         <InfoBox label="Booked At" value={bookedAt || "-"} />
         <InfoBox label="Policy Number" value={policyNumber || "-"} />
@@ -50,9 +52,9 @@ export default function InsuranceManageSummary({
         <InfoBox label="Coverage" value={coverageAmount || "-"} />
       </div>
 
-      <div className="mt-5 rounded-2xl border border-orange-100 bg-orange-50 p-5">
+      <div className="mt-4 rounded-2xl border border-orange-100 bg-orange-50 p-4 md:mt-5 md:p-5">
         <p className="text-sm font-bold text-gray-600">Total Paid</p>
-        <p className="mt-1 text-3xl font-black text-orange-700">
+        <p className="mt-1 break-words text-2xl font-black text-orange-700 md:text-3xl">
           {money(totalAmount)}
         </p>
       </div>
@@ -62,9 +64,9 @@ export default function InsuranceManageSummary({
 
 function InfoBox({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl bg-[#f8fafc] p-4">
+    <div className="min-w-0 rounded-2xl bg-[#f8fafc] p-4">
       <p className="text-xs font-bold text-[#64748b]">{label}</p>
-      <p className="mt-1 break-words text-sm font-black text-[#111827]">
+      <p className="mt-1 break-words text-sm font-black leading-5 text-[#111827]">
         {value}
       </p>
     </div>

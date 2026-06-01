@@ -27,7 +27,7 @@ export default function TrainManageSpecialRequest({
         subtitle="Add special request notes for your train journey."
       />
 
-      <div className="rounded-[24px] border border-black/5 bg-white p-5 shadow-[0_10px_30px_rgba(0,0,0,0.04)]">
+      <div className="min-w-0 rounded-[20px] border border-black/5 bg-white p-4 shadow-[0_10px_30px_rgba(0,0,0,0.04)] md:rounded-[24px] md:p-5">
         <textarea
           value={value}
           onChange={(e) =>
@@ -37,7 +37,7 @@ export default function TrainManageSpecialRequest({
           }
           rows={7}
           placeholder="Example: Lower berth request, senior citizen assistance, meal request..."
-          className="w-full rounded-2xl border border-black/10 bg-[#f8fafc] px-4 py-4 text-sm font-semibold text-[#111827] outline-none transition focus:border-[#ff6b00]"
+          className="w-full min-w-0 resize-y rounded-2xl border border-black/10 bg-[#f8fafc] px-4 py-4 text-sm font-semibold leading-6 text-[#111827] outline-none transition focus:border-[#ff6b00]"
         />
       </div>
 

@@ -26,9 +26,9 @@ export default function TrainResultRouteSummary({
 }: Props) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-bold leading-tight text-slate-800">
+      <div className="flex min-w-0 flex-col gap-2 md:flex-row md:flex-wrap md:items-center md:justify-between md:gap-3">
+        <div className="min-w-0">
+          <h1 className="break-words text-[17px] font-bold leading-tight text-slate-800 md:text-xl">
             Trains from {fromCity || "From City"} to {toCity || "To City"}
           </h1>
 
@@ -37,7 +37,7 @@ export default function TrainResultRouteSummary({
           </p>
         </div>
 
-        <div className="text-sm font-medium text-slate-500">
+        <div className="shrink-0 text-sm font-medium text-slate-500">
           {resultsCount} trains found
         </div>
       </div>

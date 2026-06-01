@@ -28,13 +28,13 @@ export default function InsuranceManageNomineeDetails({
   };
 
   return (
-    <div className="rounded-[30px] border border-black/5 bg-white p-6 shadow-sm">
-      <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <h2 className="text-xl font-black text-[#111827]">
+    <div className="min-w-0 rounded-[20px] border border-black/5 bg-white p-4 shadow-sm md:rounded-[30px] md:p-6">
+      <div className="mb-4 flex flex-col gap-3 md:mb-5 lg:flex-row lg:items-center lg:justify-between">
+        <div className="min-w-0">
+          <h2 className="break-words text-lg font-black text-[#111827] md:text-xl">
             Nominee / Emergency Contact
           </h2>
-          <p className="text-sm font-semibold text-[#6b7280]">
+          <p className="break-words text-sm font-semibold leading-5 text-[#6b7280]">
             Update nominee and emergency contact details.
           </p>
         </div>
@@ -42,21 +42,21 @@ export default function InsuranceManageNomineeDetails({
         <button
           type="button"
           onClick={onSave}
-          className="h-11 rounded-2xl bg-orange-500 px-5 text-sm font-black text-white hover:bg-orange-600"
+          className="h-11 w-full rounded-2xl bg-orange-500 px-5 text-sm font-black text-white hover:bg-orange-600 sm:w-auto"
         >
           Save Nominee Details
         </button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-3 md:grid-cols-2 md:gap-4">
         <InputBox
           label="Full Name"
           value={nominee.fullName || ""}
           onChange={(value) => update("fullName", value)}
         />
 
-        <div>
-          <label className="mb-1 block text-xs font-bold text-gray-600">
+        <div className="min-w-0">
+          <label className="mb-1 block break-words text-xs font-bold text-gray-600">
             Relationship
           </label>
           <select
@@ -96,8 +96,8 @@ export default function InsuranceManageNomineeDetails({
           onChange={(value) => update("email", value)}
         />
 
-        <div className="md:col-span-2">
-          <label className="mb-1 block text-xs font-bold text-gray-600">
+        <div className="min-w-0 md:col-span-2">
+          <label className="mb-1 block break-words text-xs font-bold text-gray-600">
             Address
           </label>
           <textarea
@@ -125,8 +125,8 @@ function InputBox({
   onChange: (value: string) => void;
 }) {
   return (
-    <div>
-      <label className="mb-1 block text-xs font-bold text-gray-600">
+    <div className="min-w-0">
+      <label className="mb-1 block break-words text-xs font-bold text-gray-600">
         {label}
       </label>
       <input

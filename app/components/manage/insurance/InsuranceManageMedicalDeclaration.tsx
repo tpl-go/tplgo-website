@@ -32,13 +32,13 @@ export default function InsuranceManageMedicalDeclaration({
   };
 
   return (
-    <div className="rounded-[30px] border border-black/5 bg-white p-6 shadow-sm">
-      <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <h2 className="text-xl font-black text-[#111827]">
+    <div className="min-w-0 rounded-[20px] border border-black/5 bg-white p-4 shadow-sm md:rounded-[30px] md:p-6">
+      <div className="mb-4 flex flex-col gap-3 md:mb-5 lg:flex-row lg:items-center lg:justify-between">
+        <div className="min-w-0">
+          <h2 className="break-words text-lg font-black text-[#111827] md:text-xl">
             Medical Declaration
           </h2>
-          <p className="text-sm font-semibold text-[#6b7280]">
+          <p className="break-words text-sm font-semibold leading-5 text-[#6b7280]">
             Update medical disclosure for policy support.
           </p>
         </div>
@@ -46,7 +46,7 @@ export default function InsuranceManageMedicalDeclaration({
         <button
           type="button"
           onClick={onSave}
-          className="h-11 rounded-2xl bg-orange-500 px-5 text-sm font-black text-white hover:bg-orange-600"
+          className="h-11 w-full rounded-2xl bg-orange-500 px-5 text-sm font-black text-white hover:bg-orange-600 sm:w-auto"
         >
           Save Medical Details
         </button>
@@ -123,16 +123,18 @@ function ToggleCard({
   onChange: (checked: boolean) => void;
 }) {
   return (
-    <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+    <div className="min-w-0 rounded-2xl border border-gray-100 bg-gray-50 p-4">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <p className="text-sm font-black text-[#111827]">{title}</p>
-          <p className="mt-1 text-xs font-semibold text-[#6b7280]">
+        <div className="min-w-0">
+          <p className="break-words text-sm font-black text-[#111827]">
+            {title}
+          </p>
+          <p className="mt-1 break-words text-xs font-semibold leading-5 text-[#6b7280]">
             {description}
           </p>
         </div>
 
-        <label className="flex items-center gap-2 text-sm font-bold text-gray-700">
+        <label className="flex w-fit items-center gap-2 rounded-full bg-white px-3 py-2 text-sm font-bold text-gray-700">
           <input
             type="checkbox"
             checked={checked}
@@ -156,8 +158,8 @@ function TextAreaBox({
   onChange: (value: string) => void;
 }) {
   return (
-    <div>
-      <label className="mb-1 block text-xs font-bold text-gray-600">
+    <div className="min-w-0">
+      <label className="mb-1 block break-words text-xs font-bold text-gray-600">
         {label}
       </label>
       <textarea

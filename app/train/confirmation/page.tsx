@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import LoginModal from "@/app/components/common/LoginModal";
 
 import TrainConfirmationSuccessHeader from "@/app/components/confirmation/train/TrainConfirmationSuccessHeader";
+import TrainConfirmationTopBar from "@/app/components/confirmation/train/TrainConfirmationTopBar";
 import TrainConfirmationJourneyCard from "@/app/components/confirmation/train/TrainConfirmationJourneyCard";
 import TrainConfirmationTravellerCard from "@/app/components/confirmation/train/TrainConfirmationTravellerCard";
 import TrainConfirmationFareCard from "@/app/components/confirmation/train/TrainConfirmationFareCard";
@@ -652,8 +653,13 @@ export default function TrainConfirmationPage() {
   const handlePrint = () => window.print();
 
   return (
-    <main className="min-h-screen bg-[#eef3f8] text-black">
-      <div className="bg-green-50 border-b border-green-200 text-center py-4">
+    <main className="min-w-0 overflow-x-hidden bg-[#eef3f8] pb-8 text-black md:min-h-screen">
+      <TrainConfirmationTopBar
+        route={route}
+        onGoHome={() => router.push("/")}
+      />
+
+      <div className="hidden border-b border-green-200 bg-green-50 py-4 text-center md:block">
         <div className="font-black text-green-700 text-lg">
           🎉 Train Booking Confirmed
         </div>
@@ -670,8 +676,28 @@ export default function TrainConfirmationPage() {
         )}
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-6 flex gap-4">
-        <div className="w-[72%] flex flex-col gap-4">
+      <div className="mx-auto flex max-w-7xl flex-col gap-4 px-3 py-3 md:px-4 md:py-6 lg:flex-row">
+        <div className="flex min-w-0 flex-col gap-4 lg:w-[72%]">
+          <div className="rounded-2xl border border-green-200 bg-green-50 px-4 py-4 text-center md:hidden">
+            <div className="text-lg font-black text-green-700">
+              Train Booking Confirmed
+            </div>
+            <div className="mt-1 text-sm font-semibold text-green-600">
+              Your train ticket is successfully generated
+            </div>
+            {pnrNumber ? (
+              <div className="mt-3 rounded-xl bg-white px-3 py-2 text-[13px] font-black text-slate-900">
+                PNR: {pnrNumber}
+              </div>
+            ) : null}
+            {earnedOnThisBooking > 0 && (
+              <div className="mt-2 text-sm font-bold text-green-700">
+                You earned ₹
+                {earnedOnThisBooking.toLocaleString("en-IN")} TPL Earned Credit
+              </div>
+            )}
+          </div>
+
           <TrainConfirmationSuccessHeader
             bookingId={bookingId}
             pnrNumber={pnrNumber}
@@ -736,7 +762,7 @@ export default function TrainConfirmationPage() {
           />
         </div>
 
-        <div className="w-[28%]">
+        <div className="min-w-0 lg:w-[28%]">
           <TrainConfirmationActionsCard
             bookingId={bookingId}
             pnrNumber={pnrNumber}

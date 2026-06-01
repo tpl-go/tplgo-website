@@ -478,7 +478,7 @@ export default function TrainIrctcAuthPage() {
     return (
       <main className="min-h-screen bg-[#f5f7fb]">
         <TrainIrctcAuthTopBar timerLabel="10:00" />
-        <div className="mx-auto max-w-[1400px] px-4 py-6">
+        <div className="mx-auto max-w-[1400px] px-3 py-4 md:px-4 md:py-6">
           <div className="rounded-2xl border border-slate-200 bg-white p-8 text-[18px] font-bold text-slate-700">
             No IRCTC authentication data found.
           </div>
@@ -488,12 +488,26 @@ export default function TrainIrctcAuthPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f5f7fb] text-black">
-      <TrainIrctcAuthTopBar timerLabel={timerLabel} />
+    <main className="min-w-0 overflow-x-hidden bg-[#f5f7fb] pb-8 text-black lg:min-h-screen">
+      <TrainIrctcAuthTopBar
+        timerLabel={timerLabel}
+        trainName={
+          authData.trainName ||
+          authData.bookingPayload?.trainName ||
+          authData.bookingPayload?.train?.trainName ||
+          ""
+        }
+        route={
+          authData.route ||
+          `${authData.bookingPayload?.fromCode || authData.bookingPayload?.fromCity || "From"} → ${
+            authData.bookingPayload?.toCode || authData.bookingPayload?.toCity || "To"
+          }`
+        }
+      />
 
-      <div className="mx-auto max-w-[1400px] px-4 py-6">
-        <div className="flex items-start gap-5">
-          <div className="w-[74%] min-w-0 space-y-5">
+      <div className="mx-auto max-w-[1400px] px-3 py-3 md:px-4 lg:py-6">
+        <div className="flex min-w-0 flex-col items-stretch gap-4 lg:flex-row lg:items-start lg:gap-5">
+          <div className="min-w-0 space-y-4 lg:w-[74%] lg:space-y-5">
             <TrainIrctcAuthSummaryCard
               bookingPayload={authData.bookingPayload}
               irctcUsername={authData.irctcAccount?.username || ""}
@@ -510,9 +524,13 @@ export default function TrainIrctcAuthPage() {
               onVerify={handleVerify}
               onRetry={handleRetry}
             />
+
+            <div className="lg:hidden">
+              <TrainIrctcAuthInfoCard />
+            </div>
           </div>
 
-          <div className="w-[26%] min-w-0 self-start">
+          <div className="hidden w-[26%] min-w-0 self-start lg:block">
             <TrainIrctcAuthInfoCard />
           </div>
         </div>

@@ -1,16 +1,43 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { Clock3, ShieldCheck, TrainFront } from "lucide-react";
 
 type Props = {
   timerLabel: string;
+  trainName?: string;
+  route?: string;
 };
 
-export default function TrainIrctcAuthTopBar({ timerLabel }: Props) {
+export default function TrainIrctcAuthTopBar({
+  timerLabel,
+  trainName,
+  route,
+}: Props) {
+  const router = useRouter();
+
   return (
     <div className="sticky top-0 z-[120] border-b border-slate-200 bg-white/95 backdrop-blur">
-      <div className="mx-auto flex max-w-[1400px] items-center justify-between px-4 py-3">
-        <div className="flex items-center gap-4">
+      <div className="mx-auto flex max-w-[1400px] items-center justify-between px-3 py-3 md:px-4">
+        <div className="flex min-w-0 items-center gap-3 md:gap-4">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-xl font-bold text-slate-700 shadow-sm md:hidden"
+            aria-label="Go back"
+          >
+            ‹
+          </button>
+
+          <div className="min-w-0 md:hidden">
+            <div className="truncate text-[15px] font-extrabold text-slate-900">
+              IRCTC Authentication
+            </div>
+            <div className="mt-0.5 truncate text-[12px] font-semibold text-slate-500">
+              {trainName || route ? `${trainName || "Train"} • ${route || ""}` : "Final verification"}
+            </div>
+          </div>
+
           <div className="hidden items-center gap-2 md:inline-flex">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-50 text-sky-600">
               <TrainFront size={18} />

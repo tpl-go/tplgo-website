@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { useRef } from "react";
 import useThemeScroll from "./useThemeScroll";
 import ThemeCard from "./ThemeCard";
@@ -16,7 +18,7 @@ export default function ThemeSlider({ themes }: any) {
       ref={scrollRef}
       onMouseEnter={() => (pauseRef.current = true)}
       onMouseLeave={() => (pauseRef.current = false)}
-      className="flex gap-6 overflow-x-hidden scroll-smooth scrollbar-hide"
+      className="flex gap-3 overflow-x-hidden scroll-smooth scrollbar-hide sm:gap-6"
     >
       {[...themes, ...themes, ...themes].map((t, index) => (
         <ThemeCard key={index} t={t} />
