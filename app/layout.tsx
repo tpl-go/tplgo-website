@@ -35,14 +35,14 @@ export default function RootLayout({
           bg-white
           text-black
           min-h-screen
-          overflow-x-hidden
+          overflow-x-clip
         `}
       >
         <AuthProvider>
           {/* 🔥 STICKY HEADER SECTION */}
           <StickyHeaderWrapper />
 
-          <main className="bg-white min-h-screen w-full overflow-x-hidden">
+          <main className="bg-white min-h-screen w-full overflow-x-clip">
             {children}
           </main>
 
