@@ -392,7 +392,7 @@ export function buildSmartNearbyStops(
       "Sham Valley",
       "Nubra Valley",
       "Pangong Lake",
-      "Leh Local Market",
+      "Leh Local Life",
       "Monastery Circuit",
       "Return Buffer",
       "Trip Closure",
@@ -403,7 +403,7 @@ export function buildSmartNearbyStops(
       "Sonmarg",
       "Pahalgam",
       "Dal Lake",
-      "Local Market",
+      "Local Life",
       "Trip Closure",
     ],
     manali: [
@@ -412,14 +412,14 @@ export function buildSmartNearbyStops(
       "Atal Tunnel",
       "Sissu",
       "Jispa",
-      "Local Market",
+      "Local Life",
       "Trip Closure",
     ],
     jaipur: [
       "Jaipur City",
       "Amer Fort",
       "Nahargarh",
-      "Local Market",
+      "Local Life",
       "Chokhi Dhani",
       "Trip Closure",
     ],
@@ -431,7 +431,7 @@ export function buildSmartNearbyStops(
     `${destination} Arrival`,
     "Local Sightseeing",
     routeOption?.id === "scenic" ? "Scenic Viewpoint" : "Nearby Excursion",
-    "Local Market",
+    "Local Life",
     "Free Exploration",
     "Return Buffer",
     "Trip Closure",
@@ -460,7 +460,7 @@ export function getJourneyNodeDisplay(city: string, title: string, journeyType: 
     "sham valley": "Scenic valley exploration",
     "nubra valley": "Desert valley stay",
     "pangong lake": "High-altitude lake experience",
-    "leh local market": "Local market walk",
+    "leh local market": "Local Life walk",
     "monastery circuit": "Heritage monastery circuit",
     "return buffer": "Return buffer day",
     "trip closure": "Journey closure",
@@ -1125,7 +1125,7 @@ export function buildLocalLife(routeOption: TiyaRouteOption, tripIntent?: TiyaTr
     sections: [
       ["Local Food", buildLocalFood(routeOption, tripIntent).join(" • ")],
       ["Local Products", buildLocalProducts(routeOption, tripIntent).join(" • ")],
-      ["Local Markets", "Market walks, regional products, creator-friendly stops"],
+      ["Local Life", "Market walks, regional products, creator-friendly stops"],
       ["Hidden Gems", buildMajorAttractions(routeOption, tripIntent).join(" • ")],
       ["Culture Experiences", "Heritage areas, local walks and community stops"],
       ["Shopping Areas", "Local market clusters and souvenir stops"],
@@ -1324,7 +1324,7 @@ export function buildLocalProducts(
 ) {
   const destination = getRouteCities(tripIntent).destination;
   return [
-    `${destination} local market picks`,
+    `${destination} Local Life picks`,
     "Handicraft and souvenir stops",
     routeOption.id === "scenic" ? "Creator-recommended local goods" : "Regional specialty products",
   ];

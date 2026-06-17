@@ -271,6 +271,7 @@ export default function TiyaDesktopEntryHero({
     value: TiyaTripIntent[K]
   ) {
     setIntent((current) => ({ ...current, [key]: value }));
+    setValidationMessage("");
     onIntentChange?.();
   }
 
@@ -282,6 +283,7 @@ export default function TiyaDesktopEntryHero({
       multiCityStops: value === "Multi City" ? current.multiCityStops || [] : [],
       stops: value === "Multi City" ? current.stops || [] : [],
     }));
+    setValidationMessage("");
     onIntentChange?.();
   }
 
@@ -291,6 +293,7 @@ export default function TiyaDesktopEntryHero({
       transportPreference: value,
       transportMode: mapTransportPreferenceToMode(value),
     }));
+    setValidationMessage("");
     onIntentChange?.();
   }
 
@@ -305,6 +308,7 @@ export default function TiyaDesktopEntryHero({
         stops: [current.toCity, ...nextStops].filter((stop) => stop.trim()),
       };
     });
+    setValidationMessage("");
     onIntentChange?.();
   }
 
@@ -313,6 +317,7 @@ export default function TiyaDesktopEntryHero({
       ...current,
       multiCityStops: [...(current.multiCityStops || []), ""],
     }));
+    setValidationMessage("");
     onIntentChange?.();
   }
 
@@ -328,6 +333,7 @@ export default function TiyaDesktopEntryHero({
         stops: [current.toCity, ...nextStops].filter((stop) => stop.trim()),
       };
     });
+    setValidationMessage("");
     onIntentChange?.();
   }
 
@@ -362,6 +368,11 @@ export default function TiyaDesktopEntryHero({
       setValidationMessage(
         "Please fill all required trip details to generate routes."
       );
+      return;
+    }
+
+    if (new Date(intent.endDate).getTime() < new Date(intent.startDate).getTime()) {
+      setValidationMessage("End date must be after the start date.");
       return;
     }
 

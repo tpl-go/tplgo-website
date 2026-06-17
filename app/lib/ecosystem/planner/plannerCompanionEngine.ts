@@ -47,7 +47,7 @@ export const companionPrompts: TiyaCompanionPrompt[] = [
   { id: "rest-day", label: "Add rest day", mode: "Planner Mode" },
   { id: "family-safe", label: "Make it family-safe", mode: "Safety Mode" },
   { id: "creator", label: "Add creator spots", mode: "Creator Mode" },
-  { id: "market", label: "Add local market stops", mode: "Local Market Mode" },
+  { id: "market", label: "Add Local Life stops", mode: "Local Market Mode" },
   { id: "fatigue", label: "Reduce travel fatigue", mode: "Safety Mode" },
   { id: "weather", label: "Improve weather safety", mode: "Safety Mode" },
 ];
@@ -162,7 +162,7 @@ export function generateCompanionSuggestions({
   if (intent.smartPreferences.includeLocalMarket || safeMarketPicks.length > 0) {
     suggestions.push({
       id: "market",
-      title: "Local market stop recommended",
+      title: "Local Life stop recommended",
       detail: "Cluster local market exploration near food or culture activity windows.",
       mode: "Local Market Mode",
       priority: "Smart",

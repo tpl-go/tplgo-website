@@ -200,7 +200,7 @@ export function generateSmartBundles({
       safetyScore: clampScore(74),
       valueScore: clampScore(82 + creatorCount * 3),
       bestFor: "Creator-led discovery and social-first trips.",
-      upgradeNote: "Add local market products to complete creator commerce flow.",
+      upgradeNote: "Add Local Life products to complete creator commerce flow.",
       isRecommended: recommendedId === "creator",
     },
     {

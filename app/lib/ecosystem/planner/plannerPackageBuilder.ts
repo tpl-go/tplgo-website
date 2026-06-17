@@ -121,7 +121,7 @@ export function generatePackageVariants(intent: TiyaTripIntent): TiyaPackageVari
     {
       id: "creator",
       name: "Creator Curated Package",
-      description: "Creator picks, local market stops and experience-led routing.",
+      description: "Creator picks, Local Life stops and experience-led routing.",
       multiplier: 1.18,
       highlight: intent.smartPreferences.includeCreatorSpots,
     },

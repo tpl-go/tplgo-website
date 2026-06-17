@@ -140,7 +140,7 @@ export function generatePostTripProducts({
     {
       id: "travel-essentials",
       title: "Travel essentials refill",
-      region: "TPL Local Market",
+      region: "TPL Local Life",
       detail: "Reorder practical items for your next trip.",
       tag: "Reorder",
     },

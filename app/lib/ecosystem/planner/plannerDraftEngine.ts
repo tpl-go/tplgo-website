@@ -1,5 +1,6 @@
 import type {
   TiyaGeneratedPlan,
+  TiyaAIRecommendationChangeLog,
   TiyaPlannerSnapshot,
   TiyaTripIntent,
   TiyaTripNotes,
@@ -15,6 +16,10 @@ export function buildPlannerSnapshot(args: {
   itinerary: TiyaPlannerSnapshot["itinerary"];
   notes: TiyaTripNotes;
   selectedRouteId?: TiyaPlannerSnapshot["selectedRouteId"];
+  appliedRecommendationIds?: string[];
+  savedRecommendationIds?: string[];
+  dismissedRecommendationIds?: string[];
+  recommendationChangeLog?: TiyaAIRecommendationChangeLog[];
 }): TiyaPlannerSnapshot {
   const creatorPicks = Array.isArray(args.plan.creatorPicks)
     ? args.plan.creatorPicks
@@ -27,7 +32,11 @@ export function buildPlannerSnapshot(args: {
     : [];
 
   return {
+    tripId: undefined,
     tripName: buildPlannerTripName(args.intent, args.plan),
+    status: "Planning",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
     intent: args.intent,
     plan: args.plan,
     itinerary: args.itinerary,
@@ -42,5 +51,9 @@ export function buildPlannerSnapshot(args: {
     selectedBookingModuleIds: bookingModules
       .filter((module) => module.isHighlighted)
       .map((module) => module.id),
+    appliedRecommendationIds: args.appliedRecommendationIds || [],
+    savedRecommendationIds: args.savedRecommendationIds || [],
+    dismissedRecommendationIds: args.dismissedRecommendationIds || [],
+    recommendationChangeLog: args.recommendationChangeLog || [],
   };
 }

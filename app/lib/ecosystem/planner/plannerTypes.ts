@@ -1,4 +1,4 @@
-export type TiyaTimelineDetailValue = string | number | string[];
+export type TiyaTimelineDetailValue = string | number | string[] | undefined;
 
 export type TiyaTimelineServiceOption = {
   id: string;
@@ -258,12 +258,78 @@ export type TiyaSmartAlert = {
   severity: "info" | "warning" | "critical";
 };
 
+export type TiyaAIRecommendationCategory =
+  | "Route"
+  | "Stay"
+  | "Transport"
+  | "Activities"
+  | "Budget"
+  | "Weather"
+  | "Risk"
+  | "Local Market"
+  | "Creator";
+
+export type TiyaAIRecommendationPriority = "High" | "Medium" | "Low";
+
+export type TiyaAIRecommendationStatus = "active" | "applied" | "dismissed" | "saved";
+
 export type TiyaAIRecommendation = {
   id: string;
   title: string;
+  category: TiyaAIRecommendationCategory;
+  priority: TiyaAIRecommendationPriority;
+  confidenceScore: number;
   detail: string;
+  reason: string;
   impact: string;
+  impactSummary: string;
+  affectedDay: string;
+  affectedModule: string;
+  costImpact: number;
+  comfortImpact: number;
+  riskImpact: number;
+  budgetImpact: number;
+  experienceImpact: number;
+  localCommerceImpact?: number;
+  itineraryImpact: string;
+  whyAiSuggestsThis: {
+    travellerStyle: string;
+    itineraryGap: string;
+    budgetFit: string;
+    routeFit: string;
+    weatherRiskFit?: string;
+  };
+  whatWillChange: {
+    dayChange: string;
+    added?: string[];
+    removed?: string[];
+    updated?: string[];
+    costImpact: string;
+    fatigueImpact: string;
+    bookingBasketImpact: string;
+  };
 };
+
+export type TiyaAIRecommendationChangeLog = {
+  id: string;
+  recommendationId: string;
+  title: string;
+  summary: string;
+  reason: string;
+  impact: string;
+  appliedAt: string;
+  category: TiyaAIRecommendationCategory;
+  costDelta: number;
+  actionType?: string;
+  affectedDays?: string[];
+  comfortImpact?: number;
+  newState?: string;
+  previousState?: string;
+  riskImpact?: number;
+  sourceModule?: string;
+};
+
+export type TiyaPlannerChangeLog = TiyaAIRecommendationChangeLog;
 
 export type TiyaTravelStat = {
   label: string;
@@ -280,16 +346,43 @@ export type TiyaTripNotes = {
 
 export type TiyaPlannerSnapshot = {
   tripId?: string;
+  userId?: string;
+  owner?: {
+    id: string;
+    mobile?: string;
+    email?: string;
+  };
   tripName: string;
+  status?: "Draft" | "Planning" | "Ready" | "Booked" | "Completed" | "Deleted";
+  createdAt?: string;
+  updatedAt?: string;
+  deletedAt?: string;
   savedAt?: string;
   intent: TiyaTripIntent;
   plan: TiyaGeneratedPlan;
   itinerary: TiyaDayPlan[];
   notes: TiyaTripNotes;
+  draftData?: unknown;
+  plannerState?: unknown;
+  workspacePayload?: unknown;
+  savedItems?: unknown[];
+  expertRequests?: unknown[];
+  checklist?: Record<string, string[]>;
+  selectedTripItems?: unknown[];
+  readinessScore?: number;
+  recentActivity?: {
+    id: string;
+    label: string;
+    createdAt: string;
+  }[];
   selectedRouteId?: TiyaRouteOption["id"];
   selectedCreatorPickIds: string[];
   selectedMarketPickIds: string[];
   selectedBookingModuleIds: string[];
+  appliedRecommendationIds?: string[];
+  savedRecommendationIds?: string[];
+  dismissedRecommendationIds?: string[];
+  recommendationChangeLog?: TiyaAIRecommendationChangeLog[];
 };
 
 export type TiyaTripIntent = {

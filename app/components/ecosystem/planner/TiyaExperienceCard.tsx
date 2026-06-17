@@ -1,12 +1,16 @@
 "use client";
 
-import { CheckCircle2, Plus, Sparkles } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Plus, Sparkles, X } from "lucide-react";
 import type { TiyaExperience } from "@/app/lib/ecosystem/planner/plannerExperienceEngine";
 
 type TiyaExperienceCardProps = {
+  costEstimate: number;
+  conflictStatus: "Safe" | "Warning" | "Conflict";
+  conflictText: string;
   experience: TiyaExperience;
   isAdded?: boolean;
   onAdd: (experienceId: string) => void;
+  onRemove?: (experienceId: string) => void;
 };
 
 function ScoreChip({
@@ -27,10 +31,21 @@ function ScoreChip({
 }
 
 export default function TiyaExperienceCard({
+  costEstimate,
+  conflictStatus,
+  conflictText,
   experience,
   isAdded = false,
   onAdd,
+  onRemove,
 }: TiyaExperienceCardProps) {
+  const conflictClass =
+    conflictStatus === "Safe"
+      ? "border-emerald-300/20 bg-emerald-400/10 text-emerald-100"
+      : conflictStatus === "Conflict"
+        ? "border-red-300/20 bg-red-400/10 text-red-100"
+        : "border-orange-300/20 bg-orange-400/10 text-orange-100";
+
   return (
     <article
       className={`overflow-hidden rounded-3xl border transition ${
@@ -85,23 +100,60 @@ export default function TiyaExperienceCard({
           <span className="rounded-full bg-emerald-400/15 px-2.5 py-1 text-[11px] font-black text-emerald-100">
             {experience.bookingReadiness}
           </span>
+          <span className={`rounded-full border px-2.5 py-1 text-[11px] font-black ${conflictClass}`}>
+            {conflictStatus}
+          </span>
         </div>
 
         <p className="mt-4 text-sm font-semibold leading-6 text-white/70">
           {experience.reason}
         </p>
 
+        <div className="mt-4 rounded-2xl border border-cyan-300/14 bg-cyan-300/10 p-3">
+          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.14em] text-cyan-100">
+            <Sparkles size={14} />
+            What will change
+          </div>
+          <div className="mt-2 grid gap-1.5 text-xs font-bold leading-5 text-cyan-50/78">
+            <p>• Day {experience.suggestedDay} {experience.bestTime} slot will be used</p>
+            <p>• Activity cost +₹{costEstimate.toLocaleString("en-IN")}</p>
+            <p>• Fatigue +{Math.round(experience.fatigueImpact / 10)}</p>
+            <p>• Local market relevance +{Math.round(experience.localCommerceValue / 5)}</p>
+            <p>• Booking basket activity item added after confirmation</p>
+          </div>
+        </div>
+
+        <div className={`mt-3 rounded-2xl border p-3 ${conflictClass}`}>
+          <div className="flex items-start gap-2">
+            {conflictStatus === "Safe" ? (
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+            ) : (
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+            )}
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.14em]">
+                Conflict check
+              </p>
+              <p className="mt-1 text-xs font-bold leading-5 opacity-85">
+                {conflictText}
+              </p>
+            </div>
+          </div>
+        </div>
+
         <button
           type="button"
-          onClick={() => onAdd(experience.id)}
+          onClick={() =>
+            isAdded && onRemove ? onRemove(experience.id) : onAdd(experience.id)
+          }
           className={`mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full px-4 py-2 text-xs font-black transition ${
             isAdded
-              ? "bg-gradient-to-r from-[#ff7b00] via-[#ff9500] to-[#ffb300] text-white"
+              ? "border border-orange-300/30 bg-orange-500/10 text-orange-100 hover:bg-orange-500/15"
               : "border border-white/15 bg-white/10 text-white hover:bg-white/15"
           }`}
         >
-          {isAdded ? <CheckCircle2 size={15} /> : <Plus size={15} />}
-          {isAdded ? "Added to Day" : "Add to Day"}
+          {isAdded ? <X size={15} /> : <Plus size={15} />}
+          {isAdded ? `Remove / Change Day ${experience.suggestedDay}` : "Add to Day"}
         </button>
       </div>
     </article>

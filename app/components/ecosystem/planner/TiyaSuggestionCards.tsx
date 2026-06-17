@@ -4,6 +4,7 @@ import { TiyaEmptyState } from "./TiyaPolishStates";
 
 type TiyaSuggestionCardsProps = {
   suggestions: TiyaSuggestion[];
+  onSuggestionAction?: (suggestion: TiyaSuggestion) => void;
 };
 
 const iconMap = {
@@ -14,6 +15,7 @@ const iconMap = {
 
 export default function TiyaSuggestionCards({
   suggestions,
+  onSuggestionAction,
 }: TiyaSuggestionCardsProps) {
   const safeSuggestions = Array.isArray(suggestions) ? suggestions : [];
 
@@ -74,6 +76,31 @@ export default function TiyaSuggestionCards({
               <div className="mt-4 rounded-2xl bg-orange-50 px-3 py-2 text-sm font-black text-orange-700">
                 {suggestion.price}
               </div>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <div className="rounded-xl border border-blue-100 bg-blue-50 px-3 py-2">
+                  <p className="text-[10px] font-black uppercase tracking-[0.12em] text-blue-700">
+                    Fit score
+                  </p>
+                  <p className="mt-1 text-sm font-black text-slate-950">
+                    {suggestion.fit}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2">
+                  <p className="text-[10px] font-black uppercase tracking-[0.12em] text-emerald-700">
+                    Estimate
+                  </p>
+                  <p className="mt-1 text-sm font-black text-slate-950">
+                    {suggestion.price}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => onSuggestionAction?.(suggestion)}
+                className="mt-4 inline-flex min-h-10 w-full items-center justify-center rounded-full border border-orange-100 bg-orange-500 px-4 text-xs font-black text-white shadow-[0_10px_24px_rgba(255,123,0,0.18)] transition hover:bg-orange-600"
+              >
+                Add / Apply Suggestion
+              </button>
             </article>
           );
         })}

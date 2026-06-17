@@ -95,7 +95,7 @@ function hrefForService(service: TiyaBookingBridgeService) {
     Activities: "/explore",
     Insurance: "/insurance/results",
     "Local Transport": "/cab/result",
-    "Local Market": "/local-market",
+    "Local Market": "/local-life",
   };
 
   return hrefs[service];
@@ -110,7 +110,7 @@ function ctaForService(service: TiyaBookingBridgeService) {
     Activities: "View Activities",
     Insurance: "Add Insurance",
     "Local Transport": "Book Route",
-    "Local Market": "View Local Market",
+    "Local Market": "View Local Life",
   };
 
   return labels[service];

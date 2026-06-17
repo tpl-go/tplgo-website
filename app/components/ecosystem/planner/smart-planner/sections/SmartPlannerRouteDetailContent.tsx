@@ -7,6 +7,7 @@ import MobilityIntelligenceSection from "./MobilityIntelligenceSection";
 import OverviewSection from "./OverviewSection";
 import TPLCreatorsSection from "./TPLCreatorsSection";
 import TravelIntelligenceSection from "./TravelIntelligenceSection";
+import type { DiscoveryItem } from "../drawers/DiscoveryDrawer";
 import type { SmartPlannerPreviewTab as PreviewTab } from "../types/plannerTypes";
 import type {
   buildCreatorIntelligence,
@@ -37,6 +38,10 @@ type SmartPlannerRouteDetailContentProps = {
   setOpenCostDay: Dispatch<SetStateAction<number | null>>;
   onContinue: () => void;
   onOpenOverviewDetail: (card: OverviewCard) => void;
+  onAddLocalLifeSelection?: (item: DiscoveryItem) => void;
+  onSaveLocalLifeSelection?: (item: DiscoveryItem) => void;
+  onAddCreatorSelection?: (item: DiscoveryItem) => void;
+  onSaveCreatorSelection?: (item: DiscoveryItem) => void;
 };
 
 export default function SmartPlannerRouteDetailContent({
@@ -57,6 +62,10 @@ export default function SmartPlannerRouteDetailContent({
   setOpenCostDay,
   onContinue,
   onOpenOverviewDetail,
+  onAddLocalLifeSelection,
+  onSaveLocalLifeSelection,
+  onAddCreatorSelection,
+  onSaveCreatorSelection,
 }: SmartPlannerRouteDetailContentProps) {
   if (activeTab === "Overview") {
     return (
@@ -126,6 +135,8 @@ export default function SmartPlannerRouteDetailContent({
           routeOption={routeOption}
           tripIntent={tripIntent}
           localLife={localLife}
+          onAddToTrip={onAddLocalLifeSelection}
+          onSave={onSaveLocalLifeSelection}
         />
       </div>
     );
@@ -138,6 +149,8 @@ export default function SmartPlannerRouteDetailContent({
           routeOption={routeOption}
           tripIntent={tripIntent}
           creatorIntelligence={creatorIntelligence}
+          onAddToTrip={onAddCreatorSelection}
+          onSave={onSaveCreatorSelection}
         />
       </div>
     );

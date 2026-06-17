@@ -130,7 +130,7 @@ const smartPreferenceLabels: Array<{
   icon: LucideIcon;
 }> = [
   { key: "includeStays", label: "Include Stays", icon: Hotel },
-  { key: "includeLocalMarket", label: "Local Market", icon: CircleDollarSign },
+  { key: "includeLocalMarket", label: "Local Life", icon: CircleDollarSign },
   { key: "includeCreatorSpots", label: "Creator Spots", icon: Sparkles },
   { key: "includeInsurance", label: "Travel Insurance", icon: ShieldCheck },
   { key: "avoidNightTravel", label: "Avoid Night Travel", icon: Compass },
@@ -143,6 +143,10 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
       {children}
     </span>
   );
+}
+
+function displayInterestLabel(value: string) {
+  return value === "Local Market" ? "Local Life" : value;
 }
 
 function CommandSection({
@@ -727,7 +731,7 @@ export default function TiyaTripIntentForm({
                               : "border-white/15 bg-white/[0.04] text-white/55 hover:border-emerald-300/50 hover:text-white"
                           }`}
                         >
-                          {tag}
+                          {displayInterestLabel(tag)}
                         </button>
                       );
                     })}

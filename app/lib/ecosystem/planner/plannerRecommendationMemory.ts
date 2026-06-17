@@ -132,7 +132,7 @@ export function generateTripContinuitySuggestions({
     `Explore a nearby destination cluster around ${intent.toCity}.`,
     `Use ${profile.preferredStayStyle.toLowerCase()} stays as the default mix.`,
     profile.creatorLocalMarketInterest >= 55
-      ? "Add creator-driven discovery and local market stops."
+      ? "Add creator-driven discovery and Local Life stops."
       : "Add one signature activity based on your saved interests.",
   ];
 }

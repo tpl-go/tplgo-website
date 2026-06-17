@@ -520,10 +520,14 @@ export default function TPLCreatorsSection({
   routeOption,
   tripIntent,
   creatorIntelligence,
+  onAddToTrip,
+  onSave,
 }: {
   routeOption: TiyaRouteOption;
   tripIntent?: TiyaTripIntent;
   creatorIntelligence: CreatorIntelligenceData;
+  onAddToTrip?: (item: DiscoveryItem) => void;
+  onSave?: (item: DiscoveryItem) => void;
 }) {
   const router = useRouter();
   const [selectedDiscovery, setSelectedDiscovery] =
@@ -806,7 +810,10 @@ export default function TPLCreatorsSection({
               </button>
               <button
                 type="button"
-                onClick={() => showCreatorMessage("Saved")}
+                onClick={() => {
+                  onSave?.(creatorRouteToDiscoveryItem(trendingRoute, destination));
+                  showCreatorMessage("Saved");
+                }}
                 className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-3 text-xs font-black text-slate-800 transition hover:bg-slate-50"
               >
                 <Heart size={14} />
@@ -875,8 +882,14 @@ export default function TPLCreatorsSection({
         isOpen={Boolean(selectedDiscovery)}
         anchorRect={discoveryAnchor}
         onClose={closeCreatorDiscovery}
-        onAddToTrip={() => showCreatorMessage("Added to trip draft")}
-        onSave={() => showCreatorMessage("Saved")}
+        onAddToTrip={(item) => {
+          onAddToTrip?.(item);
+          showCreatorMessage("Added to trip draft");
+        }}
+        onSave={(item) => {
+          onSave?.(item);
+          showCreatorMessage("Saved");
+        }}
         onCreatorTips={() => router.push("/explore")}
       />
 

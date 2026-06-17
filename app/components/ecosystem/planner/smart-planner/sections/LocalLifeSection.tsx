@@ -292,7 +292,7 @@ function LocalLifeVibeBanner({
         </div>
         <div className="mt-5">
           <Link
-            href="/local-market"
+            href="/local-life"
             className="inline-flex w-full justify-center rounded-full border border-white/24 bg-white px-4 py-2 text-xs font-black text-slate-950 shadow-[0_12px_26px_rgba(0,0,0,0.18)] transition hover:-translate-y-0.5 hover:bg-emerald-50 sm:w-auto"
           >
             Explore More Local Experiences -&gt;
@@ -707,10 +707,14 @@ export default function LocalLifeSection({
   routeOption,
   tripIntent,
   localLife,
+  onAddToTrip,
+  onSave,
 }: {
   routeOption: TiyaRouteOption;
   tripIntent?: TiyaTripIntent;
   localLife: LocalLifeData;
+  onAddToTrip?: (item: DiscoveryItem) => void;
+  onSave?: (item: DiscoveryItem) => void;
 }) {
   const destination = localDestinationName(tripIntent);
   const [selectedDiscovery, setSelectedDiscovery] = useState<DiscoveryItem | null>(null);
@@ -726,7 +730,7 @@ export default function LocalLifeSection({
     ["Handicrafts", "Regional Product", "Souvenir", "Local Specialty", "Creator Pick"]
   );
   const marketItems = splitLocalDetail(
-    localSectionDetail(localLife.sections, "Local Markets", "Traditional Market • Night Market • Handicraft Market • Food Market")
+    localSectionDetail(localLife.sections, "Local Life", "Traditional Market • Night Market • Handicraft Market • Food Market")
   );
   const hiddenGems = splitLocalDetail(
     localSectionDetail(localLife.sections, "Hidden Gems", "Secret viewpoints • Hidden cafes • Less crowded spots • Local shortcuts • Underrated experiences")
@@ -888,7 +892,7 @@ export default function LocalLifeSection({
               index={index}
               onExplore={(anchor) =>
                 openDiscovery({
-                  category: "Local Market",
+                  category: "Local Life",
                   title: name,
                   description: `${name} is a walkable local discovery stop for products, food and street atmosphere.`,
                   bestTime: "Evening",
@@ -1087,7 +1091,7 @@ export default function LocalLifeSection({
 
       <div className="flex justify-end">
         <Link
-          href="/local-market"
+          href="/local-life"
           className="w-full rounded-full border border-orange-200 bg-orange-50 px-5 py-3 text-xs font-black text-orange-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-orange-100 sm:w-auto"
         >
           Explore More Local Experiences
@@ -1102,8 +1106,8 @@ export default function LocalLifeSection({
           setSelectedDiscovery(null);
           setDiscoveryAnchor(null);
         }}
-        onAddToTrip={() => undefined}
-        onSave={() => undefined}
+        onAddToTrip={onAddToTrip}
+        onSave={onSave}
         onCreatorTips={() => undefined}
       />
     </div>

@@ -48,7 +48,7 @@ export function generateCommerceBundles({
       title: product.productName,
       detail: `${product.specialtyLabel} from ${product.localRegion}, matched to this route.`,
       source: "Local Market",
-      cta: "View Local Market",
+      cta: "View Local Life",
       href: "/local-market",
       relevance: product.routeRelevance,
     });

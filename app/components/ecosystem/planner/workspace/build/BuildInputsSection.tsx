@@ -156,13 +156,17 @@ const smartInterestOptions = [
   { label: "Food", value: "Food", icon: Coffee },
   { label: "Shopping", value: "Shopping", icon: ShoppingBag },
   { label: "Creator Spots", value: "Creator Spots", icon: Sparkles },
-  { label: "Local Market", value: "Local Market", icon: ShoppingBag },
+  { label: "Local Life", value: "Local Market", icon: ShoppingBag },
   { label: "Trekking", value: "Trekking", icon: Mountain },
   { label: "Temples", value: "Temples", icon: Landmark },
 ].filter((item) => interestOptions.includes(item.value));
 
 function displayValue(value: string) {
   return value === "Mixed" ? "Auto Decide by Tiya" : value;
+}
+
+function displayInterestLabel(value: string) {
+  return value === "Local Market" ? "Local Life" : value;
 }
 
 function getMoodLabel(preferences: WorkspacePreferences) {
@@ -177,7 +181,7 @@ function getSmartTripStyle(preferences: WorkspacePreferences) {
   const hasNature = preferences.interests.includes("Nature");
 
   if (hasCreator) return "Creator Route + Local Discovery";
-  if (hasLocal) return "Local Market + Culture Discovery";
+  if (hasLocal) return "Local Life + Culture Discovery";
   if (hasNature) return "Nature + Scenic Discovery";
   return "Balanced Smart Journey";
 }
@@ -625,7 +629,7 @@ export default function BuildInputsSection({
                       key={interest}
                       className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 text-[11px] font-black text-blue-700"
                     >
-                      {interest}
+                      {displayInterestLabel(interest)}
                     </span>
                   ))}
                 </div>
@@ -639,8 +643,8 @@ export default function BuildInputsSection({
                   </h5>
                   <p className="mt-1.5 text-xs font-semibold leading-5 text-slate-600 sm:text-sm">
                     Tiya will build route, stay, transport, activities, food,
-                    local markets, creator spots, budget and route alerts in one
-                    editable workspace.
+                    Local Life, creator spots, budget and route alerts in one
+                    editable journey plan.
                   </p>
                 </div>
 

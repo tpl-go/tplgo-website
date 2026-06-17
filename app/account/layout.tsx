@@ -20,6 +20,7 @@ import {
 const tabs = [
   { href: "/account/profile", label: "My Profile" },
   { href: "/account/bookings", label: "My Bookings" },
+  { href: "/account/trips", label: "My Trips" },
   { href: "/account/wishlist", label: "Wishlist" },
   { href: "/account/wallet", label: "My Wallet" },
 ];

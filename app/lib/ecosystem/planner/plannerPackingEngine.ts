@@ -226,6 +226,42 @@ export function generatePlannerPackingSections({
     );
   }
 
+  if (
+    intent.transportMode === "Self Drive" ||
+    intent.transportMode.includes("Car") ||
+    intent.transportMode === "Bike"
+  ) {
+    sections[4]?.items.push(
+      item("driving-license", "Driving License", "Critical", "Required for self-drive, car and bike route movement.")
+    );
+  }
+
+  if (intent.travelStyle === "Couple") {
+    sections[5]?.items.push(
+      item("shared-emergency-contact", "Shared emergency contact", "Recommended", "Keeps both travellers aligned for route and stay emergencies.")
+    );
+  }
+
+  if (
+    intent.tripType === "Multi-city" ||
+    intent.tripType === "Road trip loop" ||
+    intent.transportMode === "Mixed Mode"
+  ) {
+    sections[2]?.items.push(
+      item("offline-route-copy", "Offline route copy", "Critical", "Multi-city movement needs route access when network is weak.")
+    );
+  }
+
+  if (
+    intent.toCity.toLowerCase().includes("international") ||
+    intent.toCity.toLowerCase().includes("europe") ||
+    intent.tripType === "International"
+  ) {
+    sections[4]?.items.push(
+      item("passport", "Passport", "Critical", "Required for international trip planning and travel checks.")
+    );
+  }
+
   if (profile.destinationType === "Spiritual" || intent.travelStyle === "Spiritual") {
     sections[0]?.items.push(
       item("modest-clothing", "Comfortable modest clothing", "Recommended", "Better suited for temple and spiritual routes.")

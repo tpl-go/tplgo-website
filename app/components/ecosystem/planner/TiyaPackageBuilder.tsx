@@ -39,6 +39,7 @@ export default function TiyaPackageBuilder({
     useState<TiyaPackageComponent[]>(initialComponents);
   const [selectedVariantId, setSelectedVariantId] =
     useState<TiyaPackageVariantId>(initialVariantId);
+  const [actionStatus, setActionStatus] = useState("");
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -179,24 +180,38 @@ export default function TiyaPackageBuilder({
             <TiyaPackagePriceCard price={price} />
             <div className="grid gap-2 rounded-3xl border border-white/10 bg-white/[0.08] p-3 sm:p-4">
               {[
-                "Customize Package",
-                "Save Package",
-                "Request Expert Review",
-                "Continue to Booking",
+                { label: "Customize Package - Feature Under Development", disabled: true },
+                { label: "Save Package - Feature Under Development", disabled: true },
+                { label: "Request Expert Review - Use Expert Assistance", disabled: true },
+                { label: "Proceed to Book", disabled: false },
               ].map((action, index) => (
                 <button
-                  key={action}
+                  key={action.label}
                   type="button"
+                  disabled={action.disabled}
+                  onClick={() => {
+                    if (action.label === "Proceed to Book") {
+                      window.dispatchEvent(new Event("tpl:proceed-to-book"));
+                      setActionStatus("Proceeding through protected Smart Planner review flow.");
+                      return;
+                    }
+                    setActionStatus("Feature Under Development. Package variants and component toggles are preview-only in this phase.");
+                  }}
                   className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-black transition ${
                     index === 0
                       ? "bg-orange-500 text-white shadow-[0_12px_32px_rgba(249,115,22,0.28)] hover:bg-orange-600"
                       : "border border-white/15 bg-white/10 text-white hover:bg-white/15"
-                  }`}
+                  } disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:bg-white/10`}
                 >
                   {index === 2 ? <Send size={15} /> : null}
-                  {action}
+                  {action.label}
                 </button>
               ))}
+              {actionStatus ? (
+                <p className="rounded-2xl border border-cyan-300/20 bg-cyan-400/10 px-3 py-2 text-xs font-semibold text-cyan-50">
+                  {actionStatus}
+                </p>
+              ) : null}
             </div>
           </div>
         </div>

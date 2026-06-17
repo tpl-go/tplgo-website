@@ -3,7 +3,7 @@ import { ArrowRight, WandSparkles } from "lucide-react";
 export default function BuildIntroSection({
   onStart,
 }: {
-  onStart: () => void;
+  onStart: () => void | Promise<void>;
 }) {
   return (
     <div className="relative overflow-hidden bg-[#061839] px-6 py-9 text-center text-white lg:px-10 lg:py-12">
@@ -11,17 +11,16 @@ export default function BuildIntroSection({
 
       <div className="relative mx-auto max-w-[900px]">
         <p className="text-[11px] font-black uppercase tracking-[0.18em] text-cyan-100">
-          Build your itinerary
+          BUILD YOUR SMART JOURNEY
         </p>
 
         <h2 className="mx-auto mt-3 max-w-4xl text-3xl font-black leading-tight tracking-tight lg:text-4xl">
-          Turn this route into a fully editable AI journey
+          Turn this route into a complete AI-powered travel plan
         </h2>
 
         <p className="mx-auto mt-3 max-w-3xl text-sm font-semibold leading-6 text-white/72">
-          Tiya will ask only a few smart inputs, then build transport, stay,
-          activities, budget, route alerts and editable itinerary in one clean
-          workspace.
+          Tiya converts your selected route, dates, travel style and preferences
+          into a day-wise itinerary, budget plan and booking-ready journey.
         </p>
 
         <button
@@ -36,11 +35,11 @@ export default function BuildIntroSection({
 
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           {[
-            "Budget aware",
-            "Weather aware",
-            "Creator powered",
-            "Local market integrated",
-            "Editable later",
+            "Route-aware",
+            "Budget-ready",
+            "Stay & activity mapped",
+            "Editable plan",
+            "Booking-ready",
           ].map((item) => (
             <span
               key={item}

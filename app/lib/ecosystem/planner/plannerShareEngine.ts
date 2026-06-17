@@ -31,7 +31,7 @@ export function buildPlannerShareText(snapshot: TiyaPlannerSnapshot) {
     "Itinerary highlights:",
     highlights || "Flexible itinerary ready inside Tiya Smart Planner.",
     creators ? `\nCreator picks: ${creators}` : "",
-    market ? `Local market picks: ${market}` : "",
+    market ? `Local Life picks: ${market}` : "",
     "\nPlanned with Tiya Smart Planner by TPL.",
   ]
     .filter(Boolean)

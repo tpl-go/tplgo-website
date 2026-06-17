@@ -1,4 +1,5 @@
 import type {
+  SmartPlannerWorkspaceDraft,
   TiyaRouteWorkspacePayload,
   TiyaSelectedSmartPlannerTrip,
 } from "@/app/lib/ecosystem/planner/plannerRouteWorkspaceHandoff";
@@ -16,7 +17,7 @@ export const workspaceTabs = [
   "Itinerary",
   "Booking",
   "Creator",
-  "Local Market",
+  "Local Life",
 ] as const;
 
 export type WorkspaceTab = (typeof workspaceTabs)[number];
@@ -30,11 +31,17 @@ export type WorkspacePreferences = {
 };
 
 export type WorkspacePayload = TiyaRouteWorkspacePayload & {
+  buildItineraryGenerated?: boolean;
+  dayStatuses?: Record<string, string>;
+  finalizedDayIds?: string[];
+  finalizedDayNumbers?: number[];
+  finalizedDays?: number;
   routeOptions?: TiyaRouteOption[];
   preferences?: WorkspacePreferences;
   tripIntent?: TiyaTripIntent;
   generatedPlan?: TiyaGeneratedPlan;
   selectedSmartPlannerTrip?: TiyaSelectedSmartPlannerTrip;
+  smartPlannerWorkspaceDraft?: SmartPlannerWorkspaceDraft;
 };
 
 export type SmartBuildPreferences = {
@@ -122,7 +129,7 @@ export const aiSwitches: Array<{
 }> = [
   { label: "Hidden gems", key: "hiddenGems" },
   { label: "Creator spots", key: "creatorSpots" },
-  { label: "Local market", key: "localMarket" },
+  { label: "Local Life", key: "localMarket" },
   { label: "Family mode", key: "familyMode" },
   { label: "Senior friendly", key: "seniorFriendly" },
   { label: "Weather-safe mode", key: "weatherSafe" },

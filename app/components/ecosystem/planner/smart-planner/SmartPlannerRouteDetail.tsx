@@ -1,6 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 import { useRouter } from "next/navigation";
 import {
   Compass,
@@ -10,6 +18,11 @@ import {
 } from "lucide-react";
 import SmartPlannerRouteDetailContent from "./sections/SmartPlannerRouteDetailContent";
 import SmartPlannerTabs from "./tabs/SmartPlannerTabs";
+import type { DiscoveryItem } from "./drawers/DiscoveryDrawer";
+import {
+  buildInitialBookingBasket,
+  type WorkspaceBookingBasketItem,
+} from "@/app/components/ecosystem/planner/workspace/utils/bookingBasket";
 import {
   buildCreatorIntelligence,
   buildJourneyFlow,
@@ -33,14 +46,259 @@ import {
   type RoutePricing,
 } from "./data/routePreviewData";
 import { saveRouteWorkspacePayload } from "@/app/lib/ecosystem/planner/plannerRouteWorkspaceHandoff";
+import { useAuth } from "@/app/hooks/useAuth";
+import {
+  loadMyTripById,
+  loadMyTrips,
+  MY_TRIPS_ACTIVE_TRIP_ID_KEY,
+  MY_TRIPS_RESTORE_BASKET_KEY,
+  myTripOwnerKey,
+  saveMyTrip,
+  type MyTripSavedItem,
+  type MyTripSavedItemType,
+} from "@/app/lib/ecosystem/planner/myTripsStorage";
+import {
+  buildSmartPlannerReviewPayload,
+  persistSmartPlannerReviewPayload,
+} from "@/app/lib/ecosystem/planner/plannerReviewPayload";
 import type {
+  TiyaCreatorPick,
+  TiyaDayPlan,
+  TiyaGeneratedPlan,
+  TiyaLocalMarketPick,
   TiyaRouteOption,
+  TiyaTimelineItem,
   TiyaTripIntent,
 } from "@/app/lib/ecosystem/planner/plannerTypes";
 import type {
   SmartPlannerPreviewTab as PreviewTab,
   SmartPlannerRouteDetailProps,
 } from "./types/plannerTypes";
+
+const SMART_PLANNER_GUEST_DISCOVERY_SAVES_KEY =
+  "tpl_smart_planner_guest_discovery_saves_v1";
+
+function discoveryKey(item: DiscoveryItem) {
+  return `${item.category}:${item.id}`;
+}
+
+function uniqueDiscoveryItems(items: DiscoveryItem[]) {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    const key = discoveryKey(item);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function discoveryPrice(item: DiscoveryItem, isCreator: boolean) {
+  if (isCreator) return 0;
+  const text = `${item.category} ${item.title}`.toLowerCase();
+  if (text.includes("food") || text.includes("snack")) return 800;
+  if (text.includes("market") || text.includes("shopping")) return 1200;
+  if (text.includes("culture") || text.includes("walk")) return 1500;
+  return 1000;
+}
+
+function discoveryToTimelineItem(
+  item: DiscoveryItem,
+  isCreator: boolean,
+  index: number
+): TiyaTimelineItem {
+  const price = discoveryPrice(item, isCreator);
+
+  return {
+    id: `${isCreator ? "creator" : "local-life"}-${item.id}`,
+    time: item.bestTime || (isCreator ? "Golden hour" : "Evening"),
+    title: item.title,
+    location: item.distance || "Route stop",
+    type: "activity",
+    category: "Activities",
+    serviceType: isCreator ? "Creator Spot" : "Local Life",
+    description: item.description,
+    durationDays: 1,
+    unitPrice: price,
+    price,
+    priceBasis: isCreator ? "fixed" : "per_item",
+    displayPriceLabel: price
+      ? `₹${price.toLocaleString("en-IN")} estimate`
+      : "No cost estimate",
+    currency: "INR",
+    providerName: isCreator ? "TPL Creators" : "TPL Local Life",
+    detailSummary: isCreator
+      ? "Creator discovery added from Smart Planner route preview."
+      : "Local Life discovery added from Smart Planner route preview.",
+    details: {
+      category: item.category,
+      order: index + 1,
+      source: "Smart Planner discovery",
+    },
+    bookingStatus: "selected",
+  };
+}
+
+function discoveryToLocalLifePick(item: DiscoveryItem): TiyaLocalMarketPick {
+  return {
+    id: `local-life-${item.id}`,
+    productName: item.title,
+    localRegion: item.distance || "Route area",
+    description: item.description,
+    priceRange: `₹${discoveryPrice(item, false).toLocaleString("en-IN")} estimate`,
+    specialtyLabel: item.category || "Local Life",
+    authenticityBadge: "Route matched",
+    routeRelevance: 88,
+    productType: item.category.toLowerCase().includes("food")
+      ? "local snacks"
+      : item.category.toLowerCase().includes("travel")
+        ? "travel essentials"
+        : "creator recommended items",
+    isCreatorRecommended: Boolean(item.creatorReviews),
+    isHighlighted: true,
+  };
+}
+
+function discoveryToCreatorPick(item: DiscoveryItem): TiyaCreatorPick {
+  return {
+    id: `creator-${item.id}`,
+    creatorName: item.creatorReviews || item.title,
+    handle: `@${item.title.toLowerCase().replace(/[^a-z0-9]+/g, "").slice(0, 24) || "tplcreator"}`,
+    destination: item.distance || "Route stop",
+    specialty: item.category || "Creator route",
+    engagementScore: 84,
+    routeFit: 90,
+    recommendationNote: item.description,
+    suggestedStopover: item.title,
+    tags: [item.category, item.bestTime || "Creator ready"].filter(Boolean),
+    isVerified: true,
+    isHighlighted: true,
+  };
+}
+
+function enrichPlanWithDiscoverySelections({
+  creatorSelections,
+  localLifeSelections,
+  plan,
+}: {
+  creatorSelections: DiscoveryItem[];
+  localLifeSelections: DiscoveryItem[];
+  plan: TiyaGeneratedPlan;
+}) {
+  const days = Array.isArray(plan.days) ? plan.days : [];
+  if (!days.length) return plan;
+
+  const targetDayIndex = Math.min(1, days.length - 1);
+  const selectedTimelineItems = [
+    ...uniqueDiscoveryItems(localLifeSelections).map((item, index) =>
+      discoveryToTimelineItem(item, false, index)
+    ),
+    ...uniqueDiscoveryItems(creatorSelections).map((item, index) =>
+      discoveryToTimelineItem(item, true, index)
+    ),
+  ];
+  const selectedIds = new Set(selectedTimelineItems.map((item) => item.id));
+  const nextDays = days.map((day, index): TiyaDayPlan => {
+    if (index !== targetDayIndex) return day;
+
+    const existingItems = Array.isArray(day.items) ? day.items : [];
+    const keptItems = existingItems.filter((item) => !selectedIds.has(item.id));
+
+    return {
+      ...day,
+      items: [...keptItems, ...selectedTimelineItems],
+      notes: [
+        day.notes,
+        selectedTimelineItems.length
+          ? "Smart Planner discovery selections added to this day."
+          : "",
+      ]
+        .filter(Boolean)
+        .join(" "),
+    };
+  });
+
+  const localLifePicks = [
+    ...uniqueDiscoveryItems(localLifeSelections).map(discoveryToLocalLifePick),
+    ...(Array.isArray(plan.localMarketPicks) ? plan.localMarketPicks : []),
+  ].filter(
+    (item, index, array) =>
+      array.findIndex((entry) => entry.id === item.id) === index
+  );
+  const creatorPicks = [
+    ...uniqueDiscoveryItems(creatorSelections).map(discoveryToCreatorPick),
+    ...(Array.isArray(plan.creatorPicks) ? plan.creatorPicks : []),
+  ].filter(
+    (item, index, array) =>
+      array.findIndex((entry) => entry.id === item.id) === index
+  );
+
+  return {
+    ...plan,
+    creatorPicks,
+    days: nextDays,
+    localMarketPicks: localLifePicks,
+  };
+}
+
+function saveGuestDiscoveryPreference(item: DiscoveryItem) {
+  if (typeof window === "undefined") return;
+
+  try {
+    const raw = window.localStorage.getItem(SMART_PLANNER_GUEST_DISCOVERY_SAVES_KEY);
+    const current = raw ? JSON.parse(raw) : [];
+    const list = Array.isArray(current) ? current : [];
+    const next = [
+      {
+        ...item,
+        savedAt: new Date().toISOString(),
+      },
+      ...list.filter(
+        (entry: Partial<DiscoveryItem>) =>
+          entry.id !== item.id || entry.category !== item.category
+      ),
+    ];
+
+    window.localStorage.setItem(
+      SMART_PLANNER_GUEST_DISCOVERY_SAVES_KEY,
+      JSON.stringify(next)
+    );
+    window.dispatchEvent(new Event("tpl_tiya_workspace_payload_updated"));
+    window.dispatchEvent(new Event("tpl_tiya_my_trips_updated"));
+  } catch {
+    return;
+  }
+}
+
+function clearGuestDiscoveryPreferences() {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.localStorage.removeItem(SMART_PLANNER_GUEST_DISCOVERY_SAVES_KEY);
+  } catch {
+    return;
+  }
+}
+
+function readGuestDiscoveryPreferences(): DiscoveryItem[] {
+  if (typeof window === "undefined") return [];
+
+  try {
+    const raw = window.localStorage.getItem(SMART_PLANNER_GUEST_DISCOVERY_SAVES_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(parsed)) return [];
+
+    return uniqueDiscoveryItems(
+      parsed.filter(
+        (item: Partial<DiscoveryItem>) =>
+          typeof item?.id === "string" &&
+          typeof item?.title === "string" &&
+          typeof item?.category === "string"
+      ) as DiscoveryItem[]
+    );
+  } catch {
+    return [];
+  }
+}
 
 function ScoreGauge({
   label,
@@ -113,6 +371,10 @@ function RoutePreviewDetailPanel({
   onContinue,
   onOpenOverviewDetail,
   tripIntent,
+  onAddLocalLifeSelection,
+  onSaveLocalLifeSelection,
+  onAddCreatorSelection,
+  onSaveCreatorSelection,
 }: {
   routeOption: TiyaRouteOption;
   routePricing: RoutePricing;
@@ -121,6 +383,10 @@ function RoutePreviewDetailPanel({
   onContinue: () => void;
   onOpenOverviewDetail: (card: OverviewCard) => void;
   tripIntent?: TiyaTripIntent;
+  onAddLocalLifeSelection?: (item: DiscoveryItem) => void;
+  onSaveLocalLifeSelection?: (item: DiscoveryItem) => void;
+  onAddCreatorSelection?: (item: DiscoveryItem) => void;
+  onSaveCreatorSelection?: (item: DiscoveryItem) => void;
 }) {
   const overviewCards = buildOverviewCards(routeOption, tripIntent);
   const journeyFlow = buildJourneyFlow(routeOption, tripIntent, routePricing);
@@ -172,6 +438,10 @@ function RoutePreviewDetailPanel({
           setOpenCostDay={setOpenCostDay}
           onContinue={onContinue}
           onOpenOverviewDetail={onOpenOverviewDetail}
+          onAddLocalLifeSelection={onAddLocalLifeSelection}
+          onSaveLocalLifeSelection={onSaveLocalLifeSelection}
+          onAddCreatorSelection={onAddCreatorSelection}
+          onSaveCreatorSelection={onSaveCreatorSelection}
         />
 
       </div>
@@ -189,6 +459,7 @@ export default function TiyaRouteIntelligence({
   onSelectedRouteChange,
 }: SmartPlannerRouteDetailProps) {
   const router = useRouter();
+  const { isAuthenticated, user } = useAuth();
   const safeRouteOptions = useMemo(
     () => (Array.isArray(routeOptions) ? routeOptions : []),
     [routeOptions]
@@ -212,6 +483,18 @@ export default function TiyaRouteIntelligence({
     useState<OverviewCard | null>(null);
   const [activePreviewTab, setActivePreviewTab] =
     useState<PreviewTab>("Overview");
+  const [localLifeSelections, setLocalLifeSelections] = useState<DiscoveryItem[]>(
+    () =>
+      readGuestDiscoveryPreferences().filter(
+        (item) => !item.category.toLowerCase().includes("creator")
+      )
+  );
+  const [creatorSelections, setCreatorSelections] = useState<DiscoveryItem[]>(
+    () =>
+      readGuestDiscoveryPreferences().filter((item) =>
+        item.category.toLowerCase().includes("creator")
+      )
+  );
 
   useEffect(() => {
     if ((!isCompareOpen && !activeOverviewCard) || typeof document === "undefined") {
@@ -265,15 +548,396 @@ export default function TiyaRouteIntelligence({
     setIsCompareOpen(true);
   }
 
-  function continueWithRoute(routeOption: TiyaRouteOption) {
+  function storeUniqueSelection(
+    item: DiscoveryItem,
+    setter: Dispatch<SetStateAction<DiscoveryItem[]>>
+  ) {
+    setter((current) =>
+      current.some(
+        (selection) =>
+          selection.id === item.id && selection.category === item.category
+      )
+        ? current
+        : [...current, item]
+    );
+  }
+
+  function syncDiscoveryToWorkspaceDraft({
+    creatorItems,
+    localLifeItems,
+    routeOption,
+  }: {
+    creatorItems: DiscoveryItem[];
+    localLifeItems: DiscoveryItem[];
+    routeOption?: TiyaRouteOption;
+  }) {
+    if (!routeOption || !tripIntent || !generatedPlan) {
+      return {
+        basket: [] as WorkspaceBookingBasketItem[],
+        plan: generatedPlan,
+      };
+    }
+
+    const enrichedPlan = enrichPlanWithDiscoverySelections({
+      creatorSelections: creatorItems,
+      localLifeSelections: localLifeItems,
+      plan: generatedPlan,
+    });
+    const routePricing = buildRoutePricing(routeOption, tripIntent);
+    const travelIntelligence = getTravelIntelligenceDashboard(routeOption);
+    const mobilityIntelligence = buildMobilityIntelligence(routeOption, tripIntent);
+
     saveRouteWorkspacePayload(
       routeOption,
       safeRouteOptions,
       tripIntent,
-      generatedPlan
+      enrichedPlan,
+      {
+        costSummary: {
+          activityCost: routePricing.activityCost,
+          budgetType: routePricing.budgetType,
+          bufferCost: routePricing.bufferCost,
+          dayWiseCosts: routePricing.dayWiseCosts,
+          perDayCost: routePricing.perDayCost,
+          perPersonCost: routePricing.perPersonCost,
+          savings: routePricing.savings,
+          stayCost: routePricing.stayCost,
+          totalCost: routePricing.totalCost,
+          transportCost: routePricing.transportCost,
+          travellerCount: routePricing.travellerCount,
+          tripDays: routePricing.tripDays,
+        },
+        creatorSelections: creatorItems,
+        localLifeSelections: localLifeItems,
+        mobilityIntelligence,
+        notes: routeOption.note,
+        routeSummary: {
+          bestFor: routeOption.bestFor,
+          difficulty: routeOption.difficulty,
+          distance: routeOption.distance,
+          duration: routeOption.duration,
+          id: routeOption.id,
+          name: routeOption.name,
+          note: routeOption.note,
+          riskLevel: routeOption.riskLevel,
+          routeStyle: routeOption.routeStyle,
+        },
+        travelIntelligence,
+      }
     );
+
+    const basket = buildInitialBookingBasket(enrichedPlan.days || [], enrichedPlan);
+    const workspacePayload = {
+      generatedAt: new Date().toISOString(),
+      generatedPlan: enrichedPlan,
+      routeId: routeOption.id,
+      routeOptions: safeRouteOptions,
+      selectedRoute: routeOption,
+      source: "route-intelligence" as const,
+      tripIntent,
+    };
+    const reviewPayload = buildSmartPlannerReviewPayload({
+      bookingBasket: basket,
+      intent: tripIntent,
+      plan: enrichedPlan,
+      selectedRoute: routeOption,
+      workspace: workspacePayload,
+    });
+
+    if (typeof window !== "undefined") {
+      window.sessionStorage.setItem(
+        MY_TRIPS_RESTORE_BASKET_KEY,
+        JSON.stringify(basket)
+      );
+      window.dispatchEvent(new Event("tpl_tiya_workspace_payload_updated"));
+      window.dispatchEvent(new Event("tpl_tiya_review_payload_updated"));
+    }
+
+    if (reviewPayload) {
+      persistSmartPlannerReviewPayload(reviewPayload);
+    }
+
+    return { basket, plan: enrichedPlan };
+  }
+
+  function addDiscoveryToTrip(item: DiscoveryItem) {
+    const isCreator = item.category.toLowerCase().includes("creator");
+    const nextLocalLifeSelections = isCreator
+      ? localLifeSelections
+      : uniqueDiscoveryItems([...localLifeSelections, item]);
+    const nextCreatorSelections = isCreator
+      ? uniqueDiscoveryItems([...creatorSelections, item])
+      : creatorSelections;
+
+    setLocalLifeSelections(nextLocalLifeSelections);
+    setCreatorSelections(nextCreatorSelections);
+    syncDiscoveryToWorkspaceDraft({
+      creatorItems: nextCreatorSelections,
+      localLifeItems: nextLocalLifeSelections,
+      routeOption: selectedRoute,
+    });
+  }
+
+  function discoverySavedItem(item: DiscoveryItem): MyTripSavedItem {
+    const isCreator = item.category.toLowerCase().includes("creator");
+    const type: MyTripSavedItemType = isCreator ? "Creators" : "Local Life";
+
+    return {
+      id: `${isCreator ? "creator" : "local-life"}:${item.id}`,
+      type,
+      title: item.title,
+      subtitle: item.description,
+      category: isCreator ? "Creator" : "Local Life",
+      sourceModule: isCreator ? "Creator Recommendations" : "Local Life",
+      destination: tripIntent?.toCity,
+      city: tripIntent?.toCity,
+      day: "Route preview",
+      time: item.bestTime,
+      image: item.image,
+      metadata: {
+        category: item.category,
+        distance: item.distance,
+        duration: item.duration,
+        routeId: selectedRoute?.id,
+        routeName: selectedRoute?.name,
+      },
+      savedAt: new Date().toISOString(),
+    };
+  }
+
+  function saveDiscoveryToMyTrips(item: DiscoveryItem) {
+    const isCreator = item.category.toLowerCase().includes("creator");
+    storeUniqueSelection(
+      item,
+      isCreator ? setCreatorSelections : setLocalLifeSelections
+    );
+
+    if (!selectedRoute || !tripIntent || !generatedPlan) {
+      saveGuestDiscoveryPreference(item);
+      return;
+    }
+
+    if (!isAuthenticated || !user) {
+      saveGuestDiscoveryPreference(item);
+      return;
+    }
+
+    const savedItem = discoverySavedItem(item);
+    const activeTripId =
+      typeof window !== "undefined"
+        ? window.sessionStorage.getItem(MY_TRIPS_ACTIVE_TRIP_ID_KEY)
+        : null;
+    const activeTrip = activeTripId ? loadMyTripById(activeTripId) : null;
+    const ownerKey = myTripOwnerKey(user);
+    const matchingTrip =
+      activeTrip && myTripOwnerKey(activeTrip.owner) === ownerKey
+        ? activeTrip
+        : loadMyTrips(user).find(
+            (trip) =>
+              trip.workspacePayload?.routeId === selectedRoute.id &&
+              trip.origin === tripIntent.fromCity &&
+              trip.destination === tripIntent.toCity &&
+              trip.startDate === tripIntent.startDate
+          );
+    const now = new Date().toISOString();
+    const workspacePayload = {
+      routeId: selectedRoute.id,
+      selectedRoute,
+      routeOptions: safeRouteOptions,
+      tripIntent,
+      generatedPlan,
+      generatedAt: now,
+      source: "route-intelligence" as const,
+    };
+    const savedItems = [
+      savedItem,
+      ...(matchingTrip?.savedItems || []).filter((existing) => existing.id !== savedItem.id),
+    ];
+
+    saveMyTrip({
+      id: matchingTrip?.id || `trip-${now}`,
+      tripName:
+        matchingTrip?.tripName ||
+        `${tripIntent.fromCity || "Origin"} to ${tripIntent.toCity || "Destination"} ${selectedRoute.name}`,
+      origin: tripIntent.fromCity,
+      destination: tripIntent.toCity,
+      startDate: tripIntent.startDate,
+      endDate: tripIntent.endDate,
+      duration: `${generatedPlan.days?.length || 0} Day${(generatedPlan.days?.length || 0) === 1 ? "" : "s"}`,
+      travellerCount: Math.max(
+        1,
+        Number(tripIntent.adults || 0) +
+          Number(tripIntent.children || 0) +
+          Number(tripIntent.seniors || 0)
+      ),
+      selectedItemsCount: matchingTrip?.selectedItemsCount || 0,
+      estimatedTripValue: generatedPlan.totalBudget || matchingTrip?.estimatedTripValue || 0,
+      status: matchingTrip?.status || "Draft",
+      createdAt: matchingTrip?.createdAt || now,
+      updatedAt: now,
+      owner: {
+        id: user.id,
+        mobile: user.mobile,
+        email: user.email,
+      },
+      workspacePayload,
+      itineraryDays: generatedPlan.days || [],
+      dayStatuses: matchingTrip?.dayStatuses || {},
+      selectedTripItems: matchingTrip?.selectedTripItems || [],
+      savedItems,
+      expertRequests: matchingTrip?.expertRequests || [],
+      checklist: matchingTrip?.checklist || {},
+      notes: matchingTrip?.notes,
+      generatedJourneyData: matchingTrip?.generatedJourneyData || generatedPlan,
+    });
+
+    const reviewPayload = buildSmartPlannerReviewPayload({
+      bookingBasket: matchingTrip?.selectedTripItems || [],
+      intent: tripIntent,
+      plan: generatedPlan,
+      savedItems,
+      selectedRoute,
+      workspace: workspacePayload,
+    });
+
+    if (reviewPayload) {
+      persistSmartPlannerReviewPayload(reviewPayload);
+    }
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("tpl_tiya_my_trips_updated"));
+      window.dispatchEvent(new Event("tpl_tiya_review_payload_updated"));
+      window.dispatchEvent(new Event("tpl_tiya_workspace_payload_updated"));
+    }
+  }
+
+  function continueWithRoute(routeOption: TiyaRouteOption) {
+    const routePricing = buildRoutePricing(routeOption, tripIntent);
+    const travelIntelligence = getTravelIntelligenceDashboard(routeOption);
+    const mobilityIntelligence = buildMobilityIntelligence(routeOption, tripIntent);
+    const enrichedPlan = generatedPlan
+      ? enrichPlanWithDiscoverySelections({
+          creatorSelections,
+          localLifeSelections,
+          plan: generatedPlan,
+        })
+      : generatedPlan;
+    const basket = enrichedPlan
+      ? buildInitialBookingBasket(enrichedPlan.days || [], enrichedPlan)
+      : [];
+
+    saveRouteWorkspacePayload(
+      routeOption,
+      safeRouteOptions,
+      tripIntent,
+      enrichedPlan,
+      {
+        routeSummary: {
+          id: routeOption.id,
+          name: routeOption.name,
+          distance: routeOption.distance,
+          duration: routeOption.duration,
+          difficulty: routeOption.difficulty,
+          riskLevel: routeOption.riskLevel,
+          bestFor: routeOption.bestFor,
+          routeStyle: routeOption.routeStyle,
+          note: routeOption.note,
+        },
+        costSummary: {
+          totalCost: routePricing.totalCost,
+          perPersonCost: routePricing.perPersonCost,
+          perDayCost: routePricing.perDayCost,
+          transportCost: routePricing.transportCost,
+          stayCost: routePricing.stayCost,
+          activityCost: routePricing.activityCost,
+          bufferCost: routePricing.bufferCost,
+          travellerCount: routePricing.travellerCount,
+          tripDays: routePricing.tripDays,
+          budgetType: routePricing.budgetType,
+          dayWiseCosts: routePricing.dayWiseCosts,
+          savings: routePricing.savings,
+        },
+        travelIntelligence,
+        mobilityIntelligence,
+        localLifeSelections,
+        creatorSelections,
+        notes: routeOption.note,
+      }
+    );
+    const workspacePayload = enrichedPlan
+      ? {
+          generatedAt: new Date().toISOString(),
+          generatedPlan: enrichedPlan,
+          routeId: routeOption.id,
+          routeOptions: safeRouteOptions,
+          selectedRoute: routeOption,
+          source: "route-intelligence" as const,
+          tripIntent,
+        }
+      : null;
+    const reviewPayload =
+      workspacePayload && enrichedPlan
+        ? buildSmartPlannerReviewPayload({
+            bookingBasket: basket,
+            intent: tripIntent,
+            plan: enrichedPlan,
+            selectedRoute: routeOption,
+            workspace: workspacePayload,
+          })
+        : null;
+
+    if (typeof window !== "undefined") {
+      window.sessionStorage.setItem(
+        MY_TRIPS_RESTORE_BASKET_KEY,
+        JSON.stringify(basket)
+      );
+      window.dispatchEvent(new Event("tpl_tiya_workspace_payload_updated"));
+      window.dispatchEvent(new Event("tpl_tiya_review_payload_updated"));
+    }
+
+    if (reviewPayload) {
+      persistSmartPlannerReviewPayload(reviewPayload);
+    }
     router.push("/smart-planner/workspace");
   }
+
+  const syncDiscoveryToWorkspaceDraftRef = useRef(syncDiscoveryToWorkspaceDraft);
+  const saveDiscoveryToMyTripsRef = useRef(saveDiscoveryToMyTrips);
+
+  useEffect(() => {
+    syncDiscoveryToWorkspaceDraftRef.current = syncDiscoveryToWorkspaceDraft;
+    saveDiscoveryToMyTripsRef.current = saveDiscoveryToMyTrips;
+  });
+
+  useEffect(() => {
+    if (!selectedRoute || !tripIntent || !generatedPlan) return;
+
+    const guestSaves = readGuestDiscoveryPreferences();
+    if (!guestSaves.length) return;
+
+    const localItems = uniqueDiscoveryItems(
+      guestSaves.filter((item) => !item.category.toLowerCase().includes("creator"))
+    );
+    const creatorItems = uniqueDiscoveryItems(
+      guestSaves.filter((item) => item.category.toLowerCase().includes("creator"))
+    );
+
+    syncDiscoveryToWorkspaceDraftRef.current({
+      creatorItems: uniqueDiscoveryItems([...creatorSelections, ...creatorItems]),
+      localLifeItems: uniqueDiscoveryItems([...localLifeSelections, ...localItems]),
+      routeOption: selectedRoute,
+    });
+  }, [creatorSelections, generatedPlan, localLifeSelections, selectedRoute, tripIntent]);
+
+  useEffect(() => {
+    if (!isAuthenticated || (!user?.id && !user?.mobile)) return;
+
+    const guestSaves = readGuestDiscoveryPreferences();
+    if (!guestSaves.length) return;
+
+    guestSaves.forEach((item) => saveDiscoveryToMyTripsRef.current(item));
+    clearGuestDiscoveryPreferences();
+  }, [isAuthenticated, user?.id, user?.mobile]);
 
   return (
     <section className="min-w-0 overflow-hidden rounded-[1.4rem] border border-sky-100/35 bg-[#dff4ff] text-white shadow-[0_28px_100px_rgba(6,24,57,0.18)] sm:rounded-[2rem]">
@@ -590,6 +1254,18 @@ export default function TiyaRouteIntelligence({
                         onContinue={() => continueWithRoute(routeOption)}
                         onOpenOverviewDetail={setActiveOverviewCard}
                         tripIntent={tripIntent}
+                        onAddLocalLifeSelection={(item) =>
+                          addDiscoveryToTrip(item)
+                        }
+                        onSaveLocalLifeSelection={(item) =>
+                          saveDiscoveryToMyTrips(item)
+                        }
+                        onAddCreatorSelection={(item) =>
+                          addDiscoveryToTrip(item)
+                        }
+                        onSaveCreatorSelection={(item) =>
+                          saveDiscoveryToMyTrips(item)
+                        }
                       />
                     </div>
                   </div>

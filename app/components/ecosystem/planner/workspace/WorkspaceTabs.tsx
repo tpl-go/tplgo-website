@@ -67,7 +67,7 @@ export default function WorkspaceTabs({
         {activeTab === "Itinerary" ? <ItineraryTab selectedRoute={selectedRoute} preferences={preferences} /> : null}
         {activeTab === "Booking" ? <BookingTab selectedRoute={selectedRoute} preferences={preferences} /> : null}
         {activeTab === "Creator" ? <CreatorTab /> : null}
-        {activeTab === "Local Market" ? <LocalMarketTab /> : null}
+        {activeTab === "Local Life" ? <LocalMarketTab /> : null}
       </div>
     </div>
   );

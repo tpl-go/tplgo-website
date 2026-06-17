@@ -25,6 +25,8 @@ import {
 } from "lucide-react";
 import TPLDynamicImage from "@/app/components/common/TPLDynamicImage";
 
+const LOCAL_LIFE_ROUTE = "/local-life";
+
 export type DiscoveryItem = {
   id: string;
   category: string;
@@ -384,10 +386,10 @@ export default function DiscoveryDrawer({
                 </Link>
 
                 <Link
-                  href="/local-market"
+                  href={LOCAL_LIFE_ROUTE}
                   className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-center text-xs font-black text-emerald-700"
                 >
-                  Open Local Market
+                  Open Local Life
                 </Link>
               </div>
             </div>
@@ -498,10 +500,10 @@ export default function DiscoveryDrawer({
               </Link>
 
               <Link
-                href="/local-market"
+                href={LOCAL_LIFE_ROUTE}
                 className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-center text-xs font-black text-emerald-700"
               >
-                Open Local Market
+                Open Local Life
               </Link>
             </div>
           </div>

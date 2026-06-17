@@ -63,6 +63,76 @@ function ScoreChip({
   );
 }
 
+function parseDurationDays(duration: string) {
+  const match = duration.match(/(\d+)\s*Days?/i);
+  return match ? Number(match[1]) : 0;
+}
+
+function signedNumber(value: number, suffix = "") {
+  if (value === 0) return `No change${suffix}`;
+  return `${value > 0 ? "+" : ""}${value}${suffix}`;
+}
+
+function displayCostImpact(value: number) {
+  if (value === 0) return "No change";
+  return `${value > 0 ? "+" : "-"}${formatCurrency(Math.abs(value))}`;
+}
+
+function variantStrategyLabel(variant: TiyaTripVariant) {
+  if (variant.id === "budget") return "Budget Route";
+  if (variant.id === "premium") return "Balanced Route";
+  if (variant.id === "short") return "Weekend Variant";
+  if (variant.id === "long") return "Extended Variant";
+  if (variant.id === "family") return "Family Safe Route";
+  if (variant.id === "adventure") return "Adventure Route";
+  return "Luxury Route";
+}
+
+function variantGroupLabel(variant: TiyaTripVariant) {
+  if (variant.id === "budget" || variant.id === "premium" || variant.id === "luxury") {
+    return "Budget Strategy";
+  }
+
+  if (variant.id === "short" || variant.id === "long") {
+    return "Trip Duration Strategy";
+  }
+
+  return "Route Strategy";
+}
+
+function variantChangeBullets(variant: TiyaTripVariant) {
+  const added =
+    variant.id === "short"
+      ? "Adds priority highlights only"
+      : variant.id === "budget"
+        ? "Adds value-first stay and transfer options"
+        : variant.id === "adventure"
+          ? "Adds outdoor activity pressure"
+          : variant.id === "family"
+            ? "Adds daylight and safety buffers"
+            : "Adds comfort and experience upgrades";
+  const removed =
+    variant.id === "short"
+      ? "Removes slower detours"
+      : variant.id === "budget"
+        ? "Removes premium-heavy add-ons"
+        : variant.id === "adventure"
+          ? "Removes passive downtime"
+          : "Removes rushed transitions";
+  const updated = `Updates ${variant.transportStyle}, ${variant.stayStyle}`;
+
+  return [added, removed, updated];
+}
+
+function aiRecommendationReasons(variant: TiyaTripVariant) {
+  return [
+    variant.aiNote,
+    `Matches ${variant.bestFor}.`,
+    `${variant.comfortLevel}% comfort with ${variant.activityIntensity}% activity intensity.`,
+    `${variant.routeStyle} keeps the route strategy clear before booking.`,
+  ];
+}
+
 export default function TiyaTripVariantBuilder({
   intent,
   plan,
@@ -84,6 +154,26 @@ export default function TiyaTripVariantBuilder({
   >([]);
   const [savedVariantIds, setSavedVariantIds] = useState<TiyaTripVariantId[]>([]);
   const activeVariantId = selectedVariantId ?? internalSelectedVariantId;
+  const baseDurationDays = plan.nights ? plan.nights + 1 : 0;
+  const baseComfort = 76;
+  const baseActivityIntensity = intent.pace === "Packed" ? 82 : intent.pace === "Relaxed" ? 56 : 68;
+  const groupedVariants = [
+    {
+      title: "Route Strategy",
+      description: "Fastest, scenic, family-safe and adventure-oriented route decisions.",
+      variants: variants.filter((variant) => variant.id === "premium" || variant.id === "family" || variant.id === "adventure"),
+    },
+    {
+      title: "Budget Strategy",
+      description: "Budget, balanced and luxury cost positioning before checkout.",
+      variants: variants.filter((variant) => variant.id === "budget" || variant.id === "luxury"),
+    },
+    {
+      title: "Trip Duration Strategy",
+      description: "Short trip, weekend, long trip and extended journey planning options.",
+      variants: variants.filter((variant) => variant.id === "short" || variant.id === "long"),
+    },
+  ].filter((group) => group.variants.length > 0);
 
   function selectVariant(variant: TiyaTripVariant) {
     setInternalSelectedVariantId(variant.id);
@@ -140,21 +230,71 @@ export default function TiyaTripVariantBuilder({
         </div>
       </div>
 
-      <div className="grid gap-3 p-3 sm:p-5 lg:grid-cols-2">
-        {variants.map((variant) => {
-          const selected = activeVariantId === variant.id;
-          const duplicated = duplicatedVariantIds.includes(variant.id);
-          const saved = savedVariantIds.includes(variant.id);
+      <div className="grid gap-5 p-3 sm:p-5">
+        {groupedVariants.map((group) => (
+          <div key={group.title} className="grid gap-3">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-orange-100">
+                  {group.title}
+                </p>
+                <p className="text-xs font-semibold leading-5 text-white/55">
+                  {group.description}
+                </p>
+              </div>
+              <span className="w-fit rounded-full border border-white/10 bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-white/60">
+                {group.variants.length} option{group.variants.length === 1 ? "" : "s"}
+              </span>
+            </div>
 
-          return (
+            <div className="grid gap-3 lg:grid-cols-2">
+              {group.variants.map((variant) => {
+                const selected = activeVariantId === variant.id;
+                const duplicated = duplicatedVariantIds.includes(variant.id);
+                const saved = savedVariantIds.includes(variant.id);
+                const costImpact = variant.estimatedCost - plan.totalBudget;
+                const durationImpact = baseDurationDays
+                  ? parseDurationDays(variant.duration) - baseDurationDays
+                  : 0;
+                const comfortImpact = variant.comfortLevel - baseComfort;
+                const activityImpact = variant.activityIntensity - baseActivityIntensity;
+                const scenicImpact =
+                  variant.id === "adventure" || variant.id === "long"
+                    ? 12
+                    : variant.id === "budget"
+                      ? -6
+                      : variant.id === "family"
+                        ? 4
+                        : 8;
+                const safetyImpact =
+                  variant.id === "family"
+                    ? 14
+                    : variant.id === "adventure"
+                      ? -8
+                      : variant.id === "budget"
+                        ? -3
+                        : 5;
+                const difficultyImpact =
+                  variant.id === "adventure"
+                    ? 18
+                    : variant.id === "family" || variant.id === "long"
+                      ? -8
+                      : variant.id === "short"
+                        ? 9
+                        : 0;
+
+                return (
             <article
               key={variant.id}
-              className={`rounded-3xl border p-3 transition-all duration-300 sm:p-4 ${
+              className={`relative overflow-hidden rounded-3xl border p-3 transition-all duration-300 sm:p-4 ${
                 selected
-                  ? "border-orange-300/50 bg-orange-500/10 shadow-[0_16px_44px_rgba(249,115,22,0.18)]"
+                  ? "border-orange-300/80 bg-orange-500/12 shadow-[0_0_0_1px_rgba(255,138,31,0.35),0_22px_60px_rgba(249,115,22,0.26)]"
                   : "border-white/10 bg-white/[0.08] hover:bg-white/10"
               }`}
             >
+              {selected ? (
+                <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#ff7b00] via-[#ff9500] to-[#ffb300]" />
+              ) : null}
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0">
                   <div className="flex items-center gap-3">
@@ -170,12 +310,18 @@ export default function TiyaTripVariantBuilder({
                         {variant.name}
                       </h3>
                       <p className="mt-0.5 text-xs font-bold text-white/60">
-                        {variant.duration}
+                        {variantStrategyLabel(variant)} · {variant.duration}
                       </p>
                     </div>
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
+                  {selected ? (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-orange-200/55 bg-orange-500 px-2.5 py-1 text-[11px] font-black text-white shadow-[0_10px_24px_rgba(249,115,22,0.28)]">
+                      <CheckCircle2 size={12} />
+                      ACTIVE ITINERARY
+                    </span>
+                  ) : null}
                   {variant.isRecommended ? (
                     <span className="inline-flex items-center gap-1 rounded-full bg-cyan-300/15 px-2.5 py-1 text-[11px] font-black text-cyan-100">
                       <Sparkles size={12} />
@@ -235,6 +381,31 @@ export default function TiyaTripVariantBuilder({
                 <ScoreChip label="Comfort level" score={variant.comfortLevel} />
               </div>
 
+              <div className="mt-3 rounded-2xl border border-orange-300/16 bg-black/10 p-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-orange-100">
+                  Key differences
+                </p>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                  {[
+                    ["Cost impact", displayCostImpact(costImpact), costImpact <= 0 ? "text-emerald-100" : "text-amber-100"],
+                    ["Duration impact", signedNumber(durationImpact, " day"), durationImpact <= 0 ? "text-emerald-100" : "text-amber-100"],
+                    ["Comfort impact", signedNumber(comfortImpact), comfortImpact >= 0 ? "text-emerald-100" : "text-amber-100"],
+                    ["Scenic impact", signedNumber(scenicImpact), scenicImpact >= 0 ? "text-emerald-100" : "text-amber-100"],
+                    ["Safety impact", signedNumber(safetyImpact), safetyImpact >= 0 ? "text-emerald-100" : "text-amber-100"],
+                    ["Difficulty impact", signedNumber(difficultyImpact), difficultyImpact <= 0 ? "text-emerald-100" : "text-amber-100"],
+                  ].map(([label, value, tone]) => (
+                    <div key={`${variant.id}-${label}`} className="rounded-2xl border border-white/10 bg-white/10 p-2.5">
+                      <p className="text-[10px] font-black uppercase tracking-[0.12em] text-white/45">
+                        {label}
+                      </p>
+                      <p className={`mt-1 text-xs font-black ${tone}`}>
+                        {value}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               <div className="mt-3 rounded-2xl border border-white/10 bg-white/10 p-3">
                 <p className="text-xs font-black uppercase tracking-[0.12em] text-white/50">
                   Best for
@@ -245,13 +416,58 @@ export default function TiyaTripVariantBuilder({
                 <p className="mt-3 text-xs font-black uppercase tracking-[0.12em] text-white/50">
                   What changes
                 </p>
-                <p className="mt-1 text-xs font-semibold leading-5 text-white/75">
-                  {variant.changesFromBase}
-                </p>
+                <ul className="mt-2 grid gap-1.5 text-xs font-semibold leading-5 text-white/75">
+                  {variantChangeBullets(variant).map((change) => (
+                    <li key={`${variant.id}-${change}`} className="flex gap-2">
+                      <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-orange-300" />
+                      <span>{change}</span>
+                    </li>
+                  ))}
+                </ul>
                 <p className="mt-3 text-xs font-bold leading-5 text-orange-100/90">
                   {variant.aiNote}
                 </p>
               </div>
+
+              <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.07] p-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-cyan-100">
+                  Itinerary impact
+                </p>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+                  {[
+                    ["Days updated", durationImpact === 0 ? "Timing only" : `${Math.abs(durationImpact)} day shift`],
+                    ["Stays updated", variant.stayStyle],
+                    ["Transport updated", variant.transportStyle],
+                    ["Activities updated", `${variant.activityIntensity}% intensity`],
+                    ["Cost impact", displayCostImpact(costImpact)],
+                  ].map(([label, value]) => (
+                    <div key={`${variant.id}-impact-${label}`} className="rounded-2xl border border-white/10 bg-white/10 p-2.5">
+                      <p className="text-[10px] font-black uppercase tracking-[0.12em] text-white/45">
+                        {label}
+                      </p>
+                      <p className="mt-1 line-clamp-2 text-xs font-black text-white">
+                        {value}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {variant.isRecommended ? (
+                <div className="mt-3 rounded-2xl border border-cyan-300/20 bg-cyan-300/10 p-3">
+                  <p className="text-[10px] font-black uppercase tracking-[0.14em] text-cyan-100">
+                    Why AI recommends this
+                  </p>
+                  <ul className="mt-2 grid gap-1.5 text-xs font-semibold leading-5 text-cyan-50/80">
+                    {aiRecommendationReasons(variant).map((reason) => (
+                      <li key={`${variant.id}-ai-${reason}`} className="flex gap-2">
+                        <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-cyan-100" />
+                        <span>{reason}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
 
               <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
                 <button
@@ -264,7 +480,7 @@ export default function TiyaTripVariantBuilder({
                   }`}
                 >
                   {selected ? <CheckCircle2 size={15} /> : <Route size={15} />}
-                  {selected ? "Selected" : "Select"}
+                  {selected ? "Previewing" : "Preview Scenario"}
                 </button>
                 <button
                   type="button"
@@ -272,7 +488,7 @@ export default function TiyaTripVariantBuilder({
                   className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-orange-300/30 bg-orange-500/10 px-4 py-2 text-xs font-black text-orange-100 transition hover:bg-orange-500/15"
                 >
                   <Wand2 size={15} />
-                  Apply
+                  Apply To Itinerary
                 </button>
                 <button
                   type="button"
@@ -292,8 +508,11 @@ export default function TiyaTripVariantBuilder({
                 </button>
               </div>
             </article>
-          );
-        })}
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </div>
 
       {showCompare ? (

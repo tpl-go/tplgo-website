@@ -6,6 +6,8 @@ import {
   Copy,
   Edit3,
   FolderOpen,
+  Save,
+  Search,
   RotateCcw,
   Trash2,
 } from "lucide-react";
@@ -15,6 +17,8 @@ import { TiyaEmptyState } from "./TiyaPolishStates";
 type TiyaSavedTripLibraryProps = {
   savedTrips?: TiyaPlannerSnapshot[] | null;
   lastTrip?: TiyaPlannerSnapshot | null;
+  currentSnapshot: TiyaPlannerSnapshot;
+  onSaveCurrent: () => void;
   onRestore: (snapshot: TiyaPlannerSnapshot) => void;
   onRename: (tripId: string, tripName: string) => void;
   onDuplicate: (tripId: string) => void;
@@ -55,6 +59,9 @@ function TripCard({
   const startDate = trip.intent?.startDate || "Start";
   const endDate = trip.intent?.endDate || "End";
   const transportMode = trip.intent?.transportMode || "Mixed Mode";
+  const status = trip.status || "Planning";
+  const readinessScore = trip.readinessScore ?? Math.min(96, 58 + (trip.selectedBookingModuleIds?.length || 0) * 7);
+  const updatedAt = trip.updatedAt || trip.savedAt;
 
   function commitRename() {
     if (!tripId || !tripName.trim()) return;
@@ -86,7 +93,7 @@ function TripCard({
           </p>
         </div>
         <span className="w-fit rounded-full border border-orange-300/20 bg-orange-500/10 px-3 py-1.5 text-xs font-black text-orange-100">
-          {budgetTier}
+          {status}
         </span>
       </div>
 
@@ -115,7 +122,46 @@ function TripCard({
             {formatDate(trip.savedAt)}
           </p>
         </div>
+        <div className="rounded-2xl border border-white/10 bg-white/10 p-3">
+          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-white/50">
+            Readiness
+          </p>
+          <p className="mt-1 text-xs font-black text-white">
+            {readinessScore}%
+          </p>
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-white/10 p-3">
+          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-white/50">
+            Budget
+          </p>
+          <p className="mt-1 text-xs font-black text-white">
+            {budgetTier}
+          </p>
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-white/10 p-3">
+          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-white/50">
+            Updated
+          </p>
+          <p className="mt-1 text-xs font-black text-white">
+            {formatDate(updatedAt)}
+          </p>
+        </div>
       </div>
+
+      {trip.recentActivity?.length ? (
+        <div className="mt-4 rounded-2xl border border-cyan-300/15 bg-cyan-400/10 p-3">
+          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-cyan-100">
+            Recent activity
+          </p>
+          <div className="mt-2 grid gap-1">
+            {trip.recentActivity.slice(0, 4).map((activity) => (
+              <p key={activity.id} className="text-xs font-semibold text-cyan-50/80">
+                {activity.label} · {formatDate(activity.createdAt)}
+              </p>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         <button
@@ -144,7 +190,12 @@ function TripCard({
         </button>
         <button
           type="button"
-          onClick={() => tripId && onDelete(tripId)}
+          onClick={() => {
+            if (!tripId) return;
+            if (window.confirm(`Delete ${trip.tripName}? This will soft-delete the trip from this workspace.`)) {
+              onDelete(tripId);
+            }
+          }}
           className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-rose-200/20 bg-rose-500/10 px-3 py-2 text-xs font-black text-rose-100"
         >
           <Trash2 size={14} />
@@ -158,13 +209,30 @@ function TripCard({
 export default function TiyaSavedTripLibrary({
   savedTrips = [],
   lastTrip,
+  currentSnapshot,
+  onSaveCurrent,
   onRestore,
   onRename,
   onDuplicate,
   onDelete,
 }: TiyaSavedTripLibraryProps) {
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [destinationFilter, setDestinationFilter] = useState("");
   const safeTrips = Array.isArray(savedTrips) ? savedTrips : [];
+  const filteredTrips = safeTrips.filter((trip) => {
+    const haystack = `${trip.tripName} ${trip.intent?.fromCity} ${trip.intent?.toCity} ${trip.status || "Planning"}`.toLowerCase();
+    const matchesSearch = !search || haystack.includes(search.toLowerCase());
+    const matchesStatus = statusFilter === "All" || (trip.status || "Planning") === statusFilter;
+    const matchesDestination =
+      !destinationFilter ||
+      (trip.intent?.toCity || "").toLowerCase().includes(destinationFilter.toLowerCase());
+
+    return matchesSearch && matchesStatus && matchesDestination;
+  });
   const lastRouteTitle = lastTrip?.plan?.routeTitle || "Tiya route";
+  const currentRouteTitle = currentSnapshot.plan?.routeTitle || "Current route";
+  const currentTravellerCount = currentSnapshot.plan?.travellerCount ?? 1;
 
   return (
     <section className="overflow-hidden rounded-3xl border border-white/80 bg-[#061839]/95 text-white shadow-[0_22px_80px_rgba(6,24,57,0.2)] backdrop-blur-xl">
@@ -184,13 +252,62 @@ export default function TiyaSavedTripLibrary({
               snapshots saved in this browser.
             </p>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-white/10 px-3 py-2 text-xs font-black text-cyan-100">
-            {safeTrips.length} saved trip{safeTrips.length === 1 ? "" : "s"}
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={onSaveCurrent}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#ff7b00] via-[#ff9500] to-[#ffb300] px-5 py-2 text-sm font-black text-white"
+            >
+              <Save size={15} />
+              Save Current Trip
+            </button>
+            <div className="rounded-2xl border border-white/10 bg-white/10 px-3 py-2 text-xs font-black text-cyan-100">
+              {safeTrips.length} saved trip{safeTrips.length === 1 ? "" : "s"}
+            </div>
           </div>
         </div>
       </div>
 
       <div className="grid gap-3 p-3 sm:p-5">
+        <div className="rounded-3xl border border-cyan-300/20 bg-cyan-400/10 p-4">
+          <p className="text-[11px] font-black uppercase tracking-[0.16em] text-cyan-100">
+            Current trip ready to save
+          </p>
+          <div className="mt-3 grid gap-2 text-xs font-black text-white/80 sm:grid-cols-2 lg:grid-cols-4">
+            <span>{currentSnapshot.intent.fromCity} → {currentSnapshot.intent.toCity}</span>
+            <span>{currentSnapshot.intent.startDate} → {currentSnapshot.intent.endDate}</span>
+            <span>{currentTravellerCount} travellers</span>
+            <span>{currentRouteTitle}</span>
+          </div>
+        </div>
+
+        <div className="grid gap-2 rounded-3xl border border-white/10 bg-white/[0.08] p-3 md:grid-cols-[1fr_180px_180px]">
+          <label className="relative min-w-0">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/45" />
+            <input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              className="min-h-11 w-full rounded-2xl border border-white/10 bg-white/10 pl-9 pr-3 text-sm font-bold text-white outline-none placeholder:text-white/35"
+              placeholder="Search saved trips"
+            />
+          </label>
+          <input
+            value={destinationFilter}
+            onChange={(event) => setDestinationFilter(event.target.value)}
+            className="min-h-11 w-full rounded-2xl border border-white/10 bg-white/10 px-3 text-sm font-bold text-white outline-none placeholder:text-white/35"
+            placeholder="Destination"
+          />
+          <select
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value)}
+            className="min-h-11 w-full rounded-2xl border border-white/10 bg-[#102746] px-3 text-sm font-bold text-white outline-none"
+          >
+            {["All", "Draft", "Planning", "Ready", "Booked", "Completed"].map((status) => (
+              <option key={status}>{status}</option>
+            ))}
+          </select>
+        </div>
+
         {lastTrip ? (
           <div className="rounded-3xl border border-orange-300/30 bg-orange-500/10 p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -217,9 +334,9 @@ export default function TiyaSavedTripLibrary({
           </div>
         ) : null}
 
-        {safeTrips.length ? (
+        {filteredTrips.length ? (
           <div className="grid gap-3">
-            {safeTrips.map((trip) => (
+            {filteredTrips.map((trip) => (
               <TripCard
                 key={trip.tripId || trip.tripName}
                 trip={trip}

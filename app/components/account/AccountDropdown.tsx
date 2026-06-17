@@ -22,6 +22,12 @@ const menuItems = [
     icon: "🧳",
   },
   {
+    href: "/account/trips",
+    title: "My Trips",
+    description: "Open saved Smart Planner journeys and drafts",
+    icon: "🗺️",
+  },
+  {
     href: "/account/wishlist",
     title: "Wishlist",
     description: "Save and access your favourite packages and stays",

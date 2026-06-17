@@ -21,7 +21,7 @@ export const TIYA_QUOTE_PREVIEW_KEY = "tpl_tiya_quote_preview";
 export type TiyaCheckoutChecklistItem = {
   id: string;
   label: string;
-  status: "Ready" | "Required" | "Optional" | "Not started";
+  status: "Ready" | "Warning" | "Required" | "Optional" | "Not started";
   detail: string;
 };
 

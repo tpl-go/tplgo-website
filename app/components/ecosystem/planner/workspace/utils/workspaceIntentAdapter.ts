@@ -8,6 +8,11 @@ import type {
   WorkspacePreferences,
 } from "./workspaceTypes";
 
+function normalizePace(value: string): TiyaTripIntent["pace"] {
+  if (value === "Relaxed" || value === "Packed") return value;
+  return "Balanced";
+}
+
 export function buildWorkspaceTripIntent({
   fromCity,
   toCity,
@@ -54,7 +59,7 @@ export function buildWorkspaceTripIntent({
         : selectedRoute.id === "budget"
             ? sourceIntent?.travelStyle || "Budget"
             : sourceIntent?.travelStyle || "Couple",
-    pace: preferences.pace,
+    pace: normalizePace(preferences.pace),
     interests: preferences.interests,
     smartPreferences: {
       includeStays: true,

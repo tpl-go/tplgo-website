@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, CheckCircle2, Circle } from "lucide-react";
+import { CheckCircle2, Circle } from "lucide-react";
 import type {
   TiyaPackingItem,
   TiyaPackingSection,
@@ -9,6 +9,8 @@ import type {
 
 type TiyaPackingChecklistProps = {
   sections: TiyaPackingSection[];
+  checkedItemIds: string[];
+  onToggleItem: (item: TiyaPackingItem, section: TiyaPackingSection) => void;
 };
 
 const priorityTone: Record<TiyaPackingItem["priority"], string> = {
@@ -19,24 +21,19 @@ const priorityTone: Record<TiyaPackingItem["priority"], string> = {
 
 export default function TiyaPackingChecklist({
   sections,
+  checkedItemIds,
+  onToggleItem,
 }: TiyaPackingChecklistProps) {
   const safeSections = Array.isArray(sections) ? sections : [];
-  const [openSectionId, setOpenSectionId] = useState(safeSections[0]?.id ?? "");
-  const [checkedItemIds, setCheckedItemIds] = useState<string[]>([]);
-
-  function toggleChecked(itemId: string) {
-    setCheckedItemIds((currentIds) =>
-      currentIds.includes(itemId)
-        ? currentIds.filter((id) => id !== itemId)
-        : [...currentIds, itemId]
-    );
-  }
+  const [openSectionIds, setOpenSectionIds] = useState<string[]>(
+    safeSections[0]?.id ? [safeSections[0].id] : []
+  );
 
   return (
     <div className="grid gap-3">
       {safeSections.map((section) => {
         const safeItems = Array.isArray(section.items) ? section.items : [];
-        const isOpen = openSectionId === section.id;
+        const isOpen = openSectionIds.includes(section.id);
         const checkedCount = safeItems.filter((item) =>
           checkedItemIds.includes(item.id)
         ).length;
@@ -48,7 +45,13 @@ export default function TiyaPackingChecklist({
           >
             <button
               type="button"
-              onClick={() => setOpenSectionId(isOpen ? "" : section.id)}
+              onClick={() =>
+                setOpenSectionIds((current) =>
+                  current.includes(section.id)
+                    ? current.filter((id) => id !== section.id)
+                    : [...current, section.id]
+                )
+              }
               className="flex w-full items-center justify-between gap-3 text-left"
             >
               <div className="min-w-0">
@@ -59,12 +62,9 @@ export default function TiyaPackingChecklist({
                   {checkedCount}/{safeItems.length} locally checked
                 </p>
               </div>
-              <ChevronDown
-                size={18}
-                className={`shrink-0 text-white/60 transition ${
-                  isOpen ? "rotate-180" : ""
-                }`}
-              />
+              <span className="shrink-0 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-[11px] font-black text-white/70">
+                {isOpen ? "Hide" : "Open"}
+              </span>
             </button>
 
             {isOpen ? (
@@ -77,13 +77,25 @@ export default function TiyaPackingChecklist({
                     <button
                       key={item.id}
                       type="button"
-                      onClick={() => toggleChecked(item.id)}
-                      className="grid gap-2 rounded-2xl border border-white/10 bg-white/10 p-3 text-left transition hover:bg-white/15 sm:grid-cols-[1fr_auto] sm:items-start"
+                      onClick={() => onToggleItem(item, section)}
+                      className={`grid gap-2 rounded-2xl border p-3 text-left transition hover:bg-white/15 sm:grid-cols-[1fr_auto] sm:items-start ${
+                        checked
+                          ? "border-emerald-300/30 bg-emerald-400/10"
+                          : "border-white/10 bg-white/10"
+                      }`}
                     >
                       <div className="flex min-w-0 gap-2">
-                        <Icon className="mt-0.5 h-4 w-4 shrink-0 text-cyan-100" />
+                        <Icon
+                          className={`mt-0.5 h-4 w-4 shrink-0 ${
+                            checked ? "text-emerald-200" : "text-cyan-100"
+                          }`}
+                        />
                         <div className="min-w-0">
-                          <p className="text-sm font-black text-white">
+                          <p
+                            className={`text-sm font-black ${
+                              checked ? "text-white/55 line-through" : "text-white"
+                            }`}
+                          >
                             {item.label}
                           </p>
                           <p className="mt-1 text-xs font-semibold leading-5 text-white/60">

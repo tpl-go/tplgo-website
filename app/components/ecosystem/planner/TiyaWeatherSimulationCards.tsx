@@ -14,6 +14,60 @@ const toneStyles: Record<TiyaWeatherSimulationCard["tone"], string> = {
   blue: "from-cyan-300 to-blue-400",
 };
 
+function travelImpactForCard(card: TiyaWeatherSimulationCard) {
+  const risk =
+    card.tone === "red" || card.score < 50
+      ? "high"
+      : card.tone === "orange" || card.score < 72
+        ? "medium"
+        : "low";
+
+  if (card.id === "rain-snow") {
+    return risk === "high"
+      ? {
+          positives: ["Greener landscapes", "Better waterfall visibility"],
+          warnings: ["Slower road movement", "Buffer time recommended"],
+        }
+      : {
+          positives: ["Scenic landscapes remain workable", "Outdoor slots possible"],
+          warnings: ["Keep one weather backup window"],
+        };
+  }
+
+  if (card.id === "fog-cloud") {
+    return {
+      positives: risk === "low" ? ["Sunrise slots remain usable"] : ["Midday movement remains possible"],
+      warnings: risk === "low" ? ["Monitor early morning visibility"] : ["Lower morning visibility", "Sunrise activities may shift"],
+    };
+  }
+
+  if (card.id === "visibility") {
+    return {
+      positives: card.score >= 60 ? ["Scenic viewpoints available"] : ["Flexible scenic stops still possible"],
+      warnings: card.score >= 60 ? ["Flexible travel timing advised"] : ["Route visibility reduction", "Avoid rushed road movement"],
+    };
+  }
+
+  if (card.id === "daylight") {
+    return {
+      positives: ["Better route safety in daylight", "Cleaner transfer planning"],
+      warnings: risk === "low" ? ["Avoid late starts"] : ["Start transfers earlier", "Limit late-evening roads"],
+    };
+  }
+
+  if (card.id === "comfort") {
+    return {
+      positives: card.score >= 70 ? ["Traveller comfort is workable"] : ["Comfort can improve with buffers"],
+      warnings: card.score >= 70 ? ["Keep hydration and rest windows"] : ["Add recovery windows", "Reduce packed activity pressure"],
+    };
+  }
+
+  return {
+    positives: card.score >= 70 ? ["Comfortable movement window"] : ["Route remains manageable with planning"],
+    warnings: card.score >= 70 ? ["Carry seasonal backup layers"] : ["Weather-sensitive timing advised"],
+  };
+}
+
 export default function TiyaWeatherSimulationCards({
   cards,
 }: TiyaWeatherSimulationCardsProps) {
@@ -51,6 +105,25 @@ export default function TiyaWeatherSimulationCards({
             <p className="mt-3 text-xs font-semibold leading-5 text-white/70">
               {card.note}
             </p>
+            <div className="mt-3 rounded-2xl border border-white/10 bg-black/10 p-3">
+              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-cyan-100">
+                Travel impact
+              </p>
+              <div className="mt-2 grid gap-1.5 text-xs font-semibold leading-5">
+                {travelImpactForCard(card).positives.map((impact) => (
+                  <div key={`${card.id}-positive-${impact}`} className="flex gap-2 text-emerald-100">
+                    <span>✓</span>
+                    <span>{impact}</span>
+                  </div>
+                ))}
+                {travelImpactForCard(card).warnings.map((impact) => (
+                  <div key={`${card.id}-warning-${impact}`} className="flex gap-2 text-amber-100">
+                    <span>⚠</span>
+                    <span>{impact}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </article>
         ))}
       </div>

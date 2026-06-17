@@ -22,7 +22,20 @@ export type TiyaExpertContact = {
 
 export type TiyaExpertLeadPayload = {
   leadId: string;
+  status: "draft" | "submitted";
+  source: "Tiya Smart Planner";
   plannerTripId: string;
+  userId?: string;
+  tripSummary: string;
+  routeScenario: string;
+  quoteEstimate: number;
+  selectedBundle: string;
+  travellers: number;
+  travelDates: {
+    startDate: string;
+    endDate: string;
+  };
+  selectedServices: string[];
   tripIntent: TiyaTripIntent;
   packageQuoteBundleSummary: {
     route: string;
@@ -33,10 +46,15 @@ export type TiyaExpertLeadPayload = {
     bookingModules: string[];
   };
   customerContact: TiyaExpertContact;
+  contact: TiyaExpertContact;
+  userContactData: TiyaExpertContact;
+  message: string;
+  communicationMode: TiyaExpertContact["communicationMode"];
   priorityScore: number;
   priorityReasons: string[];
   leadSource: "Tiya Smart Planner";
   createdAt: string;
+  updatedAt: string;
 };
 
 function canUseStorage() {
@@ -155,9 +173,25 @@ export function generateExpertLeadPayload({
     selectedRoute,
   });
 
+  const now = new Date().toISOString();
+
   return {
     leadId: leadId(),
+    status: "submitted",
+    source: "Tiya Smart Planner",
     plannerTripId: checkoutDraft.plannerTripId,
+    tripSummary: `${intent.fromCity} to ${intent.toCity} · ${intent.travelStyle} · ${intent.pace}`,
+    routeScenario: selectedRoute?.name || checkoutDraft.route,
+    quoteEstimate: checkoutDraft.quotePreview.totalQuoteEstimate,
+    selectedBundle: checkoutDraft.selectedBundle.name,
+    travellers: checkoutDraft.travellers.total,
+    travelDates: {
+      startDate: checkoutDraft.dates.startDate,
+      endDate: checkoutDraft.dates.endDate,
+    },
+    selectedServices: checkoutDraft.bookingModules.map(
+      (module) => module.serviceName
+    ),
     tripIntent: intent,
     packageQuoteBundleSummary: {
       route: checkoutDraft.route,
@@ -170,10 +204,15 @@ export function generateExpertLeadPayload({
       ),
     },
     customerContact: contact,
+    contact,
+    userContactData: contact,
+    message: contact.specialRequest,
+    communicationMode: contact.communicationMode,
     priorityScore: priority.priorityScore,
     priorityReasons: priority.priorityReasons,
     leadSource: "Tiya Smart Planner",
-    createdAt: new Date().toISOString(),
+    createdAt: now,
+    updatedAt: now,
   };
 }
 
@@ -188,19 +227,40 @@ export function saveExpertLeadPayload(payload: TiyaExpertLeadPayload) {
   return nextLeads;
 }
 
+export function saveExpertLeadDraftPayload(payload: TiyaExpertLeadPayload) {
+  writeJson(TIYA_LAST_EXPERT_REQUEST_KEY, payload);
+  return payload;
+}
+
 export function buildLeadSummaryText(payload: TiyaExpertLeadPayload) {
   return [
     `TPL Expert Lead: ${payload.leadId}`,
-    `Route: ${payload.packageQuoteBundleSummary.route}`,
-    `Bundle: ${payload.packageQuoteBundleSummary.selectedBundle}`,
-    `Quote: ₹${payload.packageQuoteBundleSummary.quoteEstimate.toLocaleString("en-IN")}`,
-    `Travellers: ${payload.tripIntent.adults + payload.tripIntent.children + payload.tripIntent.seniors}`,
-    `Dates: ${payload.tripIntent.startDate} to ${payload.tripIntent.endDate}`,
-    `Contact: ${payload.customerContact.name} · ${payload.customerContact.mobile} · ${payload.customerContact.communicationMode}`,
+    `Status: ${payload.status}`,
+    `Trip: ${payload.tripSummary}`,
+    `Route: ${payload.routeScenario}`,
+    `Dates: ${payload.travelDates.startDate} to ${payload.travelDates.endDate}`,
+    `Quote: ₹${payload.quoteEstimate.toLocaleString("en-IN")}`,
+    `Travellers: ${payload.travellers}`,
+    `Bundle: ${payload.selectedBundle}`,
+    `Services: ${payload.selectedServices.join(", ") || "Review pending"}`,
+    `Contact: ${payload.contact.name} · ${payload.contact.mobile} · ${payload.contact.email || "No email"} · ${payload.contact.communicationMode}`,
+    `Message: ${payload.message || "No special message"}`,
     `Priority: ${payload.priorityScore}/100 (${payload.priorityReasons.join(", ")})`,
   ].join("\n");
 }
 
 export function buildWhatsAppPreview(payload: TiyaExpertLeadPayload) {
-  return `Hi TPL Expert, I want help reviewing my ${payload.packageQuoteBundleSummary.route} trip. Quote estimate is ₹${payload.packageQuoteBundleSummary.quoteEstimate.toLocaleString("en-IN")} with ${payload.packageQuoteBundleSummary.selectedBundle}. Preferred contact: ${payload.customerContact.communicationMode} at ${payload.customerContact.preferredContactTime}.`;
+  return [
+    "Hi TPL Expert, I want help reviewing my Smart Planner trip.",
+    `Route: ${payload.routeScenario}`,
+    `Dates: ${payload.travelDates.startDate} to ${payload.travelDates.endDate}`,
+    `Quote estimate: ₹${payload.quoteEstimate.toLocaleString("en-IN")}`,
+    `Travellers: ${payload.travellers}`,
+    `Bundle: ${payload.selectedBundle}`,
+    `Preferred contact: ${payload.contact.communicationMode}${payload.contact.preferredContactTime ? ` at ${payload.contact.preferredContactTime}` : ""}`,
+    `Contact: ${payload.contact.name || "Name pending"} · ${payload.contact.mobile || "Mobile pending"}`,
+    payload.message ? `Request: ${payload.message}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
 }

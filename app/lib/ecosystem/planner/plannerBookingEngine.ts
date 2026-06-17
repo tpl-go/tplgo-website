@@ -120,13 +120,13 @@ export function generatePlannerBookingModules(
     },
     {
       id: "local-market",
-      serviceName: "Local Market",
+      serviceName: "Local Life",
       reason: localMarket || creatorSpots
         ? "Local market and creator-led discovery are enabled in this brief."
         : "Explore destination-led products and local finds.",
       readiness: readiness(localMarket || creatorSpots, true),
-      cta: "Explore Local Market",
-      href: "/local-market",
+      cta: "Explore Local Life",
+      href: "/local-life",
       isHighlighted: localMarket || creatorSpots,
     },
   ];

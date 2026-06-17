@@ -3,10 +3,8 @@
 import { useState, type Dispatch, type SetStateAction } from "react";
 import {
   AlertTriangle,
-  Bell,
   CalendarDays,
   Car,
-  CheckCircle2,
   CloudSun,
   Hotel,
   Info,
@@ -15,7 +13,6 @@ import {
   ShieldCheck,
   Sparkles,
   Ticket,
-  WalletCards,
   Zap,
 } from "lucide-react";
 
@@ -37,16 +34,6 @@ import type {
 
 type GeneratedTab = "Itinerary" | "Summary" | "Budget" | "Alerts";
 
-const generatedTabs: {
-  id: GeneratedTab;
-  icon: typeof Route;
-}[] = [
-  { id: "Itinerary", icon: Route },
-  { id: "Budget", icon: WalletCards },
-  { id: "Summary", icon: CheckCircle2 },
-  { id: "Alerts", icon: Bell },
-];
-
 export default function BuildGeneratedSection({
   selectedRoute,
   preferences,
@@ -66,7 +53,7 @@ export default function BuildGeneratedSection({
   bookingBasket: WorkspaceBookingBasketItem[];
   setBookingBasket: Dispatch<SetStateAction<WorkspaceBookingBasketItem[]>>;
 }) {
-  const [activeTab, setActiveTab] = useState<GeneratedTab>("Itinerary");
+  const [activeTab] = useState<GeneratedTab>("Itinerary");
 
   const totalActivities = editableDays.reduce(
     (sum, day) =>
@@ -99,7 +86,12 @@ export default function BuildGeneratedSection({
     generatedPlan.routeStops.find((stop) => stop.nights > 0)?.city ||
     cities[cities.length - 1] ||
     "Destination";
-
+  const routePathCities =
+    sourceIntent?.tripType === "Multi City"
+      ? [routeOrigin, ...(sourceIntent.multiCityStops || [])].filter((city) =>
+          city.trim()
+        )
+      : [routeOrigin, routeDestination].filter((city) => city.trim());
   const transportName = transportHint(selectedRoute);
 
   const smartAlerts = [
@@ -144,7 +136,7 @@ export default function BuildGeneratedSection({
     },
   ];
 
-  const summaryCards = [
+  const summaryCards: Array<[string, string, typeof Route]> = [
     ["Route", selectedRoute.name, Route],
     ["Stay Style", preferences.stayPreference, Hotel],
     ["Pace", preferences.pace, Sparkles],
@@ -158,53 +150,68 @@ export default function BuildGeneratedSection({
   return (
     <div className="grid gap-4 p-3 sm:p-4 lg:p-5">
       <div className="overflow-hidden rounded-[1.6rem] border border-slate-200/80 bg-white/95 shadow-[0_18px_60px_rgba(15,23,42,0.08)] backdrop-blur-2xl">
-        <div className="flex flex-col gap-4 bg-gradient-to-br from-white via-blue-50/45 to-orange-50/55 p-4 lg:flex-row lg:items-center lg:justify-between lg:p-5">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-blue-700">
-                Generated itinerary workspace
+        <div className="flex flex-col gap-3 bg-gradient-to-br from-white via-blue-50/45 to-orange-50/55 p-4 lg:p-5">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0">
+              <p className="flex flex-wrap items-baseline gap-1.5 text-[10px] font-black tracking-[0.16em] text-blue-700">
+                <span className="bg-gradient-to-r from-blue-950 via-blue-800 to-blue-600 bg-clip-text font-serif text-[17px] font-black italic tracking-normal text-transparent">
+                  Tiya
+                </span>
+                <span>Travel Intelligence Plan™</span>
               </p>
-              <span className="rounded-full border border-orange-100 bg-orange-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.1em] text-orange-700">
-                Booking ready
-              </span>
+              <h3 className="mt-2 max-w-3xl text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">
+                One Intelligent Journey
+              </h3>
             </div>
-            <h3 className="mt-2 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">
-              Generated Itinerary Workspace
-            </h3>
-            <div className="mt-2 flex min-w-0 flex-wrap items-center gap-2 text-sm font-black text-slate-800">
-              <span className="truncate rounded-full border border-blue-100 bg-white/80 px-3 py-1.5 text-blue-800">
-                {routeOrigin}
-              </span>
-              <span className="text-orange-600">→</span>
-              <span className="truncate rounded-full border border-orange-100 bg-white/80 px-3 py-1.5 text-orange-800">
-                {routeDestination}
-              </span>
+
+            <div className="flex flex-wrap gap-2 lg:justify-end">
+              {[
+                ["Booking Ready", "bg-emerald-50 text-emerald-700 border-emerald-100", "bg-emerald-500"],
+                ["Editable", "bg-blue-50 text-blue-700 border-blue-100", "bg-blue-500"],
+                ["AI Assisted", "bg-violet-50 text-violet-700 border-violet-100", "bg-violet-500"],
+              ].map(([badge, tone, dot]) => (
+                <span
+                  key={badge}
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.1em] ${tone}`}
+                >
+                  <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />
+                  {badge}
+                </span>
+              ))}
             </div>
-            <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-slate-600">
-              Plan your journey, review budget, select booking items and track alerts.
-            </p>
           </div>
 
-          <div className="-mx-1 overflow-x-auto px-1 pb-1 [scrollbar-width:none] lg:max-w-[620px]">
-            <div className="flex min-w-max items-center gap-2 rounded-full border border-white/80 bg-white/75 p-1.5 shadow-[0_12px_34px_rgba(15,23,42,0.08)] backdrop-blur-xl">
-              {generatedTabs.map((tab) => {
-                const TabIcon = tab.icon;
-                const isActive = activeTab === tab.id;
+          <div className="max-w-full overflow-x-auto pb-1 [scrollbar-width:none]">
+            <div className="flex min-w-max items-center gap-2 rounded-2xl border border-slate-100 bg-white/82 px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.75),0_12px_30px_rgba(15,23,42,0.06)]">
+              {routePathCities.map((city, index) => {
+                const isFirst = index === 0;
+                const isLast = index === routePathCities.length - 1;
 
                 return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`inline-flex h-10 items-center gap-2 rounded-full border px-3.5 text-xs font-black transition-all duration-300 hover:-translate-y-0.5 ${
-                      isActive
-                        ? "border-transparent bg-gradient-to-r from-[#ff7b00] via-[#ff9500] to-[#ffb300] text-white shadow-[0_14px_32px_rgba(255,123,0,0.24)]"
-                        : "border-transparent bg-transparent text-slate-600 hover:bg-white hover:text-orange-700"
-                    }`}
-                  >
-                    <TabIcon size={14} />
-                    <span>{tab.id}</span>
-                  </button>
+                  <div key={`${city}-${index}`} className="group flex min-w-0 items-center gap-2">
+                    {index > 0 ? (
+                      <span className="relative flex h-5 w-12 items-center sm:w-16">
+                        <span className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-gradient-to-r from-orange-200 via-orange-400 to-orange-200" />
+                        <span className="absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-orange-500 shadow-[0_0_14px_rgba(251,146,60,0.55)]" />
+                      </span>
+                    ) : null}
+                    <span className="inline-flex min-w-0 items-center gap-2 rounded-full border border-transparent px-1.5 py-1 transition group-hover:border-orange-100 group-hover:bg-orange-50/70">
+                      <span
+                        className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border shadow-[0_0_18px_rgba(251,146,60,0.16)] ${
+                          isFirst
+                            ? "border-blue-200 bg-blue-50 text-blue-700"
+                            : isLast
+                              ? "border-orange-200 bg-orange-50 text-orange-700"
+                              : "border-slate-200 bg-white text-slate-600"
+                        }`}
+                      >
+                        <span className={`h-2 w-2 rounded-full ${isFirst ? "bg-blue-600" : isLast ? "bg-orange-600" : "bg-slate-500"}`} />
+                      </span>
+                      <span className="whitespace-nowrap text-sm font-black text-slate-950">
+                        {city}
+                      </span>
+                    </span>
+                  </div>
                 );
               })}
             </div>
@@ -234,9 +241,7 @@ export default function BuildGeneratedSection({
             </h3>
 
             <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {summaryCards.map(([label, value, Icon]) => {
-                const SummaryIcon = Icon as typeof Route;
-
+              {summaryCards.map(([label, value, SummaryIcon]) => {
                 return (
                   <div
                     key={String(label)}

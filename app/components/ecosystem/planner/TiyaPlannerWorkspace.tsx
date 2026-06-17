@@ -25,12 +25,17 @@ import {
   loadSavedPlannerTrips,
   renamePlannerTrip,
   savePlannerDraft,
+  savePlannerTrip,
 } from "@/app/lib/ecosystem/planner/plannerStorage";
 import type {
+  TiyaAIRecommendation,
+  TiyaAIRecommendationChangeLog,
   TiyaDayPlan,
   TiyaGeneratedPlan,
+  TiyaLocalMarketPick,
   TiyaPlannerSnapshot,
   TiyaRouteOption,
+  TiyaTimelineItem,
   TiyaTripIntent,
   TiyaTripNotes as TiyaTripNotesState,
 } from "@/app/lib/ecosystem/planner/plannerTypes";
@@ -125,6 +130,239 @@ function getRecommendedRouteId(plan: TiyaGeneratedPlan) {
   );
 }
 
+function buildRecommendationItem(
+  recommendation: TiyaAIRecommendation,
+  day: TiyaDayPlan,
+  type: TiyaTimelineItem["type"] = "activity"
+): TiyaTimelineItem {
+  return {
+    id: `ai-${recommendation.id}-${Date.now()}`,
+    time: recommendation.category === "Stay" ? "20:00" : "17:00",
+    title: recommendation.title,
+    location: day.city,
+    type,
+    category:
+      recommendation.category === "Transport"
+        ? "Transport"
+        : recommendation.category === "Stay"
+          ? "Stay"
+          : recommendation.category === "Local Market"
+            ? "Other"
+            : "Activities",
+    description: recommendation.reason,
+    price: Math.max(0, recommendation.costImpact),
+    currency: "INR",
+    bookingStatus: "recommended",
+    detailSummary: recommendation.impactSummary,
+  };
+}
+
+function updateFirstMatchingDay(
+  days: TiyaDayPlan[],
+  recommendation: TiyaAIRecommendation,
+  type: TiyaTimelineItem["type"] = "activity"
+) {
+  if (!days.length) return days;
+  const dayIndex = Math.min(1, days.length - 1);
+
+  return days.map((day, index) => {
+    if (index !== dayIndex) return day;
+    if (day.items?.some((item) => item.id.includes(`ai-${recommendation.id}`))) {
+      return day;
+    }
+
+    return {
+      ...day,
+      notes: `${day.notes || ""} AI applied: ${recommendation.title}.`.trim(),
+      items: [...(day.items || []), buildRecommendationItem(recommendation, day, type)],
+    };
+  });
+}
+
+function updateBudgetForRecommendation(
+  plan: TiyaGeneratedPlan,
+  recommendation: TiyaAIRecommendation
+): TiyaGeneratedPlan {
+  const costImpact = recommendation.costImpact;
+  if (!costImpact) return plan;
+  const targetLabel =
+    recommendation.category === "Budget"
+      ? "Optimization"
+      : recommendation.category === "Stay"
+        ? "Stay"
+        : recommendation.category === "Transport"
+          ? "Transport"
+          : recommendation.category === "Local Market"
+            ? "Local"
+            : "Activities";
+  const budgetLines = Array.isArray(plan.budgetLines) ? plan.budgetLines : [];
+  const matchIndex = budgetLines.findIndex((line) =>
+    line.label.toLowerCase().includes(targetLabel.toLowerCase())
+  );
+  const nextLines =
+    matchIndex >= 0
+      ? budgetLines.map((line, index) =>
+          index === matchIndex
+            ? { ...line, amount: Math.max(0, line.amount + costImpact) }
+            : line
+        )
+      : [
+          ...budgetLines,
+          {
+            label: `AI ${recommendation.category}`,
+            amount: Math.max(0, costImpact),
+            tone: "orange" as const,
+          },
+        ];
+
+  return {
+    ...plan,
+    budgetLines: nextLines,
+    totalBudget: Math.max(0, plan.totalBudget + costImpact),
+  };
+}
+
+function updatePlanForRecommendation(
+  plan: TiyaGeneratedPlan,
+  recommendation: TiyaAIRecommendation
+): TiyaGeneratedPlan {
+  const withBudget = updateBudgetForRecommendation(plan, recommendation);
+  const bookingModules = (withBudget.bookingModules || []).map((module) => {
+    const shouldHighlight =
+      (recommendation.category === "Stay" && ["hotels", "homestays"].includes(module.id)) ||
+      (recommendation.category === "Transport" && module.id === "cabs") ||
+      (recommendation.category === "Activities" && module.id === "experiences") ||
+      (recommendation.category === "Risk" && module.id === "insurance") ||
+      (recommendation.category === "Local Market" && module.id === "local-market");
+
+    return shouldHighlight
+      ? { ...module, readiness: "Ready" as const, isHighlighted: true }
+      : module;
+  });
+  const localMarketPicks =
+    recommendation.category === "Local Market"
+      ? (withBudget.localMarketPicks || []).map((pick, index) =>
+          index === 0 ? { ...pick, isHighlighted: true } : pick
+        )
+      : withBudget.localMarketPicks;
+  const creatorPicks =
+    recommendation.category === "Creator"
+      ? (withBudget.creatorPicks || []).map((pick, index) =>
+          index === 0 ? { ...pick, isHighlighted: true } : pick
+        )
+      : withBudget.creatorPicks;
+
+  return {
+    ...withBudget,
+    bookingModules,
+    creatorPicks,
+    localMarketPicks,
+  };
+}
+
+function buildRecommendationChangeLog(
+  recommendation: TiyaAIRecommendation
+): TiyaAIRecommendationChangeLog {
+  return {
+    id: `ai_log_${recommendation.id}_${Date.now()}`,
+    recommendationId: recommendation.id,
+    title: "AI Recommendation Applied",
+    summary: recommendation.whatWillChange.added?.length
+      ? `Added ${recommendation.whatWillChange.added.join(", ")} to ${recommendation.affectedDay}`
+      : recommendation.itineraryImpact,
+    reason: recommendation.reason,
+    impact: recommendation.impactSummary,
+    appliedAt: new Date().toISOString(),
+    category: recommendation.category,
+    costDelta: recommendation.costImpact,
+    actionType: "apply_recommendation",
+    affectedDays: [recommendation.affectedDay],
+    comfortImpact: recommendation.comfortImpact,
+    newState: recommendation.whatWillChange.updated?.join(", ") || recommendation.itineraryImpact,
+    previousState: "Current planner state",
+    riskImpact: recommendation.riskImpact,
+    sourceModule: "Smart Travel Recommendations",
+  };
+}
+
+type PlannerModuleAction = {
+  actionType: string;
+  affectedDay?: number;
+  affectedDays?: string[];
+  category?: TiyaAIRecommendation["category"];
+  comfortImpact?: number;
+  costImpact?: number;
+  detail: string;
+  fatigueImpact?: number;
+  newState?: string;
+  previousState?: string;
+  riskImpact?: number;
+  sourceModule: string;
+  title: string;
+};
+
+function buildModuleChangeLog(
+  action: PlannerModuleAction
+): TiyaAIRecommendationChangeLog {
+  const affectedDays =
+    action.affectedDays ||
+    (action.affectedDay ? [`Day ${action.affectedDay}`] : ["Planner"]);
+  const costImpact = action.costImpact || 0;
+  const comfortImpact = action.comfortImpact || 0;
+  const riskImpact = action.riskImpact || 0;
+
+  return {
+    id: `planner_log_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    recommendationId: `module-${action.sourceModule.toLowerCase().replace(/\s+/g, "-")}`,
+    title: action.title,
+    summary: action.detail,
+    reason: `${action.sourceModule} action applied from the live planner state.`,
+    impact: [
+      `Cost ${costImpact >= 0 ? "+" : "-"}₹${Math.abs(costImpact).toLocaleString("en-IN")}`,
+      `Comfort ${comfortImpact >= 0 ? "+" : ""}${comfortImpact}`,
+      `Risk ${riskImpact >= 0 ? "+" : ""}${riskImpact}`,
+    ].join(" · "),
+    appliedAt: new Date().toISOString(),
+    category: action.category || "Route",
+    costDelta: costImpact,
+    actionType: action.actionType,
+    affectedDays,
+    comfortImpact,
+    newState: action.newState || action.detail,
+    previousState: action.previousState || "Current planner state",
+    riskImpact,
+    sourceModule: action.sourceModule,
+  };
+}
+
+function localLifePriceEstimate(product: TiyaLocalMarketPick) {
+  const values = product.priceRange
+    .match(/\d[\d,]*/g)
+    ?.map((value) => Number(value.replace(/,/g, "")))
+    .filter((value) => Number.isFinite(value));
+
+  return values?.[0] || 0;
+}
+
+function buildLocalLifeTimelineItem(
+  product: TiyaLocalMarketPick,
+  day: TiyaDayPlan
+): TiyaTimelineItem {
+  return {
+    id: `local-life-${product.id}-${Date.now()}`,
+    time: "17:30",
+    title: product.productName,
+    location: product.localRegion || day.city,
+    type: "activity",
+    category: "Other",
+    description: `${product.description} Route fit ${product.routeRelevance}%.`,
+    price: localLifePriceEstimate(product),
+    currency: "INR",
+    bookingStatus: "recommended",
+    detailSummary: "Local Life item added from the discovery engine.",
+  };
+}
+
 type PlannerModuleProps = {
   id: string;
   title: string;
@@ -214,6 +452,12 @@ export default function TiyaPlannerWorkspace() {
   const [lastSavedAt, setLastSavedAt] = useState<string | undefined>();
   const [savedTrips, setSavedTrips] = useState<TiyaPlannerSnapshot[]>([]);
   const [lastTrip, setLastTrip] = useState<TiyaPlannerSnapshot | null>(null);
+  const [appliedRecommendationIds, setAppliedRecommendationIds] = useState<string[]>([]);
+  const [savedRecommendationIds, setSavedRecommendationIds] = useState<string[]>([]);
+  const [dismissedRecommendationIds, setDismissedRecommendationIds] = useState<string[]>([]);
+  const [recommendationChangeLog, setRecommendationChangeLog] = useState<
+    TiyaAIRecommendationChangeLog[]
+  >([]);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [routeWorkspaceOpen, setRouteWorkspaceOpen] = useState(false);
@@ -226,8 +470,22 @@ export default function TiyaPlannerWorkspace() {
         itinerary: editableDays,
         notes: tripNotes,
         selectedRouteId,
+        appliedRecommendationIds,
+        savedRecommendationIds,
+        dismissedRecommendationIds,
+        recommendationChangeLog,
       }),
-    [editableDays, generatedPlan, selectedRouteId, submittedIntent, tripNotes]
+    [
+      appliedRecommendationIds,
+      dismissedRecommendationIds,
+      editableDays,
+      generatedPlan,
+      recommendationChangeLog,
+      savedRecommendationIds,
+      selectedRouteId,
+      submittedIntent,
+      tripNotes,
+    ]
   );
 
   const journeyTimeline = useMemo(
@@ -316,9 +574,22 @@ export default function TiyaPlannerWorkspace() {
     () =>
       generatePlannerRecommendations({
         intent: submittedIntent,
+        plan: generatedPlan,
+        days: editableDays,
         selectedRoute,
+        budget: budgetIntelligence,
+        alerts: smartAlerts,
+        journeyStatus,
       }),
-    [selectedRoute, submittedIntent]
+    [
+      budgetIntelligence,
+      editableDays,
+      generatedPlan,
+      journeyStatus,
+      selectedRoute,
+      smartAlerts,
+      submittedIntent,
+    ]
   );
 
   const travelStats = useMemo(
@@ -349,6 +620,10 @@ export default function TiyaPlannerWorkspace() {
       );
       setTripNotes(draft.notes || defaultNotes);
       setSelectedRouteId(draft.selectedRouteId);
+      setAppliedRecommendationIds(draft.appliedRecommendationIds || []);
+      setSavedRecommendationIds(draft.savedRecommendationIds || []);
+      setDismissedRecommendationIds(draft.dismissedRecommendationIds || []);
+      setRecommendationChangeLog(draft.recommendationChangeLog || []);
       setRouteWorkspaceOpen(Boolean(draft.selectedRouteId));
       setLastSavedAt(draft.savedAt);
       setHasUnsavedChanges(false);
@@ -378,6 +653,10 @@ export default function TiyaPlannerWorkspace() {
       setRouteWorkspaceOpen(false);
       setSelectedScenarioId(undefined);
       setSelectedVariantId(undefined);
+      setAppliedRecommendationIds([]);
+      setSavedRecommendationIds([]);
+      setDismissedRecommendationIds([]);
+      setRecommendationChangeLog([]);
       setHasUnsavedChanges(true);
       setIsGenerating(false);
     }, 650);
@@ -394,8 +673,27 @@ export default function TiyaPlannerWorkspace() {
   }
 
   function handleRouteChange(routeId: TiyaRouteOption["id"]) {
+    const previousRoute = selectedRoute?.name || selectedRouteId || "No active route";
+    const nextRoute = generatedPlan.routeOptions.find((route) => route.id === routeId);
+
     setSelectedRouteId(routeId);
     setRouteWorkspaceOpen(true);
+    setRecommendationChangeLog((current) => [
+      buildModuleChangeLog({
+        actionType: "apply_route_variant",
+        affectedDays: ["Full route"],
+        category: "Route",
+        comfortImpact: nextRoute ? nextRoute.comfortScore - (selectedRoute?.comfortScore || nextRoute.comfortScore) : 0,
+        costImpact: 0,
+        detail: `Active route changed to ${nextRoute?.name || routeId}.`,
+        newState: nextRoute?.name || routeId,
+        previousState: previousRoute,
+        riskImpact: nextRoute?.riskLevel === "Low" ? -8 : nextRoute?.riskLevel === "High" ? 8 : 0,
+        sourceModule: "Route Variants & Alternatives",
+        title: "Route Variant Applied",
+      }),
+      ...current,
+    ]);
     setHasUnsavedChanges(true);
   }
 
@@ -408,11 +706,43 @@ export default function TiyaPlannerWorkspace() {
     }
 
     setHasUnsavedChanges(true);
+    setRecommendationChangeLog((current) => [
+      buildModuleChangeLog({
+        actionType: "apply_route_scenario",
+        affectedDays: ["Scenario route"],
+        category: "Route",
+        comfortImpact: 4,
+        costImpact: 0,
+        detail: `Scenario ${scenario.name} selected for route review.`,
+        newState: scenario.name,
+        previousState: selectedScenarioId || "Base scenario",
+        riskImpact: -4,
+        sourceModule: "Route Variants & Alternatives",
+        title: "Route Scenario Applied",
+      }),
+      ...current,
+    ]);
   }
 
   function handleVariantSelect(variant: TiyaTripVariant) {
     setSelectedVariantId(variant.id);
     setHasUnsavedChanges(true);
+    setRecommendationChangeLog((current) => [
+      buildModuleChangeLog({
+        actionType: "preview_trip_variant",
+        affectedDays: ["Trip variant"],
+        category: "Route",
+        comfortImpact: 2,
+        costImpact: 0,
+        detail: `${variant.name} variant selected for preview.`,
+        newState: variant.name,
+        previousState: selectedVariantId || "Base variant",
+        riskImpact: 0,
+        sourceModule: "Route Variants & Alternatives",
+        title: "Trip Variant Previewed",
+      }),
+      ...current,
+    ]);
   }
 
   function handleVariantApply(variant: TiyaTripVariant) {
@@ -424,9 +754,29 @@ export default function TiyaPlannerWorkspace() {
     setGeneratedPlan(nextPlan);
     setEditableDays(nextPlan.days);
     setSelectedRouteId(getRecommendedRouteId(nextPlan));
+    setAppliedRecommendationIds([]);
+    setSavedRecommendationIds([]);
+    setDismissedRecommendationIds([]);
+    setRecommendationChangeLog([]);
     setRouteWorkspaceOpen(true);
     setSelectedScenarioId(undefined);
     setHasUnsavedChanges(true);
+    setRecommendationChangeLog((current) => [
+      buildModuleChangeLog({
+        actionType: "apply_trip_variant",
+        affectedDays: ["Full itinerary"],
+        category: "Route",
+        comfortImpact: variant.id === "luxury" || variant.id === "premium" ? 12 : variant.id === "budget" ? -3 : 5,
+        costImpact: 0,
+        detail: `${variant.name} variant applied and regenerated the master plan.`,
+        newState: variant.name,
+        previousState: submittedIntent.pace,
+        riskImpact: variant.id === "adventure" ? 8 : -4,
+        sourceModule: "Route Variants & Alternatives",
+        title: "Trip Variant Applied",
+      }),
+      ...current,
+    ]);
   }
 
   function restorePlannerSnapshot(snapshot: TiyaPlannerSnapshot) {
@@ -439,6 +789,10 @@ export default function TiyaPlannerWorkspace() {
     );
     setTripNotes(snapshot.notes || defaultNotes);
     setSelectedRouteId(snapshot.selectedRouteId || getRecommendedRouteId(restoredPlan));
+    setAppliedRecommendationIds(snapshot.appliedRecommendationIds || []);
+    setSavedRecommendationIds(snapshot.savedRecommendationIds || []);
+    setDismissedRecommendationIds(snapshot.dismissedRecommendationIds || []);
+    setRecommendationChangeLog(snapshot.recommendationChangeLog || []);
     setRouteWorkspaceOpen(true);
     setLastSavedAt(snapshot.savedAt);
     setLastTrip(snapshot);
@@ -462,6 +816,215 @@ export default function TiyaPlannerWorkspace() {
     const nextTrips = deletePlannerTrip(tripId);
     setSavedTrips(nextTrips);
     setLastTrip(loadLastPlannerTrip() || loadPlannerDraft());
+  }
+
+  function handleApplyRecommendation(recommendation: TiyaAIRecommendation) {
+    if (appliedRecommendationIds.includes(recommendation.id)) return;
+
+    if (recommendation.id === "better-route") {
+      const scenicRoute = generatedPlan.routeOptions.find((route) => route.id === "scenic");
+      if (scenicRoute) {
+        setSelectedRouteId(scenicRoute.id);
+        setRouteWorkspaceOpen(true);
+      }
+    }
+
+    if (recommendation.id === "insurance") {
+      setSubmittedIntent((current) => ({
+        ...current,
+        smartPreferences: {
+          ...current.smartPreferences,
+          includeInsurance: true,
+        },
+      }));
+    }
+
+    if (recommendation.id === "night-travel-risk") {
+      setSubmittedIntent((current) => ({
+        ...current,
+        smartPreferences: {
+          ...current.smartPreferences,
+          avoidNightTravel: true,
+        },
+      }));
+    }
+
+    const itemType: TiyaTimelineItem["type"] =
+      recommendation.category === "Stay"
+        ? "stay"
+        : recommendation.category === "Transport"
+          ? "transport"
+          : "activity";
+
+    setEditableDays((currentDays) => {
+      if (recommendation.category === "Budget" || recommendation.category === "Risk") {
+        return currentDays.map((day, index) =>
+          index === 0
+            ? {
+                ...day,
+                notes: `${day.notes || ""} AI applied: ${recommendation.title}. ${recommendation.impactSummary}`.trim(),
+              }
+            : day
+        );
+      }
+
+      return updateFirstMatchingDay(currentDays, recommendation, itemType);
+    });
+    setGeneratedPlan((currentPlan) =>
+      updatePlanForRecommendation(currentPlan, recommendation)
+    );
+    setAppliedRecommendationIds((current) => [...current, recommendation.id]);
+    setSavedRecommendationIds((current) =>
+      current.filter((id) => id !== recommendation.id)
+    );
+    setRecommendationChangeLog((current) => [
+      buildRecommendationChangeLog(recommendation),
+      ...current,
+    ]);
+    setHasUnsavedChanges(true);
+  }
+
+  function handleDismissRecommendation(recommendationId: string) {
+    setDismissedRecommendationIds((current) =>
+      current.includes(recommendationId) ? current : [...current, recommendationId]
+    );
+    setSavedRecommendationIds((current) =>
+      current.filter((id) => id !== recommendationId)
+    );
+    setHasUnsavedChanges(true);
+  }
+
+  function handleSaveRecommendation(recommendationId: string) {
+    setSavedRecommendationIds((current) =>
+      current.includes(recommendationId)
+        ? current.filter((id) => id !== recommendationId)
+        : [...current, recommendationId]
+    );
+    setHasUnsavedChanges(true);
+  }
+
+  function handlePlannerModuleAction(action: PlannerModuleAction) {
+    const changeLogEntry = buildModuleChangeLog(action);
+    const costImpact = action.costImpact || 0;
+
+    if (costImpact !== 0) {
+      setGeneratedPlan((currentPlan) =>
+        updateBudgetForRecommendation(currentPlan, {
+          id: changeLogEntry.id,
+          title: action.title,
+          category: action.category || "Budget",
+          priority: "Medium",
+          confidenceScore: 86,
+          detail: action.detail,
+          reason: action.detail,
+          impact: changeLogEntry.impact,
+          impactSummary: changeLogEntry.impact,
+          affectedDay: action.affectedDays?.[0] || (action.affectedDay ? `Day ${action.affectedDay}` : "Planner"),
+          affectedModule: action.sourceModule,
+          costImpact,
+          comfortImpact: action.comfortImpact || 0,
+          riskImpact: action.riskImpact || 0,
+          budgetImpact: -costImpact,
+          experienceImpact: 0,
+          itineraryImpact: action.detail,
+          whyAiSuggestsThis: {
+            travellerStyle: submittedIntent.travelStyle,
+            itineraryGap: action.previousState || "Current planner state",
+            budgetFit: costImpact < 0 ? "Improves budget fit." : "Cost is reflected in the live estimate.",
+            routeFit: selectedRoute?.name || "Current route",
+          },
+          whatWillChange: {
+            dayChange: action.affectedDays?.[0] || (action.affectedDay ? `Day ${action.affectedDay}` : "Planner"),
+            updated: [action.newState || action.detail],
+            costImpact: `${costImpact >= 0 ? "+" : "-"}₹${Math.abs(costImpact).toLocaleString("en-IN")}`,
+            fatigueImpact: `${action.fatigueImpact || 0}`,
+            bookingBasketImpact: "Review payload and checkout readiness refreshed.",
+          },
+        })
+      );
+    }
+
+    setEditableDays((currentDays) =>
+      currentDays.map((day, index) => {
+        const matchesDay =
+          action.affectedDay === day.day ||
+          (!action.affectedDay && index === 0);
+
+        if (!matchesDay) return day;
+
+        return {
+          ...day,
+          notes: `${day.notes || ""} ${action.sourceModule}: ${action.title}. ${action.detail}`.trim(),
+        };
+      })
+    );
+
+    setGeneratedPlan((currentPlan) => ({
+      ...currentPlan,
+      bookingModules: (currentPlan.bookingModules || []).map((module) => {
+        const shouldHighlight =
+          (action.category === "Transport" && ["flights", "cabs"].includes(module.id)) ||
+          (action.category === "Stay" && ["hotels", "homestays"].includes(module.id)) ||
+          (action.category === "Activities" && module.id === "experiences") ||
+          (action.category === "Risk" && module.id === "insurance") ||
+          (action.category === "Local Market" && module.id === "local-market") ||
+          action.sourceModule.toLowerCase().includes(module.id);
+
+        return shouldHighlight
+          ? { ...module, readiness: "Ready" as const, isHighlighted: true }
+          : module;
+      }),
+    }));
+    setRecommendationChangeLog((current) => [changeLogEntry, ...current]);
+    setHasUnsavedChanges(true);
+  }
+
+  function handleLocalLifeAction(action: string, product: TiyaLocalMarketPick) {
+    const isSave = action.toLowerCase().includes("save");
+    const targetDay = Math.min(2, Math.max(1, editableDays[1]?.day || editableDays[0]?.day || 1));
+    const priceEstimate = localLifePriceEstimate(product);
+
+    setGeneratedPlan((currentPlan) => ({
+      ...currentPlan,
+      localMarketPicks: (currentPlan.localMarketPicks || []).map((pick) =>
+        pick.id === product.id ? { ...pick, isHighlighted: true } : pick
+      ),
+    }));
+
+    if (!isSave) {
+      setEditableDays((currentDays) =>
+        currentDays.map((day, index) => {
+          const matchesTarget = day.day === targetDay || (!currentDays.some((item) => item.day === targetDay) && index === 0);
+          if (!matchesTarget) return day;
+          if ((day.items || []).some((item) => item.id.includes(`local-life-${product.id}`))) return day;
+
+          return {
+            ...day,
+            notes: `${day.notes || ""} Local Life Added: ${product.productName}. Route fit ${product.routeRelevance}%.`.trim(),
+            items: [...(day.items || []), buildLocalLifeTimelineItem(product, day)],
+          };
+        })
+      );
+    }
+
+    handlePlannerModuleAction({
+      actionType: isSave ? "save_local_life" : "add_local_life",
+      affectedDay: targetDay,
+      category: "Local Market",
+      comfortImpact: isSave ? 0 : 6,
+      costImpact: isSave ? 0 : priceEstimate,
+      detail: isSave
+        ? `${product.productName} saved for Local Life review.`
+        : `${product.productName} added to Day ${targetDay} evening. Route and traveller interest matched.`,
+      fatigueImpact: isSave ? 0 : 2,
+      newState: isSave
+        ? `Saved Local Life item: ${product.productName}`
+        : `Day ${targetDay} evening Local Life stop: ${product.productName}`,
+      previousState: "No Local Life stop selected for this slot",
+      riskImpact: 0,
+      sourceModule: "Local Life",
+      title: isSave ? "Local Life Saved" : "Local Life Added",
+    });
   }
 
   return (
@@ -493,7 +1056,7 @@ export default function TiyaPlannerWorkspace() {
               Select a route to open the Tiya planning studio
             </h2>
             <p className="mx-auto mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-600">
-              The itinerary, weather, creator, local market, quote and booking
+              The itinerary, weather, creator, Local Life, quote and booking
               systems stay hidden until the journey path is chosen.
             </p>
           </div>
@@ -556,7 +1119,14 @@ export default function TiyaPlannerWorkspace() {
               alerts={smartAlerts}
               recommendations={recommendations}
               stats={travelStats}
+              recommendationChangeLog={recommendationChangeLog}
+              appliedRecommendationIds={appliedRecommendationIds}
+              dismissedRecommendationIds={dismissedRecommendationIds}
+              savedRecommendationIds={savedRecommendationIds}
               isGenerating={isGenerating}
+              onApplyRecommendation={handleApplyRecommendation}
+              onDismissRecommendation={handleDismissRecommendation}
+              onSaveRecommendation={handleSaveRecommendation}
             />
           </PlannerModule>
 
@@ -565,6 +1135,7 @@ export default function TiyaPlannerWorkspace() {
               days={journeyTimeline}
               map={journeyMap}
               status={journeyStatus}
+              changeHistory={recommendationChangeLog}
               isGenerating={isGenerating}
             />
           </PlannerModule>
@@ -618,6 +1189,21 @@ export default function TiyaPlannerWorkspace() {
               plan={generatedPlan}
               selectedRoute={selectedRoute}
               isGenerating={isGenerating}
+              onRuleAction={(rule) =>
+                handlePlannerModuleAction({
+                  actionType: "apply_risk_fix",
+                  affectedDays: [rule.affectedArea],
+                  category: "Risk",
+                  comfortImpact: rule.status === "critical" ? 18 : 10,
+                  costImpact: rule.status === "critical" ? 2000 : 800,
+                  detail: `${rule.suggestedFix}. Previous risk: ${rule.reason}`,
+                  newState: rule.suggestedFix,
+                  previousState: rule.reason,
+                  riskImpact: rule.status === "critical" ? -24 : -12,
+                  sourceModule: "Route Risk Analysis",
+                  title: `Risk Fix Applied: ${rule.title}`,
+                })
+              }
             />
           </PlannerModule>
 
@@ -628,6 +1214,21 @@ export default function TiyaPlannerWorkspace() {
               plan={generatedPlan}
               selectedRoute={selectedRoute}
               isGenerating={isGenerating}
+              onSuggestionAction={(suggestion) =>
+                handlePlannerModuleAction({
+                  actionType: "apply_cost_optimization",
+                  affectedDays: ["Budget overview"],
+                  category: "Budget",
+                  comfortImpact: suggestion.estimatedSavings > 0 ? -2 : 4,
+                  costImpact: -Math.abs(suggestion.estimatedSavings),
+                  detail: suggestion.detail,
+                  newState: suggestion.title,
+                  previousState: "Current cost plan",
+                  riskImpact: 0,
+                  sourceModule: "Cost Optimization",
+                  title: suggestion.actionLabel,
+                })
+              }
             />
           </PlannerModule>
 
@@ -640,11 +1241,49 @@ export default function TiyaPlannerWorkspace() {
               selectedScenarioId={selectedScenarioId}
               selectedVariantId={selectedVariantId}
               isGenerating={isGenerating}
+              onExperienceAction={(action) =>
+                handlePlannerModuleAction({
+                  actionType: "apply_activity",
+                  affectedDay: action.day,
+                  category: "Activities",
+                  comfortImpact: -Math.max(0, Math.round(action.fatigueImpact / 2)),
+                  costImpact: action.costImpact,
+                  detail: action.detail,
+                  fatigueImpact: action.fatigueImpact,
+                  newState: action.title,
+                  previousState: `Day ${action.day} activity set`,
+                  riskImpact: 0,
+                  sourceModule: "Experiences & Activities",
+                  title: action.title,
+                })
+              }
             />
-            <TiyaSuggestionCards suggestions={generatedPlan.suggestions} />
+            <TiyaSuggestionCards
+              suggestions={generatedPlan.suggestions}
+              onSuggestionAction={(suggestion) =>
+                handlePlannerModuleAction({
+                  actionType: "apply_suggestion",
+                  affectedDays: ["Suggested module"],
+                  category:
+                    suggestion.category === "Stay"
+                      ? "Stay"
+                      : suggestion.category === "Transport"
+                        ? "Transport"
+                        : "Activities",
+                  comfortImpact: suggestion.category === "Stay" ? 8 : 3,
+                  costImpact: Number(suggestion.price.replace(/[^0-9-]/g, "")) || 0,
+                  detail: suggestion.detail,
+                  newState: suggestion.title,
+                  previousState: "Suggestion not selected",
+                  riskImpact: 0,
+                  sourceModule: "Smart Suggestions",
+                  title: `Suggestion Applied: ${suggestion.title}`,
+                })
+              }
+            />
           </PlannerModule>
 
-          <PlannerModule id="ecosystem" eyebrow="Creator and marketplace" title="Creator picks and local market" defaultOpen>
+          <PlannerModule id="ecosystem" eyebrow="Creator and Local Life" title="Creator picks and Local Life" defaultOpen>
             <TiyaCreatorPicks
               creators={
                 Array.isArray(generatedPlan.creatorPicks)
@@ -660,16 +1299,33 @@ export default function TiyaPlannerWorkspace() {
                   : []
               }
               isGenerating={isGenerating}
+              onProductAction={handleLocalLifeAction}
             />
           </PlannerModule>
 
           <PlannerModule id="seasonal" eyebrow="Seasonal weather" title="Season, weather and route timing">
             <TiyaSeasonalWeather
               intent={submittedIntent}
+              days={editableDays}
               selectedRoute={selectedRoute}
               selectedScenarioId={selectedScenarioId}
               selectedVariantId={selectedVariantId}
               isGenerating={isGenerating}
+              onAdviceAction={(advice) =>
+                handlePlannerModuleAction({
+                  actionType: "apply_weather_action",
+                  affectedDays: ["Weather-sensitive days"],
+                  category: "Weather",
+                  comfortImpact: 6,
+                  costImpact: 0,
+                  detail: advice.detail,
+                  newState: advice.action,
+                  previousState: "Current weather timing",
+                  riskImpact: advice.severity === "High" ? -16 : -8,
+                  sourceModule: "Weather Intelligence",
+                  title: `Weather Action Applied: ${advice.title}`,
+                })
+              }
             />
           </PlannerModule>
 
@@ -725,6 +1381,11 @@ export default function TiyaPlannerWorkspace() {
                   ? generatedPlan.bookingModules
                   : []
               }
+              intent={submittedIntent}
+              plan={generatedPlan}
+              days={editableDays}
+              selectedRoute={selectedRoute}
+              changeHistory={recommendationChangeLog}
               isGenerating={isGenerating}
             />
           </PlannerModule>
@@ -751,7 +1412,9 @@ export default function TiyaPlannerWorkspace() {
             <TiyaCheckoutBridge
               intent={submittedIntent}
               plan={generatedPlan}
+              days={editableDays}
               selectedRoute={selectedRoute}
+              changeHistory={recommendationChangeLog}
               isGenerating={isGenerating}
             />
             <TiyaExpertReview
@@ -771,7 +1434,11 @@ export default function TiyaPlannerWorkspace() {
               selectedScenarioId={selectedScenarioId}
               selectedVariantId={selectedVariantId}
               smartAlerts={smartAlerts}
+              recommendationChangeLog={recommendationChangeLog}
               isGenerating={isGenerating}
+              onAction={() => {
+                window.location.href = "/smart-planner/review";
+              }}
             />
           </PlannerModule>
 
@@ -789,6 +1456,14 @@ export default function TiyaPlannerWorkspace() {
             <TiyaSavedTripLibrary
               savedTrips={savedTrips}
               lastTrip={lastTrip}
+              currentSnapshot={plannerSnapshot}
+              onSaveCurrent={() => {
+                const savedSnapshot = savePlannerTrip(plannerSnapshot);
+                setLastSavedAt(savedSnapshot.savedAt);
+                setSavedTrips(loadSavedPlannerTrips());
+                setLastTrip(loadLastPlannerTrip() || savedSnapshot);
+                setHasUnsavedChanges(false);
+              }}
               onRestore={restorePlannerSnapshot}
               onRename={handleRenameTrip}
               onDuplicate={handleDuplicateTrip}
@@ -810,6 +1485,21 @@ export default function TiyaPlannerWorkspace() {
             total={generatedPlan.totalBudget}
             budgetRange={
               submittedIntent.customBudgetAmount || submittedIntent.budgetTier
+            }
+            onBudgetAction={(action) =>
+              handlePlannerModuleAction({
+                actionType: "apply_budget_scenario",
+                affectedDays: ["Budget overview"],
+                category: "Budget",
+                comfortImpact: action.type === "luxury-route" ? 12 : action.type === "budget-route" ? -4 : 2,
+                costImpact: action.costImpact,
+                detail: action.detail,
+                newState: action.title,
+                previousState: "Current budget scenario",
+                riskImpact: action.type === "budget-route" ? 2 : -2,
+                sourceModule: "Budget Overview",
+                title: action.title,
+              })
             }
           />
           <TiyaAIInsights

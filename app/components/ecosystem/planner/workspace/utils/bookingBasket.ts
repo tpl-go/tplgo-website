@@ -675,41 +675,49 @@ export function upsertBookingBasketItem(
   basket: WorkspaceBookingBasketItem[],
   item: WorkspaceBookingBasketItem
 ) {
-  const priceBasis = priceBasisFromBookingItem(item);
-  const itemKey =
-    priceBasis === "per_night" || priceBasis === "per_room_night"
-      ? `stay-${item.city}-${item.title}`
-      : priceBasis === "per_day" && item.serviceType === "cab"
-        ? `cab-coverage-${item.city}-${item.title}`
-        : item.sourceItemId || item.id;
-  const exists = basket.some(
-    (basketItem) => {
-      const basketPriceBasis = priceBasisFromBookingItem(basketItem);
-      const basketKey =
-        basketPriceBasis === "per_night" || basketPriceBasis === "per_room_night"
-          ? `stay-${basketItem.city}-${basketItem.title}`
-          : basketPriceBasis === "per_day" && basketItem.serviceType === "cab"
-            ? `cab-coverage-${basketItem.city}-${basketItem.title}`
-            : basketItem.sourceItemId || basketItem.id;
+  const basketItemKey = (basketItem: WorkspaceBookingBasketItem) => {
+    const basketPriceBasis = priceBasisFromBookingItem(basketItem);
+    const stableFallback = [
+      basketItem.dayId || `day-${basketItem.day}`,
+      basketItem.sourceItemId || basketItem.title,
+      basketItem.serviceType,
+      basketItem.time || basketItem.date || basketItem.dayLabel,
+    ]
+      .filter(Boolean)
+      .join("|")
+      .toLowerCase();
 
-      return basketKey === itemKey;
+    if (basketPriceBasis === "per_night" || basketPriceBasis === "per_room_night") {
+      return `stay-${basketItem.city}-${basketItem.title}`.toLowerCase();
     }
+
+    if (basketPriceBasis === "per_day" && basketItem.serviceType === "cab") {
+      return `cab-coverage-${basketItem.city}-${basketItem.title}`.toLowerCase();
+    }
+
+    return [
+      basketItem.dayId || `day-${basketItem.day}`,
+      basketItem.sourceItemId || basketItem.id || basketItem.title,
+      basketItem.serviceType,
+      basketItem.time || basketItem.date || basketItem.dayLabel,
+    ]
+      .filter(Boolean)
+      .join("|")
+      .toLowerCase() || stableFallback;
+  };
+  const itemKey = basketItemKey(item);
+  const exists = basket.some(
+    (basketItem) => basketItemKey(basketItem) === itemKey
   );
 
   if (!exists) return [...basket, item];
 
-  return basket.map((basketItem) =>
+  return basket.map((basketItem): WorkspaceBookingBasketItem =>
     (() => {
-      const basketPriceBasis = priceBasisFromBookingItem(basketItem);
-      const basketKey =
-        basketPriceBasis === "per_night" || basketPriceBasis === "per_room_night"
-          ? `stay-${basketItem.city}-${basketItem.title}`
-          : basketPriceBasis === "per_day" && basketItem.serviceType === "cab"
-            ? `cab-coverage-${basketItem.city}-${basketItem.title}`
-            : basketItem.sourceItemId || basketItem.id;
+      const basketKey = basketItemKey(basketItem);
 
       return basketKey === itemKey
-        ? { ...basketItem, ...item, status: "selected" }
+        ? { ...basketItem, ...item, status: "selected" as const }
         : basketItem;
     })()
   );

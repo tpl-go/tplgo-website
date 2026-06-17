@@ -27,6 +27,7 @@ type TiyaScenarioEngineProps = {
   selectedScenarioId?: TiyaScenarioId;
   isGenerating?: boolean;
   onScenarioSelect?: (scenario: TiyaRouteScenario) => void;
+  onScenarioMerge?: (scenario: TiyaRouteScenario) => void;
 };
 
 function formatCurrency(value: number) {
@@ -73,6 +74,7 @@ export default function TiyaScenarioEngine({
   selectedScenarioId,
   isGenerating = false,
   onScenarioSelect,
+  onScenarioMerge,
 }: TiyaScenarioEngineProps) {
   const scenarios = useMemo(
     () => generatePlannerScenarios(intent, plan),
@@ -254,6 +256,7 @@ export default function TiyaScenarioEngine({
                 </button>
                 <button
                   type="button"
+                  onClick={() => onScenarioMerge?.(scenario)}
                   className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-black text-white transition hover:bg-white/15"
                 >
                   <GitMerge size={15} />

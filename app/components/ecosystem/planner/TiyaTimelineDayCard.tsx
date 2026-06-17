@@ -133,7 +133,7 @@ export default function TiyaTimelineDayCard({
                 Market
               </div>
               <p className="mt-2 text-sm font-semibold text-white/70">
-                {day.localMarketPicks.map((product) => product.productName).join(", ") || "Market stop optional"}
+                {day.localMarketPicks.map((product) => product.productName).join(", ") || "Local Life stop optional"}
               </p>
             </div>
             <div className="rounded-2xl border border-white/10 bg-white/10 p-3">

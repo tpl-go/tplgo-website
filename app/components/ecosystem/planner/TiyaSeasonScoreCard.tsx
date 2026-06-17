@@ -25,6 +25,17 @@ function MonthStrip({
   months: string[];
 }) {
   const safeMonths = Array.isArray(months) ? months : [];
+  const reasonsForMonth = (month: string) => {
+    if (label.toLowerCase().includes("avoid")) {
+      return ["Weather risk", "Route uncertainty", "Visibility reduction"];
+    }
+
+    if (label.toLowerCase().includes("okay")) {
+      return ["Workable weather", "Moderate crowd pressure", "Flexible route timing"];
+    }
+
+    return ["Clearer roads", "Stable weather", "Best visibility"];
+  };
 
   return (
     <div>
@@ -35,9 +46,12 @@ function MonthStrip({
         {safeMonths.map((month) => (
           <span
             key={`${label}-${month}`}
-            className="rounded-full border border-white/10 bg-white/10 px-2.5 py-1 text-[11px] font-black text-white/75"
+            className="rounded-2xl border border-white/10 bg-white/10 px-3 py-2 text-[11px] font-black text-white/75"
           >
-            {month}
+            <span className="block text-white">{month}</span>
+            <span className="mt-1 block text-[10px] font-semibold leading-4 text-white/48">
+              Why? {reasonsForMonth(month).join(" · ")}
+            </span>
           </span>
         ))}
       </div>
@@ -49,6 +63,15 @@ export default function TiyaSeasonScoreCard({
   readiness,
   monthIntelligence,
 }: TiyaSeasonScoreCardProps) {
+  const confidence =
+    readiness.riskLabel === "Low"
+      ? Math.min(92, readiness.seasonScore + 8)
+      : readiness.riskLabel === "Medium"
+        ? Math.max(62, readiness.seasonScore + 4)
+        : Math.max(42, readiness.seasonScore);
+  const confidenceLabel =
+    confidence >= 78 ? "High" : confidence >= 58 ? "Medium" : "Low";
+
   return (
     <div className="rounded-3xl border border-white/10 bg-white/[0.07] p-3 sm:p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -75,6 +98,33 @@ export default function TiyaSeasonScoreCard({
       <p className="mt-4 rounded-2xl border border-white/10 bg-white/10 p-3 text-sm font-semibold leading-6 text-white/70">
         {readiness.note}
       </p>
+
+      <div className="mt-4 rounded-2xl border border-cyan-300/20 bg-cyan-300/10 p-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-100">
+              Weather confidence
+            </p>
+            <p className="mt-1 text-3xl font-black text-white">{confidence}%</p>
+          </div>
+          <span className={`w-fit rounded-full border px-3 py-1.5 text-xs font-black ${riskStyles[confidenceLabel === "High" ? "Low" : confidenceLabel]}`}>
+            {confidenceLabel} confidence
+          </span>
+        </div>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          {[
+            "Historical climate pattern",
+            "Destination profile",
+            "Altitude intelligence",
+            "Seasonal route conditions",
+          ].map((signal) => (
+            <div key={signal} className="flex gap-2 rounded-2xl border border-white/10 bg-white/10 px-3 py-2 text-xs font-black text-cyan-50/85">
+              <span className="text-emerald-100">✓</span>
+              <span>{signal}</span>
+            </div>
+          ))}
+        </div>
+      </div>
 
       <div className="mt-4 grid gap-2 sm:grid-cols-3">
         <div className="rounded-2xl border border-white/10 bg-white/10 p-3">

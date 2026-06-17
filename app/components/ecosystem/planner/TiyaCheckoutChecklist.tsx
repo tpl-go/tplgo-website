@@ -9,6 +9,7 @@ type TiyaCheckoutChecklistProps = {
 
 const statusStyle: Record<TiyaCheckoutChecklistItem["status"], string> = {
   Ready: "border-emerald-300/20 bg-emerald-400/10 text-emerald-100",
+  Warning: "border-amber-300/20 bg-amber-400/10 text-amber-100",
   Required: "border-orange-300/20 bg-orange-400/10 text-orange-100",
   Optional: "border-cyan-300/20 bg-cyan-400/10 text-cyan-100",
   "Not started": "border-white/10 bg-white/10 text-white/60",
@@ -16,6 +17,7 @@ const statusStyle: Record<TiyaCheckoutChecklistItem["status"], string> = {
 
 const statusIcon: Record<TiyaCheckoutChecklistItem["status"], typeof CheckCircle2> = {
   Ready: CheckCircle2,
+  Warning: AlertCircle,
   Required: AlertCircle,
   Optional: CircleDashed,
   "Not started": CircleDashed,

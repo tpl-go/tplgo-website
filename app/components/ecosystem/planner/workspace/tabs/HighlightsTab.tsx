@@ -20,7 +20,7 @@ export default function HighlightsTab({
         items={["View corridors", "Photo halts", "Slow route windows"]}
       />
       <HighlightBlock
-        title="Food / local market"
+        title="Food / Local Life"
         items={["Local food", "Market stop", "Regional tasting"]}
       />
       <HighlightBlock

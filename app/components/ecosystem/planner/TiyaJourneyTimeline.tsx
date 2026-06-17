@@ -1,10 +1,19 @@
 "use client";
 
-import { Activity, BrainCircuit, CloudSun, Gauge, ShieldCheck } from "lucide-react";
+import {
+  Activity,
+  AlertTriangle,
+  BrainCircuit,
+  CloudSun,
+  Gauge,
+  MapPinned,
+  ShieldCheck,
+} from "lucide-react";
 import type {
   TiyaJourneyMap as TiyaJourneyMapData,
   TiyaJourneyStatus,
   TiyaJourneyTimelineDay,
+  TiyaAIRecommendationChangeLog,
 } from "@/app/lib/ecosystem/planner/plannerTypes";
 import TiyaJourneyMap from "./TiyaJourneyMap";
 import TiyaTimelineDayCard from "./TiyaTimelineDayCard";
@@ -13,6 +22,7 @@ type TiyaJourneyTimelineProps = {
   days: TiyaJourneyTimelineDay[];
   map: TiyaJourneyMapData;
   status: TiyaJourneyStatus;
+  changeHistory?: TiyaAIRecommendationChangeLog[];
   isGenerating?: boolean;
 };
 
@@ -25,6 +35,7 @@ const statusChips = [
 ] as const;
 
 export default function TiyaJourneyTimeline({
+  changeHistory = [],
   days,
   map,
   status,
@@ -89,6 +100,50 @@ export default function TiyaJourneyTimeline({
         </div>
 
         <TiyaJourneyMap map={map} />
+
+        <div className="grid gap-3 lg:grid-cols-[1fr_0.9fr]">
+          <div className="rounded-3xl border border-cyan-300/16 bg-cyan-300/10 p-3 sm:p-4">
+            <div className="flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.16em] text-cyan-100">
+              <MapPinned size={15} />
+              Map sync and booking markers
+            </div>
+            <div className="mt-3 grid gap-2 sm:grid-cols-3">
+              {[
+                ["Route movement", `${safeDays.length} days synced`],
+                ["Booking-ready markers", `${safeDays.reduce((sum, day) => sum + day.bookingSuggestions.length, 0)}`],
+                ["Warning markers", `${safeDays.filter((day) => day.status === "Needs review").length}`],
+              ].map(([label, value]) => (
+                <div key={label} className="rounded-2xl border border-white/10 bg-white/10 p-3">
+                  <p className="text-[10px] font-black uppercase tracking-[0.12em] text-white/45">
+                    {label}
+                  </p>
+                  <p className="mt-1 text-sm font-black text-white">{value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-orange-300/18 bg-orange-400/10 p-3 sm:p-4">
+            <div className="flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.16em] text-orange-100">
+              <AlertTriangle size={15} />
+              Applied changes on timeline
+            </div>
+            <div className="mt-3 grid gap-2">
+              {changeHistory.length ? changeHistory.slice(0, 3).map((change) => (
+                <div key={change.id} className="rounded-2xl border border-white/10 bg-white/10 p-3">
+                  <p className="text-xs font-black text-white">{change.title}</p>
+                  <p className="mt-1 text-xs font-semibold leading-5 text-white/58">
+                    {(change.affectedDays || []).join(", ") || change.summary}
+                  </p>
+                </div>
+              )) : (
+                <p className="rounded-2xl border border-white/10 bg-white/10 p-3 text-sm font-semibold text-white/58">
+                  No applied planner changes yet.
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
 
         <div className="relative grid gap-3">
           <div className="absolute bottom-4 left-6 top-4 hidden w-px bg-gradient-to-b from-cyan-300 via-orange-300 to-blue-300 opacity-50 sm:block" />

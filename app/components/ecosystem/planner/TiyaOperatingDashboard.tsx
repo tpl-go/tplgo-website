@@ -1,5 +1,6 @@
 import type {
   TiyaAIRecommendation,
+  TiyaAIRecommendationChangeLog,
   TiyaBudgetIntelligence,
   TiyaSmartAlert,
   TiyaTravelStat,
@@ -17,16 +18,30 @@ type TiyaOperatingDashboardProps = {
   alerts: TiyaSmartAlert[];
   recommendations: TiyaAIRecommendation[];
   stats: TiyaTravelStat[];
+  recommendationChangeLog?: TiyaAIRecommendationChangeLog[];
+  appliedRecommendationIds?: string[];
+  dismissedRecommendationIds?: string[];
+  savedRecommendationIds?: string[];
   isGenerating?: boolean;
+  onApplyRecommendation?: (recommendation: TiyaAIRecommendation) => void;
+  onDismissRecommendation?: (recommendationId: string) => void;
+  onSaveRecommendation?: (recommendationId: string) => void;
 };
 
 export default function TiyaOperatingDashboard({
+  appliedRecommendationIds = [],
   health,
   budget,
   alerts,
+  dismissedRecommendationIds = [],
   recommendations,
+  recommendationChangeLog = [],
+  savedRecommendationIds = [],
   stats,
   isGenerating = false,
+  onApplyRecommendation,
+  onDismissRecommendation,
+  onSaveRecommendation,
 }: TiyaOperatingDashboardProps) {
   return (
     <section className="overflow-hidden rounded-3xl border border-white/80 bg-[#061839]/95 text-white shadow-[0_22px_80px_rgba(6,24,57,0.2)] backdrop-blur-xl">
@@ -47,12 +62,26 @@ export default function TiyaOperatingDashboard({
       </div>
 
       <div className="grid gap-3 p-3 sm:p-5">
-        <TiyaTripHealthPanel health={health} isGenerating={isGenerating} />
+        <TiyaTripHealthPanel
+          health={health}
+          changeHistory={recommendationChangeLog}
+          alerts={alerts}
+          budget={budget}
+          isGenerating={isGenerating}
+        />
         <div className="grid gap-3 xl:grid-cols-[0.95fr_1.05fr]">
           <TiyaBudgetIntelligencePanel budget={budget} />
           <TiyaSmartAlerts alerts={alerts} />
         </div>
-        <TiyaAIRecommendationRail recommendations={recommendations} />
+        <TiyaAIRecommendationRail
+          recommendations={recommendations}
+          appliedRecommendationIds={appliedRecommendationIds}
+          dismissedRecommendationIds={dismissedRecommendationIds}
+          savedRecommendationIds={savedRecommendationIds}
+          onApply={onApplyRecommendation}
+          onDismiss={onDismissRecommendation}
+          onSave={onSaveRecommendation}
+        />
         <TiyaTravelStats stats={stats} />
       </div>
     </section>
