@@ -1771,7 +1771,11 @@ type StoredAdminSession = {
   };
 };
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_TPL_API_BASE_URL?.replace(/\/+$/, "") || "";
+const PRODUCTION_API_BASE_URL = "https://api.tplgo.com";
+const API_BASE_URL =
+  process.env.NODE_ENV === "production"
+    ? PRODUCTION_API_BASE_URL
+    : process.env.NEXT_PUBLIC_TPL_API_BASE_URL?.replace(/\/+$/, "") || "";
 
 export function getAdminApiBaseUrl(): string {
   return API_BASE_URL;

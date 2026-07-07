@@ -44,7 +44,11 @@ export type TplApiRequestOptions = {
   fallbackOnError?: boolean;
 };
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_TPL_API_BASE_URL?.replace(/\/+$/, "") || "";
+const PRODUCTION_API_BASE_URL = "https://api.tplgo.com";
+const API_BASE_URL =
+  process.env.NODE_ENV === "production"
+    ? PRODUCTION_API_BASE_URL
+    : process.env.NEXT_PUBLIC_TPL_API_BASE_URL?.replace(/\/+$/, "") || "";
 const AUTH_STORAGE_KEY = "tpl_auth_session_v1";
 
 export function getTplApiBaseUrl(): string {
@@ -210,4 +214,3 @@ function readTokenValue(source: unknown): string | null {
     record.bearerToken;
   return typeof token === "string" && token.trim() ? token.trim() : null;
 }
-
