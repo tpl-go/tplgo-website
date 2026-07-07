@@ -319,6 +319,7 @@ export default function PaymentPriceCard({
           <div className="bg-white px-4 py-4">
             <button
               type="button"
+              data-testid="package-payment-pay-button"
               disabled={!canPay}
               onClick={() => {
                 if (!canPay) return;

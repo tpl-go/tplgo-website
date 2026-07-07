@@ -262,6 +262,7 @@ export default function CabPaymentPriceCard({
           <div className="bg-white px-4 py-4">
             <button
               type="button"
+              data-testid="cab-payment-pay-button"
               onClick={() => {
                 if (paymentActionState === "failure") {
                   onRetryPayment?.();

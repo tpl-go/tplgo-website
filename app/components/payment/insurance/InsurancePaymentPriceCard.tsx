@@ -261,6 +261,7 @@ export default function InsurancePaymentPriceCard({
 
         <button
           type="button"
+          data-testid="insurance-payment-pay-button"
           disabled={buttonDisabled}
           onClick={paymentActionState === "failure" ? onRetryPayment : onPayNow}
           className={`mt-5 h-12 w-full rounded-full text-[15px] font-black text-white transition ${

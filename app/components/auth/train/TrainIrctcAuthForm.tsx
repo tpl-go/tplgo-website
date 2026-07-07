@@ -68,6 +68,7 @@ export default function TrainIrctcAuthForm({
           </div>
           <input
             type="password"
+            data-testid="train-irctc-password"
             value={password}
             onChange={(e) => onPasswordChange(e.target.value)}
             placeholder="Enter IRCTC password"
@@ -86,6 +87,7 @@ export default function TrainIrctcAuthForm({
 
           <input
             type="text"
+            data-testid="train-irctc-captcha"
             value={captcha}
             onChange={(e) => onCaptchaChange(e.target.value.toUpperCase())}
             placeholder="Enter captcha"
@@ -95,6 +97,7 @@ export default function TrainIrctcAuthForm({
 
         <button
           type="button"
+          data-testid="train-irctc-verify-button"
           onClick={handleAction}
           disabled={isExpired || isProcessing}
           className={`min-h-12 w-full rounded-full px-4 text-[15px] font-extrabold text-white transition ${

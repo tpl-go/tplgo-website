@@ -85,6 +85,15 @@ function creditEarnedForCabBooking(params: {
   localStorage.setItem(guardKey, "true");
 }
 
+function persistCabConfirmationSession(payload: ConfirmationPayload) {
+  if (typeof window === "undefined") return;
+
+  const value = JSON.stringify(payload);
+  sessionStorage.setItem("cabConfirmationData", value);
+  sessionStorage.setItem("cabPaymentSuccessData", value);
+  sessionStorage.setItem("tplCabConfirmationData", value);
+}
+
 export default function CabConfirmationPage() {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
@@ -257,6 +266,7 @@ const pickupDate = String(rawPickupDate).slice(0, 10);
           existingBooking.payloadStorageKey || payloadStorageKey,
           JSON.stringify(payloadWithBookingId)
         );
+        persistCabConfirmationSession(payloadWithBookingId);
 
         createGuestUserFromBooking({
           name: getTravellerName(leadTraveller),
@@ -313,6 +323,7 @@ const pickupDate = String(rawPickupDate).slice(0, 10);
           payloadStorageKey,
           JSON.stringify(payloadWithBookingId)
         );
+        persistCabConfirmationSession(payloadWithBookingId);
 
         createGuestUserFromBooking({
           name: getTravellerName(leadTraveller),

@@ -7,6 +7,10 @@ import TrainIrctcAuthTopBar from "@/app/components/auth/train/TrainIrctcAuthTopB
 import TrainIrctcAuthSummaryCard from "@/app/components/auth/train/TrainIrctcAuthSummaryCard";
 import TrainIrctcAuthForm from "@/app/components/auth/train/TrainIrctcAuthForm";
 import TrainIrctcAuthInfoCard from "@/app/components/auth/train/TrainIrctcAuthInfoCard";
+import {
+  confirmTrainBackendCheckout,
+  type TrainBackendCheckoutRefs,
+} from "@/app/lib/api/trainCheckoutIntegration";
 
 type ConfirmedTrainPaymentPayload = any;
 
@@ -255,7 +259,7 @@ export default function TrainIrctcAuthPage() {
 
     setAuthActionState("processing");
 
-    setTimeout(() => {
+    setTimeout(async () => {
       try {
         const now = new Date().toISOString();
         const booking = authData.bookingPayload || {};
@@ -319,7 +323,7 @@ export default function TrainIrctcAuthPage() {
             "",
         };
 
-        const confirmationPayload = {
+        let confirmationPayload = {
           ...authData,
 
           bookingId,
@@ -436,6 +440,32 @@ export default function TrainIrctcAuthPage() {
             serviceType: "train",
           },
         };
+
+        let backendRefs: TrainBackendCheckoutRefs = {
+          backendCheckoutId: authData.backendCheckoutId,
+          backendBookingId: authData.backendBookingId,
+          backendPaymentId: authData.backendPaymentId,
+          backendRequestId: authData.backendRequestId,
+          backendServiceType: authData.backendServiceType,
+          backendCheckoutStatus: authData.backendCheckoutStatus,
+        };
+
+        if (backendRefs.backendCheckoutId) {
+          const backendConfirm = await confirmTrainBackendCheckout({
+            ...confirmationPayload,
+            ...backendRefs,
+          });
+
+          backendRefs = {
+            ...backendRefs,
+            ...backendConfirm.refs,
+          };
+
+          confirmationPayload = {
+            ...confirmationPayload,
+            ...backendRefs,
+          };
+        }
 
         sessionStorage.setItem(
           "trainConfirmationData",

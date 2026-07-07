@@ -196,6 +196,7 @@ export default function BusPaymentPriceCard({
           <div className="overflow-hidden rounded-[18px] border border-[#d9e2ec] bg-white p-[8px] shadow-[0_4px_14px_rgba(15,23,42,0.05)]">
             <button
               type="button"
+              data-testid="bus-payment-pay-button"
               onClick={() => {
                 if (paymentActionState === "failure") {
                   onRetryPayment?.();

@@ -5,6 +5,7 @@ import { generateSmartPlannerMock } from "@/app/lib/ecosystem/planner/plannerMoc
 import {
   SMART_PLANNER_RETURN_SEARCH_KEY,
 } from "@/app/lib/ecosystem/planner/plannerRouteWorkspaceHandoff";
+import { resetSmartPlannerWorkingSession } from "@/app/lib/ecosystem/planner/plannerPayloadStorage";
 import type {
   TiyaGeneratedPlan,
   TiyaRouteOption,
@@ -165,6 +166,9 @@ function saveGeneratedRouteDraft(draft: SmartPlannerGeneratedRouteDraft) {
 export default function SmartPlannerEntry() {
   const [initialState] = useState(() => {
     const returnIntent = readReturnSearchIntent();
+    if (!returnIntent) {
+      resetSmartPlannerWorkingSession();
+    }
     const generatedDraft = returnIntent ? null : readGeneratedRouteDraft();
     const initialIntent = returnIntent ?? generatedDraft?.intent ?? emptyHeroIntent;
     const initialPlan = generatedDraft?.plan ?? defaultPlan;
@@ -198,6 +202,7 @@ export default function SmartPlannerEntry() {
   );
 
   function handleGenerate(intent: TiyaTripIntent) {
+    resetSmartPlannerWorkingSession();
     setIsGenerating(true);
 
     window.setTimeout(() => {

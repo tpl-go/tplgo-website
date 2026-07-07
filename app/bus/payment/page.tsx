@@ -18,6 +18,11 @@ import {
   addWalletLedgerItem,
   type Wallet,
 } from "@/app/lib/wallet/walletStorage";
+import {
+  confirmBusBackendCheckout,
+  startBusBackendCheckout,
+  type BusBackendCheckoutRefs,
+} from "@/app/lib/api/busCheckoutIntegration";
 
 type BusPaymentPayload = {
   serviceType?: string;
@@ -126,6 +131,12 @@ type BusPaymentPayload = {
   manageBookingReady?: boolean;
   timerLeft: number;
   timestamp?: number;
+  backendCheckoutId?: string;
+  backendBookingId?: string;
+  backendPaymentId?: string;
+  backendRequestId?: string;
+  backendServiceType?: "bus";
+  backendCheckoutStatus?: string;
 };
 
 function getActiveUser() {
@@ -514,82 +525,120 @@ export default function BusPaymentPage() {
 
     setPaymentActionState("processing");
 
-    setTimeout(() => {
+    setTimeout(async () => {
       try {
-        if (activeUser?.mobile) {
-          const latestWallet = getWallet(activeUser.mobile);
+        const backendStart = await startBusBackendCheckout(
+          paymentData as unknown as Record<string, unknown>
+        );
+        let backendRefs: BusBackendCheckoutRefs = backendStart.refs;
 
-          const nextWallet: Wallet = {
-            promoCredit: Math.max(
-              Number(latestWallet.promoCredit || 0) - savedPromoUsed,
-              0
-            ),
-            earnedCredit: Math.max(
-              Number(latestWallet.earnedCredit || 0) - savedEarnedUsed,
-              0
-            ),
-            refundableBalance: Math.max(
-              Number(latestWallet.refundableBalance || 0) - savedRefundUsed,
-              0
-            ),
+        if (backendStart.attempted) {
+          const updatedPaymentData = {
+            ...paymentData,
+            ...backendStart.refs,
           };
 
-          saveWallet(nextWallet, activeUser.mobile);
-          setWallet(nextWallet);
+          sessionStorage.setItem(
+            "tplBusPaymentData",
+            JSON.stringify(updatedPaymentData)
+          );
 
-          if (savedPromoUsed > 0) {
-            addWalletLedgerItem(
-              {
-                type: "wallet_used",
-                title: "TPL Promo Credit Used",
-                description: "Promo credit used for bus booking payment",
-                amount: savedPromoUsed,
-              },
-              activeUser.mobile
-            );
-          }
-
-          if (savedEarnedUsed > 0) {
-            addWalletLedgerItem(
-              {
-                type: "wallet_used",
-                title: "TPL Earned Credit Used",
-                description: "Earned credit used for bus booking payment",
-                amount: savedEarnedUsed,
-              },
-              activeUser.mobile
-            );
-          }
-
-          if (savedRefundUsed > 0) {
-            addWalletLedgerItem(
-              {
-                type: "wallet_used",
-                title: "Refund Wallet Used",
-                description: "Refund wallet used for bus booking payment",
-                amount: savedRefundUsed,
-              },
-              activeUser.mobile
-            );
-          }
+          setPaymentData(updatedPaymentData as BusPaymentPayload);
         }
 
         const confirmedPayload = buildConfirmationPayload();
 
         if (confirmedPayload) {
+          if (backendRefs.backendCheckoutId) {
+            const backendConfirm = await confirmBusBackendCheckout({
+              ...backendRefs,
+              bookingId: confirmedPayload.bookingId,
+              paymentId: confirmedPayload.paymentId,
+              paymentMethod: confirmedPayload.paymentMethod,
+            });
+
+            backendRefs = {
+              ...backendRefs,
+              ...backendConfirm.refs,
+            };
+          }
+
+          if (activeUser?.mobile) {
+            const latestWallet = getWallet(activeUser.mobile);
+
+            const nextWallet: Wallet = {
+              promoCredit: Math.max(
+                Number(latestWallet.promoCredit || 0) - savedPromoUsed,
+                0
+              ),
+              earnedCredit: Math.max(
+                Number(latestWallet.earnedCredit || 0) - savedEarnedUsed,
+                0
+              ),
+              refundableBalance: Math.max(
+                Number(latestWallet.refundableBalance || 0) - savedRefundUsed,
+                0
+              ),
+            };
+
+            saveWallet(nextWallet, activeUser.mobile);
+            setWallet(nextWallet);
+
+            if (savedPromoUsed > 0) {
+              addWalletLedgerItem(
+                {
+                  type: "wallet_used",
+                  title: "TPL Promo Credit Used",
+                  description: "Promo credit used for bus booking payment",
+                  amount: savedPromoUsed,
+                },
+                activeUser.mobile
+              );
+            }
+
+            if (savedEarnedUsed > 0) {
+              addWalletLedgerItem(
+                {
+                  type: "wallet_used",
+                  title: "TPL Earned Credit Used",
+                  description: "Earned credit used for bus booking payment",
+                  amount: savedEarnedUsed,
+                },
+                activeUser.mobile
+              );
+            }
+
+            if (savedRefundUsed > 0) {
+              addWalletLedgerItem(
+                {
+                  type: "wallet_used",
+                  title: "Refund Wallet Used",
+                  description: "Refund wallet used for bus booking payment",
+                  amount: savedRefundUsed,
+                },
+                activeUser.mobile
+              );
+            }
+          }
+
+          const finalConfirmedPayload = {
+            ...confirmedPayload,
+            ...backendRefs,
+          };
+
           sessionStorage.setItem(
             "busConfirmationData",
-            JSON.stringify(confirmedPayload)
+            JSON.stringify(finalConfirmedPayload)
           );
 
           sessionStorage.setItem(
             "busPaymentSuccessData",
-            JSON.stringify(confirmedPayload)
+            JSON.stringify(finalConfirmedPayload)
           );
 
           sessionStorage.setItem(
             "tplBusPaymentConfirmedData",
-            JSON.stringify(confirmedPayload)
+            JSON.stringify(finalConfirmedPayload)
           );
         }
 

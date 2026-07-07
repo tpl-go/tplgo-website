@@ -18,6 +18,11 @@ import {
   addWalletLedgerItem,
   type Wallet,
 } from "@/app/lib/wallet/walletStorage";
+import {
+  confirmFlightBackendCheckout,
+  startFlightBackendCheckout,
+  type FlightBackendCheckoutRefs,
+} from "@/app/lib/api/flightCheckoutIntegration";
 
 import FlightPaymentTopSummary from "@/app/components/payment/flight/FlightPaymentTopSummary";
 import FlightPaymentInsuranceCard from "@/app/components/payment/flight/FlightPaymentInsuranceCard";
@@ -329,6 +334,181 @@ const finalTotalAmount =
     await new Promise((resolve) => setTimeout(resolve, 1500));
 
     if (shouldSucceed) {
+      const contactDetails = travellerValidation?.contactDetails || {};
+      const leadTraveller = travellerValidation?.travellers?.[0] || {};
+
+      const confirmationMobile =
+        contactDetails?.mobile ||
+        contactDetails?.phone ||
+        activeUser?.mobile ||
+        "";
+
+      const confirmationEmail =
+        contactDetails?.email ||
+        leadTraveller?.email ||
+        activeUser?.email ||
+        "";
+
+      let backendRefs: FlightBackendCheckoutRefs = {};
+      const frontendBookingId = `TPL-FLT-${Date.now()}`;
+      let backendCheckoutPayload: Record<string, unknown> | null = null;
+
+      try {
+        const backendRawPayload = {
+          ...storedPayload,
+          bookingId: frontendBookingId,
+          id: frontendBookingId,
+          legacyFrontendId: frontendBookingId,
+          mobile: confirmationMobile,
+          contactDetails: {
+            ...contactDetails,
+            mobile: confirmationMobile,
+            email: confirmationEmail,
+          },
+          reviewData,
+          travellerValidation,
+          seatMealData,
+          cabData,
+          insuranceData: {
+            insuranceStatus: insuranceSelected ? "selected" : "skipped",
+            insurancePrice: insuranceSelected ? insuranceAmount : 0,
+          },
+          addonsData,
+          offerData,
+          walletData: priceBreakup.walletCalc,
+          walletBreakdown: priceBreakup.walletCalc,
+          selectedPaymentMethod,
+          paymentMethod: selectedPaymentMethod,
+          paymentStatus: "paid",
+          paymentState: "success",
+          priceBreakup,
+          pricing: priceBreakup,
+          pricingSnapshot: {
+            baseFare: priceBreakup.baseFare,
+            baseAfterOffer: priceBreakup.baseAfterOffer,
+            appliedOffer: priceBreakup.appliedOffer,
+            totalBeforeWallet: priceBreakup.totalBeforeWallet,
+            finalPayable: priceBreakup.totalAmount,
+          },
+          earnedCreditAmount: earnedOnThisBooking,
+          paymentData: {
+            method: selectedPaymentMethod,
+            totalPaid: priceBreakup.totalAmount,
+            mobile: confirmationMobile,
+            email: confirmationEmail,
+            leadTraveller: {
+              ...leadTraveller,
+              mobile: confirmationMobile,
+              email: confirmationEmail,
+            },
+            walletUsed:
+              Number(priceBreakup.walletCalc.promoUsed || 0) +
+              Number(priceBreakup.walletCalc.earnedUsed || 0) +
+              Number(priceBreakup.walletCalc.refundUsed || 0),
+            promoUsed: priceBreakup.walletCalc.promoUsed,
+            earnedUsed: priceBreakup.walletCalc.earnedUsed,
+            refundUsed: priceBreakup.walletCalc.refundUsed,
+          },
+          timerLeft: timeLeft,
+        };
+
+        const backendStart = await startFlightBackendCheckout(
+          backendRawPayload as Record<string, unknown>
+        );
+        backendRefs = backendStart.refs;
+        backendCheckoutPayload = backendStart.payload;
+
+        if (backendStart.attempted) {
+          const updatedReviewPayload = {
+            ...backendStart.payload,
+            ...backendStart.refs,
+          };
+          sessionStorage.setItem(
+            "tplFlightBookingReviewData",
+            JSON.stringify(updatedReviewPayload)
+          );
+          setStoredPayload(updatedReviewPayload);
+        }
+      } catch {
+        handlePaymentFailure();
+        setPaymentActionState("failure");
+        return;
+      }
+
+      let confirmationPayload = {
+        ...storedPayload,
+        ...(backendCheckoutPayload || {}),
+        ...backendRefs,
+        reviewData,
+        travellerValidation,
+        seatMealData,
+        cabData,
+        insuranceData: {
+          insuranceStatus: insuranceSelected ? "selected" : "skipped",
+          insurancePrice: insuranceSelected ? insuranceAmount : 0,
+        },
+        addonsData,
+        offerData,
+        walletData: priceBreakup.walletCalc,
+        walletBreakdown: priceBreakup.walletCalc,
+
+pricingSnapshot: {
+  baseFare: priceBreakup.baseFare,
+  baseAfterOffer: priceBreakup.baseAfterOffer,
+  appliedOffer: priceBreakup.appliedOffer,
+  totalBeforeWallet: priceBreakup.totalBeforeWallet,
+  finalPayable: priceBreakup.totalAmount,
+},
+
+earnedCreditAmount: earnedOnThisBooking,
+
+paymentData: {
+  method: selectedPaymentMethod,
+  totalPaid: priceBreakup.totalAmount,
+  paidAt: new Date().toISOString(),
+  mobile: confirmationMobile,
+  email: confirmationEmail,
+leadTraveller: {
+  ...leadTraveller,
+  mobile: confirmationMobile,
+  email: confirmationEmail,
+},
+          walletUsed:
+            Number(priceBreakup.walletCalc.promoUsed || 0) +
+            Number(priceBreakup.walletCalc.earnedUsed || 0) +
+            Number(priceBreakup.walletCalc.refundUsed || 0),
+          promoUsed: priceBreakup.walletCalc.promoUsed,
+          earnedUsed: priceBreakup.walletCalc.earnedUsed,
+          refundUsed: priceBreakup.walletCalc.refundUsed,
+        },
+        bookingMeta: {
+          bookingId: frontendBookingId,
+          bookingStatus: "confirmed",
+          paymentStatus: "paid",
+          createdAt: new Date().toISOString(),
+        },
+      };
+
+      if (backendRefs.backendCheckoutId) {
+        try {
+          const backendConfirm = await confirmFlightBackendCheckout(
+            confirmationPayload as Record<string, unknown>
+          );
+          backendRefs = {
+            ...backendRefs,
+            ...backendConfirm.refs,
+          };
+          confirmationPayload = {
+            ...confirmationPayload,
+            ...backendRefs,
+          };
+        } catch {
+          handlePaymentFailure();
+          setPaymentActionState("failure");
+          return;
+        }
+      }
+
       const activeMobile = activeUser?.mobile || "";
 
       if (activeMobile) {
@@ -418,71 +598,6 @@ const finalTotalAmount =
       handlePaymentSuccess();
       confirmBooking();
       setPaymentActionState("success");
-
-const contactDetails = travellerValidation?.contactDetails || {};
-const leadTraveller = travellerValidation?.travellers?.[0] || {};
-
-const confirmationMobile =
-  contactDetails?.mobile ||
-  contactDetails?.phone ||
-  activeUser?.mobile ||
-  "";
-
-const confirmationEmail =
-  contactDetails?.email ||
-  leadTraveller?.email ||
-  activeUser?.email ||
-  "";
-
-      const confirmationPayload = {
-        reviewData,
-        travellerValidation,
-        seatMealData,
-        cabData,
-        insuranceData: {
-          insuranceStatus: insuranceSelected ? "selected" : "skipped",
-          insurancePrice: insuranceSelected ? insuranceAmount : 0,
-        },
-        addonsData,
-        offerData,
-        walletData: priceBreakup.walletCalc,
-
-pricingSnapshot: {
-  baseFare: priceBreakup.baseFare,
-  baseAfterOffer: priceBreakup.baseAfterOffer,
-  appliedOffer: priceBreakup.appliedOffer,
-  totalBeforeWallet: priceBreakup.totalBeforeWallet,
-  finalPayable: priceBreakup.totalAmount,
-},
-
-earnedCreditAmount: earnedOnThisBooking,
-
-paymentData: {
-  method: selectedPaymentMethod,
-  totalPaid: priceBreakup.totalAmount,
-  paidAt: new Date().toISOString(),
-  mobile: confirmationMobile,
-  email: confirmationEmail,
-leadTraveller: {
-  ...leadTraveller,
-  mobile: confirmationMobile,
-  email: confirmationEmail,
-},
-          walletUsed:
-            Number(priceBreakup.walletCalc.promoUsed || 0) +
-            Number(priceBreakup.walletCalc.earnedUsed || 0) +
-            Number(priceBreakup.walletCalc.refundUsed || 0),
-          promoUsed: priceBreakup.walletCalc.promoUsed,
-          earnedUsed: priceBreakup.walletCalc.earnedUsed,
-          refundUsed: priceBreakup.walletCalc.refundUsed,
-        },
-        bookingMeta: {
-          bookingId: `TPL-FLT-${Date.now()}`,
-          bookingStatus: "confirmed",
-          paymentStatus: "paid",
-          createdAt: new Date().toISOString(),
-        },
-      };
 
       sessionStorage.setItem(
         "tplFlightConfirmationData",

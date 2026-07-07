@@ -209,6 +209,10 @@ export default function FlightConfirmationPage() {
           existingBooking.payloadStorageKey || payloadStorageKey,
           JSON.stringify(payloadWithBookingId)
         );
+        sessionStorage.setItem(
+          "tplFlightConfirmationData",
+          JSON.stringify(payloadWithBookingId)
+        );
 
         createGuestUserFromBooking({
           name:
@@ -270,6 +274,10 @@ export default function FlightConfirmationPage() {
 
         localStorage.setItem(
           payloadStorageKey,
+          JSON.stringify(payloadWithBookingId)
+        );
+        sessionStorage.setItem(
+          "tplFlightConfirmationData",
           JSON.stringify(payloadWithBookingId)
         );
 

@@ -27,6 +27,11 @@ import {
 import { getSavedProfile } from "@/app/lib/account/profileStorage";
 import { getLoggedInDisplayName } from "@/app/lib/auth/displayName";
 import { applyBenefitPricing } from "@/app/lib/pricing/applyBenefitPricing";
+import {
+  confirmInsuranceBackendCheckout,
+  startInsuranceBackendCheckout,
+  type InsuranceBackendCheckoutRefs,
+} from "@/app/lib/api/insuranceCheckoutIntegration";
 
 import InsurancePaymentTopSummary from "@/app/components/payment/insurance/InsurancePaymentTopSummary";
 import InsurancePaymentOptionSection from "@/app/components/payment/insurance/InsurancePaymentOptionSection";
@@ -649,6 +654,44 @@ export default function InsurancePaymentPage() {
     await new Promise((resolve) => setTimeout(resolve, 1500));
 
     if (shouldSucceed) {
+      const backendStart = await startInsuranceBackendCheckout(
+        enhancedStoredPayload as Record<string, unknown>
+      );
+      let backendRefs: InsuranceBackendCheckoutRefs = backendStart.refs;
+
+      if (backendStart.attempted) {
+        const updatedBookingPayload = {
+          ...enhancedStoredPayload,
+          ...backendStart.refs,
+        };
+
+        sessionStorage.setItem(
+          "tplInsuranceBookingData",
+          JSON.stringify(updatedBookingPayload)
+        );
+
+        setStoredPayload(updatedBookingPayload);
+      }
+
+      let confirmationPayload = buildConfirmationPayload();
+
+      if (backendRefs.backendCheckoutId) {
+        const backendConfirm = await confirmInsuranceBackendCheckout({
+          ...confirmationPayload,
+          ...backendRefs,
+        });
+
+        backendRefs = {
+          ...backendRefs,
+          ...backendConfirm.refs,
+        };
+
+        confirmationPayload = {
+          ...confirmationPayload,
+          ...backendRefs,
+        };
+      }
+
       const activeMobile =
         activeUser?.mobile ||
         enhancedStoredPayload?.user?.mobile ||
@@ -716,8 +759,6 @@ export default function InsurancePaymentPage() {
 
       handlePaymentSuccess();
       confirmBooking();
-
-      const confirmationPayload = buildConfirmationPayload();
 
       try {
         sessionStorage.setItem(

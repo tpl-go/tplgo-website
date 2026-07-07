@@ -21,6 +21,10 @@ import {
   addWalletLedgerItem,
   type Wallet,
 } from "@/app/lib/wallet/walletStorage";
+import {
+  startTrainBackendCheckout,
+  type TrainBackendCheckoutRefs,
+} from "@/app/lib/api/trainCheckoutIntegration";
 
 function toNumber(value: any, fallback = 0) {
   const parsed = Number(value);
@@ -325,7 +329,7 @@ export default function TrainPaymentPage() {
 
     setPaymentActionState("processing");
 
-    setTimeout(() => {
+    setTimeout(async () => {
       try {
         const now = new Date().toISOString();
 
@@ -334,6 +338,62 @@ export default function TrainPaymentPage() {
           earnedUsed: 0,
           refundUsed: 0,
         };
+
+        const pricingSnapshot = walletPriceBreakup || {
+          baseFare: 0,
+          trueBaseFare: 0,
+          baseAfterOffer: 0,
+          convenienceFee: 0,
+          gatewayFee: 0,
+          confirmUpgradeAmount: 0,
+          nonBenefitTotal: 0,
+          appliedOffer: 0,
+          offerApplied: 0,
+          appliedOfferAmount: 0,
+          tplCredit: 0,
+          tplCreditUsed: 0,
+          totalWalletUsed: 0,
+          totalBeforeWallet: 0,
+          totalAmount: 0,
+          payableAmount: 0,
+          grandTotal: 0,
+          earnedOnThisBooking: 0,
+          walletCalc,
+          walletBreakdown: walletCalc,
+        };
+
+        const backendRawPayload = {
+          ...rawPaymentData,
+          ...paymentData,
+          pricing: pricingSnapshot,
+          fareSnapshot: pricingSnapshot,
+          priceBreakup: pricingSnapshot,
+          selectedPaymentMethod,
+          paymentMethod: selectedPaymentMethod,
+          paymentStatus: "paid",
+          paymentState: "success",
+          irctcAccount: paymentData.irctcAccount,
+          irctcFlow: rawPaymentData?.irctcFlow,
+        };
+
+        const backendStart = await startTrainBackendCheckout(
+          backendRawPayload as Record<string, unknown>
+        );
+        const backendRefs: TrainBackendCheckoutRefs = backendStart.refs;
+        const backendCheckoutPayload = {
+          ...backendRawPayload,
+          ...(backendStart.payload as Record<string, unknown>),
+          ...backendStart.refs,
+        };
+
+        if (backendStart.attempted) {
+          sessionStorage.setItem(
+            "tplTrainPaymentData",
+            JSON.stringify(backendCheckoutPayload)
+          );
+
+          setRawPaymentData(backendCheckoutPayload);
+        }
 
         if (activeUser?.mobile) {
           const latestWallet = getWallet(activeUser.mobile);
@@ -426,32 +486,10 @@ export default function TrainPaymentPage() {
             }))
           : [];
 
-        const pricingSnapshot = walletPriceBreakup || {
-          baseFare: 0,
-          trueBaseFare: 0,
-          baseAfterOffer: 0,
-          convenienceFee: 0,
-          gatewayFee: 0,
-          confirmUpgradeAmount: 0,
-          nonBenefitTotal: 0,
-          appliedOffer: 0,
-          offerApplied: 0,
-          appliedOfferAmount: 0,
-          tplCredit: 0,
-          tplCreditUsed: 0,
-          totalWalletUsed: 0,
-          totalBeforeWallet: 0,
-          totalAmount: 0,
-          payableAmount: 0,
-          grandTotal: 0,
-          earnedOnThisBooking: 0,
-          walletCalc,
-          walletBreakdown: walletCalc,
-        };
-
         const confirmedPayload = {
-          ...rawPaymentData,
+          ...backendCheckoutPayload,
           ...paymentData,
+          ...backendRefs,
           timerLeft,
           selectedPaymentMethod,
           paymentState: "success",
@@ -566,10 +604,20 @@ export default function TrainPaymentPage() {
             (paymentData as any).pnrNumber || (paymentData as any).pnr || "",
 
           route:
+            (backendCheckoutPayload as any).route ||
+            (backendCheckoutPayload as any).bookingPayload?.route ||
             (paymentData as any).route ||
             paymentData.bookingPayload?.route ||
-            `${paymentData.bookingPayload?.fromStation || "Origin"} → ${
-              paymentData.bookingPayload?.toStation || "Destination"
+            `${
+              paymentData.bookingPayload?.fromCode ||
+              paymentData.bookingPayload?.fromCity ||
+              paymentData.bookingPayload?.fromStation ||
+              "Origin"
+            } → ${
+              paymentData.bookingPayload?.toCode ||
+              paymentData.bookingPayload?.toCity ||
+              paymentData.bookingPayload?.toStation ||
+              "Destination"
             }`,
 
           boardingStation:
@@ -615,6 +663,10 @@ export default function TrainPaymentPage() {
           },
 
           earnedCreditAmount: pricingSnapshot.earnedOnThisBooking || 0,
+          walletSource: backendCheckoutPayload.walletSource,
+          walletSyncStatus: backendCheckoutPayload.walletSyncStatus,
+          backendWalletSnapshot: backendCheckoutPayload.backendWalletSnapshot,
+          metadata: backendCheckoutPayload.metadata,
         };
 
         sessionStorage.setItem(

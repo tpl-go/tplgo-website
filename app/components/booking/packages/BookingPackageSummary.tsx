@@ -12,6 +12,13 @@ import {
   Ticket,
   IndianRupee,
   Clock3,
+  Train,
+  Bus,
+  ShieldCheck,
+  FileCheck2,
+  Ship,
+  ShoppingBag,
+  Sparkles,
 } from "lucide-react";
 
 type Room = {
@@ -59,6 +66,28 @@ type PackageSelectionState = {
   selectedActivities?: ActivityItem[];
 };
 
+type SmartSummaryItem = {
+  key: string;
+  title: string;
+  body: string;
+  meta: string;
+  icon?:
+    | "flight"
+    | "train"
+    | "bus"
+    | "hotel"
+    | "homestay"
+    | "transfer"
+    | "meal"
+    | "activity"
+    | "insurance"
+    | "visa"
+    | "cruise"
+    | "localLife"
+    | "creator"
+    | "localMarket";
+};
+
 type FareSnapshot = {
   basePrice: number;
   upgradedDiffTotal: number;
@@ -79,6 +108,7 @@ type Props = {
   route?: string[] | string;
   nights?: number;
   days?: number;
+  durationLabel?: string;
   variant?: "withFlight" | "withoutFlight";
   travelDate?: string;
   originCity?: string;
@@ -97,6 +127,7 @@ type Props = {
   includedTransferLabels?: string[];
   includedMealLabels?: string[];
   includedActivityLabels?: string[];
+  smartSummaryItems?: SmartSummaryItem[];
 };
 
 function formatDate(value?: string) {
@@ -303,6 +334,7 @@ export default function BookingPackageSummary({
   route,
   nights = 0,
   days = 0,
+  durationLabel: durationLabelOverride,
   variant = "withFlight",
   travelDate,
   originCity = "Delhi",
@@ -321,6 +353,7 @@ export default function BookingPackageSummary({
   includedTransferLabels = [],
   includedMealLabels = [],
   includedActivityLabels = [],
+  smartSummaryItems,
 }: Props) {
   const flights = selectionState?.selectedFlights || [];
   const hotels = selectionState?.selectedHotels || [];
@@ -353,7 +386,7 @@ export default function BookingPackageSummary({
       : finalTotal;
 
   const routeLabel = buildRouteLabel(route);
-  const durationLabel = `${nights}N / ${days}D`;
+  const durationLabel = durationLabelOverride || `${nights}N / ${days}D`;
   const travellerLabel = buildTravellerLabel(
     totalAdults,
     totalChildren,
@@ -367,6 +400,8 @@ export default function BookingPackageSummary({
   const transferInfo = getTransferLabel(transfers, includedTransferLabels);
   const mealInfo = getMealLabel(meals, includedMealLabels);
   const activityInfo = getActivityLabel(activities, includedActivityLabels);
+  const shouldUseSmartSummary = Array.isArray(smartSummaryItems);
+  const resolvedSmartSummaryItems = smartSummaryItems || [];
 
   return (
     <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
@@ -507,16 +542,47 @@ export default function BookingPackageSummary({
           </div>
 
           <div className="grid grid-cols-1 gap-3 p-4 md:grid-cols-2 xl:grid-cols-5">
-            <SummaryCard icon={<Plane className="h-4 w-4 text-blue-500" />} title="Flights" info={flightInfo} />
-            <SummaryCard icon={<Hotel className="h-4 w-4 text-blue-500" />} title="Hotels" info={hotelInfo} />
-            <SummaryCard icon={<Car className="h-4 w-4 text-blue-500" />} title="Transfers" info={transferInfo} />
-            <SummaryCard icon={<UtensilsCrossed className="h-4 w-4 text-blue-500" />} title="Meals" info={mealInfo} />
-            <SummaryCard icon={<Ticket className="h-4 w-4 text-blue-500" />} title="Activities" info={activityInfo} />
+            {shouldUseSmartSummary ? (
+              resolvedSmartSummaryItems.map((item) => (
+                <SummaryCard
+                  key={item.key}
+                  icon={getSmartSummaryIcon(item.icon)}
+                  title={item.title}
+                  info={{
+                    meta: item.meta,
+                    title: item.body,
+                  }}
+                />
+              ))
+            ) : (
+              <>
+                <SummaryCard icon={<Plane className="h-4 w-4 text-blue-500" />} title="Flights" info={flightInfo} />
+                <SummaryCard icon={<Hotel className="h-4 w-4 text-blue-500" />} title="Hotels" info={hotelInfo} />
+                <SummaryCard icon={<Car className="h-4 w-4 text-blue-500" />} title="Transfers" info={transferInfo} />
+                <SummaryCard icon={<UtensilsCrossed className="h-4 w-4 text-blue-500" />} title="Meals" info={mealInfo} />
+                <SummaryCard icon={<Ticket className="h-4 w-4 text-blue-500" />} title="Activities" info={activityInfo} />
+              </>
+            )}
           </div>
         </div>
       </div>
     </div>
   );
+}
+
+function getSmartSummaryIcon(icon?: SmartSummaryItem["icon"]) {
+  if (icon === "train") return <Train className="h-4 w-4 text-blue-500" />;
+  if (icon === "bus") return <Bus className="h-4 w-4 text-blue-500" />;
+  if (icon === "hotel" || icon === "homestay") return <Hotel className="h-4 w-4 text-blue-500" />;
+  if (icon === "transfer") return <Car className="h-4 w-4 text-blue-500" />;
+  if (icon === "meal") return <UtensilsCrossed className="h-4 w-4 text-blue-500" />;
+  if (icon === "insurance") return <ShieldCheck className="h-4 w-4 text-blue-500" />;
+  if (icon === "visa") return <FileCheck2 className="h-4 w-4 text-blue-500" />;
+  if (icon === "cruise") return <Ship className="h-4 w-4 text-blue-500" />;
+  if (icon === "localMarket") return <ShoppingBag className="h-4 w-4 text-blue-500" />;
+  if (icon === "localLife" || icon === "creator") return <Sparkles className="h-4 w-4 text-blue-500" />;
+  if (icon === "activity") return <Ticket className="h-4 w-4 text-blue-500" />;
+  return <Plane className="h-4 w-4 text-blue-500" />;
 }
 
 function SummaryCard({

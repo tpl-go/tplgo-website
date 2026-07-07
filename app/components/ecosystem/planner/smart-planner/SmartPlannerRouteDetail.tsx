@@ -61,6 +61,7 @@ import {
   buildSmartPlannerReviewPayload,
   persistSmartPlannerReviewPayload,
 } from "@/app/lib/ecosystem/planner/plannerReviewPayload";
+import { resetSmartPlannerWorkingSession } from "@/app/lib/ecosystem/planner/plannerPayloadStorage";
 import type {
   TiyaCreatorPick,
   TiyaDayPlan,
@@ -812,6 +813,7 @@ export default function TiyaRouteIntelligence({
   }
 
   function continueWithRoute(routeOption: TiyaRouteOption) {
+    resetSmartPlannerWorkingSession();
     const routePricing = buildRoutePricing(routeOption, tripIntent);
     const travelIntelligence = getTravelIntelligenceDashboard(routeOption);
     const mobilityIntelligence = buildMobilityIntelligence(routeOption, tripIntent);

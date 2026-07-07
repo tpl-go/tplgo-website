@@ -314,9 +314,11 @@ function buildManageStateFromResolvedFlightSource(
       source.payload?.pnr ||
       "PNR Pending",
     bookingStatus: "confirmed",
+    bookingType: source.reviewData?.bookingType || "oneWay",
     origin: source.firstSegment?.fromCode || source.firstSegment?.from || "",
     destination:
-      source.reviewData?.bookingType === "roundTrip"
+      source.reviewData?.bookingType === "roundTrip" ||
+      source.reviewData?.bookingType === "multiCity"
         ? source.lastSegment?.toCode || source.lastSegment?.to || ""
         : source.firstSegment?.toCode || source.firstSegment?.to || "",
     travelDate: source.journeyDateLabel || booking.travelDate,
@@ -460,6 +462,13 @@ function FlightManagePageContent() {
     mealSelections,
     baggageSelections,
   ]);
+
+  const bookingTypeLabel =
+    manageSummary.bookingType === "roundTrip"
+      ? "Round Trip"
+      : manageSummary.bookingType === "multiCity"
+      ? "Multi City"
+      : "One Way";
 
   const seatQuote = useMemo(() => {
     return buildManageQuote({
@@ -641,7 +650,7 @@ function FlightManagePageContent() {
       bookingId={manageSummary.bookingId}
       pnr={manageSummary.pnr}
       tripLabel={`${manageSummary.origin} → ${manageSummary.destination}`}
-      journeyLabel={`${travellers.length} Traveller • One Way`}
+      journeyLabel={`${travellers.length} Traveller • ${bookingTypeLabel}`}
       sidebarItems={[
         { key: "summary", label: "Booking Summary" },
         { key: "traveller-details", label: "Traveller Details" },

@@ -251,6 +251,15 @@ function creditEarnedForTrainBooking(params: {
   localStorage.setItem(guardKey, "true");
 }
 
+function persistTrainConfirmationSession(payload: ConfirmationPayload) {
+  if (typeof window === "undefined") return;
+
+  const value = JSON.stringify(payload);
+  sessionStorage.setItem("trainConfirmationData", value);
+  sessionStorage.setItem("trainPaymentSuccessData", value);
+  sessionStorage.setItem("tplTrainPaymentConfirmedData", value);
+}
+
 export default function TrainConfirmationPage() {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
@@ -437,6 +446,7 @@ export default function TrainConfirmationPage() {
           existingBooking.payloadStorageKey || payloadStorageKey,
           JSON.stringify(payloadWithBookingId)
         );
+        persistTrainConfirmationSession(payloadWithBookingId);
 
         createGuestUserFromBooking({
           name: getTravellerName(leadTraveller),
@@ -491,6 +501,7 @@ export default function TrainConfirmationPage() {
           payloadStorageKey,
           JSON.stringify(payloadWithBookingId)
         );
+        persistTrainConfirmationSession(payloadWithBookingId);
 
         createGuestUserFromBooking({
           name: getTravellerName(leadTraveller),

@@ -15,6 +15,10 @@ export default function StickyHeaderWrapper() {
   const [showTrigger, setShowTrigger] = useState(false);
   const [openPanel, setOpenPanel] = useState(false);
 
+  if (pathname.startsWith("/admin")) {
+    return null;
+  }
+
   const disableUniversalSticky =
   pathname.startsWith("/holidays") ||
   pathname.startsWith("/popular") ||

@@ -13,12 +13,14 @@ type PaymentOptionSectionProps = {
   defaultOption?: PaymentOptionKey | null;
   payableAmount?: number;
   onPaymentMethodChange?: (method: string) => void;
+  upiTestId?: string;
 };
 
 export default function PaymentOptionSection({
   defaultOption = null,
   payableAmount = 0,
   onPaymentMethodChange,
+  upiTestId = "package-payment-method-upi",
 }: PaymentOptionSectionProps) {
   const [activeOption, setActiveOption] =
     useState<PaymentOptionKey | null>(defaultOption);
@@ -31,6 +33,7 @@ export default function PaymentOptionSection({
       </div>
 
       <PaymentRow
+        testId={upiTestId}
         icon="IN"
         title="UPI Options"
         subtitle="Pay directly from your bank account"
@@ -189,6 +192,7 @@ function PaymentRow({
   badge,
   isActive,
   disabled = false,
+  testId,
   onClick,
 }: {
   icon: string;
@@ -197,10 +201,13 @@ function PaymentRow({
   badge?: string;
   isActive?: boolean;
   disabled?: boolean;
+  testId?: string;
   onClick?: () => void;
 }) {
   return (
     <div
+      data-testid={testId}
+      data-selected={isActive && !disabled ? "true" : "false"}
       onClick={disabled ? undefined : onClick}
       aria-disabled={disabled}
       className={`flex items-center justify-between gap-3 border-b border-[#e5e7eb] px-4 py-4 transition sm:gap-4 sm:px-5 sm:py-[18px] ${

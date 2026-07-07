@@ -1,21 +1,24 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import ScrollTop from "./components/global/ScrollTop";
 import StickyHeaderWrapper from "./components/layout/StickyHeaderWrapper";
 import AuthProvider from "./providers/AuthProvider";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
+function getMetadataBase(): URL {
+  const fallbackUrl =
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    process.env.NEXT_PUBLIC_TPL_APP_BASE_URL ||
+    "http://localhost:3000";
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+  try {
+    return new URL(fallbackUrl);
+  } catch {
+    return new URL("http://localhost:3000");
+  }
+}
 
 export const metadata: Metadata = {
+  metadataBase: getMetadataBase(),
   title: "TPL GO",
   description: "Treeyambak OTA Platform",
 };
@@ -29,8 +32,6 @@ export default function RootLayout({
     <html lang="en" className="bg-white scroll-smooth">
       <body
         className={`
-          ${geistSans.variable}
-          ${geistMono.variable}
           antialiased
           bg-white
           text-black

@@ -1,11 +1,12 @@
 import CruiseDetailPage from "@/app/components/cruise/detail/CruiseDetailPage";
 
 type Props = {
-  params: {
+  params: Promise<{
     cruiseId: string;
-  };
+  }>;
 };
 
-export default function Page({ params }: Props) {
-  return <CruiseDetailPage cruiseId={params.cruiseId} />;
+export default async function Page({ params }: Props) {
+  const { cruiseId } = await params;
+  return <CruiseDetailPage cruiseId={cruiseId} />;
 }

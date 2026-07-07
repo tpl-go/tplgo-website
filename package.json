@@ -6,7 +6,15 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "npm run lint:frontend",
+    "lint:frontend": "eslint app scripts tailwind.config.mjs next.config.ts",
+    "lint:backend": "npm --prefix tpl-api run typecheck",
+    "smoke:first-batch-browser": "node scripts/smoke-first-batch-browser.mjs",
+    "phase5a:package-browser": "node scripts/phase5a-package-browser-certification.mjs",
+    "phase6a:smart-planner-browser": "node scripts/phase6a-smart-planner-browser-certification.mjs",
+    "phase7a:cab-browser": "node scripts/phase7a-cab-browser-certification.mjs",
+    "phase7b:train-browser": "node scripts/phase7b-train-browser-certification.mjs",
+    "phase7c:cruise-browser": "node scripts/phase7c-cruise-browser-certification.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.101.0",
@@ -33,6 +41,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "playwright": "^1.61.1",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

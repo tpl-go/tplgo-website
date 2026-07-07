@@ -89,12 +89,20 @@ function parseLocalDate(value: string) {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-function travellerFullName(traveller?: GuestItem) {
+function travellerFullName(traveller?: GuestItem | null) {
   const fullName = [traveller?.firstName?.trim(), traveller?.lastName?.trim()]
     .filter(Boolean)
     .join(" ");
 
   return fullName || traveller?.label || "Primary Guest";
+}
+
+function textFallback(...values: unknown[]) {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+
+  return "";
 }
 
 function InfoRow({
@@ -154,7 +162,21 @@ export default function HomestayPaymentTopSummary({
   }, [searchMeta]);
 
   const roomSummary = selectedVariant
-    ? `${selectedVariant.name} • ${selectedVariant.mealPlan} • ${selectedVariant.cancellation}`
+    ? `${textFallback(
+        selectedVariant.name,
+        (selectedVariant as unknown as { title?: string }).title,
+        (selectedVariant as unknown as { roomName?: string }).roomName,
+        "Selected stay"
+      )} • ${textFallback(
+        selectedVariant.mealPlan,
+        (selectedVariant as unknown as { boardBasis?: string }).boardBasis,
+        "Room only"
+      )} • ${textFallback(
+        selectedVariant.cancellation,
+        (selectedVariant as unknown as { cancellationPolicy?: string })
+          .cancellationPolicy,
+        "Standard cancellation"
+      )}`
     : "Base stay option selected";
 
   const contactSummary = `${

@@ -21,6 +21,11 @@ import {
   addWalletLedgerItem,
   type Wallet,
 } from "@/app/lib/wallet/walletStorage";
+import {
+  confirmHotelBackendCheckout,
+  startHotelBackendCheckout,
+  type HotelBackendCheckoutRefs,
+} from "@/app/lib/api/hotelCheckoutIntegration";
 
 import { applyBenefitPricing } from "@/app/lib/pricing/applyBenefitPricing";
 
@@ -440,8 +445,8 @@ const priceBreakup = {
 
       roomType:
         selectedVariant?.name ||
-        selectedVariant?.roomType ||
-        selectedVariant?.title ||
+        (selectedVariant as unknown as { roomType?: string })?.roomType ||
+        (selectedVariant as unknown as { title?: string })?.title ||
         "Selected Room",
 
       checkInDate: searchMeta.checkIn,
@@ -561,6 +566,48 @@ const priceBreakup = {
     await new Promise((resolve) => setTimeout(resolve, 1500));
 
     if (shouldSucceed) {
+      const backendRawPayload = {
+        ...storedPayload,
+        selectedPaymentMethod,
+        paymentMethod: selectedPaymentMethod,
+        paymentStatus: "paid",
+        paymentState: "success",
+        priceBreakup,
+        pricing: priceBreakup,
+        fareBreakup: {
+          ...(storedPayload.fareBreakup || {}),
+          ...priceBreakup,
+        },
+        walletBreakdown: {
+          ...(storedPayload.walletBreakdown || {}),
+          promoUsed: savedPromoUsed,
+          earnedUsed: savedEarnedUsed,
+          refundUsed: savedRefundUsed,
+          totalWalletUsed: walletUsed,
+          earnedOnThisBooking,
+        },
+        finalTotal: finalPayable,
+      };
+
+      const backendStart = await startHotelBackendCheckout(
+        backendRawPayload as Record<string, unknown>
+      );
+      let backendRefs: HotelBackendCheckoutRefs = backendStart.refs;
+
+      if (backendStart.attempted) {
+        const updatedBookingPayload = {
+          ...backendRawPayload,
+          ...backendStart.refs,
+        };
+
+        sessionStorage.setItem(
+          "tplHotelBookingData",
+          JSON.stringify(updatedBookingPayload)
+        );
+
+        setStoredPayload(updatedBookingPayload as StoredHotelPaymentPayload);
+      }
+
       const activeMobile = activeUser?.mobile || "";
 
       if (activeMobile) {
@@ -626,7 +673,24 @@ const priceBreakup = {
       handlePaymentSuccess();
       confirmBooking();
 
-      const confirmationPayload = buildConfirmationPayload();
+      let confirmationPayload = buildConfirmationPayload();
+
+      if (backendRefs.backendCheckoutId) {
+        const backendConfirm = await confirmHotelBackendCheckout({
+          ...confirmationPayload,
+          ...backendRefs,
+        });
+
+        backendRefs = {
+          ...backendRefs,
+          ...backendConfirm.refs,
+        };
+
+        confirmationPayload = {
+          ...confirmationPayload,
+          ...backendRefs,
+        };
+      }
 
       try {
         sessionStorage.setItem(

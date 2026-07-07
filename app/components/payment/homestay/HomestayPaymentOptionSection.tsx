@@ -37,6 +37,7 @@ export default function HomestayPaymentOptionSection({
       </div>
 
       <PaymentRow
+        testId="homestay-payment-method-upi"
         icon="🇮🇳"
         title="UPI Options"
         subtitle="Pay directly from your bank account"
@@ -77,6 +78,7 @@ export default function HomestayPaymentOptionSection({
       )}
 
       <PaymentRow
+        testId="homestay-payment-method-qr"
         icon="▦"
         title="QR Payment"
         subtitle="Scan and pay using any UPI app"
@@ -124,6 +126,7 @@ export default function HomestayPaymentOptionSection({
       )}
 
       <PaymentRow
+        testId="homestay-payment-method-cards"
         icon="💳"
         title="Credit & Debit Cards"
         subtitle="Visa, Mastercard, Amex, Rupay and more"
@@ -185,6 +188,7 @@ export default function HomestayPaymentOptionSection({
       )}
 
       <PaymentRow
+        testId="homestay-payment-method-emi"
         icon="🧾"
         title="EMI"
         subtitle="Coming soon"
@@ -193,6 +197,7 @@ export default function HomestayPaymentOptionSection({
       />
 
       <PaymentRow
+        testId="homestay-payment-method-netbanking"
         icon="🏦"
         title="Net Banking"
         subtitle="40+ banks available"
@@ -225,6 +230,7 @@ export default function HomestayPaymentOptionSection({
 }
 
 function PaymentRow({
+  testId,
   icon,
   title,
   subtitle,
@@ -233,6 +239,7 @@ function PaymentRow({
   disabled = false,
   onClick,
 }: {
+  testId?: string;
   icon: string;
   title: string;
   subtitle: string;
@@ -243,7 +250,18 @@ function PaymentRow({
 }) {
   return (
     <div
+      data-testid={testId}
+      data-selected={isActive ? "true" : "false"}
+      role={disabled ? undefined : "button"}
+      tabIndex={disabled ? undefined : 0}
       onClick={disabled ? undefined : onClick}
+      onKeyDown={(event) => {
+        if (disabled) return;
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onClick?.();
+        }
+      }}
       aria-disabled={disabled}
       className={`flex items-center justify-between gap-[14px] border-b border-[#e5e7eb] px-4 py-4 transition md:px-5 md:py-[18px] ${
         disabled

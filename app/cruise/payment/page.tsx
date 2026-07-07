@@ -26,6 +26,11 @@ import {
   addWalletLedgerItem,
   type Wallet,
 } from "@/app/lib/wallet/walletStorage";
+import {
+  confirmCruiseBackendCheckout,
+  startCruiseBackendCheckout,
+  type CruiseBackendCheckoutRefs,
+} from "@/app/lib/api/cruiseCheckoutIntegration";
 
 function getActiveUser() {
   if (typeof window === "undefined") return null;
@@ -242,6 +247,137 @@ const priceBreakup = {
     await new Promise((resolve) => setTimeout(resolve, 1500));
 
     if (shouldSucceed) {
+      let backendRefs: CruiseBackendCheckoutRefs = {};
+
+      try {
+        const backendRawPayload = {
+          ...storedPayload,
+          earnedCreditAmount: earnedOnThisBooking,
+          selectedPaymentMethod,
+          paymentMethod: selectedPaymentMethod,
+          paymentStatus: "paid",
+          paymentState: "success",
+          contactDetails: storedPayload?.travellers?.contact,
+          mobile: storedPayload?.travellers?.contact?.mobile,
+          priceBreakup,
+          pricing: priceBreakup,
+          fareBreakup: priceBreakup,
+          fare: {
+            ...bookingFare,
+            insuranceTotal,
+            grandTotal: finalTotalAmount,
+            totalAmount: finalTotalAmount,
+            walletBreakdown: {
+              ...walletBreakdown,
+              totalWalletUsed: walletUsedTotal,
+            },
+          },
+          paymentData: {
+            selectedPaymentMethod,
+            insuranceSelected,
+            insuranceAmount,
+            finalPayableAmount: priceBreakup.totalAmount,
+            totalBeforeWallet,
+            walletUsed: walletUsedTotal,
+            promoUsed: Number(walletBreakdown?.promoUsed || 0),
+            earnedUsed: Number(walletBreakdown?.earnedUsed || 0),
+            refundUsed: Number(walletBreakdown?.refundUsed || 0),
+          },
+          session: {
+            ...(storedPayload?.session || {}),
+            timerLeft: timeLeft,
+          },
+        };
+
+        const backendStart = await startCruiseBackendCheckout(
+          backendRawPayload as Record<string, unknown>
+        );
+        backendRefs = backendStart.refs;
+        const backendCheckoutPayload = {
+          ...backendRawPayload,
+          ...(backendStart.payload as Record<string, unknown>),
+          ...backendStart.refs,
+        };
+
+        if (backendStart.attempted) {
+          sessionStorage.setItem(
+            "tplCruiseBookingSession",
+            JSON.stringify(backendCheckoutPayload)
+          );
+          setStoredPayload(backendCheckoutPayload);
+        }
+      } catch {
+        handlePaymentFailure();
+        setPaymentActionState("failure");
+        return;
+      }
+
+      let latestSessionPayload: Record<string, unknown> = {};
+
+      try {
+        latestSessionPayload = JSON.parse(
+          sessionStorage.getItem("tplCruiseBookingSession") || "{}"
+        );
+      } catch {
+        latestSessionPayload = {};
+      }
+
+      let confirmationPayload = {
+        ...storedPayload,
+        ...latestSessionPayload,
+        ...backendRefs,
+
+        earnedCreditAmount: earnedOnThisBooking,
+
+        fare: {
+          ...bookingFare,
+
+          insuranceTotal,
+
+          grandTotal: finalTotalAmount,
+
+          totalAmount: finalTotalAmount,
+
+          walletBreakdown: {
+            ...walletBreakdown,
+            totalWalletUsed: walletUsedTotal,
+          },
+        },
+
+        paymentData: {
+          selectedPaymentMethod,
+          insuranceSelected,
+          insuranceAmount,
+          finalPayableAmount: priceBreakup.totalAmount,
+          totalBeforeWallet,
+          walletUsed: walletUsedTotal,
+          promoUsed: Number(walletBreakdown?.promoUsed || 0),
+          earnedUsed: Number(walletBreakdown?.earnedUsed || 0),
+          refundUsed: Number(walletBreakdown?.refundUsed || 0),
+          paidAt: new Date().toISOString(),
+        },
+      };
+
+      if (backendRefs.backendCheckoutId) {
+        try {
+          const backendConfirm = await confirmCruiseBackendCheckout(
+            confirmationPayload as Record<string, unknown>
+          );
+          backendRefs = {
+            ...backendRefs,
+            ...backendConfirm.refs,
+          };
+          confirmationPayload = {
+            ...confirmationPayload,
+            ...backendRefs,
+          };
+        } catch {
+          handlePaymentFailure();
+          setPaymentActionState("failure");
+          return;
+        }
+      }
+
       if (activeUser?.mobile && walletUsedTotal > 0) {
   const latestWallet = getWallet(activeUser.mobile);
 
@@ -308,40 +444,6 @@ const priceBreakup = {
       handlePaymentSuccess();
       confirmBooking();
       setPaymentActionState("success");
-
-      const confirmationPayload = {
-  ...storedPayload,
-
-  earnedCreditAmount: earnedOnThisBooking, // ✅ THIS LINE ADD
-
-  fare: {
-  ...bookingFare,
-
-  insuranceTotal,
-
-  grandTotal: finalTotalAmount,
-
-  totalAmount: finalTotalAmount,
-
-  walletBreakdown: {
-    ...walletBreakdown,
-    totalWalletUsed: walletUsedTotal,
-  },
-},
-
-  paymentData: {
-  selectedPaymentMethod,
-  insuranceSelected,
-  insuranceAmount,
-  finalPayableAmount: priceBreakup.totalAmount,
-  totalBeforeWallet,
-  walletUsed: walletUsedTotal,
-  promoUsed: Number(walletBreakdown?.promoUsed || 0),
-  earnedUsed: Number(walletBreakdown?.earnedUsed || 0),
-  refundUsed: Number(walletBreakdown?.refundUsed || 0),
-  paidAt: new Date().toISOString(),
-},
-};
 
       sessionStorage.setItem(
         "tplCruiseConfirmationData",

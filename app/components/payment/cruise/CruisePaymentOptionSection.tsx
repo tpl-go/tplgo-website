@@ -57,6 +57,7 @@ export default function CruisePaymentOptionSection({
         title="UPI Options"
         subtitle="Pay Directly From Your Bank Account"
         isActive={activeOption === "upi"}
+        testId="cruise-payment-method-upi"
         onClick={() => {
           setActiveOption((prev) => (prev === "upi" ? null : "upi"));
           onPaymentMethodChange?.("upi");
@@ -225,6 +226,7 @@ function PaymentRow({
   badge,
   isActive,
   disabled = false,
+  testId,
   onClick,
 }: {
   icon: string;
@@ -233,10 +235,13 @@ function PaymentRow({
   badge?: string;
   isActive?: boolean;
   disabled?: boolean;
+  testId?: string;
   onClick?: () => void;
 }) {
   return (
     <div
+      data-testid={testId}
+      data-selected={isActive ? "true" : "false"}
       onClick={disabled ? undefined : onClick}
       aria-disabled={disabled}
       style={{

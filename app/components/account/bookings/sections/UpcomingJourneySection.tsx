@@ -201,6 +201,7 @@ export default function UpcomingJourneySection() {
             const config = getBookingServiceConfig(booking.type);
             const isVisa = booking.type === "visa";
             const showDigiYatra = isDomesticFlightBooking(booking);
+            const isSmartPlanner = booking.type === "smart-planner";
 
             return (
               <div
@@ -212,7 +213,7 @@ export default function UpcomingJourneySection() {
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-semibold uppercase text-blue-700 md:px-3 md:text-[11px]">
-                          {booking.type}
+                          {config.label}
                         </span>
 
                         <span className={getBookingStatusClass(booking)}>
@@ -253,8 +254,24 @@ export default function UpcomingJourneySection() {
                           <span className="font-semibold text-slate-800">
                             Travellers:
                           </span>{" "}
-                          {booking.travellers}
+                          {booking.travellersLabel || booking.travellers}
                         </p>
+                        {isSmartPlanner && booking.routeLabel ? (
+                          <p className="min-w-0 break-words">
+                            <span className="font-semibold text-slate-800">
+                              Route:
+                            </span>{" "}
+                            {booking.routeLabel}
+                          </p>
+                        ) : null}
+                        {isSmartPlanner && booking.durationLabel ? (
+                          <p className="min-w-0 break-words">
+                            <span className="font-semibold text-slate-800">
+                              Duration:
+                            </span>{" "}
+                            {booking.durationLabel}
+                          </p>
+                        ) : null}
                       </div>
                     </div>
 

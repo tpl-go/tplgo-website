@@ -13,8 +13,17 @@ import type {
   TiyaTripIntent,
   TiyaTripNotes,
 } from "@/app/lib/ecosystem/planner/plannerTypes";
+import {
+  buildPlannerDetailId,
+  cleanupPlannerTempStorage,
+  compactPlannerPayload,
+  savePlannerDetailPayload,
+} from "@/app/lib/ecosystem/planner/plannerPayloadStorage";
+import { logSmartPlannerStorageWrite } from "@/app/lib/ecosystem/planner/booking/smartPlannerStorageWriteAudit";
 
 export const TIYA_CHECKOUT_PAYLOAD_KEY = "tpl_tiya_checkout_v1";
+export const TIYA_CHECKOUT_DRAFT_KEY = "tpl_tiya_checkout_draft";
+export const TIYA_CHECKOUT_DRAFT_V1_KEY = "tpl_tiya_checkout_draft_v1";
 export const TIYA_REVIEW_DRAFT_KEY = "tpl_tiya_review_draft_v1";
 export const TIYA_WORKSPACE_REVIEW_PAYLOAD_KEY =
   "tpl_tiya_workspace_review_payload_v1";
@@ -78,6 +87,11 @@ export type TiyaSmartPlannerReviewPayload = {
   selectedCreatorSpots: unknown[];
   savedItems: MyTripSavedItem[];
   selectedBasketItems: WorkspaceBookingBasketItem[];
+  selectedBasketValue?: number;
+  dayStatuses?: Record<string, string>;
+  finalizedDayIds?: string[];
+  finalizedDayNumbers?: number[];
+  finalizedDays?: number;
   notes?: TiyaTripNotes | string;
   budgetEstimate: {
     activity?: number;
@@ -148,6 +162,30 @@ function selectedServiceModules(plan?: TiyaGeneratedPlan) {
     }));
 }
 
+function bookingBasketValue(items: WorkspaceBookingBasketItem[]) {
+  return safeArray(items).reduce((sum, item) => {
+    const record = item as WorkspaceBookingBasketItem & {
+      amount?: number;
+      cost?: number;
+      total?: number;
+      totalPrice?: number;
+      value?: number;
+    };
+    const value = Number(
+      record.total ||
+        record.totalPrice ||
+        record.estimatedTotal ||
+        record.estimatedPrice ||
+        record.price ||
+        record.value ||
+        record.amount ||
+        record.cost ||
+        0
+    );
+    return sum + (Number.isFinite(value) ? Math.max(value, 0) : 0);
+  }, 0);
+}
+
 function highlightedLocalLife(plan?: TiyaGeneratedPlan) {
   return safeArray(plan?.localMarketPicks).filter(
     (item: TiyaLocalMarketPick) => item.isHighlighted
@@ -190,12 +228,8 @@ export function buildSmartPlannerReviewPayload({
     safeArray(bookingBasket).some((item) =>
       `${item.category} ${item.serviceType} ${item.serviceName}`.toLowerCase().includes("cab")
     );
-  const estimatedTotal =
-    safeArray(bookingBasket).reduce(
-      (sum, item) =>
-        sum + (item.estimatedTotal || item.estimatedPrice || item.price || 0),
-      0
-    ) || sourcePlan.totalBudget;
+  const selectedBasketValue = bookingBasketValue(bookingBasket);
+  const estimatedTotal = selectedBasketValue || sourcePlan.totalBudget;
   const now = new Date().toISOString();
   const healthScore = plannerAudit?.healthScore ?? 76;
   const readinessScore =
@@ -265,6 +299,11 @@ export function buildSmartPlannerReviewPayload({
     selectedCreatorSpots: highlightedCreators(sourcePlan),
     savedItems: safeArray(savedItems),
     selectedBasketItems: safeArray(bookingBasket),
+    selectedBasketValue,
+    dayStatuses: workspace?.dayStatuses || {},
+    finalizedDayIds: safeArray(workspace?.finalizedDayIds),
+    finalizedDayNumbers: safeArray(workspace?.finalizedDayNumbers),
+    finalizedDays: Number(workspace?.finalizedDays || 0),
     notes,
     budgetEstimate: {
       activity: budgetLineAmount(sourcePlan, "activit"),
@@ -307,15 +346,122 @@ export function persistSmartPlannerReviewPayload(
 ) {
   if (typeof window === "undefined") return;
 
-  window.sessionStorage.setItem(TIYA_CHECKOUT_PAYLOAD_KEY, JSON.stringify(payload));
-  window.sessionStorage.setItem(
-    TIYA_WORKSPACE_REVIEW_PAYLOAD_KEY,
-    JSON.stringify(payload)
+  const detailSave = savePlannerDetailPayload(
+    buildPlannerDetailId("review", payload),
+    payload
   );
-  window.sessionStorage.setItem(
-    TIYA_REVIEW_DRAFT_KEY,
-    JSON.stringify({ checkoutPayload: payload, updatedAt: payload.updatedAt })
-  );
+  const compactPayload = compactPlannerPayload(payload, detailSave.key || undefined);
+  const reviewDraft = { checkoutPayload: payload, reviewPayload: payload, updatedAt: payload.updatedAt };
+  const compactReviewDraft = {
+    checkoutPayload: compactPayload,
+    detailStorageKey: detailSave.key || undefined,
+    reviewPayload: compactPayload,
+    updatedAt: payload.updatedAt,
+  };
+  const checkoutDraft = {
+    checkoutPayload: payload,
+    reviewPayload: payload,
+    selectedBasketItems: safeArray(payload.selectedBasketItems),
+    source: "smart-planner-review",
+    updatedAt: payload.updatedAt,
+  };
+  const compactCheckoutDraft = {
+    checkoutPayload: compactPayload,
+    detailStorageKey: detailSave.key || undefined,
+    selectedBasketItems: safeArray(payload.selectedBasketItems),
+    selectedBasketValue: payload.selectedBasketValue,
+    source: "smart-planner-review",
+    updatedAt: payload.updatedAt,
+  };
+  const writes: Array<[Storage, string, unknown, boolean?]> = [
+    [window.sessionStorage, TIYA_CHECKOUT_PAYLOAD_KEY, payload],
+    [window.localStorage, TIYA_CHECKOUT_PAYLOAD_KEY, compactPayload, true],
+    [window.sessionStorage, TIYA_WORKSPACE_REVIEW_PAYLOAD_KEY, payload],
+    [window.localStorage, TIYA_WORKSPACE_REVIEW_PAYLOAD_KEY, compactPayload, true],
+    [window.sessionStorage, TIYA_REVIEW_DRAFT_KEY, reviewDraft],
+    [window.localStorage, TIYA_REVIEW_DRAFT_KEY, compactReviewDraft, true],
+    [window.sessionStorage, TIYA_CHECKOUT_DRAFT_KEY, checkoutDraft],
+    [window.localStorage, TIYA_CHECKOUT_DRAFT_KEY, compactCheckoutDraft, true],
+    [window.sessionStorage, TIYA_CHECKOUT_DRAFT_V1_KEY, checkoutDraft],
+    [window.localStorage, TIYA_CHECKOUT_DRAFT_V1_KEY, compactCheckoutDraft, true],
+  ];
+
+  writes.forEach(([storage, key, value, canCleanup]) => {
+    const serialized = JSON.stringify(value);
+    const storageType = storage === window.localStorage ? "localStorage" : "sessionStorage";
+    try {
+      logSmartPlannerStorageWrite({
+        file: "app/lib/ecosystem/planner/plannerReviewPayload.ts",
+        functionName: "persistSmartPlannerReviewPayload",
+        key,
+        payload: value,
+        serialized,
+        storageType,
+        successOrFailed: "attempt",
+      });
+      storage.setItem(key, serialized);
+      logSmartPlannerStorageWrite({
+        file: "app/lib/ecosystem/planner/plannerReviewPayload.ts",
+        functionName: "persistSmartPlannerReviewPayload",
+        key,
+        payload: value,
+        serialized,
+        storageType,
+        successOrFailed: "success",
+      });
+    } catch (error) {
+      logSmartPlannerStorageWrite({
+        error,
+        file: "app/lib/ecosystem/planner/plannerReviewPayload.ts",
+        functionName: "persistSmartPlannerReviewPayload",
+        key,
+        payload: value,
+        serialized,
+        storageType,
+        successOrFailed: "failed",
+      });
+      if (canCleanup) {
+        cleanupPlannerTempStorage();
+        try {
+          logSmartPlannerStorageWrite({
+            file: "app/lib/ecosystem/planner/plannerReviewPayload.ts",
+            functionName: "persistSmartPlannerReviewPayload:retry",
+            key,
+            payload: value,
+            serialized,
+            storageType,
+            successOrFailed: "attempt",
+          });
+          storage.setItem(key, serialized);
+          logSmartPlannerStorageWrite({
+            file: "app/lib/ecosystem/planner/plannerReviewPayload.ts",
+            functionName: "persistSmartPlannerReviewPayload:retry",
+            key,
+            payload: value,
+            serialized,
+            storageType,
+            successOrFailed: "success",
+          });
+          return;
+        } catch (retryError) {
+          logSmartPlannerStorageWrite({
+            error: retryError,
+            file: "app/lib/ecosystem/planner/plannerReviewPayload.ts",
+            functionName: "persistSmartPlannerReviewPayload:retry",
+            key,
+            payload: value,
+            serialized,
+            storageType,
+            successOrFailed: "failed",
+          });
+          // Storage can fail in private mode or quota-limited browsers.
+        }
+      }
+      if (process.env.NODE_ENV === "development") {
+        console.warn("[Smart Planner] review payload storage skipped", key, error);
+      }
+    }
+  });
   window.dispatchEvent(new Event("tpl_tiya_review_payload_updated"));
   window.dispatchEvent(new Event("tpl_tiya_workspace_payload_updated"));
 }

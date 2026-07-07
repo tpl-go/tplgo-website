@@ -21,6 +21,11 @@ import {
   addWalletLedgerItem,
   type Wallet,
 } from "@/app/lib/wallet/walletStorage";
+import {
+  confirmHomestayBackendCheckout,
+  startHomestayBackendCheckout,
+  type HomestayBackendCheckoutRefs,
+} from "@/app/lib/api/homestayCheckoutIntegration";
 
 import { applyBenefitPricing } from "@/app/lib/pricing/applyBenefitPricing";
 
@@ -433,8 +438,8 @@ export default function HomestayPaymentPage() {
 
       roomType:
         selectedVariant?.name ||
-        selectedVariant?.roomType ||
-        selectedVariant?.title ||
+        (selectedVariant as unknown as { roomType?: string })?.roomType ||
+        (selectedVariant as unknown as { title?: string })?.title ||
         "Selected Stay",
 
       checkInDate: searchMeta.checkIn,
@@ -555,6 +560,50 @@ export default function HomestayPaymentPage() {
     await new Promise((resolve) => setTimeout(resolve, 1500));
 
     if (shouldSucceed) {
+      const backendRawPayload = {
+        ...storedPayload,
+        selectedPaymentMethod,
+        paymentMethod: selectedPaymentMethod,
+        paymentStatus: "paid",
+        paymentState: "success",
+        priceBreakup,
+        pricing: priceBreakup,
+        fareBreakup: {
+          ...(storedPayload.fareBreakup || {}),
+          ...priceBreakup,
+        },
+        walletBreakdown: {
+          ...(storedPayload.walletBreakdown || {}),
+          promoUsed: savedPromoUsed,
+          earnedUsed: savedEarnedUsed,
+          refundUsed: savedRefundUsed,
+          totalWalletUsed: walletUsed,
+          earnedOnThisBooking,
+        },
+        finalTotal: finalPayable,
+      };
+
+      const backendStart = await startHomestayBackendCheckout(
+        backendRawPayload as Record<string, unknown>
+      );
+      let backendRefs: HomestayBackendCheckoutRefs = backendStart.refs;
+
+      if (backendStart.attempted) {
+        const updatedBookingPayload = {
+          ...backendRawPayload,
+          ...backendStart.refs,
+        };
+
+        sessionStorage.setItem(
+          "tplHomestayBookingData",
+          JSON.stringify(updatedBookingPayload)
+        );
+
+        setStoredPayload(
+          updatedBookingPayload as StoredHomestayPaymentPayload
+        );
+      }
+
       const activeMobile = activeUser?.mobile || "";
 
       if (activeMobile) {
@@ -620,7 +669,24 @@ export default function HomestayPaymentPage() {
       handlePaymentSuccess();
       confirmBooking();
 
-      const confirmationPayload = buildConfirmationPayload();
+      let confirmationPayload = buildConfirmationPayload();
+
+      if (backendRefs.backendCheckoutId) {
+        const backendConfirm = await confirmHomestayBackendCheckout({
+          ...confirmationPayload,
+          ...backendRefs,
+        });
+
+        backendRefs = {
+          ...backendRefs,
+          ...backendConfirm.refs,
+        };
+
+        confirmationPayload = {
+          ...confirmationPayload,
+          ...backendRefs,
+        };
+      }
 
       try {
         sessionStorage.setItem(

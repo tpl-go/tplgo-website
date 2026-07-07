@@ -161,6 +161,7 @@ export default function HotelPaymentPriceCard({
         <div className="overflow-hidden rounded-[10px] border border-[#d9e2ec] bg-white p-[6px] shadow-[0_2px_8px_rgba(15,23,42,0.04)]">
           <button
             type="button"
+            data-testid="hotel-payment-pay-button"
             onClick={() => {
               if (paymentActionState === "failure") {
                 onRetryPayment?.();

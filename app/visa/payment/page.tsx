@@ -25,6 +25,11 @@ import {
   addWalletLedgerItem,
   type Wallet,
 } from "@/app/lib/wallet/walletStorage";
+import {
+  confirmVisaBackendCheckout,
+  startVisaBackendCheckout,
+  type VisaBackendCheckoutRefs,
+} from "@/app/lib/api/visaCheckoutIntegration";
 
 import VisaPaymentTopSummary from "@/app/components/payment/visa/VisaPaymentTopSummary";
 import VisaPaymentOptionSection from "@/app/components/payment/visa/VisaPaymentOptionSection";
@@ -556,6 +561,44 @@ export default function VisaPaymentPage() {
     await new Promise((resolve) => setTimeout(resolve, 1500));
 
     if (shouldSucceed) {
+      const backendStart = await startVisaBackendCheckout(
+        paymentPayload as Record<string, unknown>
+      );
+      let backendRefs: VisaBackendCheckoutRefs = backendStart.refs;
+
+      if (backendStart.attempted) {
+        const updatedBookingPayload = {
+          ...paymentPayload,
+          ...backendStart.refs,
+        };
+
+        sessionStorage.setItem(
+          "tplVisaBookingData",
+          JSON.stringify(updatedBookingPayload)
+        );
+
+        setStoredPayload(updatedBookingPayload);
+      }
+
+      let confirmationPayload = buildConfirmationPayload();
+
+      if (backendRefs.backendCheckoutId) {
+        const backendConfirm = await confirmVisaBackendCheckout({
+          ...confirmationPayload,
+          ...backendRefs,
+        });
+
+        backendRefs = {
+          ...backendRefs,
+          ...backendConfirm.refs,
+        };
+
+        confirmationPayload = {
+          ...confirmationPayload,
+          ...backendRefs,
+        };
+      }
+
       const activeMobile =
         activeUser?.mobile ||
         storedPayload?.user?.mobile ||
@@ -622,8 +665,6 @@ export default function VisaPaymentPage() {
 
       handlePaymentSuccess();
       confirmBooking();
-
-      const confirmationPayload = buildConfirmationPayload();
 
       try {
         sessionStorage.setItem(

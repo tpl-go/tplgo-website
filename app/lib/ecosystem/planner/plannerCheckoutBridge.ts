@@ -13,6 +13,7 @@ import type {
   TiyaGeneratedPlan,
   TiyaTripIntent,
 } from "./plannerTypes";
+import { logSmartPlannerStorageWrite } from "@/app/lib/ecosystem/planner/booking/smartPlannerStorageWriteAudit";
 
 export const TIYA_CHECKOUT_DRAFT_KEY = "tpl_tiya_checkout_draft";
 export const TIYA_SELECTED_BUNDLE_KEY = "tpl_tiya_selected_bundle";
@@ -67,8 +68,37 @@ function writeStorage(key: string, value: unknown, storage: "session" | "local")
   try {
     const target =
       storage === "session" ? window.sessionStorage : window.localStorage;
-    target.setItem(key, JSON.stringify(value));
-  } catch {
+    const serialized = JSON.stringify(value);
+    const storageType = storage === "session" ? "sessionStorage" : "localStorage";
+    logSmartPlannerStorageWrite({
+      file: "app/lib/ecosystem/planner/plannerCheckoutBridge.ts",
+      functionName: "writeStorage",
+      key,
+      payload: value,
+      serialized,
+      storageType,
+      successOrFailed: "attempt",
+    });
+    target.setItem(key, serialized);
+    logSmartPlannerStorageWrite({
+      file: "app/lib/ecosystem/planner/plannerCheckoutBridge.ts",
+      functionName: "writeStorage",
+      key,
+      payload: value,
+      serialized,
+      storageType,
+      successOrFailed: "success",
+    });
+  } catch (error) {
+    logSmartPlannerStorageWrite({
+      error,
+      file: "app/lib/ecosystem/planner/plannerCheckoutBridge.ts",
+      functionName: "writeStorage",
+      key,
+      payload: value,
+      storageType: storage === "session" ? "sessionStorage" : "localStorage",
+      successOrFailed: "failed",
+    });
     // Storage can fail in private mode, quota limits, or locked-down browsers.
   }
 }

@@ -80,6 +80,7 @@ export interface FlightManageBookingRecord {
   bookingId: string;
   pnr: string;
   bookingStatus: "confirmed" | "cancelled" | "changed";
+  bookingType?: string;
   origin: string;
   destination: string;
   travelDate: string;

@@ -1,6 +1,10 @@
 "use client";
 
 import type { BookingItem } from "@/app/lib/booking/bookingStorage";
+import {
+  isChunkedBookingDetailKey,
+  readChunkedBookingDetail,
+} from "@/app/lib/booking/chunkedBookingStorage";
 
 export function saveBookingPayload(
   payloadStorageKey: string,
@@ -19,6 +23,10 @@ export function getBookingPayload<T = unknown>(
   if (typeof window === "undefined" || !payloadStorageKey) return null;
 
   try {
+    if (isChunkedBookingDetailKey(payloadStorageKey)) {
+      return readChunkedBookingDetail<T>(payloadStorageKey);
+    }
+
     const raw = localStorage.getItem(payloadStorageKey);
     if (!raw) return null;
     return JSON.parse(raw) as T;

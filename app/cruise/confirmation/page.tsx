@@ -111,6 +111,11 @@ function creditEarnedForCruiseBooking(params: {
   localStorage.setItem(guardKey, "true");
 }
 
+function persistCruiseConfirmationSession(payload: ConfirmationPayload) {
+  if (typeof window === "undefined") return;
+  sessionStorage.setItem("tplCruiseConfirmationData", JSON.stringify(payload));
+}
+
 export default function CruiseConfirmationPage() {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
@@ -256,6 +261,7 @@ export default function CruiseConfirmationPage() {
           existingBooking.payloadStorageKey || payloadStorageKey,
           JSON.stringify(payloadWithBookingId)
         );
+        persistCruiseConfirmationSession(payloadWithBookingId);
 
         createGuestUserFromBooking({
           name: leadName,
@@ -320,6 +326,7 @@ export default function CruiseConfirmationPage() {
           payloadStorageKey,
           JSON.stringify(payloadWithBookingId)
         );
+        persistCruiseConfirmationSession(payloadWithBookingId);
 
         createGuestUserFromBooking({
           name: leadName,

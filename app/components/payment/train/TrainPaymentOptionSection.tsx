@@ -41,6 +41,7 @@ export default function TrainPaymentOptionSection({
         title="UPI Options"
         subtitle="Pay Directly From Your Bank Account"
         isActive={activeOption === "upi"}
+        testId="train-payment-method-upi"
         onClick={() => {
           setActiveOption((prev) => (prev === "upi" ? null : "upi"));
           onPaymentMethodChange?.("upi");
@@ -231,6 +232,7 @@ function PaymentRow({
   badge,
   isActive,
   disabled = false,
+  testId,
   onClick,
 }: {
   icon: string;
@@ -239,10 +241,13 @@ function PaymentRow({
   badge?: string;
   isActive?: boolean;
   disabled?: boolean;
+  testId?: string;
   onClick?: () => void;
 }) {
   return (
     <div
+      data-testid={testId}
+      data-selected={isActive ? "true" : "false"}
       onClick={disabled ? undefined : onClick}
       aria-disabled={disabled}
       className={`flex items-center justify-between gap-[14px] border-b border-[#e5e7eb] px-4 py-[18px] transition-all md:px-5 ${

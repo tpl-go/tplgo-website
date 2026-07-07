@@ -370,6 +370,10 @@ const payloadStorageKey = `tpl_booking_payload_package_${safePaidAt}_${mobile}_$
           existingBooking.payloadStorageKey || payloadStorageKey,
           JSON.stringify(payloadWithBookingId)
         );
+        sessionStorage.setItem(
+          "tplPackageConfirmationPayload",
+          JSON.stringify(payloadWithBookingId)
+        );
 
         createGuestUserFromBooking({
           name: getLeadName(leadTraveller, travellers),
@@ -427,6 +431,10 @@ const payloadStorageKey = `tpl_booking_payload_package_${safePaidAt}_${mobile}_$
 
         localStorage.setItem(
           payloadStorageKey,
+          JSON.stringify(payloadWithBookingId)
+        );
+        sessionStorage.setItem(
+          "tplPackageConfirmationPayload",
           JSON.stringify(payloadWithBookingId)
         );
 

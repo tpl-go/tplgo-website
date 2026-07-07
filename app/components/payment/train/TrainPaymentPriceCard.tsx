@@ -257,6 +257,7 @@ export default function TrainPaymentPriceCard({
           <div className="hidden bg-white px-4 py-4 lg:block">
             <button
               type="button"
+              data-testid="train-payment-pay-button"
               onClick={() => {
                 if (paymentActionState === "failure") {
                   onRetryPayment?.();
@@ -314,6 +315,7 @@ export default function TrainPaymentPriceCard({
 
           <button
             type="button"
+            data-testid="train-payment-pay-button-mobile"
             onClick={() => {
               if (paymentActionState === "failure") {
                 onRetryPayment?.();

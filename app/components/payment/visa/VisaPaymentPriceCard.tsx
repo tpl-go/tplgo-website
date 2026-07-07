@@ -283,6 +283,7 @@ export default function VisaPaymentPriceCard({
             {paymentActionState === "failure" ? (
               <button
                 type="button"
+                data-testid="visa-payment-pay-button"
                 onClick={onRetryPayment}
                 disabled={disabled}
                 className={`h-[50px] w-full rounded-full text-[16px] font-extrabold transition ${
@@ -296,6 +297,7 @@ export default function VisaPaymentPriceCard({
             ) : (
               <button
                 type="button"
+                data-testid="visa-payment-pay-button"
                 onClick={onPayNow}
                 disabled={disabled}
                 className={`h-[50px] w-full rounded-full text-[15px] font-extrabold transition ${

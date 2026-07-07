@@ -8,6 +8,11 @@ import type {
   TiyaPlannerSnapshot,
 } from "@/app/lib/ecosystem/planner/plannerTypes";
 import type { TiyaExpertLeadPayload } from "@/app/lib/ecosystem/planner/plannerExpertLeadEngine";
+import {
+  readPlannerDetailPayload,
+  savePlannerDetailPayload,
+} from "@/app/lib/ecosystem/planner/plannerPayloadStorage";
+import { logSmartPlannerStorageWrite } from "@/app/lib/ecosystem/planner/booking/smartPlannerStorageWriteAudit";
 
 export const MY_TRIPS_STORAGE_KEY = "tpl_tiya_saved_trips";
 export const MY_TRIPS_RESTORE_BASKET_KEY = "tpl_my_trips_restore_basket_v1";
@@ -86,6 +91,26 @@ export type MyTripSnapshot = {
   lastSavedItem?: MyTripLastSavedItem | null;
   notes?: string;
   generatedJourneyData?: unknown;
+  detailStorageKey?: string;
+};
+
+type CompactMyTripSnapshot = Omit<
+  MyTripSnapshot,
+  | "checklist"
+  | "expertRequests"
+  | "generatedJourneyData"
+  | "itineraryDays"
+  | "dayStatuses"
+  | "notes"
+  | "savedItems"
+  | "selectedTripItems"
+  | "workspacePayload"
+> & {
+  __compactMyTrip: true;
+  detailStorageKey?: string;
+  payloadStorageKey?: string;
+  routeLabel?: string;
+  thumbnail?: string;
 };
 
 export function myTripOwnerKey(owner: MyTripOwner | AuthUser | null | undefined) {
@@ -217,9 +242,20 @@ function normalizeMyTripSnapshot(snapshot: unknown): MyTripSnapshot {
 
   return {
     ...typedSnapshot,
+    dayStatuses:
+      typedSnapshot.dayStatuses && typeof typedSnapshot.dayStatuses === "object"
+        ? typedSnapshot.dayStatuses
+        : {},
     savedItems,
     expertRequests,
     checklist,
+    itineraryDays: Array.isArray(typedSnapshot.itineraryDays)
+      ? typedSnapshot.itineraryDays
+      : [],
+    selectedTripItems: Array.isArray(typedSnapshot.selectedTripItems)
+      ? typedSnapshot.selectedTripItems
+      : [],
+    workspacePayload: typedSnapshot.workspacePayload || ({} as WorkspacePayload),
     savedItemsCount: savedItems.length,
     lastSavedItem: lastSaved
       ? {
@@ -232,6 +268,159 @@ function normalizeMyTripSnapshot(snapshot: unknown): MyTripSnapshot {
   };
 }
 
+function routeLabelForTrip(trip: MyTripSnapshot) {
+  return [trip.origin, trip.destination].filter(Boolean).join(" → ");
+}
+
+function smallImage(value: unknown) {
+  const image = typeof value === "string" ? value.trim() : "";
+  if (!image) return undefined;
+  return image.length <= 500 ? image : undefined;
+}
+
+function compactTripIndexRecord(
+  trip: MyTripSnapshot,
+  detailStorageKey?: string
+): CompactMyTripSnapshot {
+  const routeLabel = routeLabelForTrip(trip);
+  const thumbnail = smallImage(
+    trip.lastSavedItem && "image" in trip.lastSavedItem
+      ? (trip.lastSavedItem as MyTripLastSavedItem & { image?: string }).image
+      : undefined
+  );
+
+  return {
+    __compactMyTrip: true,
+    createdAt: trip.createdAt,
+    destination: trip.destination,
+    detailStorageKey,
+    duration: trip.duration,
+    endDate: trip.endDate,
+    estimatedTripValue: trip.estimatedTripValue,
+    id: trip.id,
+    lastSavedItem: trip.lastSavedItem,
+    origin: trip.origin,
+    owner: {
+      email: trip.owner?.email,
+      id: trip.owner?.id || trip.owner?.mobile || trip.owner?.email || "guest",
+      mobile: trip.owner?.mobile,
+    },
+    payloadStorageKey: detailStorageKey,
+    routeLabel,
+    savedItemsCount: trip.savedItemsCount || trip.savedItems?.length || 0,
+    selectedItemsCount: trip.selectedItemsCount,
+    startDate: trip.startDate,
+    status: trip.status,
+    thumbnail,
+    travellerCount: trip.travellerCount,
+    tripName: trip.tripName,
+    updatedAt: trip.updatedAt,
+  };
+}
+
+function writeSavedTripsIndex(compactTrips: CompactMyTripSnapshot[]) {
+  if (typeof window === "undefined") return false;
+
+  const payload = JSON.stringify(compactTrips);
+  logSmartPlannerStorageWrite({
+    file: "app/lib/ecosystem/planner/myTripsStorage.ts",
+    functionName: "writeSavedTripsIndex",
+    key: MY_TRIPS_STORAGE_KEY,
+    payload: compactTrips,
+    serialized: payload,
+    storageType: "localStorage",
+    successOrFailed: "attempt",
+  });
+  try {
+    window.localStorage.setItem(MY_TRIPS_STORAGE_KEY, payload);
+    logSmartPlannerStorageWrite({
+      file: "app/lib/ecosystem/planner/myTripsStorage.ts",
+      functionName: "writeSavedTripsIndex",
+      key: MY_TRIPS_STORAGE_KEY,
+      payload: compactTrips,
+      serialized: payload,
+      storageType: "localStorage",
+      successOrFailed: "success",
+    });
+    return true;
+  } catch (error) {
+    logSmartPlannerStorageWrite({
+      error,
+      file: "app/lib/ecosystem/planner/myTripsStorage.ts",
+      functionName: "writeSavedTripsIndex",
+      key: MY_TRIPS_STORAGE_KEY,
+      payload: compactTrips,
+      serialized: payload,
+      storageType: "localStorage",
+      successOrFailed: "failed",
+    });
+    const pruned = compactTrips
+      .map((trip) => ({
+        __compactMyTrip: true,
+        createdAt: trip.createdAt,
+        destination: trip.destination,
+        detailStorageKey: trip.detailStorageKey,
+        duration: trip.duration,
+        endDate: trip.endDate,
+        estimatedTripValue: trip.estimatedTripValue,
+        id: trip.id,
+        origin: trip.origin,
+        owner: trip.owner,
+        payloadStorageKey: trip.payloadStorageKey || trip.detailStorageKey,
+        routeLabel: trip.routeLabel,
+        savedItemsCount: trip.savedItemsCount || 0,
+        selectedItemsCount: trip.selectedItemsCount,
+        startDate: trip.startDate,
+        status: trip.status,
+        travellerCount: trip.travellerCount,
+        tripName: trip.tripName,
+        updatedAt: trip.updatedAt,
+      }))
+      .slice(0, 50);
+
+    try {
+      const prunedPayload = JSON.stringify(pruned);
+      logSmartPlannerStorageWrite({
+        file: "app/lib/ecosystem/planner/myTripsStorage.ts",
+        functionName: "writeSavedTripsIndex:pruned",
+        key: MY_TRIPS_STORAGE_KEY,
+        payload: pruned,
+        serialized: prunedPayload,
+        storageType: "localStorage",
+        successOrFailed: "attempt",
+      });
+      window.localStorage.setItem(MY_TRIPS_STORAGE_KEY, prunedPayload);
+      logSmartPlannerStorageWrite({
+        file: "app/lib/ecosystem/planner/myTripsStorage.ts",
+        functionName: "writeSavedTripsIndex:pruned",
+        key: MY_TRIPS_STORAGE_KEY,
+        payload: pruned,
+        serialized: prunedPayload,
+        storageType: "localStorage",
+        successOrFailed: "success",
+      });
+      return true;
+    } catch (retryError) {
+      logSmartPlannerStorageWrite({
+        error: retryError,
+        file: "app/lib/ecosystem/planner/myTripsStorage.ts",
+        functionName: "writeSavedTripsIndex:pruned",
+        key: MY_TRIPS_STORAGE_KEY,
+        payload: pruned,
+        storageType: "localStorage",
+        successOrFailed: "failed",
+      });
+      if (process.env.NODE_ENV === "development") {
+        console.warn("[Smart Planner] saved trips index write skipped", {
+          error,
+          retryError,
+        });
+      }
+      return false;
+    }
+  }
+}
+
 function readAllTrips() {
   if (typeof window === "undefined") return [];
 
@@ -239,7 +428,20 @@ function readAllTrips() {
     const raw = window.localStorage.getItem(MY_TRIPS_STORAGE_KEY);
     const parsed = raw ? JSON.parse(raw) : [];
     return Array.isArray(parsed)
-      ? parsed.map((trip) => normalizeMyTripSnapshot(trip))
+      ? parsed.map((trip) => {
+          if (
+            trip &&
+            typeof trip === "object" &&
+            "__compactMyTrip" in trip &&
+            typeof (trip as CompactMyTripSnapshot).detailStorageKey === "string"
+          ) {
+            const detail = readPlannerDetailPayload<MyTripSnapshot>(
+              (trip as CompactMyTripSnapshot).detailStorageKey
+            );
+            return normalizeMyTripSnapshot(detail || trip);
+          }
+          return normalizeMyTripSnapshot(trip);
+        })
       : [];
   } catch {
     return [];
@@ -249,7 +451,12 @@ function readAllTrips() {
 function writeAllTrips(trips: MyTripSnapshot[]) {
   if (typeof window === "undefined") return;
 
-  window.localStorage.setItem(MY_TRIPS_STORAGE_KEY, JSON.stringify(trips));
+  const compactTrips = trips.map((trip) => {
+    const save = savePlannerDetailPayload(`my_trip_${trip.id}`, trip);
+    return compactTripIndexRecord(trip, save.key || trip.detailStorageKey);
+  });
+
+  writeSavedTripsIndex(compactTrips);
   window.dispatchEvent(new Event("tpl_tiya_saved_trips_updated"));
   window.dispatchEvent(new Event("tpl_tiya_my_trips_updated"));
   window.dispatchEvent(new Event("tpl_tiya_workspace_payload_updated"));
@@ -274,7 +481,25 @@ export function saveMyTrip(snapshot: MyTripSnapshot) {
 
   writeAllTrips(nextTrips);
   if (typeof window !== "undefined") {
+    logSmartPlannerStorageWrite({
+      file: "app/lib/ecosystem/planner/myTripsStorage.ts",
+      functionName: "saveMyTrip:activeTrip",
+      key: MY_TRIPS_ACTIVE_TRIP_ID_KEY,
+      payload: normalizedSnapshot.id,
+      serialized: normalizedSnapshot.id,
+      storageType: "sessionStorage",
+      successOrFailed: "attempt",
+    });
     window.sessionStorage.setItem(MY_TRIPS_ACTIVE_TRIP_ID_KEY, normalizedSnapshot.id);
+    logSmartPlannerStorageWrite({
+      file: "app/lib/ecosystem/planner/myTripsStorage.ts",
+      functionName: "saveMyTrip:activeTrip",
+      key: MY_TRIPS_ACTIVE_TRIP_ID_KEY,
+      payload: normalizedSnapshot.id,
+      serialized: normalizedSnapshot.id,
+      storageType: "sessionStorage",
+      successOrFailed: "success",
+    });
     window.dispatchEvent(new Event("tpl_tiya_active_trip_updated"));
   }
   return normalizedSnapshot;
@@ -351,13 +576,63 @@ export function duplicateMyTrip(
 export function restoreMyTripToWorkspace(trip: MyTripSnapshot) {
   if (typeof window === "undefined") return;
 
-  window.sessionStorage.setItem(
-    MY_TRIPS_RESTORE_BASKET_KEY,
-    JSON.stringify(trip.selectedTripItems)
-  );
-  window.sessionStorage.setItem(
-    MY_TRIPS_RESTORE_DAY_STATUSES_KEY,
-    JSON.stringify(trip.dayStatuses)
-  );
+  const basketPayload = JSON.stringify(trip.selectedTripItems);
+  logSmartPlannerStorageWrite({
+    file: "app/lib/ecosystem/planner/myTripsStorage.ts",
+    functionName: "restoreMyTripToWorkspace",
+    key: MY_TRIPS_RESTORE_BASKET_KEY,
+    payload: trip.selectedTripItems,
+    serialized: basketPayload,
+    storageType: "sessionStorage",
+    successOrFailed: "attempt",
+  });
+  window.sessionStorage.setItem(MY_TRIPS_RESTORE_BASKET_KEY, basketPayload);
+  logSmartPlannerStorageWrite({
+    file: "app/lib/ecosystem/planner/myTripsStorage.ts",
+    functionName: "restoreMyTripToWorkspace",
+    key: MY_TRIPS_RESTORE_BASKET_KEY,
+    payload: trip.selectedTripItems,
+    serialized: basketPayload,
+    storageType: "sessionStorage",
+    successOrFailed: "success",
+  });
+  const dayStatusPayload = JSON.stringify(trip.dayStatuses);
+  logSmartPlannerStorageWrite({
+    file: "app/lib/ecosystem/planner/myTripsStorage.ts",
+    functionName: "restoreMyTripToWorkspace",
+    key: MY_TRIPS_RESTORE_DAY_STATUSES_KEY,
+    payload: trip.dayStatuses,
+    serialized: dayStatusPayload,
+    storageType: "sessionStorage",
+    successOrFailed: "attempt",
+  });
+  window.sessionStorage.setItem(MY_TRIPS_RESTORE_DAY_STATUSES_KEY, dayStatusPayload);
+  logSmartPlannerStorageWrite({
+    file: "app/lib/ecosystem/planner/myTripsStorage.ts",
+    functionName: "restoreMyTripToWorkspace",
+    key: MY_TRIPS_RESTORE_DAY_STATUSES_KEY,
+    payload: trip.dayStatuses,
+    serialized: dayStatusPayload,
+    storageType: "sessionStorage",
+    successOrFailed: "success",
+  });
+  logSmartPlannerStorageWrite({
+    file: "app/lib/ecosystem/planner/myTripsStorage.ts",
+    functionName: "restoreMyTripToWorkspace",
+    key: MY_TRIPS_ACTIVE_TRIP_ID_KEY,
+    payload: trip.id,
+    serialized: trip.id,
+    storageType: "sessionStorage",
+    successOrFailed: "attempt",
+  });
   window.sessionStorage.setItem(MY_TRIPS_ACTIVE_TRIP_ID_KEY, trip.id);
+  logSmartPlannerStorageWrite({
+    file: "app/lib/ecosystem/planner/myTripsStorage.ts",
+    functionName: "restoreMyTripToWorkspace",
+    key: MY_TRIPS_ACTIVE_TRIP_ID_KEY,
+    payload: trip.id,
+    serialized: trip.id,
+    storageType: "sessionStorage",
+    successOrFailed: "success",
+  });
 }

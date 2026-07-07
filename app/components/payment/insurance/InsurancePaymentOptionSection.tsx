@@ -34,6 +34,7 @@ export default function InsurancePaymentOptionSection({
       </div>
 
       <PaymentRow
+        testId="insurance-payment-method-upi"
         icon={<Smartphone size={20} />}
         title="UPI Options"
         subtitle="Pay directly from your bank account"
@@ -71,6 +72,7 @@ export default function InsurancePaymentOptionSection({
       ) : null}
 
       <PaymentRow
+        testId="insurance-payment-method-card"
         icon={<CreditCard size={20} />}
         title="Credit & Debit Cards"
         subtitle="Visa, Mastercard, RuPay, Amex and more"
@@ -125,6 +127,7 @@ export default function InsurancePaymentOptionSection({
       ) : null}
 
       <PaymentRow
+        testId="insurance-payment-method-netbanking"
         icon={<Landmark size={20} />}
         title="Net Banking"
         subtitle="Pay securely using your bank account"
@@ -148,6 +151,7 @@ export default function InsurancePaymentOptionSection({
       ) : null}
 
       <PaymentRow
+        testId="insurance-payment-method-wallet"
         icon={<WalletCards size={20} />}
         title="Wallet / Other"
         subtitle="Use supported payment wallets and other payment options"
@@ -174,12 +178,14 @@ export default function InsurancePaymentOptionSection({
 }
 
 function PaymentRow({
+  testId,
   icon,
   title,
   subtitle,
   isActive,
   onClick,
 }: {
+  testId?: string;
   icon: ReactNode;
   title: string;
   subtitle: string;
@@ -189,6 +195,8 @@ function PaymentRow({
   return (
     <button
       type="button"
+      data-testid={testId}
+      data-selected={isActive ? "true" : "false"}
       onClick={onClick}
       className={`flex w-full items-center justify-between gap-3 border-b border-[#e5e7eb] px-4 py-4 text-left transition md:px-5 ${
         isActive

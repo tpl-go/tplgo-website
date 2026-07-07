@@ -27,6 +27,11 @@ import {
   addWalletLedgerItem,
   type Wallet,
 } from "@/app/lib/wallet/walletStorage";
+import {
+  confirmPackageBackendCheckout,
+  startPackageBackendCheckout,
+  type PackageBackendCheckoutRefs,
+} from "@/app/lib/api/packageCheckoutIntegration";
 
 type VariantKey = "withFlight" | "withoutFlight";
 
@@ -391,6 +396,203 @@ const walletCalc = {
     await new Promise((resolve) => setTimeout(resolve, 1500));
 
     if (shouldSucceed) {
+      let backendRefs: PackageBackendCheckoutRefs = {};
+      let backendCheckoutPayload: Record<string, unknown> | null = null;
+      const frontendBookingId = `TPL-PKG-${Date.now()}`;
+
+      try {
+        const backendRawPayload = {
+          ...bookingReview,
+          id: frontendBookingId,
+          bookingId: frontendBookingId,
+          legacyFrontendId: frontendBookingId,
+          serviceType: "package",
+          mobile: leadTraveller.mobile,
+          contactDetails: {
+            mobile: leadTraveller.mobile,
+            email: leadTraveller.email,
+          },
+          packageSlug: bookingReview?.summary?.packageSlug || slug,
+          packageTitle: bookingReview?.summary?.packageTitle || pkg?.title,
+          variant: selectedVariantKey,
+          selectedVariant,
+          selectedPaymentMethod,
+          paymentMethod: selectedPaymentMethod,
+          paymentStatus: "paid",
+          paymentState: "success",
+          leadTraveller,
+          addOn: {
+            ...(bookingReview?.addOn || {}),
+            insuranceSelected,
+            insuranceAmount,
+          },
+          fare: {
+            ...(bookingReview?.fare || {}),
+            basePrice: baseFare,
+            upgradedDiffTotal,
+            feesAndTaxes: taxes,
+            couponDiscount,
+            tplCreditUsed: totalTplCreditUsed,
+            grandTotal: basePackagePrice,
+            appliedCoupon,
+            insuranceAmount,
+            finalPayableAmount,
+            totalBeforeWallet: fareData?.totalBeforeWallet || 0,
+            walletBreakdown: {
+              promoUsed: storedPromoUsed,
+              earnedUsed: storedEarnedUsed,
+              refundUsed: storedRefundUsed,
+              promoAvailable: fareData?.walletBreakdown?.promoAvailable || 0,
+              earnedAvailable: fareData?.walletBreakdown?.earnedAvailable || 0,
+              refundWalletAvailable:
+                fareData?.walletBreakdown?.refundWalletAvailable || 0,
+              totalWalletUsed: walletUsedTotal,
+              earnedOnThisBooking,
+            },
+          },
+          payment: {
+            selectedPaymentMethod,
+            paymentActionState: "success",
+            amountPaid: finalPayableAmount,
+            basePackagePrice,
+            insuranceSelected,
+            insuranceAmount,
+            totalTravellers,
+            walletUsed: walletUsedTotal,
+            promoUsed: storedPromoUsed,
+            earnedUsed: storedEarnedUsed,
+            refundUsed: storedRefundUsed,
+          },
+          paymentData: {
+            method: selectedPaymentMethod,
+            amountPaid: finalPayableAmount,
+            totalPaid: finalPayableAmount,
+            mobile: leadTraveller.mobile,
+            email: leadTraveller.email,
+          },
+          walletBreakdown: walletCalc,
+          walletData: walletCalc,
+          timerLeft: timeLeft,
+        };
+
+        const backendStart = await startPackageBackendCheckout(
+          backendRawPayload as Record<string, unknown>
+        );
+        backendRefs = backendStart.refs;
+        backendCheckoutPayload = backendStart.payload;
+
+        if (backendStart.attempted) {
+          const updatedBookingReview = {
+            ...backendStart.payload,
+          };
+          sessionStorage.setItem(
+            "tplPackageBookingReview",
+            JSON.stringify(updatedBookingReview)
+          );
+          setBookingReview(updatedBookingReview);
+        }
+      } catch {
+        handlePaymentFailure();
+        setPaymentActionState("failure");
+        return;
+      }
+
+      const checkoutWalletBreakdown =
+        (backendCheckoutPayload?.walletBreakdown as Record<string, unknown> | undefined) ||
+        ((backendCheckoutPayload?.fare as Record<string, unknown> | undefined)
+          ?.walletBreakdown as Record<string, unknown> | undefined);
+
+      let confirmationPayload = {
+          ...(backendCheckoutPayload || {}),
+          ...backendRefs,
+          id:
+            (backendCheckoutPayload?.id as string | undefined) ||
+            frontendBookingId,
+          bookingId:
+            (backendCheckoutPayload?.bookingId as string | undefined) ||
+            frontendBookingId,
+          legacyFrontendId:
+            (backendCheckoutPayload?.legacyFrontendId as string | undefined) ||
+            frontendBookingId,
+          serviceType: "package",
+          mobile: leadTraveller.mobile,
+          contactDetails: {
+            mobile: leadTraveller.mobile,
+            email: leadTraveller.email,
+          },
+          summary: bookingReview?.summary || null,
+          traveller: bookingReview?.traveller || null,
+          addOn: {
+            ...(bookingReview?.addOn || {}),
+            insuranceSelected,
+            insuranceAmount,
+          },
+          itinerary: bookingReview?.itinerary || null,
+          cancellation: bookingReview?.cancellation || null,
+          fare: {
+            basePrice: baseFare,
+            upgradedDiffTotal,
+            feesAndTaxes: taxes,
+            couponDiscount,
+            tplCreditUsed: totalTplCreditUsed,
+            grandTotal: basePackagePrice,
+            appliedCoupon,
+            insuranceAmount,
+            finalPayableAmount,
+            totalBeforeWallet: fareData?.totalBeforeWallet || 0,
+            walletBreakdown: {
+              promoUsed: storedPromoUsed,
+              earnedUsed: storedEarnedUsed,
+              refundUsed: storedRefundUsed,
+              promoAvailable: fareData?.walletBreakdown?.promoAvailable || 0,
+              earnedAvailable: fareData?.walletBreakdown?.earnedAvailable || 0,
+              refundWalletAvailable:
+                fareData?.walletBreakdown?.refundWalletAvailable || 0,
+              totalWalletUsed: walletUsedTotal,
+              earnedOnThisBooking,
+              ...(checkoutWalletBreakdown || {}),
+            },
+          },
+          payment: {
+            selectedPaymentMethod,
+            paymentActionState: "success",
+            amountPaid: finalPayableAmount,
+            basePackagePrice,
+            insuranceSelected,
+            insuranceAmount,
+            totalTravellers,
+            paidAt: new Date().toISOString(),
+            walletUsed: walletUsedTotal,
+            promoUsed: storedPromoUsed,
+            earnedUsed: storedEarnedUsed,
+            refundUsed: storedRefundUsed,
+          },
+          walletBreakdown: checkoutWalletBreakdown || walletCalc,
+          leadTraveller,
+          earnedCreditAmount: earnedOnThisBooking,
+        };
+
+      if (backendRefs.backendCheckoutId) {
+        try {
+          const backendConfirm = await confirmPackageBackendCheckout(
+            confirmationPayload as Record<string, unknown>
+          );
+          backendRefs = {
+            ...backendRefs,
+            ...backendConfirm.refs,
+          };
+          confirmationPayload = {
+            ...confirmationPayload,
+            ...backendConfirm.payload,
+            ...backendRefs,
+          };
+        } catch {
+          handlePaymentFailure();
+          setPaymentActionState("failure");
+          return;
+        }
+      }
+
       if (activeUser?.mobile && walletUsedTotal > 0) {
         const latestWallet = getWallet(activeUser.mobile);
 
@@ -456,57 +658,6 @@ const walletCalc = {
       setPaymentActionState("success");
 
       if (typeof window !== "undefined") {
-        const confirmationPayload = {
-          summary: bookingReview?.summary || null,
-          traveller: bookingReview?.traveller || null,
-          addOn: {
-            ...(bookingReview?.addOn || {}),
-            insuranceSelected,
-            insuranceAmount,
-          },
-          itinerary: bookingReview?.itinerary || null,
-          cancellation: bookingReview?.cancellation || null,
-          fare: {
-            basePrice: baseFare,
-            upgradedDiffTotal,
-            feesAndTaxes: taxes,
-            couponDiscount,
-            tplCreditUsed: totalTplCreditUsed,
-            grandTotal: basePackagePrice,
-            appliedCoupon,
-            insuranceAmount,
-            finalPayableAmount,
-            totalBeforeWallet: fareData?.totalBeforeWallet || 0,
-            walletBreakdown: {
-              promoUsed: storedPromoUsed,
-              earnedUsed: storedEarnedUsed,
-              refundUsed: storedRefundUsed,
-              promoAvailable: fareData?.walletBreakdown?.promoAvailable || 0,
-              earnedAvailable: fareData?.walletBreakdown?.earnedAvailable || 0,
-              refundWalletAvailable:
-                fareData?.walletBreakdown?.refundWalletAvailable || 0,
-              totalWalletUsed: walletUsedTotal,
-              earnedOnThisBooking,
-            },
-          },
-          payment: {
-            selectedPaymentMethod,
-            paymentActionState: "success",
-            amountPaid: finalPayableAmount,
-            basePackagePrice,
-            insuranceSelected,
-            insuranceAmount,
-            totalTravellers,
-            paidAt: new Date().toISOString(),
-            walletUsed: walletUsedTotal,
-            promoUsed: storedPromoUsed,
-            earnedUsed: storedEarnedUsed,
-            refundUsed: storedRefundUsed,
-          },
-          leadTraveller,
-          earnedCreditAmount: earnedOnThisBooking,
-        };
-
         sessionStorage.setItem(
           "tplPackageConfirmationPayload",
           JSON.stringify(confirmationPayload)

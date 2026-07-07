@@ -5,9 +5,7 @@ import type {
   TiyaRouteOption,
   TiyaTripIntent,
 } from "./plannerTypes";
-import { packageSeeds } from "@/app/data/packages/packageSeeds";
-import { savePackageSelectionState } from "@/app/lib/packages/packageSelectionStorage";
-import type { PackageSelectionState } from "@/app/lib/packages/packageSelectionTypes";
+import { logSmartPlannerStorageWrite } from "@/app/lib/ecosystem/planner/booking/smartPlannerStorageWriteAudit";
 
 export type TiyaBookingBridgeService =
   | "Flights"
@@ -266,27 +264,38 @@ function writeSessionPayload(key: string, payload: unknown) {
   if (!canUseStorage()) return;
 
   try {
-    window.sessionStorage.setItem(key, JSON.stringify(payload));
-  } catch {
+    const serialized = JSON.stringify(payload);
+    logSmartPlannerStorageWrite({
+      file: "app/lib/ecosystem/planner/plannerBookingBridge.ts",
+      functionName: "writeSessionPayload",
+      key,
+      payload,
+      serialized,
+      storageType: "sessionStorage",
+      successOrFailed: "attempt",
+    });
+    window.sessionStorage.setItem(key, serialized);
+    logSmartPlannerStorageWrite({
+      file: "app/lib/ecosystem/planner/plannerBookingBridge.ts",
+      functionName: "writeSessionPayload",
+      key,
+      payload,
+      serialized,
+      storageType: "sessionStorage",
+      successOrFailed: "success",
+    });
+  } catch (error) {
+    logSmartPlannerStorageWrite({
+      error,
+      file: "app/lib/ecosystem/planner/plannerBookingBridge.ts",
+      functionName: "writeSessionPayload",
+      key,
+      payload,
+      storageType: "sessionStorage",
+      successOrFailed: "failed",
+    });
     // Storage can fail in private mode or quota-limited browsers.
   }
-}
-
-function safeDate(value?: string) {
-  if (!value) {
-    const date = new Date();
-    date.setDate(date.getDate() + 14);
-    return date.toISOString();
-  }
-
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return value;
-
-  return parsed.toISOString();
-}
-
-function safeDateOnly(value?: string) {
-  return safeDate(value).split("T")[0];
 }
 
 function basketText(items: TiyaSmartBasketItem[]) {
@@ -303,6 +312,11 @@ function inferSingleServiceType(
     new Set(items.map((item) => item.bookingType.toLowerCase()))
   );
   const text = basketText(items);
+  const hasPackageFallbackService =
+    rawTypes.some((type) =>
+      /(train|rail|bus|coach|cruise|ship|insurance|visa|document|package|bundle|local|market|creator)/i.test(type)
+    ) ||
+    /(train|rail|bus|coach|cruise|ship|insurance|visa|document|package|bundle|local market|local life|creator)/i.test(text);
   const hasStay = rawTypes.some((type) => type.includes("stay") || type.includes("hotel"));
   const hasActivity = rawTypes.some(
     (type) => type.includes("activity") || type.includes("experience") || type.includes("meal")
@@ -311,10 +325,11 @@ function inferSingleServiceType(
     rawTypes.some((type) => type.includes("cab") || type.includes("transfer")) ||
     /(cab|transfer|self-drive|self drive|road|suv|ev|local transport)/i.test(text);
   const hasFlight =
-    rawTypes.some((type) => type.includes("flight") || type.includes("transport")) ||
-    /(flight|airline|airport|train|transport)/i.test(text);
+    rawTypes.some((type) => type.includes("flight") || type.includes("air")) ||
+    /(flight|airline|airport)/i.test(text);
 
   if (hasStay) return "hotel";
+  if (hasPackageFallbackService) return "package";
   if (hasActivity) return "activity";
   if (hasCab) return "cab";
   if (hasFlight) return "flight";
@@ -337,182 +352,6 @@ function buildDraftId(intent: TiyaTripIntent) {
     .replace(/(^_|_$)/g, "");
 }
 
-function buildFlightRoute(intent: TiyaTripIntent) {
-  const params = new URLSearchParams({
-    tripType: "oneway",
-    fareType: "Regular",
-    adults: String(Math.max(1, intent.adults || 1)),
-    children: String(Math.max(0, intent.children || 0)),
-    infants: "0",
-    cabin: "Economy",
-    from: intent.fromCity || "Origin",
-    fromCity: intent.fromCity || "Origin",
-    to: intent.toCity || "Destination",
-    toCity: intent.toCity || "Destination",
-    departure: safeDate(intent.startDate),
-    returnDate: "",
-  });
-
-  return `/flights?${params.toString()}`;
-}
-
-function buildHotelRoute(intent: TiyaTripIntent) {
-  const params = new URLSearchParams({
-    city: intent.toCity || "Destination",
-    checkIn: safeDateOnly(intent.startDate),
-    checkOut: safeDateOnly(intent.endDate || intent.startDate),
-    rooms: "1",
-    adults: String(Math.max(1, intent.adults || 1)),
-    price: intent.budgetTier || "",
-  });
-
-  return `/hotels/results?${params.toString()}`;
-}
-
-function buildCabRoute(intent: TiyaTripIntent) {
-  const params = new URLSearchParams({
-    rideType: "outstationOneWay",
-    from: intent.fromCity || "Origin",
-    to: intent.toCity || "Destination",
-    departureDate: safeDateOnly(intent.startDate),
-    pickupDate: safeDateOnly(intent.startDate),
-    pickupTime: "10:00 AM",
-  });
-
-  return `/cab/result?${params.toString()}`;
-}
-
-function pickPackageSlug(intent: TiyaTripIntent) {
-  const destination = intent.toCity.toLowerCase();
-  const style = intent.travelStyle.toLowerCase();
-  const interestText = intent.interests.join(" ").toLowerCase();
-  const matchedByCity = packageSeeds.find((pkg) =>
-    pkg.cities.some((city) => destination.includes(city.toLowerCase()))
-  );
-  const matchedByTheme = packageSeeds.find((pkg) =>
-    `${pkg.theme} ${pkg.subTheme || ""}`.toLowerCase().includes(style)
-  );
-  const matchedByInterest = packageSeeds.find((pkg) =>
-    `${pkg.theme} ${pkg.subTheme || ""} ${pkg.title}`
-      .toLowerCase()
-      .split(/\s+/)
-      .some((token) => interestText.includes(token))
-  );
-
-  return (
-    matchedByCity?.slug ||
-    matchedByTheme?.slug ||
-    matchedByInterest?.slug ||
-    "heritage-india-historical-monuments"
-  );
-}
-
-function buildPackageSelectionState(
-  items: TiyaSmartBasketItem[],
-  basePrice: number
-): PackageSelectionState {
-  const safeBasePrice = Math.max(0, Math.round(basePrice || 0));
-
-  return {
-    basePrice: safeBasePrice,
-    selectedFlights: items
-      .filter((item) => inferSingleServiceType([item]) === "flight")
-      .map((item) => ({
-        id: item.serviceId,
-        airline: item.selectedOption,
-        from: item.city,
-        to: item.city,
-        departureTime: item.time,
-        fareDiff: 0,
-        included: true,
-      })),
-    selectedHotels: items
-      .filter((item) => inferSingleServiceType([item]) === "hotel")
-      .map((item) => ({
-        id: item.serviceId,
-        hotelName: item.selectedOption,
-        city: item.city || "",
-        roomType: "Smart Planner selected stay",
-        mealPlan: "As per itinerary",
-        starRating: 4,
-        nights: 1,
-        fareDiff: 0,
-        included: true,
-      })),
-    selectedTransfers: items
-      .filter((item) => inferSingleServiceType([item]) === "cab")
-      .map((item) => ({
-        id: item.serviceId,
-        vehicleType: "Smart transfer",
-        title: item.selectedOption,
-        subtitle: item.city || item.dayLabel,
-        fareDiff: 0,
-        included: true,
-      })),
-    selectedMeals: items
-      .filter((item) => item.bookingType.toLowerCase().includes("meal"))
-      .map((item) => ({
-        id: item.serviceId,
-        title: item.selectedOption,
-        description: item.city || item.dayLabel,
-        fareDiff: 0,
-        included: true,
-      })),
-    selectedActivities: items
-      .filter(
-        (item) =>
-          inferSingleServiceType([item]) === "activity" &&
-          !item.bookingType.toLowerCase().includes("meal")
-      )
-      .map((item) => ({
-        id: item.serviceId,
-        title: item.selectedOption,
-        description: item.city || item.dayLabel,
-        category: item.serviceName,
-        fareDiff: 0,
-        included: true,
-      })),
-    flightFareDiff: 0,
-    hotelFareDiff: 0,
-    transferFareDiff: 0,
-    mealFareDiff: 0,
-    activityFareDiff: 0,
-    finalPrice: safeBasePrice,
-  };
-}
-
-function buildPackageRoute({
-  intent,
-  items,
-  totalEstimate,
-}: {
-  intent: TiyaTripIntent;
-  items: TiyaSmartBasketItem[];
-  totalEstimate: number;
-}) {
-  const slug = pickPackageSlug(intent);
-  const hasFlight = items.some((item) => inferSingleServiceType([item]) === "flight");
-  const variant = hasFlight ? "withFlight" : "withoutFlight";
-  const params = new URLSearchParams({
-    variant,
-    date: safeDateOnly(intent.startDate),
-    origin: intent.fromCity || "Origin",
-    adults: String(Math.max(1, intent.adults || 1)),
-    children: String(Math.max(0, intent.children || 0)),
-    rooms: "1",
-    source: "tiya-smart-planner",
-  });
-
-  if (canUseStorage()) {
-    savePackageSelectionState(
-      slug,
-      buildPackageSelectionState(items, totalEstimate)
-    );
-  }
-
-  return `/packages/booking/${slug}?${params.toString()}`;
-}
-
 export function routeTiyaSmartBookingBasket({
   intent,
   items,
@@ -530,14 +369,7 @@ export function routeTiyaSmartBookingBasket({
   const isSingleService = serviceTypes.length === 1;
   const serviceType = isSingleService ? serviceTypes[0] : "package";
   const isCustomPackage = !isSingleService || serviceType === "activity";
-  const route =
-    serviceType === "flight"
-      ? buildFlightRoute(intent)
-      : serviceType === "hotel"
-        ? buildHotelRoute(intent)
-        : serviceType === "cab"
-          ? buildCabRoute(intent)
-          : buildPackageRoute({ intent, items: safeItems, totalEstimate });
+  const route = "/smart-planner/booking";
   const draft = {
     draftId,
     source: "tiya-smart-planner",

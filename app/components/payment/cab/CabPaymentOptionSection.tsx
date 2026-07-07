@@ -57,6 +57,7 @@ export default function CabPaymentOptionSection({
         title="UPI Options"
         subtitle="Pay Directly From Your Bank Account"
         isActive={activeOption === "upi"}
+        testId="cab-payment-method-upi"
         onClick={() => selectOption("upi")}
       />
 
@@ -202,6 +203,7 @@ function PaymentRow({
   badge,
   isActive,
   disabled = false,
+  testId,
   onClick,
 }: {
   icon: string;
@@ -210,10 +212,13 @@ function PaymentRow({
   badge?: string;
   isActive?: boolean;
   disabled?: boolean;
+  testId?: string;
   onClick?: () => void;
 }) {
   return (
     <div
+      data-testid={testId}
+      data-selected={isActive ? "true" : "false"}
       onClick={disabled ? undefined : onClick}
       aria-disabled={disabled}
       style={{

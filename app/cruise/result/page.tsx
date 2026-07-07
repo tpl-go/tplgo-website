@@ -2,11 +2,12 @@ import CruiseResultsPageClient from "@/app/components/cruise/result/CruiseResult
 import { getCruiseResultSearchMeta } from "@/app/lib/cruise/getCruiseResultSearchMeta";
 
 type Props = {
-  searchParams: Record<string, string | string[] | undefined>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
-export default function CruiseResultPage({ searchParams }: Props) {
-  const searchMeta = getCruiseResultSearchMeta(searchParams);
+export default async function CruiseResultPage({ searchParams }: Props) {
+  const resolvedSearchParams = await searchParams;
+  const searchMeta = getCruiseResultSearchMeta(resolvedSearchParams);
 
   const pageKey = JSON.stringify({
     destination: searchMeta.destinationId,

@@ -57,6 +57,7 @@ export default function FlightPaymentOptionSection({
         title="UPI Options"
         subtitle="Pay Directly From Your Bank Account"
         isActive={activeOption === "upi"}
+        testId="flight-payment-method-upi"
         onClick={() => {
           setActiveOption((prev) => (prev === "upi" ? null : "upi"));
           onPaymentMethodChange?.("upi");
@@ -223,6 +224,7 @@ function PaymentRow({
   subtitle,
   badge,
   isActive,
+  testId,
   disabled = false,
   onClick,
 }: {
@@ -231,11 +233,14 @@ function PaymentRow({
   subtitle: string;
   badge?: string;
   isActive?: boolean;
+  testId?: string;
   disabled?: boolean;
   onClick?: () => void;
 }) {
   return (
     <div
+      data-testid={testId}
+      data-selected={isActive ? "true" : "false"}
       onClick={disabled ? undefined : onClick}
       aria-disabled={disabled}
       style={{

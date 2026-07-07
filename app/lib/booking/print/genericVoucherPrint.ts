@@ -4,17 +4,25 @@ import { openPrintWindowAndPrint } from "@/app/lib/booking/print/core";
 import type { BookingItem } from "@/app/lib/booking/bookingStorage";
 import { getBookingServiceConfig } from "@/app/lib/booking/bookingServiceConfig";
 
-type AnyObj = Record<string, any>;
+type AnyObj = Record<string, unknown>;
 
-function safe(value: any, fallback = "-") {
+function asRecord(value: unknown): AnyObj {
+  return typeof value === "object" && value !== null ? (value as AnyObj) : {};
+}
+
+function at(value: unknown, key: string) {
+  return asRecord(value)[key];
+}
+
+function safe(value: unknown, fallback = "-") {
   if (value === null || value === undefined || value === "") return fallback;
   return String(value);
 }
 
-function formatDateOnly(value: any) {
+function formatDateOnly(value: unknown) {
   if (!value) return "-";
 
-  const date = new Date(value);
+  const date = new Date(String(value));
   if (Number.isNaN(date.getTime())) return String(value);
 
   return date.toLocaleDateString("en-IN", {
@@ -24,10 +32,10 @@ function formatDateOnly(value: any) {
   });
 }
 
-function formatDateTime(value: any) {
+function formatDateTime(value: unknown) {
   if (!value) return "-";
 
-  const date = new Date(value);
+  const date = new Date(String(value));
   if (Number.isNaN(date.getTime())) return String(value);
 
   return date.toLocaleString("en-IN", {
@@ -39,39 +47,71 @@ function formatDateTime(value: any) {
   });
 }
 
-function formatPrice(value: any) {
+function formatPrice(value: unknown) {
   const amount = Number(value || 0);
   return `₹${amount.toLocaleString("en-IN")}`;
 }
 
 function resolveLeadName(booking: BookingItem, payload: AnyObj) {
+  const traveller = asRecord(payload.traveller);
+  const firstTraveller = asRecord(Array.isArray(traveller.travellers) ? traveller.travellers[0] : null);
+  const leadTraveller = asRecord(payload.leadTraveller);
+  const leadGuest = asRecord(payload.leadGuest);
+  const travellerValidation = asRecord(payload.travellerValidation);
+  const validationFirst = asRecord(Array.isArray(travellerValidation.travellers) ? travellerValidation.travellers[0] : null);
+
   return (
     booking.leadTraveller?.name ||
-    payload?.leadGuest?.name ||
-    `${payload?.leadGuest?.firstName || ""} ${
-      payload?.leadGuest?.lastName || ""
+    leadTraveller.name ||
+    firstTraveller.fullName ||
+    firstTraveller.name ||
+    leadGuest.name ||
+    `${leadGuest.firstName || ""} ${
+      leadGuest.lastName || ""
     }`.trim() ||
-    payload?.travellerValidation?.travellers?.[0]?.firstName ||
+    validationFirst.firstName ||
     "Guest"
   );
 }
 
 function resolveEmail(booking: BookingItem, payload: AnyObj) {
+  const traveller = asRecord(payload.traveller);
+  const contactDetails = asRecord(traveller.contactDetails);
+  const firstTraveller = asRecord(Array.isArray(traveller.travellers) ? traveller.travellers[0] : null);
+  const leadTraveller = asRecord(payload.leadTraveller);
+  const leadGuest = asRecord(payload.leadGuest);
+  const travellerValidation = asRecord(payload.travellerValidation);
+  const guestValidation = asRecord(payload.guestValidation);
+
   return (
     booking.leadTraveller?.email ||
-    payload?.leadGuest?.email ||
-    payload?.travellerValidation?.contactDetails?.email ||
-    payload?.guestValidation?.contactDetails?.email ||
+    leadTraveller.email ||
+    contactDetails.email ||
+    firstTraveller.email ||
+    leadGuest.email ||
+    at(travellerValidation.contactDetails, "email") ||
+    at(guestValidation.contactDetails, "email") ||
     "-"
   );
 }
 
 function resolveMobile(booking: BookingItem, payload: AnyObj) {
+  const traveller = asRecord(payload.traveller);
+  const contactDetails = asRecord(traveller.contactDetails);
+  const firstTraveller = asRecord(Array.isArray(traveller.travellers) ? traveller.travellers[0] : null);
+  const leadTraveller = asRecord(payload.leadTraveller);
+  const leadGuest = asRecord(payload.leadGuest);
+  const travellerValidation = asRecord(payload.travellerValidation);
+  const guestValidation = asRecord(payload.guestValidation);
+
   return (
     booking.leadTraveller?.mobile ||
-    payload?.leadGuest?.phone ||
-    payload?.travellerValidation?.contactDetails?.mobile ||
-    payload?.guestValidation?.contactDetails?.mobile ||
+    leadTraveller.mobile ||
+    contactDetails.mobile ||
+    firstTraveller.mobile ||
+    leadGuest.phone ||
+    at(travellerValidation.contactDetails, "mobile") ||
+    at(guestValidation.contactDetails, "mobile") ||
     "-"
   );
 }
@@ -80,7 +120,8 @@ export function printGenericVoucherFromBooking(params: {
   booking: BookingItem;
   payload?: AnyObj | null;
 }) {
-  const { booking, payload = {} } = params;
+  const { booking } = params;
+  const payload = params.payload || {};
   const config = getBookingServiceConfig(booking.type);
 
   const html = `

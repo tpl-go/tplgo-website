@@ -86,6 +86,7 @@ export default function BusPaymentOptionSection({
         subtitle="Pay directly from your bank account"
         isActive={activeOption === "upi"}
         onClick={() => selectOption("upi")}
+        testId="bus-payment-method-upi"
       />
 
       {activeOption === "upi" && (
@@ -124,6 +125,7 @@ export default function BusPaymentOptionSection({
         badge="UPI QR"
         isActive={activeOption === "qr"}
         onClick={() => selectOption("qr")}
+        testId="bus-payment-method-qr"
       />
 
       {activeOption === "qr" && (
@@ -167,6 +169,7 @@ export default function BusPaymentOptionSection({
         subtitle="Visa, Mastercard, Amex, Rupay and more"
         isActive={activeOption === "cards"}
         onClick={() => selectOption("cards")}
+        testId="bus-payment-method-cards"
       />
 
       {activeOption === "cards" && (
@@ -225,6 +228,7 @@ export default function BusPaymentOptionSection({
         subtitle="Coming soon"
         badge="COMING SOON"
         disabled
+        testId="bus-payment-method-emi"
       />
 
       <PaymentRow
@@ -233,6 +237,7 @@ export default function BusPaymentOptionSection({
         subtitle="40+ banks available"
         isActive={activeOption === "netbanking"}
         onClick={() => selectOption("netbanking")}
+        testId="bus-payment-method-netbanking"
       />
 
       {activeOption === "netbanking" && (
@@ -262,6 +267,7 @@ function PaymentRow({
   isActive,
   disabled = false,
   onClick,
+  testId,
 }: {
   icon: string;
   title: string;
@@ -270,12 +276,15 @@ function PaymentRow({
   isActive?: boolean;
   disabled?: boolean;
   onClick?: () => void;
+  testId?: string;
 }) {
   return (
     <button
       type="button"
       onClick={disabled ? undefined : onClick}
       disabled={disabled}
+      data-testid={testId}
+      data-selected={isActive ? "true" : "false"}
       className={`flex w-full items-center justify-between gap-3 border-b border-[#e5e7eb] px-4 py-4 text-left sm:px-5 ${
         disabled
           ? "cursor-not-allowed bg-[#f9fafb] opacity-70"

@@ -118,6 +118,16 @@ insurance: {
     managePath: (bookingId) =>
       `/visa/status?bookingId=${encodeURIComponent(bookingId)}&from=account`,
   },
+
+  "smart-planner": {
+    type: "smart-planner",
+    label: "Smart Planner",
+    downloadLabel: "Download Voucher",
+    shareLabel: "Share Trip",
+    detailPath: (bookingId) => `/account/bookings/smart-planner/${bookingId}`,
+    managePath: (bookingId) =>
+      `/smart-planner/manage/${encodeURIComponent(bookingId)}?from=account`,
+  },
 };
 
 export function getBookingServiceConfig(type: BookingType) {

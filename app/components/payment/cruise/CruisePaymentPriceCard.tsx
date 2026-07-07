@@ -359,6 +359,7 @@ export default function CruisePaymentPriceCard({
           <div className="bg-white px-4 py-4">
             <button
               type="button"
+              data-testid="cruise-payment-pay-button"
               disabled={!canPay}
               onClick={handlePayAction}
               className={`h-[50px] w-full rounded-full text-[16px] font-extrabold transition ${
@@ -438,6 +439,7 @@ export default function CruisePaymentPriceCard({
 
                 <button
                   type="button"
+                  data-testid="cruise-payment-pay-button-mobile"
                   disabled={!canPay}
                   onClick={handlePayAction}
                   className={`h-12 min-w-[148px] rounded-full px-5 text-[14px] font-black shadow-[0_10px_22px_rgba(239,68,68,0.22)] ${

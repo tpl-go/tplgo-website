@@ -16,6 +16,11 @@ import {
   generateCabTransactionId,
   saveCabConfirmedBooking,
 } from "@/app/lib/cab/cabConfirmationHelpers";
+import {
+  confirmCabBackendCheckout,
+  startCabBackendCheckout,
+  type CabBackendCheckoutRefs,
+} from "@/app/lib/api/cabCheckoutIntegration";
 
 import { AUTH_UPDATED_EVENT } from "@/app/lib/booking/guestAuth";
 import {
@@ -108,6 +113,12 @@ type CabPaymentPayload = {
   };
   bookingData?: any;
   timerLeft: number;
+  backendCheckoutId?: string;
+  backendBookingId?: string;
+  backendPaymentId?: string;
+  backendRequestId?: string;
+  backendServiceType?: "cab";
+  backendCheckoutStatus?: string;
 };
 
 function getActiveUser() {
@@ -281,20 +292,54 @@ export default function CabPaymentPage() {
 
     setPaymentActionState("processing");
 
-    setTimeout(() => {
+    setTimeout(async () => {
       try {
+        const backendStart = await startCabBackendCheckout(
+          paymentData as unknown as Record<string, unknown>
+        );
+        let backendRefs: CabBackendCheckoutRefs = backendStart.refs;
+        let checkoutPaymentData = {
+          ...paymentData,
+          ...(backendStart.payload as Partial<CabPaymentPayload>),
+          ...backendStart.refs,
+        } as CabPaymentPayload & Record<string, unknown>;
+
+        if (backendStart.attempted) {
+          sessionStorage.setItem(
+            "tplCabPaymentData",
+            JSON.stringify(checkoutPaymentData)
+          );
+
+          setPaymentData(checkoutPaymentData as CabPaymentPayload);
+        }
+
         const now = new Date().toISOString();
         const bookingId = generateCabBookingId();
         const transactionId = generateCabTransactionId();
         const rideId = `RIDE-${Date.now().toString().slice(-8)}`;
 
-        const finalFare = walletPriceBreakup || paymentData.fare;
+        const finalFare = walletPriceBreakup || checkoutPaymentData.fare;
 
         const walletCalc = walletPriceBreakup?.walletCalc || {
           promoUsed: 0,
           earnedUsed: 0,
           refundUsed: 0,
         };
+
+        if (backendRefs.backendCheckoutId) {
+          const backendConfirm = await confirmCabBackendCheckout({
+            ...backendRefs,
+            bookingId,
+            paymentId: transactionId,
+            transactionId,
+            paymentMethod: selectedPaymentMethod,
+          });
+
+          backendRefs = {
+            ...backendRefs,
+            ...backendConfirm.refs,
+          };
+        }
 
         if (activeUser?.mobile && walletPriceBreakup?.walletCalc) {
           const latestWallet = getWallet(activeUser.mobile);
@@ -363,37 +408,37 @@ export default function CabPaymentPage() {
           createdAt: now,
           confirmedAt: now,
 
-          cab: paymentData.cab,
-          searchMeta: paymentData.searchMeta,
+          cab: checkoutPaymentData.cab,
+          searchMeta: checkoutPaymentData.searchMeta,
 
           traveller: {
-            pickupLocation: paymentData.traveller.pickupLocation || "",
-            fullName: paymentData.traveller.fullName || "",
-            gender: paymentData.traveller.gender || "",
-            mobile: paymentData.traveller.mobile || "",
-            email: paymentData.traveller.email || "",
+            pickupLocation: checkoutPaymentData.traveller.pickupLocation || "",
+            fullName: checkoutPaymentData.traveller.fullName || "",
+            gender: checkoutPaymentData.traveller.gender || "",
+            mobile: checkoutPaymentData.traveller.mobile || "",
+            email: checkoutPaymentData.traveller.email || "",
             usePickupAsBillingAddress:
-              paymentData.traveller.usePickupAsBillingAddress ?? true,
+              checkoutPaymentData.traveller.usePickupAsBillingAddress ?? true,
           },
 
-          travellers: paymentData.traveller?.fullName
+          travellers: checkoutPaymentData.traveller?.fullName
             ? [
                 {
                   id: "1",
-                  fullName: paymentData.traveller.fullName || "",
-                  gender: paymentData.traveller.gender || "",
+                  fullName: checkoutPaymentData.traveller.fullName || "",
+                  gender: checkoutPaymentData.traveller.gender || "",
                 },
               ]
             : [],
 
           contactDetails: {
             countryCode: "+91",
-            mobile: paymentData.traveller.mobile || "",
-            email: paymentData.traveller.email || "",
+            mobile: checkoutPaymentData.traveller.mobile || "",
+            email: checkoutPaymentData.traveller.email || "",
           },
 
-          selectedAddons: paymentData.selectedAddons || [],
-          appliedOffer: paymentData.appliedOffer || null,
+          selectedAddons: checkoutPaymentData.selectedAddons || [],
+          appliedOffer: checkoutPaymentData.appliedOffer || null,
 
           fare: {
             baseFare: Number(finalFare?.baseFare || 0),
@@ -430,6 +475,12 @@ export default function CabPaymentPage() {
             paidAt: now,
             transactionId,
           },
+
+          walletSource: checkoutPaymentData.walletSource,
+          walletSyncStatus: checkoutPaymentData.walletSyncStatus,
+          backendWalletSnapshot: checkoutPaymentData.backendWalletSnapshot,
+          metadata: checkoutPaymentData.metadata,
+          ...backendRefs,
         };
 
         saveCabConfirmedBooking(bookingRecord as any);
@@ -446,56 +497,56 @@ export default function CabPaymentPage() {
           paymentMethod: selectedPaymentMethod,
 
           cabType:
-            paymentData.cab.vehicleType ||
-            paymentData.cab.rideType ||
-            paymentData.cab.name ||
+            checkoutPaymentData.cab.vehicleType ||
+            checkoutPaymentData.cab.rideType ||
+            checkoutPaymentData.cab.name ||
             "Cab Booking",
-          cabName: paymentData.cab.name || "Cab Booking",
+          cabName: checkoutPaymentData.cab.name || "Cab Booking",
 
           fromLocation:
-            paymentData.searchMeta.from ||
-            paymentData.searchMeta.pickup ||
-            paymentData.traveller.pickupLocation ||
+            checkoutPaymentData.searchMeta.from ||
+            checkoutPaymentData.searchMeta.pickup ||
+            checkoutPaymentData.traveller.pickupLocation ||
             "",
           toLocation:
-            paymentData.searchMeta.to || paymentData.searchMeta.drop || "",
+            checkoutPaymentData.searchMeta.to || checkoutPaymentData.searchMeta.drop || "",
           pickupDate:
-  paymentData.searchMeta.pickupDate ||
-  paymentData.searchMeta.departureDate ||
+  checkoutPaymentData.searchMeta.pickupDate ||
+  checkoutPaymentData.searchMeta.departureDate ||
   "",
 
-pickupTime: paymentData.searchMeta.pickupTime || "",
+pickupTime: checkoutPaymentData.searchMeta.pickupTime || "",
 
 dropDate:
-  paymentData.searchMeta.returnDate ||
-  (paymentData.searchMeta as any).dropDate ||
-  paymentData.searchMeta.pickupDate ||
-  paymentData.searchMeta.departureDate ||
+  checkoutPaymentData.searchMeta.returnDate ||
+  (checkoutPaymentData.searchMeta as any).dropDate ||
+  checkoutPaymentData.searchMeta.pickupDate ||
+  checkoutPaymentData.searchMeta.departureDate ||
   "",
 
-dropTime: paymentData.searchMeta.dropTime || "",
+dropTime: checkoutPaymentData.searchMeta.dropTime || "",
 
 tripType:
-  paymentData.searchMeta.rideType || paymentData.cab.rideType || "",
+  checkoutPaymentData.searchMeta.rideType || checkoutPaymentData.cab.rideType || "",
 
           specialRequest:
-            paymentData.selectedAddons?.map((item) => item.title).join(", ") ||
+            checkoutPaymentData.selectedAddons?.map((item) => item.title).join(", ") ||
             "",
 
-          travellers: paymentData.traveller?.fullName
+          travellers: checkoutPaymentData.traveller?.fullName
             ? [
                 {
                   id: "1",
-                  fullName: paymentData.traveller.fullName || "",
-                  gender: paymentData.traveller.gender || "",
+                  fullName: checkoutPaymentData.traveller.fullName || "",
+                  gender: checkoutPaymentData.traveller.gender || "",
                 },
               ]
             : [],
 
           contactDetails: {
             countryCode: "+91",
-            mobile: paymentData.traveller.mobile || "",
-            email: paymentData.traveller.email || "",
+            mobile: checkoutPaymentData.traveller.mobile || "",
+            email: checkoutPaymentData.traveller.email || "",
           },
 
           fare: {
@@ -545,11 +596,17 @@ tripType:
 
           earnedCreditAmount: Number((finalFare as any)?.earnedOnThisBooking || 0),
 
-          cab: paymentData.cab,
-          searchMeta: paymentData.searchMeta,
-          traveller: paymentData.traveller,
-          selectedAddons: paymentData.selectedAddons || [],
-          appliedOffer: paymentData.appliedOffer || null,
+          cab: checkoutPaymentData.cab,
+          searchMeta: checkoutPaymentData.searchMeta,
+          traveller: checkoutPaymentData.traveller,
+          selectedAddons: checkoutPaymentData.selectedAddons || [],
+          appliedOffer: checkoutPaymentData.appliedOffer || null,
+          walletSource: checkoutPaymentData.walletSource,
+          walletSyncStatus: checkoutPaymentData.walletSyncStatus,
+          backendWalletSnapshot: checkoutPaymentData.backendWalletSnapshot,
+          metadata: checkoutPaymentData.metadata,
+
+          ...backendRefs,
         };
 
         sessionStorage.setItem(

@@ -236,6 +236,7 @@ export default function FlightPaymentPriceCard({
           <div className="bg-white px-4 py-4">
             <button
               type="button"
+              data-testid="flight-payment-pay-button"
               onClick={() => {
                 if (paymentActionState === "failure") {
                   onRetryPayment?.();

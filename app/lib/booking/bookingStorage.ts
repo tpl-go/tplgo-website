@@ -1,5 +1,11 @@
 "use client";
 
+import {
+  isChunkedBookingDetailKey,
+  readChunkedBookingDetail,
+} from "@/app/lib/booking/chunkedBookingStorage";
+import { cleanupPlannerTempStorage } from "@/app/lib/ecosystem/planner/plannerPayloadStorage";
+
 export type BookingType =
   | "flight"
   | "hotel"
@@ -10,7 +16,8 @@ export type BookingType =
   | "cab"
   | "cruise"
   | "visa"
-  | "insurance";
+  | "insurance"
+  | "smart-planner";
 
 export type BookingStatus = "upcoming" | "completed" | "cancelled";
 export type RefundStatus = "processing" | "processed" | "failed";
@@ -35,6 +42,31 @@ export type BookingItem = {
   voucherUrl?: string;
   detailRoute?: string;
   payloadStorageKey?: string;
+  bookingId?: string;
+  bookingStatus?: string;
+  dateRange?: {
+    end?: string;
+    start?: string;
+  };
+  destination?: string;
+  detailPath?: string;
+  detailPayloadStorageKey?: string;
+  detailSaved?: boolean;
+  detailStorageKey?: string;
+  durationLabel?: string;
+  hasChunkedDetail?: boolean;
+  invoiceNo?: string;
+  managePath?: string;
+  origin?: string;
+  paidAmount?: number;
+  paymentId?: string;
+  paymentStatus?: string;
+  routeLabel?: string;
+  serviceType?: BookingType | string;
+  smartPlannerDetailSaved?: boolean;
+  totalAmount?: number;
+  travellerCount?: number;
+  travellersLabel?: string;
 
   cancelMeta?: {
     canCancel: boolean;
@@ -68,6 +100,7 @@ function generateBookingId(type: BookingType) {
     cruise: "CRS",
     visa: "VSA",
     insurance: "INS",
+    "smart-planner": "SPL",
   };
 
   const random = Math.floor(1000 + Math.random() * 9000);
@@ -91,40 +124,67 @@ function isJourneyCompleted(travelDate: string) {
   return date < today;
 }
 
-function calculatePayloadAmount(payload: any) {
-  const reviewData = payload?.reviewData || {};
-  const seatMealData = payload?.seatMealData || {};
-  const cabData = payload?.cabData || {};
-  const insuranceData = payload?.insuranceData || {};
-  const addonsData = payload?.addonsData || {};
-  const offerData = payload?.offerData || null;
-  const paymentData = payload?.paymentData || {};
+function asRecord(value: unknown): Record<string, unknown> {
+  return typeof value === "object" && value !== null
+    ? (value as Record<string, unknown>)
+    : {};
+}
 
-  const pricing = reviewData?.pricing || {};
+function numberField(record: Record<string, unknown>, key: string) {
+  return Number(record[key] || 0);
+}
+
+function calculatePayloadAmount(payload: unknown) {
+  const payloadRecord = asRecord(payload);
+  const reviewData = asRecord(payloadRecord.reviewData);
+  const seatMealData = asRecord(payloadRecord.seatMealData);
+  const cabData = asRecord(payloadRecord.cabData);
+  const insuranceData = asRecord(payloadRecord.insuranceData);
+  const addonsData = asRecord(payloadRecord.addonsData);
+  const offerData = asRecord(payloadRecord.offerData);
+  const paymentData = asRecord(payloadRecord.paymentData);
+  const paymentSummary = asRecord(payloadRecord.paymentSummary);
+  const fare = asRecord(payloadRecord.fare);
+  const fareSummary = asRecord(payloadRecord.fareSummary);
+  const fareBreakup = asRecord(payloadRecord.fareBreakup);
+  const plannerFareSummary = asRecord(payloadRecord.plannerFareSummary);
+  const pricingSummary = asRecord(payloadRecord.pricing);
+
+  const pricing = asRecord(reviewData.pricing);
+  const passengers = asRecord(reviewData.passengers);
 
   const passengerCount =
-    (reviewData?.passengers?.adults || 0) +
-    (reviewData?.passengers?.children || 0) +
-    (reviewData?.passengers?.infants || 0);
+    numberField(passengers, "adults") +
+    numberField(passengers, "children") +
+    numberField(passengers, "infants");
 
   return (
-    paymentData?.totalPaid ||
-    payload?.fare?.totalPaid ||
-    payload?.fare?.totalAmount ||
-    payload?.fareBreakup?.finalTotal ||
-    payload?.finalTotal ||
+    numberField(plannerFareSummary, "finalPayable") ||
+    numberField(plannerFareSummary, "selectedBasketValue") ||
+    numberField(fareSummary, "finalPayable") ||
+    numberField(fareSummary, "finalPayableAmount") ||
+    numberField(fareSummary, "selectedBasketValue") ||
+    numberField(paymentSummary, "amountPaid") ||
+    numberField(paymentSummary, "finalPayable") ||
+    numberField(pricingSummary, "finalPayable") ||
+    numberField(pricingSummary, "totalAmount") ||
+    numberField(paymentData, "totalPaid") ||
+    numberField(fare, "totalPaid") ||
+    numberField(fare, "totalAmount") ||
+    numberField(fareBreakup, "finalTotal") ||
+    numberField(payloadRecord, "finalTotal") ||
     Math.max(
-      (pricing.perAdultBaseFare || 0) * passengerCount +
-        (pricing.tax || 0) +
-        (pricing.surcharge || 0) +
-        (seatMealData?.seatTotal || 0) +
-        (seatMealData?.mealTotal || 0) +
-        (cabData?.cabPrice || 0) +
-        (insuranceData?.insurancePrice || 0) +
-        (addonsData?.addonsPrice || 0) -
-        (offerData?.discountAmount || 0) -
-        (pricing.discount || 0) -
-        (pricing.tplCredit || 0),
+      numberField(pricing, "perAdultBaseFare") * passengerCount +
+        numberField(pricing, "tax") +
+        numberField(pricing, "surcharge") +
+        numberField(seatMealData, "seatTotal") +
+        numberField(seatMealData, "mealTotal") +
+        numberField(cabData, "cabPrice") +
+        numberField(insuranceData, "insurancePrice") +
+        numberField(addonsData, "addonsPrice") -
+        numberField(offerData, "discountAmount") -
+        numberField(pricing, "discount") -
+        numberField(pricing, "tplCredit"),
       0
     )
   );
@@ -170,6 +230,12 @@ function resolveBookingAmountFromPayload(booking: BookingItem) {
   if (!booking.payloadStorageKey) return booking.amount;
 
   try {
+    if (isChunkedBookingDetailKey(booking.payloadStorageKey)) {
+      const chunkedPayload = readChunkedBookingDetail<unknown>(booking.payloadStorageKey);
+      const chunkedAmount = chunkedPayload ? calculatePayloadAmount(chunkedPayload) : 0;
+      return chunkedAmount || booking.amount;
+    }
+
     const payloadRaw = localStorage.getItem(booking.payloadStorageKey);
     if (!payloadRaw) return booking.amount;
 
@@ -186,8 +252,19 @@ function saveAllBookings(bookings: BookingItem[]) {
   if (typeof window === "undefined") return;
 
   const synced = syncDerivedBookingState(bookings);
-  localStorage.setItem(BOOKING_STORAGE_KEY, JSON.stringify(synced));
-  dispatchBookingUpdate();
+  const serialized = JSON.stringify(synced);
+  try {
+    localStorage.setItem(BOOKING_STORAGE_KEY, serialized);
+    dispatchBookingUpdate();
+  } catch {
+    cleanupPlannerTempStorage();
+    try {
+      localStorage.setItem(BOOKING_STORAGE_KEY, serialized);
+      dispatchBookingUpdate();
+    } catch {
+      // Booking list persistence is best effort if the browser storage is full.
+    }
+  }
 }
 
 export function getAllBookings(): BookingItem[] {
@@ -210,7 +287,16 @@ export function getAllBookings(): BookingItem[] {
       };
     });
 
-    localStorage.setItem(BOOKING_STORAGE_KEY, JSON.stringify(final));
+    try {
+      localStorage.setItem(BOOKING_STORAGE_KEY, JSON.stringify(final));
+    } catch {
+      cleanupPlannerTempStorage();
+      try {
+        localStorage.setItem(BOOKING_STORAGE_KEY, JSON.stringify(final));
+      } catch {
+        // Keep the in-memory result for the current render.
+      }
+    }
 
     return final;
   } catch {
@@ -400,7 +486,7 @@ export function cancelBooking(id: string, reason = "Cancelled by user") {
         ...booking,
         refund: {
           ...booking.refund,
-          status: "processed",
+          status: "processed" as const,
           completedAt: new Date().toISOString(),
         },
       };
