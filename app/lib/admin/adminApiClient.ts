@@ -1772,10 +1772,15 @@ type StoredAdminSession = {
 };
 
 const PRODUCTION_API_BASE_URL = "https://api.tplgo.com";
-const API_BASE_URL =
-  process.env.NODE_ENV === "production"
-    ? PRODUCTION_API_BASE_URL
-    : process.env.NEXT_PUBLIC_TPL_API_BASE_URL?.replace(/\/+$/, "") || "";
+const API_BASE_URL = resolveAdminApiBaseUrl();
+
+function resolveAdminApiBaseUrl(): string {
+  return (
+    process.env.NEXT_PUBLIC_TPL_ADMIN_API_BASE_URL ||
+    process.env.NEXT_PUBLIC_TPL_API_BASE_URL ||
+    (process.env.NODE_ENV === "production" ? PRODUCTION_API_BASE_URL : "")
+  ).replace(/\/+$/, "");
+}
 
 export function getAdminApiBaseUrl(): string {
   return API_BASE_URL;
@@ -1901,7 +1906,11 @@ export async function adminApiRequest<TData>(
       };
     }
 
-    return failure(responseRequestId, response.status, readError(payload));
+    if (response.status === 401 && options.token !== null) {
+      clearAdminSession();
+    }
+
+    return failure(responseRequestId, response.status, readError(payload, response.status));
   } catch (error) {
     return failure(requestId, 0, {
       code: "ADMIN_API_NETWORK_ERROR",
@@ -2587,7 +2596,7 @@ function readRequestId(payload: Record<string, unknown> | null): string | null {
   return typeof requestId === "string" ? requestId : null;
 }
 
-function readError(payload: Record<string, unknown> | null): AdminApiError {
+function readError(payload: Record<string, unknown> | null, status?: number): AdminApiError {
   if (payload?.error && typeof payload.error === "object" && !Array.isArray(payload.error)) {
     const error = payload.error as Record<string, unknown>;
     return {
@@ -2597,6 +2606,13 @@ function readError(payload: Record<string, unknown> | null): AdminApiError {
       fieldErrors: Array.isArray(error.fieldErrors) ? error.fieldErrors : undefined,
     };
   }
+  if (status === 401) {
+    return {
+      code: "ADMIN_UNAUTHORIZED",
+      message: "Admin session expired or is not authorized. Sign in again.",
+    };
+  }
+
   return {
     code: "ADMIN_API_INVALID_RESPONSE",
     message: "Admin API returned an unexpected response.",

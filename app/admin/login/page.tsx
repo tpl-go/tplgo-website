@@ -13,10 +13,15 @@ import {
   type AdminSsoProvider,
 } from "../../lib/admin/adminApiClient";
 
+const DEV_ADMIN_EMAIL =
+  process.env.NODE_ENV !== "production"
+    ? process.env.NEXT_PUBLIC_TPL_ADMIN_DEV_EMAIL ?? ""
+    : "";
+
 export default function AdminLoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("dev-admin@tpl.local");
-  const [password, setPassword] = useState("TplLocalAdmin123");
+  const [email, setEmail] = useState(DEV_ADMIN_EMAIL);
+  const [password, setPassword] = useState("");
   const [role, setRole] = useState("super_admin");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -62,7 +67,7 @@ export default function AdminLoginPage() {
           </div>
           <div>
             <h1 className="text-lg font-semibold">TPL Admin</h1>
-            <p className="text-sm text-slate-500">Development admin access</p>
+            <p className="text-sm text-slate-500">Admin access</p>
           </div>
         </div>
 
@@ -73,6 +78,7 @@ export default function AdminLoginPage() {
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               className="mt-1 h-10 w-full rounded border border-slate-200 px-3 text-sm outline-none focus:border-slate-500"
+              autoComplete="username"
             />
           </label>
           <label className="block">
