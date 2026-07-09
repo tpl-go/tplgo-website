@@ -34,7 +34,7 @@ export default function LoginModal({
   const cleanedOtp = useMemo(() => otp.replace(/\D/g, ""), [otp]);
 
   const isValidMobile = cleanedMobile.length === 10;
-  const isValidOtp = cleanedOtp.length === 5;
+  const isValidOtp = cleanedOtp.length === 6;
 
   useEffect(() => {
     const checkMobile = () => {
@@ -76,7 +76,7 @@ export default function LoginModal({
       await sendOtp(cleanedMobile, activeAccountType);
 
       setStep("otp");
-      setInfoText("OTP sent. For testing use 11111.");
+      setInfoText("OTP sent. Please enter the 6-digit code.");
     } catch (error) {
       setErrorText(
         error instanceof Error ? error.message : "Failed to send OTP."
@@ -452,9 +452,9 @@ export default function LoginModal({
                 <input
                   value={otp}
                   onChange={(e) =>
-                    setOtp(e.target.value.replace(/\D/g, "").slice(0, 5))
+                    setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))
                   }
-                  placeholder="Enter 5-digit OTP"
+                  placeholder="Enter 6-digit OTP"
                   style={{
                     flex: 1,
                     height: "100%",
