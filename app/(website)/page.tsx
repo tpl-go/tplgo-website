@@ -8,7 +8,6 @@ import ThemeSection from "../components/homepage/themes/ThemeSection";
 import ExperiencesSection from "../components/homepage/experiences/ExperiencesSection";
 import TiyaSmartPlannerTeaser from "../components/homepage/planner/TiyaSmartPlannerTeaser";
 import TPLCreatorEcosystemTeaser from "../components/homepage/creators/TPLCreatorEcosystemTeaser";
-import TPLLocalMarketTeaser from "../components/homepage/market/TPLLocalMarketTeaser";
 import WhyChooseUsSection from "../components/homepage/why-choose-us/WhyChooseUsSection";
 import TestimonialsSection from "../components/homepage/testimonials/TestimonialsSection";
 import FaqSection from "../components/homepage/faq/FaqSection";
@@ -26,7 +25,6 @@ export default function Home() {
       <ExperiencesSection />
       <TiyaSmartPlannerTeaser />
       <TPLCreatorEcosystemTeaser />
-      <TPLLocalMarketTeaser />
       <WhyChooseUsSection />
       <TestimonialsSection />
       <FaqSection />

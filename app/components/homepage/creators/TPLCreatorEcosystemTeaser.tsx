@@ -104,10 +104,10 @@ export default function TPLCreatorEcosystemTeaser() {
               </Link>
 
               <Link
-                href="/creators"
+                href="/creator/dashboard"
                 className="inline-flex items-center justify-center gap-2 rounded-full border border-white/25 bg-white/16 px-5 py-2.5 text-sm font-bold text-white shadow-sm backdrop-blur-md transition hover:bg-white/22"
               >
-                Become a Creator
+                Become a Creator · Beta
               </Link>
             </div>
 

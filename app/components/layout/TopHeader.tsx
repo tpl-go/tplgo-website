@@ -125,7 +125,7 @@ export default function TopHeader({ onChatWithAI }: TopHeaderProps) {
               className="group relative flex items-center gap-1.5 rounded-full border border-blue-500/30 bg-gradient-to-r from-blue-700 via-blue-600 to-cyan-500 px-3.5 py-1.5 text-white font-semibold shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
             >
               
-              🎬 <span>TPL Creators</span>
+              🎬 <span>TPL Creators</span><span className="rounded-full bg-white/20 px-1.5 py-0.5 text-[9px] uppercase tracking-wide">Beta</span>
             </Link>
 
             <Link href="/flight-tracking" className="flex items-center gap-1 cursor-pointer hover:text-black">
