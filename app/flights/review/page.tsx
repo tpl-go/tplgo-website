@@ -17,8 +17,11 @@ import FlightOffersSection, {
 
 import {
   getFlightReviewPayload,
+  saveFlightReviewPayload,
   type FlightReviewPayload,
 } from "@/app/lib/flights/review/buildFlightReviewData";
+import { confirmBackendFlightPrice } from "@/app/lib/api/flightPriceApi";
+import { simulateBackendFlightBooking } from "@/app/lib/api/flightBookingSimulationApi";
 import { applyBenefitPricing } from "@/app/lib/pricing/applyBenefitPricing";
 import { getWallet } from "@/app/lib/wallet/walletStorage";
 import {
@@ -136,6 +139,9 @@ const [wallet, setWallet] = useState({
 });
 
   const [selectedOffer, setSelectedOffer] = useState<FlightOfferItem | null>(null);
+  const [backendPriceState, setBackendPriceState] = useState<"idle" | "checking" | "confirmed" | "changed" | "expired" | "failed">("idle");
+  const [backendSimulationState, setBackendSimulationState] = useState<"idle" | "creating" | "failed">("idle");
+  const [backendBlockerMessage, setBackendBlockerMessage] = useState("");
 
   const [timeLeft, setTimeLeft] = useState(10 * 60);
   const [isExpired, setIsExpired] = useState(false);
@@ -150,6 +156,12 @@ const [wallet, setWallet] = useState({
     setWallet(getWallet(user.mobile));
   }
 }, []);
+
+  useEffect(() => {
+    if (!reviewData?.backendOffer || reviewData.backendOffer.priceConfirmationId || backendPriceState !== "idle") return;
+
+    void refreshBackendPrice(reviewData);
+  }, [reviewData, backendPriceState]);
 
   useEffect(() => {
     if (timeLeft <= 0) {
@@ -179,6 +191,10 @@ const [wallet, setWallet] = useState({
   }, [timeLeft]);
 
   const handleRefreshPrice = () => {
+    if (reviewData?.backendOffer) {
+      void refreshBackendPrice(reviewData);
+      return;
+    }
     const freshData = getFlightReviewPayload();
     setReviewData(freshData);
     setTimeLeft(10 * 60);
@@ -316,7 +332,21 @@ const finalTotalAmount = benefitPricing.finalPayable;
   const isCabDone = cabData.cabStatus !== "pending";
   const isInsuranceDone = insuranceData.insuranceStatus !== "pending";
 
-  const blockerMessage = isExpired
+  const blockerMessage = backendBlockerMessage
+    ? backendBlockerMessage
+    : backendPriceState === "checking"
+    ? "Confirming latest backend fare."
+    : backendSimulationState === "creating"
+    ? "Creating simulated booking draft."
+    : backendPriceState === "changed"
+    ? "Price changed. Please refresh latest fare before continuing."
+    : backendPriceState === "expired"
+    ? "Backend fare expired. Please search again."
+    : backendPriceState === "failed"
+    ? "Could not confirm latest backend fare. Please refresh price."
+    : backendSimulationState === "failed"
+    ? "Could not create simulated booking draft. Please retry after refreshing price."
+    : isExpired
     ? "Session expired. Please refresh price and continue again."
     : !isTravellerDone
     ? "Please fill Traveller Detail first."
@@ -330,6 +360,12 @@ const finalTotalAmount = benefitPricing.finalPayable;
 
   const canProceed =
     !isExpired &&
+    backendPriceState !== "checking" &&
+    backendPriceState !== "changed" &&
+    backendPriceState !== "expired" &&
+    backendPriceState !== "failed" &&
+    backendSimulationState !== "creating" &&
+    backendSimulationState !== "failed" &&
     isTravellerDone &&
     isSeatMealDone &&
     isCabDone &&
@@ -644,10 +680,91 @@ seatTotal={seatMealData.seatTotal}
               onProceed={() => {
   if (isExpired) return;
 
-  
+  void proceedToPayment();
+}}
+            />
+
+            <FlightOffersSection
+  appliedOfferCode={selectedOffer?.code || ""}
+  isInternational={isInternationalFlight}
+  bookingValue={baseFare}
+  onApplyOffer={(offer) => setSelectedOffer(offer)}
+  onRemoveOffer={() => setSelectedOffer(null)}
+/>
+          </div>
+        </div>
+      </div>
+    </main>
+  );
+
+  async function proceedToPayment() {
+    if (!reviewData) return;
+
+    let nextReviewData = reviewData;
+    let backendSimulationMetadata:
+      | {
+          simulationId: string;
+          bookingDraftId: string;
+          bookingRef: string;
+          priceConfirmationId: string;
+          expiresAt: string;
+          backendRequestId?: string;
+        }
+      | null = null;
+    if (reviewData.backendOffer) {
+      const priceReady = reviewData.backendOffer.priceConfirmationId
+        ? reviewData
+        : await refreshBackendPrice(reviewData);
+
+      if (!priceReady?.backendOffer?.priceConfirmationId) return;
+      nextReviewData = priceReady;
+
+      setBackendSimulationState("creating");
+      setBackendBlockerMessage("");
+      const simulation = await simulateBackendFlightBooking({
+        searchId: priceReady.backendOffer.searchId,
+        offerId: priceReady.backendOffer.offerId,
+        ...(priceReady.backendOffer.fareId ? { fareId: priceReady.backendOffer.fareId } : {}),
+        priceConfirmationId: priceReady.backendOffer.priceConfirmationId,
+        passengers: priceReady.passengers,
+        travellers: buildBackendTravellers(travellerValidation, priceReady.passengers),
+        contactDetails: buildBackendContactDetails(travellerValidation),
+        clientPricingSnapshot: {
+          total: finalTotalAmount,
+          currency: "INR",
+        },
+        idempotencyKey: `flight-sim:${priceReady.backendOffer.priceConfirmationId}`,
+      });
+
+      if (!simulation.ok) {
+        setBackendSimulationState("failed");
+        setBackendBlockerMessage(simulation.error.message || "Could not create simulated booking draft.");
+        setShowRefreshNotice(true);
+        return;
+      }
+
+      setBackendSimulationState("idle");
+      backendSimulationMetadata = {
+        simulationId: simulation.data.simulationId,
+        bookingDraftId: simulation.data.bookingDraftId,
+        bookingRef: simulation.data.bookingRef,
+        priceConfirmationId: simulation.data.priceConfirmationId,
+        expiresAt: simulation.data.expiresAt,
+        ...(priceReady.backendOffer.backendRequestId ? { backendRequestId: priceReady.backendOffer.backendRequestId } : {}),
+      };
+      nextReviewData = {
+        ...priceReady,
+        backendOffer: {
+          ...priceReady.backendOffer,
+          priceConfirmationId: simulation.data.priceConfirmationId,
+          expiresAt: simulation.data.expiresAt,
+        },
+      };
+      saveFlightReviewPayload(nextReviewData);
+    }
 
   const payload = {
-    reviewData,
+    reviewData: nextReviewData,
     travellerValidation,
     seatMealData,
     cabData,
@@ -665,25 +782,113 @@ seatTotal={seatMealData.seatTotal}
     timerLeft: timeLeft,
   };
 
+  if (backendSimulationMetadata) {
+    Object.assign(payload, {
+      backendSimulation: backendSimulationMetadata,
+    });
+  }
+
   sessionStorage.setItem(
     "tplFlightBookingReviewData",
     JSON.stringify(payload)
   );
 
   router.push("/flights/payment");
-}}
-            />
+  }
 
-            <FlightOffersSection
-  appliedOfferCode={selectedOffer?.code || ""}
-  isInternational={isInternationalFlight}
-  bookingValue={baseFare}
-  onApplyOffer={(offer) => setSelectedOffer(offer)}
-  onRemoveOffer={() => setSelectedOffer(null)}
-/>
-          </div>
-        </div>
-      </div>
-    </main>
-  );
+  async function refreshBackendPrice(source: FlightReviewPayload): Promise<FlightReviewPayload | null> {
+    if (!source.backendOffer) return source;
+    setBackendPriceState("checking");
+    setBackendBlockerMessage("");
+    const result = await confirmBackendFlightPrice(source.backendOffer.offerId, {
+      searchId: source.backendOffer.searchId,
+      ...(source.backendOffer.fareId ? { fareId: source.backendOffer.fareId } : {}),
+      passengers: source.passengers,
+      currency: "INR",
+      clientOfferSnapshot: {
+        total: Number(source.pricing?.totalAmount || finalTotalAmount || 0),
+        currency: "INR",
+      },
+    });
+
+    if (!result.ok) {
+      setBackendPriceState(result.error.code.includes("EXPIRED") ? "expired" : "failed");
+      setBackendBlockerMessage(result.error.message || "Could not confirm latest backend fare.");
+      setShowRefreshNotice(true);
+      return null;
+    }
+
+    if (result.data.status === "price_changed") {
+      setBackendPriceState("changed");
+      setBackendBlockerMessage("Price changed. Please refresh latest fare before continuing.");
+      setShowRefreshNotice(true);
+      return null;
+    }
+
+    if (result.data.status !== "confirmed") {
+      setBackendPriceState("failed");
+      setBackendBlockerMessage("Latest fare is not available. Please search again.");
+      setShowRefreshNotice(true);
+      return null;
+    }
+
+    const updated: FlightReviewPayload = {
+      ...source,
+      backendOffer: {
+        ...source.backendOffer,
+        priceConfirmationId: result.data.priceConfirmationId,
+        priceStatus: result.data.status,
+        expiresAt: result.data.expiresAt,
+      },
+      pricing: {
+        ...source.pricing,
+        perAdultBaseFare: Math.round(result.data.price.baseFare / Math.max(source.passengers.adults, 1)),
+        baseFareTotal: result.data.price.baseFare,
+        tax: result.data.price.taxes,
+        surcharge: result.data.price.fees,
+        totalAmount: result.data.price.total,
+      },
+    };
+    setReviewData(updated);
+    saveFlightReviewPayload(updated);
+    setTimeLeft(10 * 60);
+    setIsExpired(false);
+    setShowRefreshNotice(false);
+    setBackendPriceState("confirmed");
+    return updated;
+  }
+}
+
+function buildBackendTravellers(
+  travellerValidation: TravellerValidationPayload | null,
+  passengers: FlightReviewPayload["passengers"]
+) {
+  const source = Array.isArray(travellerValidation?.travellers) ? travellerValidation.travellers : [];
+  const types: Array<"adult" | "child" | "infant"> = [
+    ...Array.from({ length: passengers.adults }, () => "adult" as const),
+    ...Array.from({ length: passengers.children }, () => "child" as const),
+    ...Array.from({ length: passengers.infants }, () => "infant" as const),
+  ];
+
+  return types.map((type, index) => {
+    const traveller = source[index] || {};
+    return {
+      type,
+      ...(typeof traveller.title === "string" && traveller.title ? { title: traveller.title } : {}),
+      firstName: String(traveller.firstName || traveller.name || `Traveller${index + 1}`),
+      lastName: String(traveller.lastName || "."),
+      ...(typeof traveller.dateOfBirth === "string" && traveller.dateOfBirth ? { dateOfBirth: traveller.dateOfBirth } : {}),
+      ...(typeof traveller.gender === "string" && traveller.gender ? { gender: traveller.gender } : {}),
+      ...(typeof traveller.nationality === "string" && traveller.nationality ? { nationality: traveller.nationality } : {}),
+    };
+  });
+}
+
+function buildBackendContactDetails(travellerValidation: TravellerValidationPayload | null) {
+  const contact: Partial<TravellerValidationPayload["contactDetails"]> = travellerValidation?.contactDetails || {};
+  return {
+    countryCode: contact.countryCode || "+91",
+    mobile: contact.mobile || "9999999999",
+    email: contact.email || "guest@example.com",
+  };
 }

@@ -24,6 +24,7 @@ import {
   saveWallet,
   addWalletLedgerItem,
 } from "@/app/lib/wallet/walletStorage";
+import { confirmFlightBackendCheckout } from "@/app/lib/api/flightCheckoutIntegration";
 
 type ConfirmationPayload = any;
 
@@ -78,6 +79,9 @@ export default function FlightConfirmationPage() {
   const [showDigiYatraPopup, setShowDigiYatraPopup] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+
+    const loadConfirmation = async () => {
     const raw =
       typeof window !== "undefined"
         ? sessionStorage.getItem("tplFlightConfirmationData")
@@ -86,7 +90,43 @@ export default function FlightConfirmationPage() {
     if (!raw) return;
 
     try {
-      const parsed = JSON.parse(raw);
+      let parsed = JSON.parse(raw);
+
+      if (parsed?.backendCheckoutId) {
+        const backendConfirm = await confirmFlightBackendCheckout({
+          ...parsed,
+          bookingId: parsed?.bookingId || "",
+          paymentId:
+            parsed?.backendPaymentId ||
+            parsed?.paymentData?.paymentId ||
+            parsed?.paymentId ||
+            "",
+          transactionId:
+            parsed?.transactionId ||
+            parsed?.paymentData?.transactionId ||
+            parsed?.paymentData?.paymentId ||
+            parsed?.paymentId ||
+            "",
+          paymentMethod:
+            parsed?.paymentMethod ||
+            parsed?.paymentData?.method ||
+            "Online Payment",
+        });
+
+        if (backendConfirm.attempted && backendConfirm.refs) {
+          parsed = {
+            ...parsed,
+            ...backendConfirm.payload,
+            ...backendConfirm.refs,
+          };
+          sessionStorage.setItem(
+            "tplFlightConfirmationData",
+            JSON.stringify(parsed)
+          );
+        }
+      }
+
+      if (cancelled) return;
 
       const contact = parsed?.travellerValidation?.contactDetails || {};
       const passengers = parsed?.reviewData?.passengers || {};
@@ -331,6 +371,14 @@ export default function FlightConfirmationPage() {
     } catch (e) {
       console.error("Parse error:", e);
     }
+
+    };
+
+    loadConfirmation();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const reviewData = data?.reviewData;
@@ -343,6 +391,10 @@ export default function FlightConfirmationPage() {
   const addonsData = data?.addonsData || {};
   const offerData = data?.offerData || null;
   const paymentData = data?.paymentData || {};
+  const backendTestConfirmation = data?.backendTestPaymentConfirmation || null;
+  const backendTestOrder = data?.backendTestPaymentOrder || null;
+  const backendSimulation = data?.backendSimulation || null;
+  const isBackendTestBooking = Boolean(backendTestConfirmation || backendSimulation);
 
   const isDomesticFlight =
     String(reviewData?.tripMode || "").toLowerCase() === "domestic";
@@ -467,7 +519,12 @@ export default function FlightConfirmationPage() {
       : "Flight Ticket";
 
   const journeyDateLabel = firstSegment?.departureDate || null;
-  const bookingId = savedBooking?.id || data?.bookingId || "-";
+  const bookingId =
+    backendTestConfirmation?.bookingRef ||
+    backendSimulation?.bookingRef ||
+    savedBooking?.id ||
+    data?.bookingId ||
+    "-";
   const finalEarnedCreditAmount =
     earnedCreditAmount || data?.earnedCreditAmount || 0;
 
@@ -487,10 +544,12 @@ export default function FlightConfirmationPage() {
     <main className="min-h-screen overflow-x-hidden bg-[#eef3f8] text-black">
       <div className="border-b border-green-200 bg-green-50 px-3 py-3 text-center md:px-0 md:py-4">
         <div className="text-[16px] font-black text-green-700 md:text-lg">
-          🎉 Flight Booking Confirmed
+          {isBackendTestBooking ? "Flight Test Booking Confirmed" : "🎉 Flight Booking Confirmed"}
         </div>
         <div className="text-[12px] font-semibold text-green-600 md:text-sm md:font-normal">
-          Your ticket is successfully generated
+          {isBackendTestBooking
+            ? "TPL-only beta confirmation. Supplier PNR and ticket are not issued in test mode."
+            : "Your ticket is successfully generated"}
         </div>
 
         {finalEarnedCreditAmount > 0 ? (
@@ -508,7 +567,11 @@ export default function FlightConfirmationPage() {
             bookingId={bookingId}
             bookingStatus="confirmed"
             paymentStatus="paid"
-            bookedAt={paymentData?.paidAt || new Date().toISOString()}
+            bookedAt={
+              backendTestConfirmation?.confirmedAt ||
+              paymentData?.paidAt ||
+              new Date().toISOString()
+            }
             bookingType={reviewData?.bookingType}
             tripMode={reviewData?.tripMode}
             cabinClass={reviewData?.cabinClass}
@@ -516,6 +579,16 @@ export default function FlightConfirmationPage() {
             routeTitle={routeTitle}
             journeyDateLabel={journeyDateLabel}
           />
+
+          {isBackendTestBooking ? (
+            <FlightTestModeConfirmationPanel
+              bookingRef={bookingId}
+              confirmationRef={backendTestConfirmation?.confirmationRef}
+              paymentStatus={backendTestConfirmation?.status || backendTestOrder?.status || "PAYMENT_PENDING_TEST_ONLY"}
+              amount={Number(paymentData?.totalPaid || priceBreakup.totalAmount || 0)}
+              currency="INR"
+            />
+          ) : null}
 
           {isDomesticFlight ? (
             <DigiYatraInlineBanner onClick={handleDigiYatraRedirect} />
@@ -546,7 +619,11 @@ export default function FlightConfirmationPage() {
             priceBreakup={priceBreakup}
             paymentMethod={paymentData?.method || "Online Payment"}
             paymentStatus="paid"
-            paidAt={paymentData?.paidAt || new Date().toISOString()}
+            paidAt={
+              backendTestConfirmation?.confirmedAt ||
+              paymentData?.paidAt ||
+              new Date().toISOString()
+            }
             earnedOnThisBooking={finalEarnedCreditAmount}
           />
         </div>
@@ -624,6 +701,66 @@ domestic flight for a faster airport experience.
         </button>
       </div>
     </div>
+  );
+}
+
+function FlightTestModeConfirmationPanel({
+  bookingRef,
+  confirmationRef,
+  paymentStatus,
+  amount,
+  currency,
+}: {
+  bookingRef: string;
+  confirmationRef?: string;
+  paymentStatus: string;
+  amount: number;
+  currency: "INR";
+}) {
+  return (
+    <section className="rounded-2xl border border-[#bfdbfe] bg-[#eff6ff] p-4 text-[#172554] md:p-5">
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+        <div className="min-w-0">
+          <div className="text-[14px] font-black uppercase tracking-[0.08em] text-[#1d4ed8]">
+            TPL Test Confirmation
+          </div>
+          <div className="mt-1 text-[18px] font-black leading-6 text-[#111827] md:text-[20px]">
+            {bookingRef}
+          </div>
+          {confirmationRef ? (
+            <div className="mt-1 break-words text-[13px] font-bold text-[#1e40af]">
+              Confirmation Ref: {confirmationRef}
+            </div>
+          ) : null}
+        </div>
+
+        <div className="shrink-0 rounded-xl border border-[#bfdbfe] bg-white px-3 py-2 text-left md:text-right">
+          <div className="text-[11px] font-black uppercase tracking-[0.08em] text-[#64748b]">
+            Test Payment
+          </div>
+          <div className="mt-0.5 text-[14px] font-black text-[#0f766e]">
+            {paymentStatus}
+          </div>
+          <div className="mt-1 text-[13px] font-extrabold text-[#111827]">
+            {currency === "INR" ? "₹" : currency} {Number(amount || 0).toLocaleString("en-IN")}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-2 text-[13px] font-bold leading-5 md:grid-cols-2">
+        <div className="rounded-xl border border-[#dbeafe] bg-white px-3 py-2">
+          PNR: Not issued in test mode
+        </div>
+        <div className="rounded-xl border border-[#dbeafe] bg-white px-3 py-2">
+          Ticket: Not issued in test mode
+        </div>
+      </div>
+
+      <div className="mt-3 text-[12px] font-semibold leading-5 text-[#1e3a8a]">
+        This is a TPL-only beta smoke confirmation. Supplier booking, live payment capture,
+        PNR generation, and ticketing remain disabled.
+      </div>
+    </section>
   );
 }
 

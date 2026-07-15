@@ -233,7 +233,7 @@ export default function FlightPaymentTopSummary({
 
   const seatSummary = useMemo(() => {
     if (seatMealData?.seatStatus === "selected" && (seatMealData?.seats?.length || 0) > 0) {
-      return seatMealData.seats
+      return (seatMealData.seats ?? [])
         .map((item, index) => `T${index + 1}: ${item.seatNumber}`)
         .join(" • ");
     }
@@ -243,7 +243,7 @@ export default function FlightPaymentTopSummary({
 
   const mealSummary = useMemo(() => {
     if (seatMealData?.mealStatus === "selected" && (seatMealData?.meals?.length || 0) > 0) {
-      return seatMealData.meals
+      return (seatMealData.meals ?? [])
         .map((item, index) => `T${index + 1}: ${item.mealName}`)
         .join(" • ");
     }

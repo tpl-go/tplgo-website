@@ -7,6 +7,15 @@ export type FlightReviewPayload = {
     infants: number;
   };
   cabinClass?: string;
+  backendOffer?: {
+    searchId: string;
+    offerId: string;
+    fareId?: string;
+    expiresAt?: string;
+    backendRequestId?: string;
+    priceConfirmationId?: string;
+    priceStatus?: string;
+  };
   pricing: {
     perAdultBaseFare: number;
     baseFareTotal?: number;
@@ -162,6 +171,7 @@ export function normalizeFlightReviewPayload(
 ): FlightReviewPayload {
   return {
     ...payload,
+    ...(payload.backendOffer ? { backendOffer: normalizeBackendOffer(payload.backendOffer) } : {}),
     pricing: normalizePricing(payload),
     journeys: (payload.journeys || []).map((journey, journeyIndex) => ({
       journeyLabel: journey.journeyLabel || `Journey ${journeyIndex + 1}`,
@@ -184,6 +194,19 @@ export function normalizeFlightReviewPayload(
         duration: layover.duration || "",
       })),
     })),
+  };
+}
+
+function normalizeBackendOffer(value: FlightReviewPayload["backendOffer"]): FlightReviewPayload["backendOffer"] {
+  if (!value) return undefined;
+  return {
+    searchId: value.searchId,
+    offerId: value.offerId,
+    ...(value.fareId ? { fareId: value.fareId } : {}),
+    ...(value.expiresAt ? { expiresAt: value.expiresAt } : {}),
+    ...(value.backendRequestId ? { backendRequestId: value.backendRequestId } : {}),
+    ...(value.priceConfirmationId ? { priceConfirmationId: value.priceConfirmationId } : {}),
+    ...(value.priceStatus ? { priceStatus: value.priceStatus } : {}),
   };
 }
 

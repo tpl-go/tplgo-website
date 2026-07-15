@@ -19,10 +19,15 @@ import {
   type Wallet,
 } from "@/app/lib/wallet/walletStorage";
 import {
-  confirmFlightBackendCheckout,
   startFlightBackendCheckout,
   type FlightBackendCheckoutRefs,
 } from "@/app/lib/api/flightCheckoutIntegration";
+import {
+  confirmFlightTestPayment,
+  createFlightTestPaymentOrder,
+  type BackendFlightTestPaymentConfirmResponse,
+  type BackendFlightTestPaymentOrderResponse,
+} from "@/app/lib/api/flightTestPaymentApi";
 
 import FlightPaymentTopSummary from "@/app/components/payment/flight/FlightPaymentTopSummary";
 import FlightPaymentInsuranceCard from "@/app/components/payment/flight/FlightPaymentInsuranceCard";
@@ -81,6 +86,14 @@ type StoredPayload = {
   };
   earnedCreditAmount?: number;
   timerLeft?: number;
+  backendSimulation?: {
+    simulationId: string;
+    bookingDraftId: string;
+    bookingRef: string;
+    priceConfirmationId: string;
+    expiresAt: string;
+    backendRequestId?: string;
+  };
 };
 
 function getActiveUser() {
@@ -101,6 +114,10 @@ export default function FlightPaymentPage() {
   const [paymentActionState, setPaymentActionState] = useState<
     "idle" | "processing" | "success" | "failure"
   >("idle");
+  const [backendPaymentStep, setBackendPaymentStep] = useState<
+    "idle" | "creating_order" | "confirming_payment" | "failed"
+  >("idle");
+  const [paymentFailureMessage, setPaymentFailureMessage] = useState("");
   const [storedPayload, setStoredPayload] = useState<StoredPayload | null>(null);
   const [insuranceSelected, setInsuranceSelected] = useState(false);
   const [insuranceAmount, setInsuranceAmount] = useState(0);
@@ -326,9 +343,11 @@ const finalTotalAmount =
 );
 
   const handleMockPayment = async (shouldSucceed = true) => {
-    if (!selectedPaymentMethod || isExpired) return;
+    if (!selectedPaymentMethod || isExpired || paymentActionState === "processing") return;
 
     setPaymentActionState("processing");
+    setBackendPaymentStep("idle");
+    setPaymentFailureMessage("");
     startPaymentProcess();
 
     await new Promise((resolve) => setTimeout(resolve, 1500));
@@ -352,8 +371,73 @@ const finalTotalAmount =
       let backendRefs: FlightBackendCheckoutRefs = {};
       const frontendBookingId = `TPL-FLT-${Date.now()}`;
       let backendCheckoutPayload: Record<string, unknown> | null = null;
+      let backendTestOrder: BackendFlightTestPaymentOrderResponse | null = null;
+      let backendTestConfirmation: BackendFlightTestPaymentConfirmResponse | null = null;
 
       try {
+        if (storedPayload?.backendSimulation?.bookingDraftId) {
+          const bookingDraftId = storedPayload.backendSimulation.bookingDraftId;
+          setBackendPaymentStep("creating_order");
+          const testOrder = await createFlightTestPaymentOrder(bookingDraftId, {
+            amount: priceBreakup.totalAmount,
+            currency: "INR",
+            paymentMethod: selectedPaymentMethod || "mock",
+            contactDetails: {
+              mobile: confirmationMobile,
+              email: confirmationEmail,
+            },
+            idempotencyKey: `flight:test-order:${bookingDraftId}:${storedPayload.backendSimulation.priceConfirmationId}`,
+          });
+
+          if (!testOrder.ok) {
+            throw new Error(testOrder.error.message || "Could not create test payment order.");
+          }
+
+          setBackendPaymentStep("confirming_payment");
+          const testConfirm = await confirmFlightTestPayment(bookingDraftId, {
+            paymentId: testOrder.data.paymentId,
+            gatewayPaymentId: `mock_frontend_${Date.now()}`,
+            testOutcome: "success",
+            idempotencyKey: `flight:test-confirm:${bookingDraftId}:${testOrder.data.paymentId}`,
+          });
+
+          if (!testConfirm.ok || testConfirm.data.status !== "TPL_TEST_BOOKING_CONFIRMED") {
+            throw new Error(testConfirm.ok ? "Test payment was not confirmed." : testConfirm.error.message);
+          }
+
+          backendTestOrder = testOrder.data;
+          backendTestConfirmation = testConfirm.data;
+          backendRefs = {
+            backendPaymentId: testConfirm.data.paymentId,
+            backendRequestId: storedPayload.backendSimulation.backendRequestId,
+            backendServiceType: "flight",
+            backendCheckoutStatus: testConfirm.data.status,
+          };
+
+          const updatedReviewPayload = {
+            ...storedPayload,
+            backendTestPayment: {
+              bookingDraftId,
+              bookingRef: testConfirm.data.bookingRef,
+              paymentId: testConfirm.data.paymentId,
+              paymentRef: testConfirm.data.paymentRef,
+              attemptId: testConfirm.data.attemptId,
+              status: testConfirm.data.status,
+              confirmationRef: testConfirm.data.simulatedConfirmation.confirmationRef,
+              supplierBookingDisabled: true,
+              bookingAllowed: false,
+              ticketingAllowed: false,
+              paymentCaptureAllowed: false,
+              pnr: null,
+              ticketNumber: null,
+            },
+          };
+          sessionStorage.setItem(
+            "tplFlightBookingReviewData",
+            JSON.stringify(updatedReviewPayload)
+          );
+          setStoredPayload(updatedReviewPayload as StoredPayload);
+        } else {
         const backendRawPayload = {
           ...storedPayload,
           bookingId: frontendBookingId,
@@ -427,18 +511,64 @@ const finalTotalAmount =
             "tplFlightBookingReviewData",
             JSON.stringify(updatedReviewPayload)
           );
-          setStoredPayload(updatedReviewPayload);
+          setStoredPayload(updatedReviewPayload as StoredPayload);
+        }
         }
       } catch {
+        setBackendPaymentStep("failed");
+        setPaymentFailureMessage(
+          storedPayload?.backendSimulation?.bookingDraftId
+            ? "Could not complete TPL test payment confirmation. No booking was confirmed."
+            : "Payment failed. You can retry."
+        );
         handlePaymentFailure();
         setPaymentActionState("failure");
         return;
       }
 
-      let confirmationPayload = {
+      const confirmationPayload = {
         ...storedPayload,
         ...(backendCheckoutPayload || {}),
         ...backendRefs,
+        ...(backendTestOrder
+          ? {
+              backendTestPaymentOrder: {
+                bookingDraftId: backendTestOrder.bookingDraftId,
+                bookingRef: backendTestOrder.bookingRef,
+                paymentId: backendTestOrder.paymentId,
+                paymentRef: backendTestOrder.paymentRef,
+                attemptId: backendTestOrder.attemptId,
+                gateway: backendTestOrder.gateway,
+                status: backendTestOrder.status,
+                supplierBookingDisabled: true,
+                bookingAllowed: false,
+                ticketingAllowed: false,
+                paymentCaptureAllowed: false,
+                pnr: null,
+                ticketNumber: null,
+              },
+            }
+          : {}),
+        ...(backendTestConfirmation
+          ? {
+              backendTestPaymentConfirmation: {
+                bookingDraftId: backendTestConfirmation.bookingDraftId,
+                bookingRef: backendTestConfirmation.bookingRef,
+                paymentId: backendTestConfirmation.paymentId,
+                paymentRef: backendTestConfirmation.paymentRef,
+                attemptId: backendTestConfirmation.attemptId,
+                status: backendTestConfirmation.status,
+                confirmationRef: backendTestConfirmation.simulatedConfirmation.confirmationRef,
+                confirmedAt: backendTestConfirmation.simulatedConfirmation.confirmedAt,
+                supplierBookingDisabled: true,
+                bookingAllowed: false,
+                ticketingAllowed: false,
+                paymentCaptureAllowed: false,
+                pnr: null,
+                ticketNumber: null,
+              },
+            }
+          : {}),
         reviewData,
         travellerValidation,
         seatMealData,
@@ -483,31 +613,21 @@ leadTraveller: {
         },
         bookingMeta: {
           bookingId: frontendBookingId,
-          bookingStatus: "confirmed",
+          bookingStatus: backendTestConfirmation ? "TPL_TEST_BOOKING_CONFIRMED" : "confirmed",
           paymentStatus: "paid",
           createdAt: new Date().toISOString(),
+          ...(backendTestConfirmation
+            ? {
+                supplierBookingDisabled: true,
+                bookingAllowed: false,
+                ticketingAllowed: false,
+                paymentCaptureAllowed: false,
+                pnr: null,
+                ticketNumber: null,
+              }
+            : {}),
         },
       };
-
-      if (backendRefs.backendCheckoutId) {
-        try {
-          const backendConfirm = await confirmFlightBackendCheckout(
-            confirmationPayload as Record<string, unknown>
-          );
-          backendRefs = {
-            ...backendRefs,
-            ...backendConfirm.refs,
-          };
-          confirmationPayload = {
-            ...confirmationPayload,
-            ...backendRefs,
-          };
-        } catch {
-          handlePaymentFailure();
-          setPaymentActionState("failure");
-          return;
-        }
-      }
 
       const activeMobile = activeUser?.mobile || "";
 
@@ -598,6 +718,7 @@ leadTraveller: {
       handlePaymentSuccess();
       confirmBooking();
       setPaymentActionState("success");
+      setBackendPaymentStep("idle");
 
       sessionStorage.setItem(
         "tplFlightConfirmationData",
@@ -606,6 +727,8 @@ leadTraveller: {
 
       window.location.href = "/flights/confirmation";
     } else {
+      setBackendPaymentStep("failed");
+      setPaymentFailureMessage("Payment failed. You can retry.");
       handlePaymentFailure();
       setPaymentActionState("failure");
     }
@@ -706,6 +829,18 @@ leadTraveller: {
       </div>
 
       <div className="mx-auto max-w-7xl px-3 py-4 pb-28 md:px-4 md:py-6 md:pb-6">
+        {storedPayload?.backendSimulation ? (
+          <div className="mb-4 rounded-xl border border-[#bfdbfe] bg-[#eff6ff] px-4 py-3 text-[12px] font-bold leading-5 text-[#1e3a8a] md:text-[13px]">
+            {backendPaymentStep === "creating_order"
+              ? "Creating TPL test payment order for this simulated flight booking."
+              : backendPaymentStep === "confirming_payment"
+              ? "Confirming TPL test payment. Supplier booking and ticketing remain disabled."
+              : backendPaymentStep === "failed"
+              ? paymentFailureMessage
+              : "This backend-sourced booking will use TPL test payment only. Supplier PNR and ticketing are disabled."}
+          </div>
+        ) : null}
+
         <div className="flex flex-col items-stretch gap-4 lg:flex-row lg:gap-[18px]">
           <div className="flex min-w-0 flex-col gap-4 lg:w-[72%]">
             <FlightPaymentTopSummary

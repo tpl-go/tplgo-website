@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import FlightsFiltersSidebar, {
   FlightsFiltersState,
 } from "../FlightsFiltersSidebar";
@@ -11,10 +11,18 @@ import FlightsSortBar from "../common/FlightsSortBar";
 import OneWayFlightResultCard from "./OneWayFlightResultCard";
 import { FlightState } from "../../hooks";
 import {
+  type DummyFlight,
   generateDummyFlights,
   formatMinutesToTime,
   formatDuration,
 } from "../../data/flightDummyData";
+import {
+  isBackendFlightSearchEnabled,
+  isBackendFlightSearchFallbackEnabled,
+  searchBackendFlights,
+  type BackendFlightSearchRequest,
+  type FlightSearchCabinClass,
+} from "@/app/lib/api/flightSearchApi";
 
 type OneWayResultsLayoutProps = {
   fromCity: string;
@@ -100,10 +108,49 @@ export default function OneWayResultsLayout({
   const [selectedDate] = useState(initialSelectedDate);
   const [sortType, setSortType] = useState("cheapest");
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [backendFlights, setBackendFlights] = useState<DummyFlight[] | null>(null);
 
-  const baseFlights = useMemo(() => {
+  const localFlights = useMemo(() => {
     return generateDummyFlights(fromCity, toCity);
   }, [fromCity, toCity]);
+
+  const backendSearchRequest = useMemo(
+    () => buildBackendFlightSearchRequest(state),
+    [state]
+  );
+
+  useEffect(() => {
+    let active = true;
+
+    if (!isBackendFlightSearchEnabled() || !backendSearchRequest) {
+      setBackendFlights(null);
+      return () => {
+        active = false;
+      };
+    }
+
+    searchBackendFlights(backendSearchRequest)
+      .then((result) => {
+        if (!active) return;
+
+        if (result.ok) {
+          setBackendFlights(result.flights);
+          return;
+        }
+
+        setBackendFlights(isBackendFlightSearchFallbackEnabled() ? null : []);
+      })
+      .catch(() => {
+        if (!active) return;
+        setBackendFlights(isBackendFlightSearchFallbackEnabled() ? null : []);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [backendSearchRequest]);
+
+  const baseFlights = backendFlights ?? localFlights;
 
   const { minPrice, maxPrice, minDuration, maxDuration } = useMemo(() => {
     if (!baseFlights.length) {
@@ -686,7 +733,7 @@ export default function OneWayResultsLayout({
               {
                 fromCity,
                 toCity,
-                departure: state.segments[0]?.departure,
+                departure: state.segments[0]?.departure ?? undefined,
               },
             ]}
           />
@@ -767,6 +814,7 @@ export default function OneWayResultsLayout({
                 timing={card.timing}
                 promo={card.promo}
                 stopDetails={card.stopDetails}
+                backendOffer={card.backendOffer}
               />
             ))
           ) : (
@@ -824,4 +872,42 @@ export default function OneWayResultsLayout({
       )}
     </div>
   );
+}
+
+function buildBackendFlightSearchRequest(state: FlightState): BackendFlightSearchRequest | null {
+  const firstSegment = state.segments[0];
+  const origin = firstSegment?.from?.code?.trim().toUpperCase();
+  const destination = firstSegment?.to?.code?.trim().toUpperCase();
+  const departureDate = formatBackendDate(firstSegment?.departure);
+
+  if (!origin || !destination || !departureDate) return null;
+
+  return {
+    tripType: "oneway",
+    origin,
+    destination,
+    departureDate,
+    adults: Math.max(Number(state.travellers.adults) || 1, 1),
+    children: Math.max(Number(state.travellers.children) || 0, 0),
+    infants: Math.max(Number(state.travellers.infants) || 0, 0),
+    cabinClass: normalizeCabinClass(state.travellers.cabin),
+    currency: "INR",
+    nonStop: false,
+    maxResults: 30,
+  };
+}
+
+function normalizeCabinClass(value: string): FlightSearchCabinClass {
+  if (value === "Premium Economy" || value === "Business" || value === "First") {
+    return value;
+  }
+  return "Economy";
+}
+
+function formatBackendDate(value: Date | null | undefined): string | null {
+  if (!value || Number.isNaN(value.getTime())) return null;
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }

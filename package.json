@@ -14,7 +14,8 @@
     "phase6a:smart-planner-browser": "node scripts/phase6a-smart-planner-browser-certification.mjs",
     "phase7a:cab-browser": "node scripts/phase7a-cab-browser-certification.mjs",
     "phase7b:train-browser": "node scripts/phase7b-train-browser-certification.mjs",
-    "phase7c:cruise-browser": "node scripts/phase7c-cruise-browser-certification.mjs"
+    "phase7c:cruise-browser": "node scripts/phase7c-cruise-browser-certification.mjs",
+    "d12:flight-browser-smoke": "node scripts/phase-d12-flight-browser-smoke-certification.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.101.0",

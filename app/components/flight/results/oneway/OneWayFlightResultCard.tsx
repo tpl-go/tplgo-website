@@ -22,6 +22,13 @@ type Props = {
   timing: string;
   promo: string;
   stopDetails?: StopDetail[];
+  backendOffer?: {
+    searchId: string;
+    offerId: string;
+    fareId?: string;
+    expiresAt?: string;
+    backendRequestId?: string;
+  };
 };
 
 type ActiveOfferSnapshot = {
@@ -264,7 +271,8 @@ export default function FlightResultCard(props: Props) {
     stop,
     arrive,
     arriveCity,
-    stopDetails = [],
+      stopDetails = [],
+    backendOffer,
   } = props;
 
   const baseCardFare = useMemo(() => parseFareNumber(props.price), [props.price]);
@@ -444,6 +452,7 @@ export default function FlightResultCard(props: Props) {
         infants,
       },
       cabinClass,
+      ...(backendOffer ? { backendOffer } : {}),
       pricing: {
         perAdultBaseFare: rawFare,
         baseFareTotal,

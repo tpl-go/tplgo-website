@@ -32,6 +32,13 @@ export type DummyFlight = {
   timing: string;
   promo: string;
   stopDetails: FlightStopDetail[];
+  backendOffer?: {
+    searchId: string;
+    offerId: string;
+    fareId?: string;
+    expiresAt?: string;
+    backendRequestId?: string;
+  };
 };
 
 const AIRLINES = [
