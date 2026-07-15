@@ -25,6 +25,8 @@ export type CoTravellerEntry = {
 };
 
 export type ProfileFormData = {
+  fullName?: string;
+  name?: string;
   firstName: string;
   lastName: string;
   gender: string;

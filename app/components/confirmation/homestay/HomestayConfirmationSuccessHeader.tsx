@@ -15,6 +15,7 @@ type Props = {
   checkIn?: string | null;
   checkOut?: string | null;
   nights?: number;
+  earnedOnThisBooking?: number;
 };
 
 function formatDateTime(value?: string | null) {
