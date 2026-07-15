@@ -24,6 +24,7 @@ import {
   saveWallet,
   addWalletLedgerItem,
 } from "@/app/lib/wallet/walletStorage";
+import { confirmHomestayBackendCheckout } from "@/app/lib/api/homestayCheckoutIntegration";
 
 type ConfirmationPayload = any;
 
@@ -82,6 +83,14 @@ function creditEarnedForHomestayBooking(params: {
   localStorage.setItem(guardKey, "true");
 }
 
+function persistHomestayConfirmationSession(payload: ConfirmationPayload) {
+  if (typeof window === "undefined") return;
+
+  const value = JSON.stringify(payload);
+  sessionStorage.setItem("homestayConfirmationData", value);
+  sessionStorage.setItem("homestayPaymentSuccessData", value);
+}
+
 export default function HomestayConfirmationPage() {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
@@ -92,6 +101,9 @@ export default function HomestayConfirmationPage() {
   const [earnedCreditAmount, setEarnedCreditAmount] = useState(0);
 
   useEffect(() => {
+    let cancelled = false;
+
+    const loadConfirmation = async () => {
     const raw =
       typeof window !== "undefined"
         ? sessionStorage.getItem("homestayConfirmationData") ||
@@ -101,7 +113,30 @@ export default function HomestayConfirmationPage() {
     if (!raw) return;
 
     try {
-      const parsed = JSON.parse(raw);
+      let parsed = JSON.parse(raw);
+
+      if (parsed?.backendCheckoutId) {
+        const backendConfirm = await confirmHomestayBackendCheckout({
+          ...parsed,
+          bookingId: parsed?.bookingId || "",
+          paymentId: parsed?.paymentId || parsed?.transactionId || "",
+          transactionId: parsed?.transactionId || parsed?.paymentId || "",
+          paymentMethod:
+            parsed?.paymentMethod ||
+            parsed?.paymentData?.method ||
+            "Online Payment",
+        });
+
+        if (backendConfirm.attempted && backendConfirm.refs) {
+          parsed = {
+            ...parsed,
+            ...backendConfirm.refs,
+          };
+          persistHomestayConfirmationSession(parsed);
+        }
+      }
+
+      if (cancelled) return;
 
       const homestay = parsed?.homestay || {};
       const searchMeta = parsed?.searchMeta || {};
@@ -314,6 +349,14 @@ export default function HomestayConfirmationPage() {
     } catch (e) {
       console.error("Homestay confirmation parse error:", e);
     }
+
+    };
+
+    loadConfirmation();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const bookingId = useMemo(() => {

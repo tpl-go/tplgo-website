@@ -1,0 +1,15 @@
+"use client";
+import { createTplRequestId,getStoredAuthToken } from "@/app/lib/api/tplApiClient";
+import type { CreatorCommerceCheckoutDTO,CreatorCommerceOrderDTO,CreatorCommerceResult,CreatorCommerceSelection } from "./creatorCommerceTypes";
+import { creatorCommerceIdempotencyKey } from "./creatorCommerceService";
+const selectionKey="tpl_creator_commerce_selection_v1",checkoutKey="tpl_creator_commerce_checkout_v1",orderKey="tpl_creator_commerce_order_v1";
+async function request<T>(path:string,body?:unknown,idempotencyKey?:string):Promise<CreatorCommerceResult<T>>{const requestId=createTplRequestId("creator_commerce");const token=getStoredAuthToken();try{const response=await fetch(path,{method:body===undefined?"GET":"POST",cache:"no-store",headers:{Accept:"application/json","X-Request-Id":requestId,...(body===undefined?{}:{"Content-Type":"application/json"}),...(token?{Authorization:`Bearer ${token}`}:{"X-Creator-Test-User":"shared-preview-user"}),...(idempotencyKey?{"Idempotency-Key":idempotencyKey}:{})},body:body===undefined?undefined:JSON.stringify(body)});const payload=await response.json() as CreatorCommerceResult<T>;return payload;}catch{return {ok:false,error:{code:"INCOMPATIBLE_DTO",message:"Creator testing commerce is temporarily unavailable."},requestId};}}
+export function stageCreatorCommerceSelection(selection:CreatorCommerceSelection){sessionStorage.setItem(selectionKey,JSON.stringify(selection));}
+export function readCreatorCommerceSelection(){try{return JSON.parse(sessionStorage.getItem(selectionKey)??"null") as CreatorCommerceSelection|null;}catch{return null;}}
+export function readStoredCreatorCheckout(){try{return JSON.parse(sessionStorage.getItem(checkoutKey)??"null") as CreatorCommerceCheckoutDTO|null;}catch{return null;}}
+export function readStoredCreatorOrder(){try{return JSON.parse(sessionStorage.getItem(orderKey)??"null") as CreatorCommerceOrderDTO|null;}catch{return null;}}
+export async function createCreatorTestingCheckout(selection:CreatorCommerceSelection,userId:string){const result=await request<CreatorCommerceCheckoutDTO>("/api/v1/creator-commerce/checkout/create",selection,creatorCommerceIdempotencyKey(userId,selection));if(result.ok)sessionStorage.setItem(checkoutKey,JSON.stringify(result.data));return result;}
+export async function startCreatorTestingPayment(checkoutId:string){return request<CreatorCommerceCheckoutDTO>("/api/v1/creator-commerce/payment/start",{checkoutId},`creator:payment:start:${checkoutId}`);}
+export async function confirmCreatorTestingPayment(checkoutId:string,outcome:"success"|"failure"){const result=await request<CreatorCommerceOrderDTO>("/api/v1/creator-commerce/payment/confirm",{checkoutId,outcome},`creator:payment:confirm:${checkoutId}:${outcome}`);if(result.ok)sessionStorage.setItem(orderKey,JSON.stringify(result.data));return result;}
+export async function readCreatorTestingCheckoutStatus(checkoutId:string){return request<CreatorCommerceCheckoutDTO>(`/api/v1/creator-commerce/checkout/${encodeURIComponent(checkoutId)}/status`);}
+

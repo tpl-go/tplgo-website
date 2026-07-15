@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { ManageQuote } from "@/lib/manage/manageTypes";
+import { ManageQuote } from "@/app/lib/manage/manageTypes";
 import {
   formatCurrency,
   getSettlementDescription,

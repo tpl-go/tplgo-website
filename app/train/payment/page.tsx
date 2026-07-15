@@ -339,7 +339,7 @@ export default function TrainPaymentPage() {
           refundUsed: 0,
         };
 
-        const pricingSnapshot = walletPriceBreakup || {
+        const pricingSnapshot: Record<string, any> = walletPriceBreakup || {
           baseFare: 0,
           trueBaseFare: 0,
           baseAfterOffer: 0,

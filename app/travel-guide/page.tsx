@@ -174,7 +174,7 @@ export default function TravelGuidePage() {
               <Link
                 key={destination}
                 href={`/travel-guide/destination/${slugifyTravelGuide(
-                  destination
+                  destination ?? ""
                 )}`}
                 className="rounded-full border border-gray-300 bg-white px-4 py-2 text-xs font-semibold text-gray-700 transition hover:border-orange-500 hover:text-orange-600 sm:px-5 sm:py-2.5 sm:text-sm"
               >
@@ -196,7 +196,7 @@ export default function TravelGuidePage() {
             {themes.map((theme) => (
               <Link
                 key={theme}
-                href={`/travel-guide/theme/${slugifyTravelGuide(theme)}`}
+                href={`/travel-guide/theme/${slugifyTravelGuide(theme ?? "")}`}
                 className="rounded-full border border-gray-300 bg-white px-4 py-2 text-xs font-semibold text-gray-700 transition hover:border-orange-500 hover:text-orange-600 sm:px-5 sm:py-2.5 sm:text-sm"
               >
                 {theme}

@@ -761,8 +761,6 @@ export default function InsuranceBookingPage() {
       finalTotal: pricing.finalTotal,
 
       appliedOffer: finalSelectedOffer,
-      appliedOfferCode: pricing.appliedOfferCode,
-      appliedOfferTitle: pricing.appliedOfferTitle,
       offerData: finalSelectedOffer,
       offerApplied: pricing.appliedOfferAmount,
 

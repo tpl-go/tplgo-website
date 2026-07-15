@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { FlightManageBookingRecord } from "@/lib/manage/manageTypes";
+import { FlightManageBookingRecord } from "@/app/lib/manage/manageTypes";
 
 interface ManageBookingDetailsProps {
   booking: FlightManageBookingRecord;

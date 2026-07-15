@@ -24,9 +24,13 @@ import {
   saveWallet,
   addWalletLedgerItem,
 } from "@/app/lib/wallet/walletStorage";
+import { confirmCruiseBackendCheckout } from "@/app/lib/api/cruiseCheckoutIntegration";
 
 type ConfirmationPayload = {
   bookingId?: string;
+  paymentId?: string;
+  paymentMethod?: string;
+  transactionId?: string;
   cruise?: any;
   cabins?: any;
   travellers?: any;
@@ -35,6 +39,12 @@ type ConfirmationPayload = {
   session?: any;
   paymentData?: any;
   earnedCreditAmount?: number;
+  backendCheckoutId?: string;
+  backendBookingId?: string;
+  backendPaymentId?: string;
+  backendRequestId?: string;
+  backendServiceType?: "cruise";
+  backendCheckoutStatus?: string;
 };
 
 function buildBookingId() {
@@ -126,6 +136,9 @@ export default function CruiseConfirmationPage() {
   const [earnedCreditAmount, setEarnedCreditAmount] = useState(0);
 
   useEffect(() => {
+    let cancelled = false;
+
+    const loadConfirmation = async () => {
     const raw =
       typeof window !== "undefined"
         ? sessionStorage.getItem("tplCruiseConfirmationData")
@@ -134,7 +147,39 @@ export default function CruiseConfirmationPage() {
     if (!raw) return;
 
     try {
-      const parsed: ConfirmationPayload = JSON.parse(raw);
+      let parsed: ConfirmationPayload = JSON.parse(raw);
+
+      if (parsed?.backendCheckoutId) {
+        const backendConfirm = await confirmCruiseBackendCheckout({
+          ...parsed,
+          bookingId: parsed?.bookingId || "",
+          paymentId:
+            parsed?.backendPaymentId ||
+            parsed?.paymentData?.paymentId ||
+            parsed?.paymentId ||
+            "",
+          transactionId:
+            parsed?.paymentData?.transactionId ||
+            parsed?.paymentData?.paymentId ||
+            parsed?.paymentId ||
+            "",
+          paymentMethod:
+            parsed?.paymentData?.selectedPaymentMethod ||
+            parsed?.paymentData?.method ||
+            parsed?.paymentMethod ||
+            "Online Payment",
+        });
+
+        if (backendConfirm.attempted && backendConfirm.refs) {
+          parsed = {
+            ...parsed,
+            ...backendConfirm.refs,
+          };
+          persistCruiseConfirmationSession(parsed);
+        }
+      }
+
+      if (cancelled) return;
 
       const activeUser = getActiveUserFromStorage();
 
@@ -367,6 +412,14 @@ export default function CruiseConfirmationPage() {
     } catch (e) {
       console.error("Cruise confirmation parse error:", e);
     }
+
+    };
+
+    loadConfirmation();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const bookingId = useMemo(() => {

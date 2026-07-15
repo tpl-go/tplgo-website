@@ -37,6 +37,11 @@ import {
   saveFlightMealChanges,
   saveFlightBaggageChanges,
 } from "@/app/lib/booking/flightManageUpdate";
+import {
+  executeBackendSamePriceManage,
+  prepareBackendManageRequest,
+  persistBackendManageCache,
+} from "@/app/lib/manage/backendManageBookingIntegration";
 
 type SidebarKey =
   | "summary"
@@ -45,7 +50,8 @@ type SidebarKey =
   | "special-request"
   | "seats"
   | "meals"
-  | "baggage";
+  | "baggage"
+  | "cancel-booking";
 
 type ManageTraveller = {
   id: string;
@@ -59,6 +65,18 @@ type ManageTraveller = {
 type ManageContact = {
   email: string;
   phone: string;
+};
+
+type FlightManagePayload = Record<string, unknown> & {
+  travellerValidation?: Record<string, unknown> & {
+    travellers?: Array<Record<string, unknown>>;
+    contactDetails?: Record<string, unknown>;
+  };
+  reviewData?: Record<string, unknown>;
+  managePayment?: Record<string, unknown>;
+  paymentData?: Record<string, unknown>;
+  fare?: Record<string, unknown>;
+  manageDraft?: Record<string, unknown>;
 };
 
 const emptyBookingSummary: FlightManageBookingRecord = {
@@ -147,7 +165,10 @@ function dispatchBookingUpdate() {
   window.dispatchEvent(new Event(BOOKING_UPDATED_EVENT));
 }
 
-function savePayloadToStorage(payloadStorageKey: string | undefined, payload: any) {
+function savePayloadToStorage(
+  payloadStorageKey: string | undefined,
+  payload: FlightManagePayload
+) {
   if (typeof window === "undefined") return;
   if (!payloadStorageKey) return;
 
@@ -155,73 +176,72 @@ function savePayloadToStorage(payloadStorageKey: string | undefined, payload: an
   dispatchBookingUpdate();
 }
 
-function saveTravellerChangesToPayload(
-  payloadStorageKey: string | undefined,
+function getFlightManageCurrentAmount(
+  payload: FlightManagePayload,
+  booking: BookingItem
+) {
+  return Number(
+    payload?.managePayment?.updatedTotalAmount ||
+      payload?.paymentData?.totalPaid ||
+      payload?.fare?.totalPaid ||
+      payload?.fare?.totalAmount ||
+      booking.amount ||
+      0
+  );
+}
+
+function buildTravellerPayload(
+  payload: FlightManagePayload,
   travellers: ManageTraveller[]
 ) {
-  if (!payloadStorageKey) return;
-
-  const payload = getBookingPayload<any>(payloadStorageKey);
-  if (!payload) return;
-
   const existingTravellers = payload?.travellerValidation?.travellers || [];
 
-  payload.travellerValidation = {
-    ...(payload.travellerValidation || {}),
-    travellers: travellers.map((item, index) => {
-      const existing = existingTravellers[index] || {};
+  return {
+    ...payload,
+    travellerValidation: {
+      ...(payload.travellerValidation || {}),
+      travellers: travellers.map((item, index) => {
+        const existing = existingTravellers[index] || {};
 
-      return {
-        ...existing,
-        id: item.id,
-        title: item.title,
-        firstName: item.firstName,
-        middleName: item.middleName || "",
-        lastName: item.lastName,
-        travellerType: item.type,
-      };
-    }),
-  };
-
-  savePayloadToStorage(payloadStorageKey, payload);
-}
-
-function saveContactChangesToPayload(
-  payloadStorageKey: string | undefined,
-  contact: ManageContact
-) {
-  if (!payloadStorageKey) return;
-
-  const payload = getBookingPayload<any>(payloadStorageKey);
-  if (!payload) return;
-
-  payload.travellerValidation = {
-    ...(payload.travellerValidation || {}),
-    contactDetails: {
-      ...(payload.travellerValidation?.contactDetails || {}),
-      email: contact.email,
-      mobile: contact.phone,
+        return {
+          ...existing,
+          id: item.id,
+          title: item.title,
+          firstName: item.firstName,
+          middleName: item.middleName || "",
+          lastName: item.lastName,
+          travellerType: item.type,
+        };
+      }),
     },
   };
-
-  savePayloadToStorage(payloadStorageKey, payload);
 }
 
-function saveSpecialRequestChangesToPayload(
-  payloadStorageKey: string | undefined,
+function buildContactPayload(payload: FlightManagePayload, contact: ManageContact) {
+  return {
+    ...payload,
+    travellerValidation: {
+      ...(payload.travellerValidation || {}),
+      contactDetails: {
+        ...(payload.travellerValidation?.contactDetails || {}),
+        email: contact.email,
+        mobile: contact.phone,
+      },
+    },
+  };
+}
+
+function buildSpecialRequestPayload(
+  payload: FlightManagePayload,
   specialRequest: string
 ) {
-  if (!payloadStorageKey) return;
-
-  const payload = getBookingPayload<any>(payloadStorageKey);
-  if (!payload) return;
-
-  payload.reviewData = {
-    ...(payload.reviewData || {}),
-    specialRequest,
+  return {
+    ...payload,
+    reviewData: {
+      ...(payload.reviewData || {}),
+      specialRequest,
+    },
   };
-
-  savePayloadToStorage(payloadStorageKey, payload);
 }
 
 function buildManageStateFromResolvedFlightSource(
@@ -242,7 +262,7 @@ function buildManageStateFromResolvedFlightSource(
     id: item.id || `traveller-${index + 1}`,
     title: getTitleFromTraveller(item),
     firstName: item.firstName || "Traveller",
-    middleName: item.middleName || "",
+    middleName: (item as { middleName?: string }).middleName || "",
     lastName: item.lastName || `${index + 1}`,
     type: normalizeTravellerType(item.travellerType),
   }));
@@ -407,7 +427,9 @@ function FlightManagePageContent() {
       return;
     }
 
-    const payload = getBookingPayload<any>(matchedBooking.payloadStorageKey);
+    const payload = getBookingPayload<FlightManagePayload>(
+      matchedBooking.payloadStorageKey
+    );
     const resolvedSource = resolveFlightBookingSource(matchedBooking, payload);
     const hydrated = buildManageStateFromResolvedFlightSource(
       matchedBooking,
@@ -523,7 +545,9 @@ function FlightManagePageContent() {
 
     try {
       if (mode === "payment" || mode === "wallet_credit") {
-        const payload = getBookingPayload<any>(bookingItem.payloadStorageKey);
+        const payload = getBookingPayload<FlightManagePayload>(
+          bookingItem.payloadStorageKey
+        );
 
         if (!payload || !bookingItem.payloadStorageKey) {
           alert("Booking payload not found.");
@@ -537,16 +561,106 @@ function FlightManagePageContent() {
           section,
         };
 
-        localStorage.setItem(
-          bookingItem.payloadStorageKey,
-          JSON.stringify(payload)
-        );
+        const sectionQuote =
+          section === "seats"
+            ? seatQuote
+            : section === "meals"
+            ? mealQuote
+            : baggageQuote;
+
+        const backendResult = await prepareBackendManageRequest({
+          booking: bookingItem,
+          payload,
+          serviceType: "flight",
+          section,
+          changeType:
+            sectionQuote.settlementMode === "payment"
+              ? "upgrade"
+              : sectionQuote.settlementMode === "wallet_credit"
+              ? "downgrade"
+              : "same_price",
+          settlementMode: sectionQuote.settlementMode,
+          currentAmount:
+            sectionQuote.settlementMode === "wallet_credit"
+              ? Number(sectionQuote.walletCredit || 0)
+              : 0,
+          requestedAmount:
+            sectionQuote.settlementMode === "payment"
+              ? Number(sectionQuote.netPayable || 0)
+              : 0,
+          requestedChange: {
+            seats: seatSelections,
+            meals: mealSelections,
+            baggage: baggageSelections,
+            section,
+          },
+          beforeSnapshot: payload,
+          afterSnapshot: payload,
+        });
+
+        if (!backendResult.ok && !backendResult.fallbackAllowed) {
+          alert(backendResult.error || "Backend manage booking request failed.");
+          return;
+        }
+
+        const payloadToSave =
+          backendResult.ok && backendResult.payload
+            ? { ...payload, ...backendResult.payload }
+            : payload;
+
+        persistBackendManageCache(bookingItem.payloadStorageKey, payloadToSave);
 
         router.push(
-  `/manage/payment?bookingId=${encodeURIComponent(
-    bookingItem.id
-  )}&section=${section}&type=flight`
-);
+          `/manage/payment?bookingId=${encodeURIComponent(
+            bookingItem.id
+          )}&section=${section}&type=flight`
+        );
+        return;
+      }
+
+      const payload = getBookingPayload<FlightManagePayload>(
+        bookingItem.payloadStorageKey
+      );
+      if (!payload) {
+        alert("Booking payload not found.");
+        return;
+      }
+
+      const backendResult = await executeBackendSamePriceManage({
+        booking: bookingItem,
+        payload,
+        serviceType: "flight",
+        section,
+        changeType:
+          section === "seats"
+            ? "seat_update"
+            : section === "meals"
+            ? "meal_update"
+            : "baggage_update",
+        settlementMode: "save",
+        currentAmount: 0,
+        requestedAmount: 0,
+        requestedChange: {
+          seats: seatSelections,
+          meals: mealSelections,
+          baggage: baggageSelections,
+          section,
+        },
+        beforeSnapshot: payload,
+        afterSnapshot: {
+          ...payload,
+          manageDraft: {
+            ...(payload.manageDraft || {}),
+            seats: seatSelections,
+            meals: mealSelections,
+            baggage: baggageSelections,
+            section,
+          },
+        },
+      });
+
+      if (!backendResult.ok && !backendResult.fallbackAllowed) {
+        alert(backendResult.error || "Backend manage booking request failed.");
         return;
       }
 
@@ -575,11 +689,17 @@ function FlightManagePageContent() {
         });
       }
 
-      if (mode === "wallet_credit") {
-        alert(`${section} updated successfully. Refund Wallet credit will be added.`);
-      } else {
-        alert(`${section} updated successfully.`);
+      if (backendResult.ok && backendResult.payload) {
+        const updatedPayload =
+          getBookingPayload<FlightManagePayload>(bookingItem.payloadStorageKey) ||
+          payload;
+        persistBackendManageCache(bookingItem.payloadStorageKey, {
+          ...updatedPayload,
+          ...backendResult.payload,
+        });
       }
+
+      alert(`${section} updated successfully.`);
 
       const allBookings = getAllBookings();
       const refreshedBooking =
@@ -587,7 +707,7 @@ function FlightManagePageContent() {
           (item) => item.id === bookingItem.id && item.type === "flight"
         ) || bookingItem;
 
-      const refreshedPayload = getBookingPayload<any>(
+      const refreshedPayload = getBookingPayload<FlightManagePayload>(
         refreshedBooking.payloadStorageKey
       );
       const refreshedSource = resolveFlightBookingSource(
@@ -611,6 +731,105 @@ function FlightManagePageContent() {
       console.error(error);
       alert(`Unable to update ${section}. Please try again.`);
     }
+  };
+
+  const handleTravellerChange = async (next: ManageTraveller[]) => {
+    setTravellers(next);
+
+    if (!bookingItem?.payloadStorageKey) return;
+    const payload = getBookingPayload<FlightManagePayload>(
+      bookingItem.payloadStorageKey
+    );
+    if (!payload) return;
+
+    const nextPayload = buildTravellerPayload(payload, next);
+    const currentAmount = getFlightManageCurrentAmount(payload, bookingItem);
+    const backendResult = await executeBackendSamePriceManage({
+      booking: bookingItem,
+      payload,
+      serviceType: "flight",
+      section: "traveller-details",
+      changeType: "traveller_update",
+      settlementMode: "save",
+      currentAmount,
+      requestedAmount: currentAmount,
+      requestedChange: { travellerValidation: nextPayload.travellerValidation },
+      beforeSnapshot: payload,
+      afterSnapshot: nextPayload,
+    });
+
+    const payloadToSave =
+      backendResult.ok && backendResult.payload
+        ? { ...nextPayload, ...backendResult.payload }
+        : nextPayload;
+
+    savePayloadToStorage(bookingItem.payloadStorageKey, payloadToSave);
+  };
+
+  const handleContactChange = async (next: ManageContact) => {
+    setContact(next);
+
+    if (!bookingItem?.payloadStorageKey) return;
+    const payload = getBookingPayload<FlightManagePayload>(
+      bookingItem.payloadStorageKey
+    );
+    if (!payload) return;
+
+    const nextPayload = buildContactPayload(payload, next);
+    const currentAmount = getFlightManageCurrentAmount(payload, bookingItem);
+    const backendResult = await executeBackendSamePriceManage({
+      booking: bookingItem,
+      payload,
+      serviceType: "flight",
+      section: "contact-details",
+      changeType: "contact_update",
+      settlementMode: "save",
+      currentAmount,
+      requestedAmount: currentAmount,
+      requestedChange: { travellerValidation: nextPayload.travellerValidation },
+      beforeSnapshot: payload,
+      afterSnapshot: nextPayload,
+    });
+
+    const payloadToSave =
+      backendResult.ok && backendResult.payload
+        ? { ...nextPayload, ...backendResult.payload }
+        : nextPayload;
+
+    savePayloadToStorage(bookingItem.payloadStorageKey, payloadToSave);
+  };
+
+  const handleSpecialRequestChange = async (next: string) => {
+    setSpecialRequest(next);
+
+    if (!bookingItem?.payloadStorageKey) return;
+    const payload = getBookingPayload<FlightManagePayload>(
+      bookingItem.payloadStorageKey
+    );
+    if (!payload) return;
+
+    const nextPayload = buildSpecialRequestPayload(payload, next);
+    const currentAmount = getFlightManageCurrentAmount(payload, bookingItem);
+    const backendResult = await executeBackendSamePriceManage({
+      booking: bookingItem,
+      payload,
+      serviceType: "flight",
+      section: "special-request",
+      changeType: "add_on_update",
+      settlementMode: "save",
+      currentAmount,
+      requestedAmount: currentAmount,
+      requestedChange: { specialRequest: next },
+      beforeSnapshot: payload,
+      afterSnapshot: nextPayload,
+    });
+
+    const payloadToSave =
+      backendResult.ok && backendResult.payload
+        ? { ...nextPayload, ...backendResult.payload }
+        : nextPayload;
+
+    savePayloadToStorage(bookingItem.payloadStorageKey, payloadToSave);
   };
 
   if (isLoading) {
@@ -669,8 +888,7 @@ function FlightManagePageContent() {
         <ManageTravellerDetailsSection
           travellers={travellers}
           onChange={(next) => {
-            setTravellers(next);
-            saveTravellerChangesToPayload(bookingItem.payloadStorageKey, next);
+            void handleTravellerChange(next);
           }}
         />
       )}
@@ -679,8 +897,7 @@ function FlightManagePageContent() {
         <ManageContactDetailsSection
           value={contact}
           onChange={(next) => {
-            setContact(next);
-            saveContactChangesToPayload(bookingItem.payloadStorageKey, next);
+            void handleContactChange(next);
           }}
         />
       )}
@@ -689,11 +906,7 @@ function FlightManagePageContent() {
         <ManageSpecialRequestSection
           value={specialRequest}
           onChange={(next) => {
-            setSpecialRequest(next);
-            saveSpecialRequestChangesToPayload(
-              bookingItem.payloadStorageKey,
-              next
-            );
+            void handleSpecialRequestChange(next);
           }}
         />
       )}

@@ -469,8 +469,6 @@ export default function InsurancePaymentPage() {
     earnedOnThisBooking: paymentPricing.earnedOnThisBooking,
     finalTotal: paymentPricing.finalTotal,
     appliedOffer,
-    appliedOfferCode: paymentPricing.appliedOfferCode,
-    appliedOfferTitle: paymentPricing.appliedOfferTitle,
     offerData: appliedOffer,
     offerApplied: paymentPricing.appliedOfferAmount,
     walletBreakdown: {
@@ -508,11 +506,11 @@ export default function InsurancePaymentPage() {
     },
   };
 
-  const buildConfirmationPayload = () => {
+  const buildConfirmationPayload = (sourcePayload = enhancedStoredPayload) => {
     const bookingId = `INS-${Date.now()}`;
-    const plan = enhancedStoredPayload.plan;
-    const search = enhancedStoredPayload.search || {};
-    const travellers = enhancedStoredPayload.travellers || [];
+    const plan = sourcePayload.plan;
+    const search = sourcePayload.search || {};
+    const travellers = sourcePayload.travellers || [];
     const leadTraveller = travellers?.[0] || {};
 
     return {
@@ -537,9 +535,9 @@ export default function InsurancePaymentPage() {
       claimSettlementRatio: plan?.claimSettlementRatio || 0,
 
       travellers,
-      nominee: enhancedStoredPayload.nominee || {},
-      medicalDeclaration: enhancedStoredPayload.medicalDeclaration || {},
-      addOns: enhancedStoredPayload.addOns || {},
+      nominee: sourcePayload.nominee || {},
+      medicalDeclaration: sourcePayload.medicalDeclaration || {},
+      addOns: sourcePayload.addOns || {},
 
       pricingSnapshot: paymentPricing.pricingSnapshot,
       benefitPricing: paymentPricing.benefitPricing,
@@ -559,8 +557,6 @@ export default function InsurancePaymentPage() {
       finalTotal: paymentPricing.finalPayable,
 
       appliedOffer,
-      appliedOfferCode: paymentPricing.appliedOfferCode,
-      appliedOfferTitle: paymentPricing.appliedOfferTitle,
       offerData: appliedOffer,
       offerApplied: paymentPricing.appliedOfferAmount,
 
@@ -568,8 +564,8 @@ export default function InsurancePaymentPage() {
         title: leadTraveller?.title || "",
         firstName: leadTraveller?.firstName || "",
         lastName: leadTraveller?.lastName || "",
-        email: enhancedStoredPayload?.user?.email || "",
-        mobile: enhancedStoredPayload?.user?.mobile || "",
+        email: sourcePayload?.user?.email || "",
+        mobile: sourcePayload?.user?.mobile || "",
       },
 
       fare: {
@@ -629,11 +625,11 @@ export default function InsurancePaymentPage() {
 
       plan,
       search,
-      user: enhancedStoredPayload.user || null,
-      walletBreakdown: enhancedStoredPayload.walletBreakdown || {},
-      fareBreakup: enhancedStoredPayload.fareBreakup || {},
+      user: sourcePayload.user || null,
+      walletBreakdown: sourcePayload.walletBreakdown || {},
+      fareBreakup: sourcePayload.fareBreakup || {},
       originalBookingBaseline: {
-        ...enhancedStoredPayload.originalBookingBaseline,
+        ...sourcePayload.originalBookingBaseline,
         grossAmount: paymentPricing.grossAmount,
         offerApplied: paymentPricing.appliedOfferAmount,
         appliedOfferCode: paymentPricing.appliedOfferCode,
@@ -641,6 +637,16 @@ export default function InsurancePaymentPage() {
         payableAmount: paymentPricing.finalPayable,
         amount: paymentPricing.finalPayable,
       },
+      walletSource: sourcePayload.walletSource,
+      walletSyncStatus: sourcePayload.walletSyncStatus,
+      backendWalletSnapshot: sourcePayload.backendWalletSnapshot,
+      metadata: sourcePayload.metadata,
+      backendCheckoutId: sourcePayload.backendCheckoutId,
+      backendBookingId: sourcePayload.backendBookingId,
+      backendPaymentId: sourcePayload.backendPaymentId,
+      backendRequestId: sourcePayload.backendRequestId,
+      backendServiceType: sourcePayload.backendServiceType,
+      backendCheckoutStatus: sourcePayload.backendCheckoutStatus,
       manageBookingReady: true,
     };
   };
@@ -659,21 +665,22 @@ export default function InsurancePaymentPage() {
       );
       let backendRefs: InsuranceBackendCheckoutRefs = backendStart.refs;
 
-      if (backendStart.attempted) {
-        const updatedBookingPayload = {
-          ...enhancedStoredPayload,
-          ...backendStart.refs,
-        };
+      const checkoutPayload = {
+        ...enhancedStoredPayload,
+        ...(backendStart.payload as Record<string, unknown>),
+        ...backendStart.refs,
+      };
 
+      if (backendStart.attempted) {
         sessionStorage.setItem(
           "tplInsuranceBookingData",
-          JSON.stringify(updatedBookingPayload)
+          JSON.stringify(checkoutPayload)
         );
 
-        setStoredPayload(updatedBookingPayload);
+        setStoredPayload(checkoutPayload);
       }
 
-      let confirmationPayload = buildConfirmationPayload();
+      let confirmationPayload = buildConfirmationPayload(checkoutPayload);
 
       if (backendRefs.backendCheckoutId) {
         const backendConfirm = await confirmInsuranceBackendCheckout({

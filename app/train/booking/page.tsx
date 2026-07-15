@@ -199,10 +199,10 @@ export default function TrainBookingPage() {
   const { bookingPayload, travellers, contactDetails, irctcAccount } = pageState;
 
   const resultPricing =
-    bookingPayload?.pricingSnapshot ||
-    bookingPayload?.fareSnapshot ||
-    bookingPayload?.priceBreakup ||
-    {};
+    (bookingPayload?.pricingSnapshot ||
+      bookingPayload?.fareSnapshot ||
+      bookingPayload?.priceBreakup ||
+      {}) as Record<string, any>;
 
   const baseFare = clampAmount(
     resultPricing?.trueBaseFare ||
