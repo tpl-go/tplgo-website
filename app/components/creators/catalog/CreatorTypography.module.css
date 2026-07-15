@@ -1,0 +1,115 @@
+.scope {
+  --creator-text-primary: #020617;
+  --creator-text-secondary: #334155;
+  --creator-text-muted: #475569;
+  --creator-text-on-dark-secondary: #e2e8f0;
+  --creator-heading-xl: clamp(1.875rem, 3.4vw, 3.25rem);
+  --creator-heading-lg: clamp(1.5rem, 2.3vw, 2.375rem);
+  --creator-heading-md: clamp(1.25rem, 1.8vw, 1.75rem);
+  --creator-body: clamp(0.875rem, 0.25vw + 0.82rem, 1rem);
+  --creator-caption: clamp(0.75rem, 0.18vw + 0.72rem, 0.875rem);
+  color: var(--creator-text-primary);
+  font-size: var(--creator-body);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.scope h1 {
+  color: inherit;
+  font-size: var(--creator-heading-lg);
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+}
+
+.scope h2 {
+  color: inherit;
+  font-size: var(--creator-heading-md);
+  font-weight: 700;
+  line-height: 1.18;
+  letter-spacing: -0.018em;
+}
+
+.scope h3,
+.scope h4 {
+  color: inherit;
+  font-size: clamp(0.9375rem, 0.35vw + 0.88rem, 1.125rem);
+  font-weight: 650;
+  line-height: 1.3;
+}
+
+.scope p {
+  line-height: 1.6;
+}
+
+.scope button,
+.scope input,
+.scope select,
+.scope textarea {
+  font-size: max(var(--creator-caption), 1em);
+  font-weight: 600;
+}
+
+.scope button,
+.scope select {
+  line-height: 1.25;
+}
+
+.scope :global([class~="text-[8px]"]),
+.scope :global([class~="text-[9px]"]),
+.scope :global([class~="text-[10px]"]),
+.scope :global([class~="text-[11px]"]) {
+  font-size: var(--creator-caption);
+  line-height: 1.35;
+}
+
+.scope :global(.text-xs) {
+  font-size: var(--creator-caption);
+  line-height: 1.45;
+}
+
+.scope :global(.text-slate-400),
+.scope :global(.text-gray-400),
+.scope :global(.text-slate-500),
+.scope :global(.text-gray-500) {
+  color: var(--creator-text-muted);
+}
+
+.scope :global(.text-slate-600),
+.scope :global(.text-gray-600) {
+  color: var(--creator-text-secondary);
+}
+
+.scope :global([class~="bg-[#071831]"]) h1 {
+  font-size: var(--creator-heading-xl);
+}
+
+.scope :global([class~="bg-[#071831]"]) :global(.text-slate-300),
+.scope :global([class~="bg-[#071831]"]) :global(.text-slate-400),
+.scope :global([class~="bg-[#071831]"]) :global(.text-slate-500) {
+  color: var(--creator-text-on-dark-secondary);
+}
+
+.scope :global([class~="bg-[#071831]"]) p,
+.scope :global([class~="bg-[#071831]"]) label,
+.scope :global([class~="bg-[#071831]"]) span {
+  text-shadow: 0 1px 2px rgb(2 6 23 / 28%);
+}
+
+@media (max-width: 767px) {
+  .scope {
+    --creator-heading-xl: clamp(1.75rem, 8vw, 2.125rem);
+    --creator-heading-lg: clamp(1.5rem, 6.8vw, 1.875rem);
+    --creator-heading-md: clamp(1.25rem, 5.6vw, 1.5rem);
+    --creator-body: 0.9375rem;
+    --creator-caption: 0.8125rem;
+  }
+
+  .scope h1,
+  .scope h2,
+  .scope h3,
+  .scope h4 {
+    overflow-wrap: anywhere;
+  }
+}

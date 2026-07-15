@@ -1,0 +1,5 @@
+import type { BillingCycle } from "@/app/lib/creators/creatorPlansData";
+
+export default function CreatorBillingToggle({ cycle, onChange }: { cycle: BillingCycle; onChange: (cycle: BillingCycle) => void }) {
+  return <div className="flex flex-col items-center gap-3"><div role="group" aria-label="Billing cycle" className="inline-flex rounded-xl border border-slate-200 bg-white p-1.5 shadow-sm"><button type="button" aria-pressed={cycle === "monthly"} onClick={() => onChange("monthly")} className={`min-h-10 rounded-lg px-5 py-2 font-bold transition ${cycle === "monthly" ? "bg-[#071831] text-white shadow" : "text-slate-600 hover:text-slate-950"}`}>Monthly</button><button type="button" aria-pressed={cycle === "yearly"} onClick={() => onChange("yearly")} className={`min-h-10 rounded-lg px-5 py-2 font-bold transition ${cycle === "yearly" ? "bg-[#071831] text-white shadow" : "text-slate-600 hover:text-slate-950"}`}>Yearly</button></div><span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800">Save up to 20%</span></div>;
+}

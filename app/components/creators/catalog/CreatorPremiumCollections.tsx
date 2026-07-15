@@ -1,0 +1,7 @@
+import Image from "next/image";
+import Link from "next/link";
+import { marketplaceHomeCollections } from "@/app/lib/creators/creatorMarketplaceHomeData";
+
+export default function CreatorPremiumCollections() {
+  return <section className="bg-slate-50 py-10 sm:py-12"><div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-10"><div className="flex items-end justify-between"><div><h2 className="text-2xl font-black tracking-tight">Premium Collections</h2><p className="mt-1 text-sm font-medium text-slate-500">Curated collections for every storytelling need</p></div><Link href="/creators/collections" className="hidden text-xs font-black text-blue-700 sm:block">View all collections →</Link></div><div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">{marketplaceHomeCollections.map((collection) => <Link href={`/creators/collections/${collection.slug}`} key={collection.slug} className="group relative aspect-[2/1] overflow-hidden rounded-xl bg-slate-900 shadow-sm"><Image src={collection.images[0]!} alt="" fill sizes="(min-width:1024px) 25vw, 50vw" className="object-cover transition duration-500 group-hover:scale-105" /><div className="absolute inset-0 bg-gradient-to-t from-[#071831] via-[#071831]/15 to-transparent" /><div className="absolute inset-x-0 bottom-0 p-4 text-white"><h3 className="text-sm font-black">{collection.title}</h3><p className="mt-0.5 text-[10px] font-semibold text-slate-200">{collection.assetCount} assets</p></div></Link>)}</div></div></section>;
+}

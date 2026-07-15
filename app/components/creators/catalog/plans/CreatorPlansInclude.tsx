@@ -1,0 +1,5 @@
+import { plansInclude } from "@/app/lib/creators/creatorPlansData";
+
+export default function CreatorPlansInclude() {
+  return <section className="mx-auto max-w-[1440px] px-4 py-14 sm:px-6 lg:px-10"><div className="mx-auto max-w-3xl text-center"><p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-700">The TPL standard</p><h2 className="mt-2">All plans include</h2><p className="mt-3 font-medium text-slate-600">A trusted Creator marketplace foundation, whatever your starting point.</p></div><div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{plansInclude.map(({ title, description, icon: Icon }) => <article key={title} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><span className="grid h-11 w-11 place-items-center rounded-xl bg-blue-50 text-blue-700"><Icon className="h-5 w-5" /></span><h3 className="mt-4 text-lg font-bold">{title}</h3><p className="mt-2 text-sm font-medium text-slate-600">{description}</p></article>)}</div></section>;
+}

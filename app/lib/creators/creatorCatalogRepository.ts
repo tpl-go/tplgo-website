@@ -42,6 +42,7 @@ import {
   listCreatorSubcategories,
 } from "./creatorCatalogService";
 import { isCreatorBackendCatalogEnabled } from "./creatorFeatureFlags";
+import { creatorFallbackAllowed } from "./creatorIntegrationFlags";
 import type {
   CreatorAsset,
   CreatorAssetSearchResult,
@@ -93,6 +94,7 @@ async function backendOrFallback<T>(backend: () => Promise<CreatorCatalogResult<
     if (result) return { ...result, source: "backend" };
     return fallbackResult(fallback(), new Error("Creator backend catalog base URL is not configured"));
   } catch (error) {
+    if (!creatorFallbackAllowed()) throw error;
     return fallbackResult(fallback(), error);
   }
 }
@@ -115,6 +117,7 @@ export async function searchAssets(filters: CreatorCatalogFilters = {}): Promise
       const result = await searchBackendCreatorAssets(filters);
       if (result) return { ...result, source: "backend" };
     } catch (error) {
+      if (!creatorFallbackAllowed()) throw error;
       const assets = listCreatorAssets(filters);
       return { data: { assets, pagination: pagination(assets.length, filters) }, source: "fallback", error: error instanceof Error ? error.message : undefined };
     }

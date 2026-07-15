@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import CreatorCollectionView from "@/app/components/creators/catalog/CreatorCollectionView";
-import { getCreatorCollection } from "@/app/lib/creators/creatorCatalogService";
+import { getCreatorCollectionConfig } from "@/app/lib/creators/creatorCollectionPageConfig";
 import { isCreatorCatalogEnabled } from "@/app/lib/creators/creatorFeatureFlags";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +11,7 @@ export async function generateMetadata({
   params: Promise<{ collectionSlug: string }>;
 }) {
   const { collectionSlug } = await params;
-  const collection = getCreatorCollection(collectionSlug);
+  const collection = getCreatorCollectionConfig(collectionSlug);
   return {
     title: collection ? `${collection.title} | TPL Creator Market` : "Creator Collection | TPL",
     description: collection?.description,
@@ -26,5 +26,6 @@ export default async function CreatorCollectionPage({
   if (!isCreatorCatalogEnabled()) notFound();
   const { collectionSlug } = await params;
 
+  if (!getCreatorCollectionConfig(collectionSlug)) notFound();
   return <CreatorCollectionView collectionSlug={collectionSlug} />;
 }

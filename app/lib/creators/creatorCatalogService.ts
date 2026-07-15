@@ -127,6 +127,16 @@ export function listAssetsForCreator(creatorSlug: string) {
 export function getRelatedCreatorAssets(asset: CreatorAsset) {
   return creatorAssets
     .filter((candidate) => candidate.slug !== asset.slug)
-    .filter((candidate) => candidate.category === asset.category || candidate.creatorSlug === asset.creatorSlug)
-    .slice(0, 3);
+    .map((candidate) => ({
+      candidate,
+      score:
+        Number(candidate.category === asset.category) * 10 +
+        Number(candidate.mediaType === asset.mediaType) * 8 +
+        candidate.tags.filter((tag) => asset.tags.some((assetTag) => assetTag.toLowerCase() === tag.toLowerCase())).length * 4 +
+        Number(candidate.creatorSlug === asset.creatorSlug) * 2 +
+        candidate.collectionSlugs.filter((slug) => asset.collectionSlugs.includes(slug)).length * 3,
+    }))
+    .sort((left, right) => right.score - left.score || right.candidate.rating - left.candidate.rating)
+    .slice(0, 6)
+    .map(({ candidate }) => candidate);
 }

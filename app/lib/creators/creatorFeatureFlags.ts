@@ -3,7 +3,7 @@ function envFlag(name: string) {
 }
 
 export function isCreatorCatalogEnabled() {
-  return envFlag("NEXT_PUBLIC_TPL_CREATOR_PUBLIC_CATALOG");
+  return process.env["NEXT_PUBLIC_TPL_CREATOR_PUBLIC_CATALOG"] !== "false";
 }
 
 export function isCreatorDebugEnabled() {
@@ -27,7 +27,7 @@ export function isCreatorLicenseCompareEnabled() {
 }
 
 export function isCreatorBackendCatalogEnabled() {
-  return envFlag("NEXT_PUBLIC_TPL_CREATOR_BACKEND_CATALOG");
+  return envFlag("NEXT_PUBLIC_TPL_CREATOR_BACKEND_CATALOG") || (envFlag("NEXT_PUBLIC_TPL_CREATOR_INTEGRATION_ENABLED") && envFlag("NEXT_PUBLIC_TPL_CREATOR_TEST_API_ENABLED") && envFlag("NEXT_PUBLIC_TPL_CREATOR_PUBLIC_CATALOG_API_ENABLED"));
 }
 
 export function isCreatorCartEnabled() {

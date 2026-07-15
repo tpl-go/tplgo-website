@@ -1,0 +1,5 @@
+import { plansTrust } from "@/app/lib/creators/creatorPlansData";
+
+export default function CreatorPlansTrust() {
+  return <section className="border-y border-slate-200 bg-[#f4f7fb] py-14"><div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-10"><div className="max-w-3xl"><p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-700">Confidence at every step</p><h2 className="mt-2">Trusted creative infrastructure</h2><p className="mt-3 font-medium text-slate-600">Quality signals, licensing clarity and workflows designed for individuals and organizations.</p></div><div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{plansTrust.map(({ title, description, icon: Icon }) => <article key={title} className="flex gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#071831] text-blue-200"><Icon className="h-5 w-5" /></span><div><h3 className="font-bold">{title}</h3><p className="mt-1 text-sm font-medium text-slate-600">{description}</p></div></article>)}</div></div></section>;
+}

@@ -25,6 +25,7 @@ export default async function CreatorAssetPage({
 }) {
   if (!isCreatorCatalogEnabled()) notFound();
   const { assetSlug } = await params;
+  if (!getCreatorAsset(assetSlug)) notFound();
 
   return <CreatorAssetDetailView assetSlug={assetSlug} />;
 }

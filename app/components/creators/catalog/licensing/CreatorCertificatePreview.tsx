@@ -1,0 +1,12 @@
+import { CheckCircle2, FileBadge2, QrCode, ShieldCheck } from "lucide-react";
+
+const fields = [
+  ["Certificate Number", "TPL-LIC-PREVIEW-2026"], ["License Type", "Extended License"],
+  ["Creator", "Verified Creator"], ["Buyer", "Licensed Organization"],
+  ["Issue Date", "Preview only"], ["Status", "Verification Ready"],
+];
+
+export default function CreatorCertificatePreview() {
+  return <section className="bg-[#f4f7fb] py-14"><div className="mx-auto grid max-w-[1280px] gap-8 px-4 sm:px-6 lg:grid-cols-[.8fr_1.2fr] lg:items-center lg:px-10"><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-700">Documented confidence</p><h2 className="mt-2">Digital license certificate</h2><p className="mt-3 font-medium text-slate-600">A clear record helps buyers, legal teams and creators verify how an asset was licensed. This is an interface preview only and does not generate a real certificate.</p><ul className="mt-6 space-y-3">{["QR Ready", "Verification Ready", "Digital Certificate"].map((item) => <li key={item} className="flex items-center gap-2 text-sm font-semibold text-slate-700"><CheckCircle2 className="h-5 w-5 text-emerald-600" />{item}</li>)}</ul></div>
+    <div className="rounded-3xl bg-gradient-to-br from-blue-600 via-blue-700 to-[#071831] p-1 shadow-2xl"><article className="rounded-[1.35rem] bg-white p-5 sm:p-7"><header className="flex items-start justify-between gap-4 border-b border-slate-200 pb-5"><div className="flex items-center gap-3"><span className="grid h-12 w-12 place-items-center rounded-xl bg-blue-600 text-white"><FileBadge2 className="h-6 w-6" /></span><div><p className="text-xs font-bold uppercase tracking-[0.14em] text-blue-700">TPL Creators</p><h3 className="mt-1 text-xl font-extrabold">License Certificate</h3></div></div><ShieldCheck className="h-8 w-8 text-emerald-600" /></header><dl className="mt-5 grid gap-x-6 gap-y-4 sm:grid-cols-2">{fields.map(([label, value]) => <div key={label}><dt className="text-xs font-semibold text-slate-500">{label}</dt><dd className="mt-1 text-sm font-bold text-slate-900">{value}</dd></div>)}</dl><footer className="mt-6 flex items-end justify-between gap-4 rounded-xl bg-slate-50 p-4"><div><p className="text-xs font-semibold text-slate-600">Digitally verifiable preview</p><p className="mt-1 text-sm font-bold text-slate-900">No commercial rights issued</p></div><QrCode className="h-14 w-14 text-slate-900" /></footer></article></div></div></section>;
+}

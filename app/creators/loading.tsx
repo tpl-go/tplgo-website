@@ -1,5 +1,1 @@
-import { CreatorCatalogSkeleton } from "@/app/components/creators/catalog/CreatorCatalogStates";
-
-export default function CreatorsLoading() {
-  return <CreatorCatalogSkeleton />;
-}
+export default function CreatorRoutesLoading(){return <main className="min-h-screen bg-slate-50 p-6"><div className="mx-auto max-w-[1440px] space-y-5"><div className="h-14 animate-pulse rounded-xl bg-slate-200"/><div className="h-64 animate-pulse rounded-3xl bg-slate-200"/><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"><div className="h-72 animate-pulse rounded-2xl bg-slate-200"/><div className="h-72 animate-pulse rounded-2xl bg-slate-200"/><div className="h-72 animate-pulse rounded-2xl bg-slate-200"/></div></div></main>;}

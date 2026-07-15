@@ -1,0 +1,6 @@
+import { CheckCircle2 } from "lucide-react";
+import { releaseSections } from "@/app/lib/creators/creatorLicensingData";
+
+export default function CreatorReleaseSection() {
+  return <section className="mx-auto max-w-[1440px] px-4 py-14 sm:px-6 lg:px-10"><div className="grid gap-5 lg:grid-cols-2">{Object.values(releaseSections).map(({ eyebrow, title, description, icon: Icon, points }) => <article key={title} className="relative overflow-hidden rounded-2xl bg-[#071831] p-6 text-white shadow-xl sm:p-8"><div className="absolute -right-16 -top-16 h-44 w-44 rounded-full bg-blue-500/15 blur-2xl" /><div className="relative"><span className="grid h-12 w-12 place-items-center rounded-xl bg-white/10 text-blue-200 ring-1 ring-white/20"><Icon className="h-6 w-6" /></span><p className="mt-5 text-xs font-bold uppercase tracking-[0.14em] text-blue-200">{eyebrow}</p><h2 className="mt-2 text-white">{title}</h2><p className="mt-3 text-sm font-medium leading-6 text-slate-200">{description}</p><div className="mt-6 flex flex-wrap gap-2">{points.map((point) => <span key={point} className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-semibold text-slate-100"><CheckCircle2 className="h-3.5 w-3.5 text-blue-300" />{point}</span>)}</div></div></article>)}</div></section>;
+}
