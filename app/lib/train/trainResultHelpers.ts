@@ -162,6 +162,7 @@ export function buildTrainClasses(
       classCode,
       price,
       statusText: status.statusText,
+      statusType: status.statusType,
       refundTag: refundTag || undefined,
       lastUpdatedText: `Updated ${2 + (seed % 6)} hrs ago`,
       dateWiseAvailability: buildTrainDateWiseAvailability(classCode, date, seed),

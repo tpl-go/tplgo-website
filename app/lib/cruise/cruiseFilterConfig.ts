@@ -1,6 +1,6 @@
 import { CruiseFilterSectionConfig } from "./cruiseResultTypes";
 
-export const cruiseFilterSectionsSeed = [
+export const cruiseFilterSectionsSeed: CruiseFilterSectionConfig[] = [
   { key: "sailingMonths", label: "Sailing Month", options: [] },
   { key: "priceRanges", label: "Price Per Person", options: [] },
   { key: "durations", label: "Cruise Duration", options: [] },

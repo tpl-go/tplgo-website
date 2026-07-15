@@ -13,6 +13,8 @@ export type BusBookingPayload = {
   };
   bus: any;
   selectedSeats: BusSelectedSeat[];
+  baseFare?: number;
+  baseAmount?: number;
   selectedBoardingPoint: {
     id: string;
     name: string;

@@ -4,7 +4,20 @@ type CruiseBookingPayload = {
   cruiseId: string;
   title: string;
   sailingDate: string | null;
-  selectedCabins: number;
+  selectedCabins:
+    | number
+    | {
+        cabinKey: string;
+        cabinId: string;
+        rows: {
+          id: string;
+          adults: number;
+          children: number;
+          infants: number;
+          nationality: string;
+        }[];
+        selectedAt: number;
+      }[];
   cabinId?: string | null;
   deckId?: string | null;
   deckCabinId?: string | null;
@@ -109,7 +122,11 @@ export default function CruiseTripSummarySection({
   const tplCreditUsed = fareBreakup?.tplCredit ?? 0;
 
   const selectedCabinCount =
-    pricingSummary?.cabins?.length || bookingData.selectedCabins || 0;
+    pricingSummary?.cabins?.length ||
+    (Array.isArray(bookingData.selectedCabins)
+      ? bookingData.selectedCabins.length
+      : bookingData.selectedCabins) ||
+    0;
 
   const routeText = buildRouteText(bookingData);
   const visitingPortsText = buildVisitingPortsText(bookingData);

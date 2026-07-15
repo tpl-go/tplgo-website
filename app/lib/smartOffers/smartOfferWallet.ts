@@ -1,5 +1,10 @@
 import { SmartOfferItem } from "./smartOfferTypes";
 
+type SmartOfferDiscountInput = Record<string, unknown> &
+  Partial<
+    Pick<SmartOfferItem, "discountMode" | "discountValue" | "maxDiscount">
+  >;
+
 type Params = {
   offer?: SmartOfferItem | null;
   bookingValue: number;
@@ -10,7 +15,7 @@ type Params = {
 };
 
 export function calculateSmartOfferDiscount(
-  offer?: SmartOfferItem | null,
+  offer?: SmartOfferDiscountInput | null,
   bookingValue = 0
 ) {
   if (!offer) return 0;

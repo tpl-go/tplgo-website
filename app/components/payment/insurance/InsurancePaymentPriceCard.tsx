@@ -32,6 +32,12 @@ function money(value: number) {
   return `₹${Math.round(Number(value || 0)).toLocaleString("en-IN")}`;
 }
 
+function text(value: unknown, fallback = "") {
+  return typeof value === "string" || typeof value === "number"
+    ? String(value)
+    : fallback;
+}
+
 export default function InsurancePaymentPriceCard({
   payload,
   selectedPaymentMethod,
@@ -55,16 +61,16 @@ export default function InsurancePaymentPriceCard({
   );
 
   const offerCode =
-    fareBreakup?.appliedOfferCode ||
+    text(fareBreakup?.appliedOfferCode) ||
     payload?.appliedOfferCode ||
-    appliedOffer?.code ||
-    appliedOffer?.couponCode ||
+    text(appliedOffer?.code) ||
+    text(appliedOffer?.couponCode) ||
     "";
 
   const offerTitle =
-    fareBreakup?.appliedOfferTitle ||
+    text(fareBreakup?.appliedOfferTitle) ||
     payload?.appliedOfferTitle ||
-    appliedOffer?.title ||
+    text(appliedOffer?.title) ||
     "Insurance Offer Applied";
 
   const grossAmount = Number(

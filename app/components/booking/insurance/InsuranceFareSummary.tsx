@@ -26,7 +26,7 @@ type WalletBreakup = {
 type Props = {
   plan: InsurancePlan & {
     pricingSnapshot?: Record<string, unknown>;
-    benefitPricing?: Record<string, unknown>;
+    benefitPricing?: Record<string, unknown> | null;
     baseAfterOffer?: number;
     nonBenefitAmount?: number;
     grossAmount?: number;
@@ -58,6 +58,12 @@ function formatPrice(value: number) {
 function safeNumber(value: unknown, fallback = 0) {
   const num = Number(value);
   return Number.isFinite(num) ? Math.round(num) : fallback;
+}
+
+function safeText(value: unknown, fallback = "") {
+  return typeof value === "string" || typeof value === "number"
+    ? String(value)
+    : fallback;
 }
 
 function getAddOnTotal(addOns: InsuranceAddOnsState) {
@@ -137,14 +143,14 @@ export default function InsuranceFareSummary({
 
   const finalOfferCode =
     appliedOfferCode ||
-    pricingSnapshot?.appliedOfferCode ||
-    plan?.appliedOfferCode ||
+    safeText(pricingSnapshot?.appliedOfferCode) ||
+    safeText(plan?.appliedOfferCode) ||
     "";
 
   const finalOfferTitle =
     appliedOfferTitle ||
-    pricingSnapshot?.appliedOfferTitle ||
-    plan?.appliedOfferTitle ||
+    safeText(pricingSnapshot?.appliedOfferTitle) ||
+    safeText(plan?.appliedOfferTitle) ||
     "Best Insurance Offer Activated";
 
   const baseAfterOffer = safeNumber(

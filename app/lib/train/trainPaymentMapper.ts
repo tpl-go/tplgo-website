@@ -9,6 +9,7 @@ export type RawTrainPaymentPayload = {
   contactDetails?: {
     email?: string;
     mobile?: string;
+    countryCode?: string;
   };
   irctcAccount?: {
     username?: string;
@@ -26,12 +27,19 @@ export type RawTrainPaymentPayload = {
     offerApplied?: number;
     tplCredit?: number;
     totalAmount?: number;
+    finalTotal?: number;
   };
   timerLeft?: number;
 };
 
 export type NormalizedTrainJourney = {
   trainId: string;
+  train?: {
+    id?: string;
+    name?: string;
+    trainName?: string;
+    trainNumber?: string;
+  };
   trainName: string;
   trainNumber: string;
   fromCity: string;
@@ -39,6 +47,11 @@ export type NormalizedTrainJourney = {
   toCity: string;
   toCode: string;
   travelDate: string;
+  journeyDate?: string;
+  date?: string;
+  route?: string;
+  fromStation?: string;
+  toStation?: string;
   departureTime: string;
   arrivalTime: string;
   duration: string;
@@ -60,6 +73,7 @@ export type NormalizedTrainPaymentData = {
   contactDetails: {
     email?: string;
     mobile?: string;
+    countryCode?: string;
   };
   irctcAccount: {
     username?: string;
@@ -77,6 +91,7 @@ export type NormalizedTrainPaymentData = {
     offerApplied: number;
     tplCredit: number;
     totalAmount: number;
+    finalTotal?: number;
   };
   timerLeft: number;
 };
@@ -133,6 +148,11 @@ console.log("DATE SOURCE CHECK", {
       bookingPayload?.id,
     ""
   ),
+  train: {
+    id: toText(train?.id ?? bookingPayload?.trainId ?? bookingPayload?.id, ""),
+    trainName: toText(train?.trainName ?? bookingPayload?.trainName ?? bookingPayload?.name, "Train"),
+    trainNumber: toText(train?.trainNumber ?? bookingPayload?.trainNumber ?? bookingPayload?.number, ""),
+  },
   trainName: toText(
     train?.trainName ??
       bookingPayload?.trainName ??
@@ -188,6 +208,14 @@ console.log("DATE SOURCE CHECK", {
     train?.date,
   ""
 ),
+  journeyDate: toText(
+    bookingPayload?.journeyDate ?? bookingPayload?.travelDate ?? searchMeta?.date,
+    ""
+  ),
+  date: toText(searchMeta?.date ?? bookingPayload?.date, ""),
+  route: toText(bookingPayload?.route, ""),
+  fromStation: toText(train?.fromStationCode ?? bookingPayload?.fromStation, ""),
+  toStation: toText(train?.toStationCode ?? bookingPayload?.toStation, ""),
   departureTime: toText(
     train?.departureTime ??
       bookingPayload?.departureTime ??
@@ -237,6 +265,7 @@ console.log("DATE SOURCE CHECK", {
     contactDetails: {
       email: toText(raw?.contactDetails?.email, ""),
       mobile: toText(raw?.contactDetails?.mobile, ""),
+      countryCode: toText(raw?.contactDetails?.countryCode, ""),
     },
     irctcAccount: {
       username: toText(raw?.irctcAccount?.username, ""),
@@ -266,6 +295,7 @@ console.log("DATE SOURCE CHECK", {
             toNumber(raw?.pricing?.tplCredit, 0)
         )
       ),
+      finalTotal: toNumber(raw?.pricing?.finalTotal ?? raw?.pricing?.totalAmount, 0),
     },
     timerLeft: toNumber(raw?.timerLeft, 15 * 60),
   };
@@ -282,6 +312,7 @@ export function buildTrainPaymentSessionData(input: {
   contactDetails: {
     email?: string;
     mobile?: string;
+    countryCode?: string;
   };
   irctcAccount: {
     username?: string;
@@ -299,6 +330,7 @@ export function buildTrainPaymentSessionData(input: {
     offerApplied?: number;
     tplCredit?: number;
     totalAmount?: number;
+    finalTotal?: number;
   };
   timerLeft?: number;
 }): NormalizedTrainPaymentData {

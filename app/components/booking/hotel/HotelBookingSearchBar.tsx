@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown, MapPin, Calendar } from "lucide-react";
 import { DateRange } from "react-date-range";
+import type { RangeKeyDict } from "react-date-range";
 import { format, addDays } from "date-fns";
 import type { Hotel } from "@/app/data/stays/types";
 import RoomGuestSelector from "@/app/components/hotel/search/RoomGuestSelector";
@@ -14,13 +15,6 @@ import "react-date-range/dist/theme/default.css";
 type Room = {
   adults: number;
   children: number;
-};
-
-type DateRangeChange = {
-  selection: {
-    startDate?: Date;
-    endDate?: Date;
-  };
 };
 
 type RoomAction = {
@@ -290,8 +284,8 @@ export default function HotelBookingSearchBar({ hotel }: Props) {
                 moveRangeOnFirstSelection={false}
                 showDateDisplay={false}
                 minDate={today}
-                onChange={(item: DateRangeChange) => {
-                  const start = item.selection.startDate || today;
+                onChange={(item: RangeKeyDict) => {
+                  const start = item.selection?.startDate || today;
                   const nextDay = addDays(start, 1);
 
                   setCheckIn(start);
@@ -342,8 +336,8 @@ export default function HotelBookingSearchBar({ hotel }: Props) {
                 moveRangeOnFirstSelection={false}
                 showDateDisplay={false}
                 minDate={addDays(checkIn, 1)}
-                onChange={(item: DateRangeChange) => {
-                  const end = item.selection.endDate || addDays(checkIn, 1);
+                onChange={(item: RangeKeyDict) => {
+                  const end = item.selection?.endDate || addDays(checkIn, 1);
 
                   if (end > checkIn) {
                     setCheckOut(end);

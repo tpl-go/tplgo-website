@@ -155,7 +155,7 @@ export default function HolidaySearchBox() {
       <HolidayTabs activeTab={activeTab} setActiveTab={setActiveTab} />
 
       {activeTab !== "search" && (
-        <HolidayPackageHighlights category={activeTab} />
+        <HolidayPackageHighlights />
       )}
 
       {activeTab === "search" && (

@@ -3,6 +3,7 @@ import {
   CruiseInfoItem,
   CruiseResultItem,
   CruiseResultSearchMeta,
+  CruiseSailingOption,
 } from "./cruiseResultTypes";
 
 const cruiseLineShipMap: Record<string, string[]> = {
@@ -183,16 +184,17 @@ function buildSailingDates(
               : info.label === "Onboard Credit"
               ? "$"
               : "PROMO",
-          type:
+          type: (
             info.label === "Buy One Get One Offer"
               ? "promo"
               : info.label === "Non Refundable Deposit"
               ? "deposit"
               : info.label === "Onboard Credit"
               ? "credit"
-              : "special",
+              : "special"
+          ) as CruiseSailingOption["badges"][number]["type"],
           popup: info,
-        })),
+        })) as CruiseSailingOption["badges"],
         infoItems: promoItems,
       };
     })
@@ -295,14 +297,15 @@ export function buildCruiseResultsFromSearch(
             : info.label === "Onboard Credit"
             ? "Onboard Credit"
             : "Special Promotions",
-        type:
+        type: (
           info.label === "Buy One Get One Offer"
             ? "promo"
             : info.label === "Non Refundable Deposit"
             ? "deposit"
             : info.label === "Onboard Credit"
             ? "credit"
-            : "special",
+            : "special"
+        ) as "promo" | "deposit" | "credit" | "special",
         popup: info,
       })),
       promoItems,

@@ -10,6 +10,7 @@ type Props = {
   checkOut: string;
   rooms: number;
   adults: number;
+  children?: number;
   childCount?: number;
   roomName?: string | null;
   specialRequest?: string;
@@ -58,12 +59,14 @@ export default function HotelConfirmationStayCard({
   checkOut,
   rooms,
   adults,
-  childCount = 0,
+  children: childrenCount,
+  childCount,
   roomName,
   specialRequest,
 }: Props) {
   const nights = getNightCount(checkIn, checkOut);
-  const totalGuests = adults + childCount;
+  const normalizedChildCount = childCount ?? childrenCount ?? 0;
+  const totalGuests = adults + normalizedChildCount;
 
   return (
     <section
@@ -377,9 +380,9 @@ export default function HotelConfirmationStayCard({
                 {adults} Adult{adults > 1 ? "s" : ""}
               </span>
 
-              {childCount > 0 ? (
+              {normalizedChildCount > 0 ? (
                 <span style={infoPillStyle}>
-                  {childCount} Child{childCount > 1 ? "ren" : ""}
+                  {normalizedChildCount} Child{normalizedChildCount > 1 ? "ren" : ""}
                 </span>
               ) : null}
 

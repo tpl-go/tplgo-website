@@ -15,8 +15,14 @@ export type BenefitPricingInput = {
   convenienceFee?: number;
   upgradeCharges?: number;
   markup?: number;
+  nonBenefitAmount?: number;
 
   offerDiscount?: number;
+  offerData?: unknown;
+  wallet?: unknown;
+  allowPromoCredit?: boolean;
+  allowEarnedCredit?: boolean;
+  allowRefundWallet?: boolean;
 
   promoCredit?: number;
   earnedCredit?: number;
@@ -123,19 +129,20 @@ export function applyBenefitPricing(
   );
 
   const nonBenefitAmount =
+    safeAmount(input.nonBenefitAmount) ||
     taxes +
-    addOns +
-    fees +
-    seatCharges +
-    mealCharges +
-    baggageCharges +
-    insuranceCharges +
-    cabCharges +
-    visaCharges +
-    gatewayCharges +
-    convenienceFee +
-    upgradeCharges +
-    markup;
+      addOns +
+      fees +
+      seatCharges +
+      mealCharges +
+      baggageCharges +
+      insuranceCharges +
+      cabCharges +
+      visaCharges +
+      gatewayCharges +
+      convenienceFee +
+      upgradeCharges +
+      markup;
 
   const grossAmount = Math.round(
     baseAmount + nonBenefitAmount

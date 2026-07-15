@@ -131,8 +131,8 @@ export default function CruiseFareSummaryCard({
   const refundUsed = walletBreakdown?.refundUsed || 0;
 
   const cabinBreakupText =
-  pricingSummary?.cabins?.length > 0
-    ? pricingSummary.cabins
+  (pricingSummary?.cabins?.length ?? 0) > 0
+    ? (pricingSummary?.cabins ?? [])
         .map((cabin) => {
           const travellers =
             Number(cabin.adults || 0) +

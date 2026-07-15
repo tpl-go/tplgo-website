@@ -9,15 +9,17 @@ type PolicyItem = {
 };
 
 type Props = {
-  policies: PolicyItem[];
+  policies?: PolicyItem[];
   title?: string;
+  defaultOpen?: boolean;
 };
 
 export default function CruisePoliciesSection({
-  policies,
+  policies = [],
   title = "Cruise Policies",
+  defaultOpen = false,
 }: Props) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
     <section id="cruise-policies">

@@ -9,15 +9,18 @@ type AdditionalInfoItem = {
 };
 
 type Props = {
-  items: AdditionalInfoItem[];
+  items?: AdditionalInfoItem[];
   title?: string;
+  defaultOpen?: boolean;
+  onChange?: (payload: any) => void;
 };
 
 export default function CruiseAdditionalInformationSection({
-  items,
+  items = [],
   title = "Additional Information",
+  defaultOpen = false,
 }: Props) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
     <section id="cruise-additional-information">

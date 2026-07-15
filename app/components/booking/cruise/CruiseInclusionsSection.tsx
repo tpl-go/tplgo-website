@@ -3,15 +3,18 @@
 import { useState } from "react";
 
 type Props = {
-  inclusions: string[];
+  inclusions?: string[];
   title?: string;
+  defaultOpen?: boolean;
+  pricingSummary?: unknown;
 };
 
 export default function CruiseInclusionsSection({
-  inclusions,
+  inclusions = [],
   title = "Inclusions",
+  defaultOpen = false,
 }: Props) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
     <section id="cruise-inclusions">

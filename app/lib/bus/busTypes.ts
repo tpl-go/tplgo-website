@@ -6,7 +6,8 @@ export type BusAmenity =
   | "CCTV"
   | "GPS"
   | "Reading Light"
-  | "Hammer";
+  | "Hammer"
+  | string;
 
 export type BusType =
   | "AC Sleeper"

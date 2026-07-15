@@ -47,6 +47,9 @@ type ValidationPayload = {
 
 type Props = {
   cabins?: CruiseCabinItem[];
+  pricingSummary?: {
+    cabins?: CruiseCabinItem[];
+  } | null;
   isInternationalTrip?: boolean;
   onValidationChange?: (payload: ValidationPayload) => void;
   defaultOpen?: boolean;

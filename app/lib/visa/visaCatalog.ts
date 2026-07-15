@@ -11,6 +11,10 @@ export type VisaOption = {
   embassyFee: number;
   serviceFee: number;
   totalPrice: number;
+  baseVisaAmount?: number;
+  basePrice?: number;
+  visaFee?: number;
+  price?: number;
   documents: string[];
   notes: string[];
 };

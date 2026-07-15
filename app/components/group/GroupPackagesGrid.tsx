@@ -11,11 +11,13 @@ import { getSmartPackageImage } from "@/app/lib/images/smartPackageImageResolver
 
 interface Props {
   selectedFilters: string[];
-  setSelectedFilters: (filters: string[]) => void;
+  setSelectedFilters: React.Dispatch<React.SetStateAction<string[]>>;
   activeTab: string;
   setActiveTab: (tab: string) => void;
+  activeCountry?: string;
+  setActiveCountry?: (country: string) => void;
   resetFilters: boolean;
-  setResetFilters: (value: boolean) => void;
+  setResetFilters: React.Dispatch<React.SetStateAction<boolean>>;
   onClearAll: () => void;
 }
 

@@ -224,7 +224,7 @@ export default function FlightSearchBox({
                           i === 0
                             ? today
                             : state.segments[i - 1]?.departure
-                            ? new Date(state.segments[i - 1].departure)
+                            ? new Date(state.segments[i - 1].departure ?? today)
                             : today;
 
                         return (

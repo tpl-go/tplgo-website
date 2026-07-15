@@ -34,11 +34,13 @@ export interface PackageItineraryDay {
   title: string;
   description?: string;
   activities?: string[];
+  items: string[];
 }
 
 export interface PackageVariant {
   label: string;
   pricePerPerson: number;
+  originCity?: string;
 
   inclusions: {
     flights?: number;
@@ -61,6 +63,9 @@ export interface PackageDetails {
 
   title: string;
   tagline?: string;
+  category?: string;
+  defaultOriginCity?: string;
+  originCity?: string;
 
   nights: number;
   days: number;

@@ -1,6 +1,21 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import type {
+  FlightFareOption,
+  RoundTripFlight,
+} from "../../data/roundtripFlights";
+
+type Props = {
+  flight: RoundTripFlight;
+  isSelected?: boolean;
+  selectedFareId?: string | null;
+  onSelect: (flight: RoundTripFlight) => void;
+  onFareSelect: (
+    flight: RoundTripFlight | null,
+    fare: FlightFareOption | null
+  ) => void;
+};
 
 export default function RoundTripFlightCard({
   flight,
@@ -8,12 +23,12 @@ export default function RoundTripFlightCard({
   selectedFareId,
   onSelect,
   onFareSelect,
-}) {
+}: Props) {
   const [showAllFares, setShowAllFares] = useState(false);
   const [showCompareModal, setShowCompareModal] = useState(false);
   const [compareStartIndex, setCompareStartIndex] = useState(0);
 
-  const modalContentRef = useRef(null);
+  const modalContentRef = useRef<HTMLDivElement | null>(null);
 
   const fares = flight.fareOptions || [];
   const visibleFares = showAllFares ? fares : fares.slice(0, 3);
@@ -35,16 +50,17 @@ export default function RoundTripFlightCard({
   useEffect(() => {
     if (!showCompareModal) return;
 
-    function handleOutsideClick(event) {
+    function handleOutsideClick(event: MouseEvent) {
       if (
         modalContentRef.current &&
+        event.target instanceof Node &&
         !modalContentRef.current.contains(event.target)
       ) {
         setShowCompareModal(false);
       }
     }
 
-    function handleEscape(event) {
+    function handleEscape(event: KeyboardEvent) {
       if (event.key === "Escape") {
         setShowCompareModal(false);
       }
@@ -59,7 +75,7 @@ export default function RoundTripFlightCard({
     };
   }, [showCompareModal]);
 
-  const openCompareModal = (event) => {
+  const openCompareModal = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
     setCompareStartIndex(0);
     setShowCompareModal(true);
@@ -69,7 +85,7 @@ export default function RoundTripFlightCard({
     setShowCompareModal(false);
   };
 
-  const getMealsText = (fare) => {
+  const getMealsText = (fare: FlightFareOption) => {
     const label = (fare.label || "").toLowerCase();
 
     if (label.includes("flexi")) return "Complimentary";
@@ -77,7 +93,7 @@ export default function RoundTripFlightCard({
     return "Chargeable";
   };
 
-  const getSeatChargeText = (fare) => {
+  const getSeatChargeText = (fare: FlightFareOption) => {
     const label = (fare.label || "").toLowerCase();
 
     if (label.includes("corporate")) return "Complimentary";
@@ -87,7 +103,7 @@ export default function RoundTripFlightCard({
   const getCancellationText = () => "NA";
   const getDateChangeText = () => "NA";
 
-  const handleSelectFare = (fare) => {
+  const handleSelectFare = (fare: FlightFareOption) => {
     onSelect(flight);
     onFareSelect(flight, fare);
     setShowCompareModal(false);

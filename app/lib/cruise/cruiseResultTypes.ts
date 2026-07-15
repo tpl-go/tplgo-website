@@ -91,4 +91,15 @@ export type CruiseFilterSectionConfig = {
   options: CruiseFilterOption[];
 };
 
-export type CruiseSortKey = "price" | "duration" | "departure";
+export type CruiseSortKey =
+  | "price"
+  | "duration"
+  | "departure"
+  | "price-low-high"
+  | "price-high-low"
+  | "duration-low-high"
+  | "duration-high-low"
+  | "departure-az"
+  | "departure-za"
+  | "line-az"
+  | "ship-az";

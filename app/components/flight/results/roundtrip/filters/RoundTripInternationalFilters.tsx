@@ -8,8 +8,8 @@ export type TimeSlot =
   | "12 PM to 6 PM"
   | "After 6 PM";
 
-export type AllianceType = "SkyTeam" | "Star Alliance" | "Oneworld";
-export type AircraftSizeType = "Small / Mid-size aircraft" | "Large Aircraft";
+export type AllianceType = "SkyTeam" | "Star Alliance" | "Oneworld" | "None";
+export type AircraftSizeType = "Small / Mid-size aircraft" | "Large Aircraft" | string;
 
 export type RoundTripInternationalFiltersValue = {
   hasCheckInBaggage: boolean;

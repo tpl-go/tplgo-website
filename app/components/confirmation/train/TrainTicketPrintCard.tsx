@@ -220,11 +220,11 @@ export default function TrainTicketPrintCard({ data }: Props) {
                 <Price label="Base Fare" value={data.pricing?.baseFare} />
                 <Price label="Convenience Fee" value={data.pricing?.convenienceFee} />
                 <Price label="Gateway Fee" value={data.pricing?.gatewayFee} />
-                {data.pricing?.offerApplied > 0 && (
-                  <Price label="Offer Applied" value={-data.pricing.offerApplied} />
+                {(data.pricing?.offerApplied ?? 0) > 0 && (
+                  <Price label="Offer Applied" value={-(data.pricing?.offerApplied ?? 0)} />
                 )}
-                {data.pricing?.tplCredit > 0 && (
-                  <Price label="TPL Credit" value={-data.pricing.tplCredit} />
+                {(data.pricing?.tplCredit ?? 0) > 0 && (
+                  <Price label="TPL Credit" value={-(data.pricing?.tplCredit ?? 0)} />
                 )}
                 <div
                   className="mt-3 border-t border-dashed pt-3 text-[18px] font-black text-black"
@@ -280,8 +280,8 @@ function Price({
   value?: number;
 }) {
   const formatted =
-    value < 0
-      ? `- ₹ ${Math.abs(value).toLocaleString("en-IN")}`
+    (value ?? 0) < 0
+      ? `- ₹ ${Math.abs(value ?? 0).toLocaleString("en-IN")}`
       : `₹ ${Number(value || 0).toLocaleString("en-IN")}`;
 
   return (

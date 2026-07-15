@@ -3,6 +3,10 @@ export type TrainBookingSelection = {
   classCode: string;
   quota: "general" | "tatkal" | "seniorCitizen" | "ladies";
   ticketPrice: number;
+  trueBaseFare?: number;
+  baseFare?: number;
+  originalTicketPrice?: number;
+  confirmUpgradeAmount?: number;
   ticketType: "regular" | "confirm";
   statusText: string;
   statusType: string;
@@ -41,6 +45,9 @@ export type TrainBookingPayload = {
     lastUpdatedText?: string;
   } | null;
   routeStops: any[];
+  pricingSnapshot?: Record<string, unknown>;
+  fareSnapshot?: Record<string, unknown>;
+  priceBreakup?: Record<string, unknown>;
   savedAt: number;
 };
 

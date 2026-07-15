@@ -71,7 +71,7 @@ export function finalize({ bookingId, payment }: FinalizeParams) {
 
   const payloadStorageKey = booking.payloadStorageKey;
 
-  const payload = getBookingPayload<any>(payloadStorageKey);
+  const payload = getBookingPayload<any>(payloadStorageKey || "");
 
   if (!payload) {
     throw new Error("Booking payload not found");
@@ -246,7 +246,7 @@ export function finalize({ bookingId, payment }: FinalizeParams) {
   }
 
   localStorage.setItem(
-    payloadStorageKey,
+    payloadStorageKey || "",
     JSON.stringify(payload)
   );
 

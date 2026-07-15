@@ -266,7 +266,7 @@ export function finalize({
   }
 
   localStorage.setItem(
-    payloadStorageKey,
+    payloadStorageKey || "",
     JSON.stringify(payload)
   );
 

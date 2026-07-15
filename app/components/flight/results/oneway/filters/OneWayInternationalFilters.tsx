@@ -67,7 +67,7 @@ function ensureRange(
     typeof value[1] === "number" &&
     !(value[0] === 0 && value[1] === 0)
   ) {
-    return value;
+    return [value[0], value[1]];
   }
 
   return [minValue, maxValue];

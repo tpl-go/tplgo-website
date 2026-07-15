@@ -37,6 +37,9 @@ export type SmartOfferRule = {
   maxBookingValue?: number;
   origins?: string[];
   destinations?: string[];
+  countries?: string[];
+  themes?: string[];
+  tags?: string[];
   routes?: string[];
   services?: SmartOfferService[];
   userTiers?: string[];

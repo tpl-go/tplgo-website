@@ -4,6 +4,7 @@ export type CancellationType = "Free Cancellation" | "Non Refundable";
 export type RoomVariant = {
   id: string;
   name: string;
+  title?: string;
   maxAdults: number;
   maxChildren: number;
   price: number;

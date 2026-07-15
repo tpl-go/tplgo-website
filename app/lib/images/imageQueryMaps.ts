@@ -72,7 +72,6 @@ export const destinationImageQueryMap: Record<string, string> = {
   northeast: "northeast india tribal culture nagaland meghalaya",
   northeastindia: "northeast india tribal culture nagaland meghalaya",
   nagaland: "northeast india tribal culture nagaland meghalaya",
-  meghalaya: "northeast india tribal culture nagaland meghalaya",
   shillong: "northeast india tribal culture nagaland meghalaya",
   kohima: "northeast india tribal culture nagaland meghalaya",
   itanagar: "northeast india tribal culture nagaland meghalaya",

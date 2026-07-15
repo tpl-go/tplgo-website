@@ -68,6 +68,12 @@ function toAmount(value: unknown, fallback = 0) {
   return Number.isFinite(amount) && amount > 0 ? Math.round(amount) : fallback;
 }
 
+function toText(value: unknown, fallback = "") {
+  return typeof value === "string" || typeof value === "number"
+    ? String(value)
+    : fallback;
+}
+
 function resolveBenefitValue(source: PricingSnapshot, keys: string[], fallback = 0) {
   for (const key of keys) {
     const value = source?.[key];
@@ -312,12 +318,12 @@ export default function InsurancePlanCard({
       appliedOfferAmount,
       appliedOfferCode:
         plan.appliedOfferCode ||
-        snapshot.appliedOfferCode ||
+        toText(snapshot.appliedOfferCode) ||
         fallback.appliedOfferCode ||
         "",
       appliedOfferTitle:
         plan.appliedOfferTitle ||
-        snapshot.appliedOfferTitle ||
+        toText(snapshot.appliedOfferTitle) ||
         fallback.appliedOfferTitle ||
         "",
       baseAfterOffer,

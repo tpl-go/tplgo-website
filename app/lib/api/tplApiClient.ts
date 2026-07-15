@@ -44,11 +44,42 @@ export type TplApiRequestOptions = {
   fallbackOnError?: boolean;
 };
 
+export type StoredTplAuthUser = {
+  id?: string;
+  accountType?: string;
+  mobile?: string;
+  email?: string;
+  fullName?: string;
+  leadTraveller?: unknown;
+};
+
+export type StoredTplAuthSession = {
+  user?: StoredTplAuthUser | null;
+  token?: string | undefined;
+  sessionToken?: string | undefined;
+  accessToken?: string | undefined;
+  authToken?: string | undefined;
+  bearerToken?: string | undefined;
+  session?: {
+    token?: string | undefined;
+    accessToken?: string | undefined;
+    sessionToken?: string | undefined;
+    authToken?: string | undefined;
+    bearerToken?: string | undefined;
+    expiresAt?: string | undefined;
+  } | undefined;
+  auth?: {
+    token?: string | undefined;
+    accessToken?: string | undefined;
+    sessionToken?: string | undefined;
+    authToken?: string | undefined;
+    bearerToken?: string | undefined;
+  } | undefined;
+};
+
 const PRODUCTION_API_BASE_URL = "https://api.tplgo.com";
-const API_BASE_URL =
-  process.env.NODE_ENV === "production"
-    ? PRODUCTION_API_BASE_URL
-    : process.env.NEXT_PUBLIC_TPL_API_BASE_URL?.replace(/\/+$/, "") || "";
+const API_BASE_URL = (process.env.NEXT_PUBLIC_TPL_API_BASE_URL?.replace(/\/+$/, "") ||
+  (process.env.NODE_ENV === "production" ? PRODUCTION_API_BASE_URL : ""));
 const AUTH_STORAGE_KEY = "tpl_auth_session_v1";
 
 export function getTplApiBaseUrl(): string {
@@ -92,7 +123,7 @@ export async function tplApiRequest<TData>(
     headers["Idempotency-Key"] = options.idempotencyKey;
   }
 
-  const authToken = options.authToken ?? readStoredAuthToken();
+  const authToken = options.authToken === undefined ? getStoredAuthToken() : options.authToken;
   if (authToken) {
     headers.Authorization = `Bearer ${authToken}`;
   }
@@ -186,7 +217,7 @@ function buildFallbackFailure(
   };
 }
 
-function readStoredAuthToken(): string | null {
+export function getStoredAuthSession(): StoredTplAuthSession | null {
   if (typeof window === "undefined") return null;
 
   try {
@@ -195,12 +226,30 @@ function readStoredAuthToken(): string | null {
 
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
-    const session = parsed as Record<string, unknown>;
-
-    return readTokenValue(session) || readTokenValue(session.session) || readTokenValue(session.auth);
+    return parsed as StoredTplAuthSession;
   } catch {
     return null;
   }
+}
+
+export function getStoredAuthToken(): string | null {
+  const session = getStoredAuthSession();
+  if (!session) return null;
+  return readTokenValue(session) || readTokenValue(session.session) || readTokenValue(session.auth);
+}
+
+export function getStoredAuthUser(): StoredTplAuthUser | null {
+  const user = getStoredAuthSession()?.user;
+  if (!user || typeof user !== "object" || Array.isArray(user)) return null;
+  return user;
+}
+
+export function isBackendAuthenticated(): boolean {
+  return Boolean(getStoredAuthToken());
+}
+
+export function buildAuthHeaders(token = getStoredAuthToken()): Record<string, string> {
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 function readTokenValue(source: unknown): string | null {

@@ -1,16 +1,25 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { Dispatch, SetStateAction } from "react";
 import { SlidersHorizontal, X } from "lucide-react";
 
 interface Props {
   selectedFilters: string[];
-  setSelectedFilters: (filters: string[]) => void;
+  setSelectedFilters: Dispatch<SetStateAction<string[]>>;
 
   // ✅ Countries -> Continents
   continents: string[];
   activeContinent: string;
   setActiveContinent: (continent: string) => void;
+  activeCountry?: string;
+  setActiveCountry?: (country: string) => void;
+  activeTab?: string;
+  setActiveTab?: (tab: string) => void;
+  activeThemeId?: string;
+  setActiveThemeId?: (themeId: string) => void;
+  setResetFilters?: Dispatch<SetStateAction<boolean>>;
+  onClearAll?: () => void;
 
   // ✅ Themes -> SubThemes (dynamic by selected theme)
   subThemes: string[];

@@ -670,7 +670,7 @@ export default function ItineraryTab({
                       {card.actionKey && card.changeLabel ? (
                         <button
                           type="button"
-                          onClick={() => handleContextAction(card.actionKey)}
+                          onClick={() => card.actionKey && handleContextAction(card.actionKey)}
                           className="shrink-0 rounded-full border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 hover:text-blue-800 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:text-blue-600"
                         >
                           {card.changeLabel}
