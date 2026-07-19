@@ -27,12 +27,31 @@ export type BackendFlightTestPaymentOrderResponse = {
   paymentCaptureAllowed: false;
   pnr: null;
   ticketNumber: null;
+  checkout?: BackendFlightRazorpayTestCheckout;
   warnings: string[];
+};
+
+export type BackendFlightRazorpayTestCheckout = {
+  provider: "razorpay";
+  mode: "test";
+  keyId: string;
+  orderId: string;
+  amountMinor: number;
+  currency: "INR";
+  name: "TPL";
+  description: string;
+  prefill?: {
+    name?: string;
+    email?: string;
+    contact?: string;
+  };
+  testOnly: true;
 };
 
 export type BackendFlightTestPaymentConfirmRequest = {
   paymentId: string;
   gatewayPaymentId?: string;
+  gatewaySignature?: string;
   testOutcome?: "success" | "failure";
   idempotencyKey?: string;
 };

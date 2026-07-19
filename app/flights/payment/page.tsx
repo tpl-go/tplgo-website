@@ -28,6 +28,11 @@ import {
   type BackendFlightTestPaymentConfirmResponse,
   type BackendFlightTestPaymentOrderResponse,
 } from "@/app/lib/api/flightTestPaymentApi";
+import {
+  isRazorpayTestCheckoutEnabled,
+  isValidRazorpayTestCheckoutPayload,
+  openRazorpayTestCheckout,
+} from "@/app/lib/api/razorpayCheckoutClient";
 
 import FlightPaymentTopSummary from "@/app/components/payment/flight/FlightPaymentTopSummary";
 import FlightPaymentInsuranceCard from "@/app/components/payment/flight/FlightPaymentInsuranceCard";
@@ -393,12 +398,28 @@ const finalTotalAmount =
             throw new Error(testOrder.error.message || "Could not create test payment order.");
           }
 
+          const checkoutPayload = testOrder.data.checkout;
+          const useRazorpayTestCheckout =
+            isRazorpayTestCheckoutEnabled() &&
+            isValidRazorpayTestCheckoutPayload(checkoutPayload);
+
+          const razorpayCheckoutResult = useRazorpayTestCheckout
+            ? await openRazorpayTestCheckout(checkoutPayload)
+            : null;
+
           setBackendPaymentStep("confirming_payment");
+          const paymentIdentifier =
+            useRazorpayTestCheckout && testOrder.data.paymentRef
+              ? testOrder.data.paymentRef
+              : testOrder.data.paymentId;
           const testConfirm = await confirmFlightTestPayment(bookingDraftId, {
-            paymentId: testOrder.data.paymentId,
-            gatewayPaymentId: `mock_frontend_${Date.now()}`,
+            paymentId: paymentIdentifier,
+            gatewayPaymentId: razorpayCheckoutResult?.gatewayPaymentId || `mock_frontend_${Date.now()}`,
+            ...(razorpayCheckoutResult?.gatewaySignature
+              ? { gatewaySignature: razorpayCheckoutResult.gatewaySignature }
+              : {}),
             testOutcome: "success",
-            idempotencyKey: `flight:test-confirm:${bookingDraftId}:${testOrder.data.paymentId}`,
+            idempotencyKey: `flight:test-confirm:${bookingDraftId}:${paymentIdentifier}`,
           });
 
           if (!testConfirm.ok || testConfirm.data.status !== "TPL_TEST_BOOKING_CONFIRMED") {
@@ -422,6 +443,7 @@ const finalTotalAmount =
               paymentId: testConfirm.data.paymentId,
               paymentRef: testConfirm.data.paymentRef,
               attemptId: testConfirm.data.attemptId,
+              gateway: testOrder.data.gateway,
               status: testConfirm.data.status,
               confirmationRef: testConfirm.data.simulatedConfirmation.confirmationRef,
               supplierBookingDisabled: true,
