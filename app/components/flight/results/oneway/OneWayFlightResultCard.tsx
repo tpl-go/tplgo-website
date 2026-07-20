@@ -28,6 +28,7 @@ type Props = {
     fareId?: string;
     expiresAt?: string;
     backendRequestId?: string;
+    priceTotal?: number;
   };
 };
 

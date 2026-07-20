@@ -198,6 +198,7 @@ function mapBackendFlightOfferToDummyFlight(
         offerId: offer.offerId,
         ...(fareOptions[0]?.fareId ? { fareId: fareOptions[0].fareId } : {}),
         ...(context.backendRequestId ? { backendRequestId: context.backendRequestId } : {}),
+        ...(Number.isFinite(offer.price.total) ? { priceTotal: Math.round(offer.price.total) } : {}),
       },
     } : {}),
   };

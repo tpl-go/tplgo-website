@@ -13,6 +13,7 @@ export type FlightReviewPayload = {
     fareId?: string;
     expiresAt?: string;
     backendRequestId?: string;
+    priceTotal?: number;
     priceConfirmationId?: string;
     priceStatus?: string;
   };
@@ -205,6 +206,7 @@ function normalizeBackendOffer(value: FlightReviewPayload["backendOffer"]): Flig
     ...(value.fareId ? { fareId: value.fareId } : {}),
     ...(value.expiresAt ? { expiresAt: value.expiresAt } : {}),
     ...(value.backendRequestId ? { backendRequestId: value.backendRequestId } : {}),
+    ...(Number.isFinite(Number(value.priceTotal)) ? { priceTotal: Number(value.priceTotal) } : {}),
     ...(value.priceConfirmationId ? { priceConfirmationId: value.priceConfirmationId } : {}),
     ...(value.priceStatus ? { priceStatus: value.priceStatus } : {}),
   };

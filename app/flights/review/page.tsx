@@ -806,7 +806,7 @@ seatTotal={seatMealData.seatTotal}
       passengers: source.passengers,
       currency: "INR",
       clientOfferSnapshot: {
-        total: Number(source.pricing?.totalAmount || finalTotalAmount || 0),
+        total: getBackendOfferSnapshotTotal(source, finalTotalAmount),
         currency: "INR",
       },
     });
@@ -891,4 +891,27 @@ function buildBackendContactDetails(travellerValidation: TravellerValidationPayl
     mobile: contact.mobile || "9999999999",
     email: contact.email || "guest@example.com",
   };
+}
+
+function getBackendOfferSnapshotTotal(
+  source: FlightReviewPayload,
+  fallbackTotal: number
+) {
+  const backendTotal = Number(source.backendOffer?.priceTotal);
+  if (Number.isFinite(backendTotal) && backendTotal > 0) {
+    return backendTotal;
+  }
+
+  const baseFare = Number(source.pricing?.baseFareTotal || 0);
+  const tax = Number(source.pricing?.tax || 0);
+  const surcharge = Number(source.pricing?.surcharge || 0);
+  const discount = Number(source.pricing?.discount || 0);
+  const tplCredit = Number(source.pricing?.tplCredit || 0);
+  const reconstructedTotal = baseFare + tax + surcharge - discount - tplCredit;
+
+  if (Number.isFinite(reconstructedTotal) && reconstructedTotal > 0) {
+    return Math.round(reconstructedTotal);
+  }
+
+  return Math.round(Number(source.pricing?.totalAmount || fallbackTotal || 0));
 }
