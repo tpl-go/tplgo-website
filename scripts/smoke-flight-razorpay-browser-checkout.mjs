@@ -127,17 +127,39 @@ async function runFlow(page) {
     const message = error instanceof Error ? error.message : String(error);
     throw new Error(`${message}; Razorpay visible controls snapshot: ${JSON.stringify(result.razorpaySnapshot)}`);
   }
-  const confirmationText = await page.locator("body").innerText({ timeout: 30000 });
+  const confirmationText = await readSettledConfirmationText(page);
 
   await addCheck(result.events.some((item) => item.endpoint === "flight-test-confirm" && item.type === "request"), "flight-test-confirm-requested", "Backend flight test-confirm request occurred.");
   await addCheck(result.events.some((item) => item.endpoint === "flight-test-confirm" && item.type === "response" && /^2/.test(item.methodOrStatus)), "flight-test-confirm-verified", "Backend test-confirm returned success, indicating signature verification passed.");
-  await addCheck(confirmationText.includes("TPL Test Confirmation"), "confirmation-test-copy", "Confirmation page shows TPL test confirmation.");
+  await addCheck(hasTestOnlyConfirmationMarkers(confirmationText), "confirmation-test-only-markers", "Confirmation page shows TPL test-only markers.");
   await addCheck(!/Supplier confirmed|real PNR|Ticket Number\s*[:#]?\s*[A-Z0-9]/i.test(confirmationText), "no-supplier-confirmation-copy", "Confirmation does not imply supplier booking, PNR, or ticketing.");
 
   result.storageSafety = await inspectStorageSafety(page);
   await addCheck(result.storageSafety.ok, "session-storage-safe", "Session storage contains no raw Razorpay response, signature, provider refs, or secrets.");
 }
 
+async function readSettledConfirmationText(page) {
+  const deadline = Date.now() + 30000;
+  let text = "";
+  while (Date.now() < deadline) {
+    text = await page.locator("body").innerText({ timeout: 5000 }).catch(() => "");
+    if (hasTestOnlyConfirmationMarkers(text)) return text;
+    await page.waitForTimeout(750);
+  }
+  return text;
+}
+
+function hasTestOnlyConfirmationMarkers(text) {
+  return (
+    text.includes("TPL Test Confirmation") ||
+    (
+      /TPL-only beta/i.test(text) &&
+      /PNR:\s*Not issued in test mode/i.test(text) &&
+      /Ticket:\s*Not issued in test mode/i.test(text) &&
+      /Supplier booking.*disabled/i.test(text)
+    )
+  );
+}
 async function prepareManualRazorpayViewport(page) {
   await page.addStyleTag({
     content: `
