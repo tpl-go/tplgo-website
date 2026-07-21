@@ -13,7 +13,9 @@ const OUT_DIR = path.resolve("artifacts/browser-smoke");
 const JSON_PATH = path.join(OUT_DIR, "d20y-razorpay-browser-checkout-result.json");
 const MD_PATH = path.join(OUT_DIR, "d20y-razorpay-browser-checkout-report.md");
 const SCREENSHOT_PATH = path.join(OUT_DIR, "d20y-razorpay-browser-checkout-failure.png");
-const HEADLESS = process.env.HEADLESS !== "0";
+const MANUAL_RAZORPAY = process.env.MANUAL_RAZORPAY === "1";
+const HEADLESS = MANUAL_RAZORPAY ? false : process.env.HEADLESS !== "0";
+const CONFIRMATION_TIMEOUT_MS = Number(process.env.CONFIRMATION_TIMEOUT_MS || (MANUAL_RAZORPAY ? 600000 : 120000));
 
 const result = {
   startedAt: new Date().toISOString(),
@@ -37,8 +39,15 @@ main().catch(async (error) => {
 
 async function main() {
   await mkdir(OUT_DIR, { recursive: true });
-  const browser = await chromium.launch({ headless: HEADLESS });
-  const page = await browser.newPage({ viewport: { width: 1600, height: 1400 } });
+  const browser = await chromium.launch({
+    headless: HEADLESS,
+    args: MANUAL_RAZORPAY ? ["--start-maximized", "--window-size=1600,1200"] : [],
+  });
+  const page = await browser.newPage(
+    MANUAL_RAZORPAY
+      ? { viewport: null }
+      : { viewport: { width: 1600, height: 1400 } }
+  );
 
   page.on("request", (request) => recordGatewayEvent("request", request.method(), request.url()));
   page.on("response", (response) => recordGatewayEvent("response", String(response.status()), response.url()));
@@ -92,20 +101,26 @@ async function runFlow(page) {
   await addCheck(paymentPayload?.reviewData?.backendOffer?.smokeRunId === RUN_ID, "payment-smoke-run-id-present", "Payment payload retained smoke run id.");
 
   await page.getByText("Credit & Debit Cards", { exact: true }).click({ timeout: 30000 });
+  if (MANUAL_RAZORPAY) await prepareManualRazorpayViewport(page);
   await page.getByRole("button", { name: "Proceed to Payment" }).click({ timeout: 30000 });
   const checkoutFrame = await waitForRazorpayFrame(page);
   await addCheck(Boolean(checkoutFrame), "razorpay-checkout-opened", "Razorpay Checkout iframe opened in test mode.");
 
-  try {
-    await completeRazorpayCheckout(page, checkoutFrame);
-  } catch (error) {
-    result.razorpaySnapshot = await describeRazorpayFrames(page);
-    await page.screenshot({ path: SCREENSHOT_PATH, fullPage: true }).catch(() => {});
-    const message = error instanceof Error ? error.message : String(error);
-    throw new Error(`${message}; Razorpay visible controls snapshot: ${JSON.stringify(result.razorpaySnapshot)}`);
+  if (MANUAL_RAZORPAY) {
+    console.log("D20Z_MANUAL_RAZORPAY_READY");
+    console.log("Complete the Razorpay test checkout manually in the visible browser. The script will resume after /flights/confirmation loads.");
+  } else {
+    try {
+      await completeRazorpayCheckout(page, checkoutFrame);
+    } catch (error) {
+      result.razorpaySnapshot = await describeRazorpayFrames(page);
+      await page.screenshot({ path: SCREENSHOT_PATH, fullPage: true }).catch(() => {});
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`${message}; Razorpay visible controls snapshot: ${JSON.stringify(result.razorpaySnapshot)}`);
+    }
   }
   try {
-    await page.waitForURL("**/flights/confirmation", { timeout: 120000 });
+    await page.waitForURL("**/flights/confirmation", { timeout: CONFIRMATION_TIMEOUT_MS });
   } catch (error) {
     result.razorpaySnapshot = await describeRazorpayFrames(page);
     await page.screenshot({ path: SCREENSHOT_PATH, fullPage: true }).catch(() => {});
@@ -114,6 +129,8 @@ async function runFlow(page) {
   }
   const confirmationText = await page.locator("body").innerText({ timeout: 30000 });
 
+  await addCheck(result.events.some((item) => item.endpoint === "flight-test-confirm" && item.type === "request"), "flight-test-confirm-requested", "Backend flight test-confirm request occurred.");
+  await addCheck(result.events.some((item) => item.endpoint === "flight-test-confirm" && item.type === "response" && /^2/.test(item.methodOrStatus)), "flight-test-confirm-verified", "Backend test-confirm returned success, indicating signature verification passed.");
   await addCheck(confirmationText.includes("TPL Test Confirmation"), "confirmation-test-copy", "Confirmation page shows TPL test confirmation.");
   await addCheck(!/Supplier confirmed|real PNR|Ticket Number\s*[:#]?\s*[A-Z0-9]/i.test(confirmationText), "no-supplier-confirmation-copy", "Confirmation does not imply supplier booking, PNR, or ticketing.");
 
@@ -121,6 +138,29 @@ async function runFlow(page) {
   await addCheck(result.storageSafety.ok, "session-storage-safe", "Session storage contains no raw Razorpay response, signature, provider refs, or secrets.");
 }
 
+async function prepareManualRazorpayViewport(page) {
+  await page.addStyleTag({
+    content: `
+      html,
+      body {
+        height: auto !important;
+        min-height: 100dvh !important;
+        overflow-y: auto !important;
+      }
+
+      .razorpay-container,
+      .razorpay-backdrop {
+        inset: 0 !important;
+        max-height: 100dvh !important;
+        overflow-y: auto !important;
+      }
+
+      iframe[src*="razorpay"] {
+        max-height: calc(100dvh - 16px) !important;
+      }
+    `,
+  }).catch(() => {});
+}
 async function completeReview(page) {
   await page.getByRole("button", { name: "Add ADULT 1" }).click({ timeout: 30000 });
   await page.getByPlaceholder("First & Middle Name").fill("Dtwentyy");
