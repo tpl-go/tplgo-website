@@ -1,13 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/app/hooks/useAuth";
-
 import {
-  BOOKING_UPDATED_EVENT,
   cancelBooking,
-  getBookingsByMobile,
   getRefundEstimate,
   type BookingItem,
 } from "@/app/lib/booking/bookingStorage";
@@ -24,18 +20,6 @@ import {
 } from "@/app/lib/visa/visaStatusStorage";
 
 const DIGI_YATRA_REDIRECT_URL = "https://www.digiyatra.org.in/";
-
-function isJourneyCompleted(travelDate: string) {
-  const date = new Date(travelDate);
-  if (Number.isNaN(date.getTime())) return false;
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  date.setHours(0, 0, 0, 0);
-
-  return date < today;
-}
 
 function resolveDisplayBookingId(booking: BookingItem) {
   const rawId = String(booking.id || "");
@@ -96,48 +80,16 @@ function isDomesticFlightBooking(booking: BookingItem) {
   return false;
 }
 
-export default function UpcomingJourneySection() {
-  const [bookings, setBookings] = useState<BookingItem[]>([]);
+type UpcomingJourneySectionProps = {
+  bookings: BookingItem[];
+};
+
+export default function UpcomingJourneySection({
+  bookings,
+}: UpcomingJourneySectionProps) {
   const [cancelTarget, setCancelTarget] = useState<BookingItem | null>(null);
 
-  const { user } = useAuth();
   const router = useRouter();
-
-  const loadBookings = () => {
-    const userMobile = user?.mobile?.trim();
-
-    if (!userMobile) {
-      setBookings([]);
-      return;
-    }
-
-    const all = getBookingsByMobile(userMobile);
-
-    setBookings(
-      all.filter((item) => {
-        if (item.status !== "upcoming") return false;
-        if (isJourneyCompleted(item.travelDate)) return false;
-
-        return true;
-      })
-    );
-  };
-
-  useEffect(() => {
-    loadBookings();
-
-    const handleBookingUpdate = () => {
-      loadBookings();
-    };
-
-    window.addEventListener(BOOKING_UPDATED_EVENT, handleBookingUpdate);
-    window.addEventListener("storage", handleBookingUpdate);
-
-    return () => {
-      window.removeEventListener(BOOKING_UPDATED_EVENT, handleBookingUpdate);
-      window.removeEventListener("storage", handleBookingUpdate);
-    };
-  }, [user]);
 
   const handleViewDetail = (booking: BookingItem) => {
     const config = getBookingServiceConfig(booking.type);
@@ -180,7 +132,6 @@ export default function UpcomingJourneySection() {
 
     cancelBooking(cancelTarget.id, "Cancelled by user from My Bookings");
     setCancelTarget(null);
-    loadBookings();
   };
 
   return (

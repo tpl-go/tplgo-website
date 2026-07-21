@@ -43,6 +43,9 @@ export type BookingItem = {
   detailRoute?: string;
   payloadStorageKey?: string;
   bookingId?: string;
+  backendBookingId?: string;
+  backendBookingRef?: string;
+  legacyFrontendId?: string;
   bookingStatus?: string;
   dateRange?: {
     end?: string;
@@ -350,7 +353,7 @@ export function getRefundEstimate(booking: BookingItem) {
 }
 
 export function addBooking(
-  booking: Omit<BookingItem, "id" | "bookingDate">
+  booking: Omit<BookingItem, "id" | "bookingDate"> & { id?: string; bookingDate?: string }
 ) {
   const existing = getAllBookings();
 
@@ -387,15 +390,15 @@ const duplicate = existing.find((item) => {
   const tempBooking: BookingItem = {
     ...booking,
     id: "temp-id",
-    bookingDate: new Date().toISOString(),
+    bookingDate: booking.bookingDate || new Date().toISOString(),
   };
 
   const estimate = getRefundEstimate(tempBooking);
 
   const newBooking: BookingItem = {
     ...booking,
-    id: generateBookingId(booking.type),
-    bookingDate: new Date().toISOString(),
+    id: booking.id || generateBookingId(booking.type),
+    bookingDate: booking.bookingDate || new Date().toISOString(),
     status: isJourneyCompleted(booking.travelDate)
       ? "completed"
       : booking.status,

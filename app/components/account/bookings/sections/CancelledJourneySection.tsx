@@ -1,42 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useAuth } from "@/app/hooks/useAuth";
-import {
-  BOOKING_UPDATED_EVENT,
-  getAllBookings,
-  type BookingItem,
-} from "@/app/lib/booking/bookingStorage";
+import type { BookingItem } from "@/app/lib/booking/bookingStorage";
 
-export default function CancelledJourneySection() {
-  const [bookings, setBookings] = useState<BookingItem[]>([]);
-  const { user } = useAuth();
+type CancelledJourneySectionProps = {
+  bookings: BookingItem[];
+};
 
-  useEffect(() => {
-    const loadBookings = () => {
-      const all = getAllBookings();
-      const userMobile = user?.mobile?.trim();
-
-      if (!userMobile) {
-        setBookings([]);
-        return;
-      }
-
-      setBookings(
-        all.filter(
-          (item) =>
-            item.status === "cancelled" && item.mobile?.trim() === userMobile
-        )
-      );
-    };
-
-    loadBookings();
-    window.addEventListener(BOOKING_UPDATED_EVENT, loadBookings);
-
-    return () => {
-      window.removeEventListener(BOOKING_UPDATED_EVENT, loadBookings);
-    };
-  }, [user]);
+export default function CancelledJourneySection({
+  bookings,
+}: CancelledJourneySectionProps) {
 
   return (
     <div className="bg-white">

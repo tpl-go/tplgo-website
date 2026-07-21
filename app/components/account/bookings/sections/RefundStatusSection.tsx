@@ -1,39 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useAuth } from "@/app/hooks/useAuth";
-import {
-  BOOKING_UPDATED_EVENT,
-  getAllBookings,
-  type BookingItem,
-} from "@/app/lib/booking/bookingStorage";
+import type { BookingItem } from "@/app/lib/booking/bookingStorage";
 
-export default function RefundStatusSection() {
-  const [refundBookings, setRefundBookings] = useState<BookingItem[]>([]);
-  const { user } = useAuth();
+type RefundStatusSectionProps = {
+  bookings: BookingItem[];
+};
 
-  useEffect(() => {
-    const loadRefunds = () => {
-      const all = getAllBookings();
-      const userMobile = user?.mobile?.trim();
-
-      if (!userMobile) {
-        setRefundBookings([]);
-        return;
-      }
-
-      setRefundBookings(
-        all.filter((item) => item.refund && item.mobile?.trim() === userMobile)
-      );
-    };
-
-    loadRefunds();
-    window.addEventListener(BOOKING_UPDATED_EVENT, loadRefunds);
-
-    return () => {
-      window.removeEventListener(BOOKING_UPDATED_EVENT, loadRefunds);
-    };
-  }, [user]);
+export default function RefundStatusSection({
+  bookings: refundBookings,
+}: RefundStatusSectionProps) {
 
   return (
     <div className="bg-white">

@@ -1,36 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useAuth } from "@/app/hooks/useAuth";
-import {
-  getAllBookings,
-  type BookingItem,
-} from "@/app/lib/booking/bookingStorage";
+import type { BookingItem } from "@/app/lib/booking/bookingStorage";
 
 // ✅ SAME AS UPCOMING
 import { printBookingDocument } from "@/app/lib/booking/print/bookingPrintDispatcher";
 
-export default function CompletedJourneySection() {
-  const [bookings, setBookings] = useState<BookingItem[]>([]);
-  const { user } = useAuth();
+type CompletedJourneySectionProps = {
+  bookings: BookingItem[];
+};
 
-  useEffect(() => {
-    const all = getAllBookings();
-    const userMobile = user?.mobile?.trim();
-
-    if (!userMobile) {
-      setBookings([]);
-      return;
-    }
-
-    setBookings(
-      all.filter(
-        (item) =>
-          item.status === "completed" &&
-          item.mobile?.trim() === userMobile
-      )
-    );
-  }, [user]);
+export default function CompletedJourneySection({
+  bookings,
+}: CompletedJourneySectionProps) {
 
   return (
     <div className="bg-white">

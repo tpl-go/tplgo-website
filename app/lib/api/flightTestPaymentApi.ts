@@ -59,6 +59,9 @@ export type BackendFlightTestPaymentConfirmRequest = {
 export type BackendFlightTestPaymentConfirmResponse = {
   bookingDraftId: string;
   bookingRef: string;
+  backendBookingId?: string;
+  backendBookingRef?: string;
+  bookingPersisted?: boolean;
   paymentId: string;
   paymentRef: string;
   attemptId: string;

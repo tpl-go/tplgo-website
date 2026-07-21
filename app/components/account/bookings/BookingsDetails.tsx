@@ -10,10 +10,10 @@ import CancelledJourneySection from "@/app/components/account/bookings/sections/
 import RefundStatusSection from "@/app/components/account/bookings/sections/RefundStatusSection";
 
 import {
-  getBookingsByMobile,
   BOOKING_UPDATED_EVENT,
   type BookingItem,
 } from "@/app/lib/booking/bookingStorage";
+import { getBackendFirstBookings } from "@/app/lib/api/bookingApi";
 
 type BookingsDetailsProps = {
   activeSection: BookingSectionKey;
@@ -27,22 +27,27 @@ export default function BookingsDetails({
   const [bookings, setBookings] = useState<BookingItem[]>([]);
 
   useEffect(() => {
-    const loadBookings = () => {
+    let cancelled = false;
+
+    const loadBookings = async () => {
       if (!user?.mobile) {
         setBookings([]);
         return;
       }
 
-      const userBookings = getBookingsByMobile(user.mobile);
-      setBookings(userBookings);
+      const result = await getBackendFirstBookings(user.mobile);
+      if (!cancelled) setBookings(result.bookings);
     };
 
-    loadBookings();
+    void loadBookings();
 
     window.addEventListener(BOOKING_UPDATED_EVENT, loadBookings);
+    window.addEventListener("storage", loadBookings);
 
     return () => {
+      cancelled = true;
       window.removeEventListener(BOOKING_UPDATED_EVENT, loadBookings);
+      window.removeEventListener("storage", loadBookings);
     };
   }, [user?.mobile]);
 
@@ -51,16 +56,16 @@ export default function BookingsDetails({
   const cancelled = bookings.filter((b) => b.status === "cancelled");
 
   if (activeSection === "completed") {
-    return <CompletedJourneySection />;
+    return <CompletedJourneySection bookings={completed} />;
   }
 
   if (activeSection === "cancelled") {
-    return <CancelledJourneySection />;
+    return <CancelledJourneySection bookings={cancelled} />;
   }
 
   if (activeSection === "refund") {
-    return <RefundStatusSection />;
+    return <RefundStatusSection bookings={bookings.filter((b) => b.refund)} />;
   }
 
-  return <UpcomingJourneySection />;
+  return <UpcomingJourneySection bookings={upcoming} />;
 }

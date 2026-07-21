@@ -13,6 +13,7 @@ import FlightConfirmationActionsCard from "@/app/components/confirmation/flight/
 import {
   addBooking,
   getAllBookings,
+  updateBooking,
   type BookingItem,
 } from "@/app/lib/booking/bookingStorage";
 import { createGuestUserFromBooking } from "@/app/lib/booking/guestAuth";
@@ -29,7 +30,78 @@ import { confirmFlightBackendCheckout } from "@/app/lib/api/flightCheckoutIntegr
 type ConfirmationPayload = any;
 
 const DIGI_YATRA_REDIRECT_URL = "https://www.digiyatra.org.in/";
+function getBackendBookingRef(payload: ConfirmationPayload | null): string {
+  return String(
+    payload?.backendBookingRef ||
+      payload?.backendTestPaymentConfirmation?.backendBookingRef ||
+      payload?.bookingMeta?.backendBookingRef ||
+      ""
+  ).trim();
+}
 
+function getBackendBookingId(payload: ConfirmationPayload | null): string {
+  return String(
+    payload?.backendBookingId ||
+      payload?.backendTestPaymentConfirmation?.backendBookingId ||
+      payload?.bookingMeta?.backendBookingId ||
+      ""
+  ).trim();
+}
+
+function withCanonicalBackendBooking(payload: ConfirmationPayload): ConfirmationPayload {
+  const backendBookingRef = getBackendBookingRef(payload);
+  if (!backendBookingRef) return payload;
+
+  const backendBookingId = getBackendBookingId(payload);
+  const legacyFrontendId = String(
+    payload?.legacyFrontendId ||
+      payload?.bookingMeta?.legacyFrontendId ||
+      (payload?.bookingId && payload.bookingId !== backendBookingRef ? payload.bookingId : "") ||
+      ""
+  ).trim();
+
+  return {
+    ...payload,
+    id: backendBookingRef,
+    bookingId: backendBookingRef,
+    backendBookingRef,
+    ...(backendBookingId ? { backendBookingId } : {}),
+    ...(legacyFrontendId ? { legacyFrontendId } : {}),
+    bookingMeta: {
+      ...(payload?.bookingMeta || {}),
+      bookingId: backendBookingRef,
+      backendBookingRef,
+      ...(backendBookingId ? { backendBookingId } : {}),
+      ...(legacyFrontendId ? { legacyFrontendId } : {}),
+      bookingPersisted: payload?.bookingPersisted ?? payload?.bookingMeta?.bookingPersisted,
+    },
+  };
+}
+
+
+function sanitizeFlightConfirmationStoragePayload<T>(value: T): T {
+  const blockedKeys = new Set([
+    "gatewaySignature",
+    "razorpay_signature",
+    "rawRazorpay",
+    "rawResponse",
+    "razorpayResponse",
+  ]);
+
+  if (Array.isArray(value)) {
+    return value.map((item) => sanitizeFlightConfirmationStoragePayload(item)) as T;
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .filter(([key]) => !blockedKeys.has(key))
+        .map(([key, item]) => [key, sanitizeFlightConfirmationStoragePayload(item)])
+    ) as T;
+  }
+
+  return value;
+}
 function creditEarnedForFlightBooking(params: {
   mobile: string;
   bookingId: string;
@@ -90,7 +162,7 @@ export default function FlightConfirmationPage() {
     if (!raw) return;
 
     try {
-      let parsed = JSON.parse(raw);
+      let parsed = sanitizeFlightConfirmationStoragePayload(withCanonicalBackendBooking(JSON.parse(raw)));
 
       if (parsed?.backendCheckoutId) {
         const backendConfirm = await confirmFlightBackendCheckout({
@@ -114,14 +186,14 @@ export default function FlightConfirmationPage() {
         });
 
         if (backendConfirm.attempted && backendConfirm.refs) {
-          parsed = {
+          parsed = sanitizeFlightConfirmationStoragePayload(withCanonicalBackendBooking({
             ...parsed,
             ...backendConfirm.payload,
             ...backendConfirm.refs,
-          };
+          }));
           sessionStorage.setItem(
             "tplFlightConfirmationData",
-            JSON.stringify(parsed)
+            JSON.stringify(sanitizeFlightConfirmationStoragePayload(parsed))
           );
         }
       }
@@ -146,6 +218,15 @@ export default function FlightConfirmationPage() {
         firstSegment?.departureDate || new Date().toISOString();
 
       const totalAmount = parsed?.paymentData?.totalPaid || 0;
+      const backendBookingRef = getBackendBookingRef(parsed);
+      const backendBookingId = getBackendBookingId(parsed);
+      const canonicalBookingId = backendBookingRef || parsed?.bookingId || "";
+      const legacyFrontendId = String(
+        parsed?.legacyFrontendId ||
+          parsed?.bookingMeta?.legacyFrontendId ||
+          (backendBookingRef && parsed?.bookingId !== backendBookingRef ? parsed?.bookingId : "") ||
+          ""
+      ).trim();
 
       const mobile = contact?.mobile || "";
       const leadTraveller =
@@ -234,9 +315,35 @@ export default function FlightConfirmationPage() {
       });
 
       if (existingBooking) {
+        const canonicalExistingBooking =
+          backendBookingRef && existingBooking.id !== backendBookingRef
+            ? updateBooking(existingBooking.id, {
+                ...existingBooking,
+                id: backendBookingRef,
+                bookingId: backendBookingRef,
+                backendBookingId: backendBookingId || existingBooking.backendBookingId,
+                backendBookingRef,
+                legacyFrontendId:
+                  legacyFrontendId || existingBooking.legacyFrontendId || existingBooking.id,
+                payloadStorageKey: existingBooking.payloadStorageKey || payloadStorageKey,
+              }) || {
+                ...existingBooking,
+                id: backendBookingRef,
+                bookingId: backendBookingRef,
+                backendBookingId: backendBookingId || existingBooking.backendBookingId,
+                backendBookingRef,
+                legacyFrontendId:
+                  legacyFrontendId || existingBooking.legacyFrontendId || existingBooking.id,
+              }
+            : existingBooking;
+
         const payloadWithBookingId = {
           ...parsed,
-          bookingId: existingBooking.id,
+          id: canonicalBookingId || canonicalExistingBooking.id,
+          bookingId: canonicalBookingId || canonicalExistingBooking.id,
+          backendBookingId: backendBookingId || undefined,
+          backendBookingRef: backendBookingRef || undefined,
+          legacyFrontendId: legacyFrontendId || undefined,
           earnedCreditAmount: earnedAmount,
           digiYatra: {
             eligible: isDomesticFlight,
@@ -246,12 +353,12 @@ export default function FlightConfirmationPage() {
         };
 
         localStorage.setItem(
-          existingBooking.payloadStorageKey || payloadStorageKey,
-          JSON.stringify(payloadWithBookingId)
+          canonicalExistingBooking.payloadStorageKey || payloadStorageKey,
+          JSON.stringify(sanitizeFlightConfirmationStoragePayload(payloadWithBookingId))
         );
         sessionStorage.setItem(
           "tplFlightConfirmationData",
-          JSON.stringify(payloadWithBookingId)
+          JSON.stringify(sanitizeFlightConfirmationStoragePayload(payloadWithBookingId))
         );
 
         createGuestUserFromBooking({
@@ -265,12 +372,12 @@ export default function FlightConfirmationPage() {
 
         creditEarnedForFlightBooking({
           mobile,
-          bookingId: existingBooking.id,
+          bookingId: canonicalBookingId || canonicalExistingBooking.id,
           earnedAmount,
         });
 
         sessionStorage.setItem(confirmationSaveKey, "true");
-        setSavedBooking(existingBooking);
+        setSavedBooking(canonicalExistingBooking);
         setData(payloadWithBookingId);
         return;
       }
@@ -279,6 +386,11 @@ export default function FlightConfirmationPage() {
 
       if (!alreadySaved) {
         const newBooking = addBooking({
+          id: canonicalBookingId || undefined,
+          bookingId: canonicalBookingId || undefined,
+          backendBookingId: backendBookingId || undefined,
+          backendBookingRef: backendBookingRef || undefined,
+          legacyFrontendId: legacyFrontendId || undefined,
           type: "flight",
           title,
           travelDate,
@@ -303,7 +415,11 @@ export default function FlightConfirmationPage() {
 
         const payloadWithBookingId = {
           ...parsed,
-          bookingId: newBooking.id,
+          id: canonicalBookingId || newBooking.id,
+          bookingId: canonicalBookingId || newBooking.id,
+          backendBookingId: backendBookingId || undefined,
+          backendBookingRef: backendBookingRef || undefined,
+          legacyFrontendId: legacyFrontendId || undefined,
           earnedCreditAmount: earnedAmount,
           digiYatra: {
             eligible: isDomesticFlight,
@@ -314,11 +430,11 @@ export default function FlightConfirmationPage() {
 
         localStorage.setItem(
           payloadStorageKey,
-          JSON.stringify(payloadWithBookingId)
+          JSON.stringify(sanitizeFlightConfirmationStoragePayload(payloadWithBookingId))
         );
         sessionStorage.setItem(
           "tplFlightConfirmationData",
-          JSON.stringify(payloadWithBookingId)
+          JSON.stringify(sanitizeFlightConfirmationStoragePayload(payloadWithBookingId))
         );
 
         createGuestUserFromBooking({
@@ -520,6 +636,8 @@ export default function FlightConfirmationPage() {
 
   const journeyDateLabel = firstSegment?.departureDate || null;
   const bookingId =
+    data?.backendBookingRef ||
+    backendTestConfirmation?.backendBookingRef ||
     backendTestConfirmation?.bookingRef ||
     backendSimulation?.bookingRef ||
     savedBooking?.id ||

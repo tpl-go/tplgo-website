@@ -8,11 +8,10 @@ import FlightConfirmationPassengerCard from "@/app/components/confirmation/fligh
 import FlightConfirmationFareCard from "@/app/components/confirmation/flight/FlightConfirmationFareCard";
 
 import {
-  getAllBookings,
   BOOKING_UPDATED_EVENT,
   type BookingItem,
 } from "@/app/lib/booking/bookingStorage";
-import { getBookingPayload } from "@/app/lib/booking/bookingActionHelpers";
+import { getBackendFirstBookingPayload } from "@/app/lib/api/bookingApi";
 
 type ConfirmationPayload = any;
 
@@ -53,31 +52,28 @@ export default function FlightBookingDetailPage() {
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
-    const loadBookingDetail = () => {
-      const all = getAllBookings();
-      const found = all.find((item) => item.id === bookingId) || null;
-      setBooking(found);
+    let cancelled = false;
 
-      if (found?.payloadStorageKey) {
-        const savedPayload = getBookingPayload<ConfirmationPayload>(
-          found.payloadStorageKey
-        );
+    const loadBookingDetail = async () => {
+      const result = await getBackendFirstBookingPayload<ConfirmationPayload>(
+        bookingId,
+        "flight"
+      );
+      if (cancelled) return;
 
-        setPayload(savedPayload ? { ...savedPayload } : null);
-      } else {
-        setPayload(null);
-      }
-
+      setBooking(result.booking);
+      setPayload(result.payload);
       setRefreshKey((prev) => prev + 1);
     };
 
-    loadBookingDetail();
+    void loadBookingDetail();
 
     window.addEventListener(BOOKING_UPDATED_EVENT, loadBookingDetail);
     window.addEventListener("storage", loadBookingDetail);
     window.addEventListener("focus", loadBookingDetail);
 
     return () => {
+      cancelled = true;
       window.removeEventListener(BOOKING_UPDATED_EVENT, loadBookingDetail);
       window.removeEventListener("storage", loadBookingDetail);
       window.removeEventListener("focus", loadBookingDetail);

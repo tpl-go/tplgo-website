@@ -39,6 +39,11 @@ import FlightPaymentInsuranceCard from "@/app/components/payment/flight/FlightPa
 import FlightPaymentOptionSection from "@/app/components/payment/flight/FlightPaymentOptionSection";
 import FlightPaymentPriceCard from "@/app/components/payment/flight/FlightPaymentPriceCard";
 
+type FlightBackendCheckoutRefsWithBookingPersistence = FlightBackendCheckoutRefs & {
+  backendBookingRef?: string;
+  bookingPersisted?: boolean;
+};
+
 type StoredPayload = {
   reviewData?: any;
   travellerValidation?: any;
@@ -109,6 +114,30 @@ function sanitizeRazorpayContact(value: unknown): string {
   return digits.slice(0, 10);
 }
 
+
+function sanitizeFlightPaymentStoragePayload<T>(value: T): T {
+  const blockedKeys = new Set([
+    "gatewaySignature",
+    "razorpay_signature",
+    "rawRazorpay",
+    "rawResponse",
+    "razorpayResponse",
+  ]);
+
+  if (Array.isArray(value)) {
+    return value.map((item) => sanitizeFlightPaymentStoragePayload(item)) as T;
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .filter(([key]) => !blockedKeys.has(key))
+        .map(([key, item]) => [key, sanitizeFlightPaymentStoragePayload(item)])
+    ) as T;
+  }
+
+  return value;
+}
 function buildFlightSmokeIdempotencyKey(baseKey: string, smokeRunId?: string) {
   const cleanSmokeRunId = sanitizeSmokeRunId(smokeRunId);
   return cleanSmokeRunId ? `${baseKey}:smoke:${cleanSmokeRunId}` : baseKey;
@@ -396,7 +425,7 @@ const finalTotalAmount =
         activeUser?.email ||
         "";
 
-      let backendRefs: FlightBackendCheckoutRefs = {};
+      let backendRefs: FlightBackendCheckoutRefsWithBookingPersistence = {};
       const frontendBookingId = `TPL-FLT-${Date.now()}`;
       let backendCheckoutPayload: Record<string, unknown> | null = null;
       let backendTestOrder: BackendFlightTestPaymentOrderResponse | null = null;
@@ -453,6 +482,9 @@ const finalTotalAmount =
           backendTestConfirmation = testConfirm.data;
           backendRefs = {
             backendPaymentId: testConfirm.data.paymentId,
+            backendBookingId: testConfirm.data.backendBookingId,
+            backendBookingRef: testConfirm.data.backendBookingRef,
+            bookingPersisted: testConfirm.data.bookingPersisted,
             backendRequestId: storedPayload.backendSimulation.backendRequestId,
             backendServiceType: "flight",
             backendCheckoutStatus: testConfirm.data.status,
@@ -465,6 +497,9 @@ const finalTotalAmount =
               bookingRef: testConfirm.data.bookingRef,
               paymentId: testConfirm.data.paymentId,
               paymentRef: testConfirm.data.paymentRef,
+              backendBookingId: testConfirm.data.backendBookingId,
+              backendBookingRef: testConfirm.data.backendBookingRef,
+              bookingPersisted: testConfirm.data.bookingPersisted,
               attemptId: testConfirm.data.attemptId,
               gateway: testOrder.data.gateway,
               status: testConfirm.data.status,
@@ -479,7 +514,7 @@ const finalTotalAmount =
           };
           sessionStorage.setItem(
             "tplFlightBookingReviewData",
-            JSON.stringify(updatedReviewPayload)
+            JSON.stringify(sanitizeFlightPaymentStoragePayload(updatedReviewPayload))
           );
           setStoredPayload(updatedReviewPayload as StoredPayload);
         } else {
@@ -554,7 +589,7 @@ const finalTotalAmount =
           };
           sessionStorage.setItem(
             "tplFlightBookingReviewData",
-            JSON.stringify(updatedReviewPayload)
+            JSON.stringify(sanitizeFlightPaymentStoragePayload(updatedReviewPayload))
           );
           setStoredPayload(updatedReviewPayload as StoredPayload);
         }
@@ -571,8 +606,19 @@ const finalTotalAmount =
         return;
       }
 
+      const canonicalBackendBookingRef =
+        backendTestConfirmation?.backendBookingRef || backendTestConfirmation?.bookingRef;
+      const canonicalBackendBookingId = backendTestConfirmation?.backendBookingId;
+      const canonicalBookingId = canonicalBackendBookingRef || frontendBookingId;
+
       const confirmationPayload = {
         ...storedPayload,
+        bookingId: canonicalBookingId,
+        id: canonicalBookingId,
+        legacyFrontendId: canonicalBackendBookingRef ? frontendBookingId : undefined,
+        backendBookingId: canonicalBackendBookingId,
+        backendBookingRef: canonicalBackendBookingRef,
+        bookingPersisted: backendTestConfirmation?.bookingPersisted,
         ...(backendCheckoutPayload || {}),
         ...backendRefs,
         ...(backendTestOrder
@@ -601,6 +647,9 @@ const finalTotalAmount =
                 bookingRef: backendTestConfirmation.bookingRef,
                 paymentId: backendTestConfirmation.paymentId,
                 paymentRef: backendTestConfirmation.paymentRef,
+                backendBookingId: backendTestConfirmation.backendBookingId,
+                backendBookingRef: backendTestConfirmation.backendBookingRef,
+                bookingPersisted: backendTestConfirmation.bookingPersisted,
                 attemptId: backendTestConfirmation.attemptId,
                 status: backendTestConfirmation.status,
                 confirmationRef: backendTestConfirmation.simulatedConfirmation.confirmationRef,
@@ -657,7 +706,11 @@ leadTraveller: {
           refundUsed: priceBreakup.walletCalc.refundUsed,
         },
         bookingMeta: {
-          bookingId: frontendBookingId,
+          bookingId: canonicalBookingId,
+          legacyFrontendId: canonicalBackendBookingRef ? frontendBookingId : undefined,
+          backendBookingId: canonicalBackendBookingId,
+          backendBookingRef: canonicalBackendBookingRef,
+          bookingPersisted: backendTestConfirmation?.bookingPersisted,
           bookingStatus: backendTestConfirmation ? "TPL_TEST_BOOKING_CONFIRMED" : "confirmed",
           paymentStatus: "paid",
           createdAt: new Date().toISOString(),
@@ -767,7 +820,7 @@ leadTraveller: {
 
       sessionStorage.setItem(
         "tplFlightConfirmationData",
-        JSON.stringify(confirmationPayload)
+        JSON.stringify(sanitizeFlightPaymentStoragePayload(confirmationPayload))
       );
 
       window.location.href = "/flights/confirmation";
