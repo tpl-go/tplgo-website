@@ -733,7 +733,7 @@ seatTotal={seatMealData.seatTotal}
           total: finalTotalAmount,
           currency: "INR",
         },
-        idempotencyKey: `flight-sim:${priceReady.backendOffer.priceConfirmationId}`,
+        idempotencyKey: buildFlightSmokeIdempotencyKey(`flight-sim:${priceReady.backendOffer.priceConfirmationId}`, priceReady.backendOffer.smokeRunId),
       });
 
       if (!simulation.ok) {
@@ -859,6 +859,21 @@ seatTotal={seatMealData.seatTotal}
   }
 }
 
+function buildFlightSmokeIdempotencyKey(baseKey: string, smokeRunId?: string) {
+  const cleanSmokeRunId = sanitizeSmokeRunId(smokeRunId);
+  return cleanSmokeRunId ? `${baseKey}:smoke:${cleanSmokeRunId}` : baseKey;
+}
+
+function sanitizeSmokeRunId(value?: string) {
+  if (
+    process.env.NEXT_PUBLIC_PAYMENT_GATEWAY_TEST_ENABLED !== "true" ||
+    process.env.NEXT_PUBLIC_RAZORPAY_CHECKOUT_ENABLED !== "true"
+  ) {
+    return "";
+  }
+
+  return String(value || "").trim().replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 80);
+}
 function buildBackendTravellers(
   travellerValidation: TravellerValidationPayload | null,
   passengers: FlightReviewPayload["passengers"]

@@ -101,6 +101,29 @@ type StoredPayload = {
   };
 };
 
+function sanitizeRazorpayContact(value: unknown): string {
+  const digits = String(value || "").replace(/\D/g, "");
+  if (digits.length > 10 && digits.startsWith("91")) {
+    return digits.slice(-10);
+  }
+  return digits.slice(0, 10);
+}
+
+function buildFlightSmokeIdempotencyKey(baseKey: string, smokeRunId?: string) {
+  const cleanSmokeRunId = sanitizeSmokeRunId(smokeRunId);
+  return cleanSmokeRunId ? `${baseKey}:smoke:${cleanSmokeRunId}` : baseKey;
+}
+
+function sanitizeSmokeRunId(value?: string) {
+  if (
+    process.env.NEXT_PUBLIC_PAYMENT_GATEWAY_TEST_ENABLED !== "true" ||
+    process.env.NEXT_PUBLIC_RAZORPAY_CHECKOUT_ENABLED !== "true"
+  ) {
+    return "";
+  }
+
+  return String(value || "").trim().replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 80);
+}
 function getActiveUser() {
   if (typeof window === "undefined") return null;
 
@@ -361,12 +384,12 @@ const finalTotalAmount =
       const contactDetails = travellerValidation?.contactDetails || {};
       const leadTraveller = travellerValidation?.travellers?.[0] || {};
 
-      const confirmationMobile =
+      const confirmationMobile = sanitizeRazorpayContact(
         contactDetails?.mobile ||
-        contactDetails?.phone ||
-        activeUser?.mobile ||
-        "";
-
+          contactDetails?.phone ||
+          activeUser?.mobile ||
+          ""
+      );
       const confirmationEmail =
         contactDetails?.email ||
         leadTraveller?.email ||
@@ -391,7 +414,7 @@ const finalTotalAmount =
               mobile: confirmationMobile,
               email: confirmationEmail,
             },
-            idempotencyKey: `flight:test-order:${bookingDraftId}:${storedPayload.backendSimulation.priceConfirmationId}`,
+            idempotencyKey: buildFlightSmokeIdempotencyKey(`flight:test-order:${bookingDraftId}:${storedPayload.backendSimulation.priceConfirmationId}`, storedPayload?.reviewData?.backendOffer?.smokeRunId),
           });
 
           if (!testOrder.ok) {
@@ -419,7 +442,7 @@ const finalTotalAmount =
               ? { gatewaySignature: razorpayCheckoutResult.gatewaySignature }
               : {}),
             testOutcome: "success",
-            idempotencyKey: `flight:test-confirm:${bookingDraftId}:${paymentIdentifier}`,
+            idempotencyKey: buildFlightSmokeIdempotencyKey(`flight:test-confirm:${bookingDraftId}:${paymentIdentifier}`, storedPayload?.reviewData?.backendOffer?.smokeRunId),
           });
 
           if (!testConfirm.ok || testConfirm.data.status !== "TPL_TEST_BOOKING_CONFIRMED") {

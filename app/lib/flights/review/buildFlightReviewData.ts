@@ -16,6 +16,7 @@ export type FlightReviewPayload = {
     priceTotal?: number;
     priceConfirmationId?: string;
     priceStatus?: string;
+    smokeRunId?: string;
   };
   pricing: {
     perAdultBaseFare: number;
@@ -209,6 +210,7 @@ function normalizeBackendOffer(value: FlightReviewPayload["backendOffer"]): Flig
     ...(Number.isFinite(Number(value.priceTotal)) ? { priceTotal: Number(value.priceTotal) } : {}),
     ...(value.priceConfirmationId ? { priceConfirmationId: value.priceConfirmationId } : {}),
     ...(value.priceStatus ? { priceStatus: value.priceStatus } : {}),
+    ...(value.smokeRunId ? { smokeRunId: value.smokeRunId } : {}),
   };
 }
 

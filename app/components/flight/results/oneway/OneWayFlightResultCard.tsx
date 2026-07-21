@@ -29,6 +29,7 @@ type Props = {
     expiresAt?: string;
     backendRequestId?: string;
     priceTotal?: number;
+    smokeRunId?: string;
   };
 };
 
@@ -444,6 +445,11 @@ export default function FlightResultCard(props: Props) {
 
     const tripMode = detectTripMode(searchParams, fromCode, toCode);
 
+    const smokeRunId = getSmokeRunId(searchParams);
+    const backendOfferWithSmokeRun = backendOffer && smokeRunId
+      ? { ...backendOffer, smokeRunId }
+      : backendOffer;
+
     saveFlightReviewPayload({
       bookingType: "oneWay",
       tripMode,
@@ -453,7 +459,7 @@ export default function FlightResultCard(props: Props) {
         infants,
       },
       cabinClass,
-      ...(backendOffer ? { backendOffer } : {}),
+      ...(backendOfferWithSmokeRun ? { backendOffer: backendOfferWithSmokeRun } : {}),
       pricing: {
         perAdultBaseFare: rawFare,
         baseFareTotal,
@@ -645,4 +651,16 @@ export default function FlightResultCard(props: Props) {
       </OneWayModal>
     </>
   );
+}
+
+function getSmokeRunId(searchParams: URLSearchParams): string {
+  if (
+    process.env.NEXT_PUBLIC_PAYMENT_GATEWAY_TEST_ENABLED !== "true" ||
+    process.env.NEXT_PUBLIC_RAZORPAY_CHECKOUT_ENABLED !== "true"
+  ) {
+    return "";
+  }
+
+  const value = searchParams.get("tplSmokeRunId") || "";
+  return value.trim().replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 80);
 }
