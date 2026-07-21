@@ -12,6 +12,7 @@ const EMAIL = process.env.RAZORPAY_TEST_EMAIL || "d20y.smoke@example.test";
 const OUT_DIR = path.resolve("artifacts/browser-smoke");
 const JSON_PATH = path.join(OUT_DIR, "d20y-razorpay-browser-checkout-result.json");
 const MD_PATH = path.join(OUT_DIR, "d20y-razorpay-browser-checkout-report.md");
+const SCREENSHOT_PATH = path.join(OUT_DIR, "d20y-razorpay-browser-checkout-failure.png");
 const HEADLESS = process.env.HEADLESS !== "0";
 
 const result = {
@@ -95,8 +96,22 @@ async function runFlow(page) {
   const checkoutFrame = await waitForRazorpayFrame(page);
   await addCheck(Boolean(checkoutFrame), "razorpay-checkout-opened", "Razorpay Checkout iframe opened in test mode.");
 
-  await completeRazorpayCheckout(page, checkoutFrame);
-  await page.waitForURL("**/flights/confirmation", { timeout: 120000 });
+  try {
+    await completeRazorpayCheckout(page, checkoutFrame);
+  } catch (error) {
+    result.razorpaySnapshot = await describeRazorpayFrames(page);
+    await page.screenshot({ path: SCREENSHOT_PATH, fullPage: true }).catch(() => {});
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`${message}; Razorpay visible controls snapshot: ${JSON.stringify(result.razorpaySnapshot)}`);
+  }
+  try {
+    await page.waitForURL("**/flights/confirmation", { timeout: 120000 });
+  } catch (error) {
+    result.razorpaySnapshot = await describeRazorpayFrames(page);
+    await page.screenshot({ path: SCREENSHOT_PATH, fullPage: true }).catch(() => {});
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`${message}; Razorpay visible controls snapshot: ${JSON.stringify(result.razorpaySnapshot)}`);
+  }
   const confirmationText = await page.locator("body").innerText({ timeout: 30000 });
 
   await addCheck(confirmationText.includes("TPL Test Confirmation"), "confirmation-test-copy", "Confirmation page shows TPL test confirmation.");
@@ -138,6 +153,11 @@ async function completeRazorpayCheckout(page, frame) {
   await maybeFill(frame.locator('input[name="contact"]'), CONTACT);
   await maybeFill(frame.locator('input[name="email"]'), EMAIL);
   await clickFirst(frame, [
+    () => frame.getByRole("button", { name: /Using as/i }),
+    () => frame.locator("button").filter({ hasText: /Using as/i }),
+    () => frame.locator('[role="button"]').filter({ hasText: /Using as/i }),
+  ], 5000).catch(() => {});
+  await clickFirst(frame, [
     () => frame.getByRole("button", { name: "Continue" }),
     () => frame.locator("button").filter({ hasText: "Continue" }),
   ], 5000).catch(() => {});
@@ -149,10 +169,10 @@ async function completeRazorpayCheckout(page, frame) {
   ], 10000);
   await page.waitForTimeout(1500);
 
-  await maybeFill(frame.locator('input[name="card[number]"]'), "4111111111111111");
-  await maybeFill(frame.locator('input[name="card[expiry]"]'), "1230");
-  await maybeFill(frame.locator('input[name="card[cvv]"]'), "123");
-  await maybeFill(frame.locator('input[name="card[name]"]'), "Dtwentyy Smoke");
+  await typeIntoFirstVisible(frame.locator('input[name="card[number]"], input[name="card.number"]'), "4111111111111111");
+  await typeIntoFirstVisible(frame.locator('input[name="card[expiry]"], input[name="card.expiry"]'), "1230");
+  await typeIntoFirstVisible(frame.locator('input[name="card[cvv]"], input[name="card.cvv"]'), "123");
+  await typeIntoFirstVisible(frame.locator('input[name="card[name]"], input[name="card.name"]'), "Dtwentyy Smoke");
 
   await fillByPlaceholder(frame, "Card Number", "4111111111111111");
   await fillByPlaceholder(frame, "Expiry", "1230");
@@ -160,10 +180,12 @@ async function completeRazorpayCheckout(page, frame) {
   await fillByPlaceholder(frame, "Name", "Dtwentyy Smoke");
 
   await clickFirst(frame, [
-    () => frame.getByRole("button", { name: "Pay" }),
-    () => frame.locator("button").filter({ hasText: "Pay" }),
-    () => frame.locator('button[type="submit"]'),
+    () => frame.getByRole("button", { name: /Pay|Continue/i }),
+    () => frame.locator("button").filter({ hasText: /Pay|Continue/i }),
+    () => frame.locator('[role="button"]').filter({ hasText: /Pay|Continue/i }),
+    () => frame.locator('button[type="submit"]').filter({ hasText: /pay|continue/i }),
   ], 30000);
+  await clickVisibleTextDom(frame, /Continue|Pay/i).catch(() => {});
   await page.waitForTimeout(5000);
 
   await maybeFill(frame.locator('input[type="password"]'), "1234");
@@ -173,14 +195,25 @@ async function completeRazorpayCheckout(page, frame) {
     () => frame.getByRole("button", { name: "Submit" }),
     () => frame.getByRole("button", { name: "Verify" }),
     () => frame.locator("button").filter({ hasText: "Success" }),
-    () => frame.locator('button[type="submit"]'),
+    () => frame.locator('button[type="submit"]').filter({ hasText: /submit|verify|success/i }),
   ], 30000).catch(() => {});
 }
 
 async function waitForRazorpayFrame(page) {
   for (let index = 0; index < 60; index += 1) {
-    const frame = page.frames().find((item) => item.url().includes("razorpay"));
-    if (frame) return frame;
+    const frames = page.frames().filter((item) => item.url().includes("razorpay"));
+    for (const frame of frames) {
+      const visibleControlCount = await frame.locator("button, input").evaluateAll((nodes) =>
+        nodes.filter((node) => {
+          const element = node;
+          const style = window.getComputedStyle(element);
+          const rect = element.getBoundingClientRect();
+          return style.visibility !== "hidden" && style.display !== "none" && rect.width > 0 && rect.height > 0;
+        }).length
+      ).catch(() => 0);
+      if (visibleControlCount > 0) return frame;
+    }
+    if (frames[0]) return frames[0];
     await page.waitForTimeout(500);
   }
   throw new Error("Razorpay Checkout frame did not open.");
@@ -194,8 +227,13 @@ async function clickFirst(frame, locators, timeoutMs) {
       try {
         const locator = build();
         if ((await locator.count()) > 0) {
-          await locator.first().click({ timeout: 1500, force: true });
-          return;
+          const candidates = await locator.all();
+          for (const candidate of candidates) {
+            if (await candidate.isVisible().catch(() => false)) {
+              await candidate.click({ timeout: 1500 });
+              return;
+            }
+          }
         }
       } catch (error) {
         lastError = error;
@@ -206,10 +244,44 @@ async function clickFirst(frame, locators, timeoutMs) {
   throw lastError || new Error("No matching clickable Razorpay control found.");
 }
 
+async function clickVisibleTextDom(frame, pattern) {
+  const clicked = await frame.evaluate((source) => {
+    const regex = new RegExp(source, "i");
+    const visible = (node) => {
+      const element = node;
+      const style = window.getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return style.visibility !== "hidden" && style.display !== "none" && rect.width > 0 && rect.height > 0;
+    };
+    const candidates = Array.from(document.querySelectorAll("button, [role=button], input[type=button], input[type=submit]"));
+    const target = candidates.find((node) => visible(node) && regex.test(node.innerText || node.textContent || node.value || node.getAttribute("aria-label") || ""));
+    if (!target) return false;
+    target.click();
+    return true;
+  }, pattern.source);
+  if (!clicked) throw new Error("No visible Razorpay DOM control matched.");
+}
+async function typeIntoFirstVisible(locator, value) {
+  try {
+    const candidates = await locator.all();
+    for (const candidate of candidates) {
+      if (await candidate.isVisible().catch(() => false)) {
+        await candidate.click({ timeout: 2500 });
+        await candidate.press(process.platform === "darwin" ? "Meta+A" : "Control+A", { timeout: 2500 }).catch(() => {});
+        await candidate.type(value, { delay: 40, timeout: 10000 });
+        return;
+      }
+    }
+  } catch {}
+}
 async function maybeFill(locator, value) {
   try {
-    if ((await locator.count()) > 0) {
-      await locator.first().fill(value, { timeout: 2500 });
+    const candidates = await locator.all();
+    for (const candidate of candidates) {
+      if (await candidate.isVisible().catch(() => false)) {
+        await candidate.fill(value, { timeout: 2500 });
+        return;
+      }
     }
   } catch {}
 }
@@ -217,10 +289,39 @@ async function maybeFill(locator, value) {
 async function fillByPlaceholder(frame, text, value) {
   try {
     const locator = frame.getByPlaceholder(text, { exact: false });
-    if ((await locator.count()) > 0) await locator.first().fill(value, { timeout: 2500 });
+    await maybeFill(locator, value);
   } catch {}
 }
 
+async function describeRazorpayFrames(page) {
+  const frames = page.frames().filter((item) => item.url().includes("razorpay"));
+  const snapshots = [];
+  for (const frame of frames) {
+    const snapshot = await frame.evaluate(() => {
+      const clean = (value) => String(value || "").replace(/\s+/g, " ").trim().slice(0, 80);
+      const visible = (node) => {
+        const element = node;
+        const style = window.getComputedStyle(element);
+        const rect = element.getBoundingClientRect();
+        return style.visibility !== "hidden" && style.display !== "none" && rect.width > 0 && rect.height > 0;
+      };
+      return {
+        buttons: Array.from(document.querySelectorAll("button, [role=button]")).filter(visible).map((node) => ({
+          text: clean(node.innerText || node.textContent || node.getAttribute("aria-label")),
+          disabled: Boolean(node.disabled || node.getAttribute("aria-disabled") === "true"),
+        })).filter((item) => item.text).slice(0, 20),
+        inputs: Array.from(document.querySelectorAll("input")).filter(visible).map((node) => ({
+          name: clean(node.getAttribute("name") || node.getAttribute("placeholder") || node.getAttribute("aria-label") || node.getAttribute("autocomplete") || node.type),
+          valueLength: String(node.value || "").length,
+          disabled: Boolean(node.disabled || node.getAttribute("aria-disabled") === "true"),
+        })).filter((item) => item.name).slice(0, 20),
+        text: clean(document.body?.innerText || ""),
+      };
+    }).catch(() => ({ buttons: [], inputs: [], text: "" }));
+    snapshots.push(snapshot);
+  }
+  return snapshots;
+}
 async function readJsonStorage(page, key) {
   return page.evaluate((storageKey) => {
     const raw = sessionStorage.getItem(storageKey);
@@ -265,6 +366,7 @@ function buildMarkdown() {
     "# D20Y Razorpay Browser Checkout Smoke Result",
     "",
     `- Status: ${result.status}`,
+    ...(result.razorpaySnapshot ? [`- Failure screenshot: ${SCREENSHOT_PATH}`] : []),
     `- Frontend URL: ${result.frontendUrl}`,
     `- Run ID: ${result.runId}`,
     `- Departure Date: ${result.departureDate}`,
