@@ -341,16 +341,31 @@ async function manageRequest<TData>(
 }
 
 function readServiceAllowlist(): string[] {
-  return String(process.env[MANAGE_SERVICES_FLAG] || "")
+  return String(readPublicManageEnv(MANAGE_SERVICES_FLAG) || "")
     .split(",")
     .map((item) => item.trim().toLowerCase())
     .filter(Boolean);
 }
 
 function readBooleanEnv(key: string, defaultValue: boolean): boolean {
-  const value = process.env[key];
+  const value = readPublicManageEnv(key);
   if (typeof value === "undefined" || value === "") return defaultValue;
   return value === "true" || value === "1" || value === "yes";
+}
+
+function readPublicManageEnv(key: string): string | undefined {
+  switch (key) {
+    case MANAGE_ENABLED_FLAG:
+      return process.env.NEXT_PUBLIC_TPL_USE_BACKEND_MANAGE_BOOKING;
+    case MANAGE_SERVICES_FLAG:
+      return process.env.NEXT_PUBLIC_TPL_BACKEND_MANAGE_BOOKING_SERVICES;
+    case MANAGE_FALLBACK_FLAG:
+      return process.env.NEXT_PUBLIC_TPL_BACKEND_MANAGE_FALLBACK_TO_LOCAL;
+    case MANAGE_DEBUG_FLAG:
+      return process.env.NEXT_PUBLIC_TPL_DEBUG_MANAGE_PAYLOADS;
+    default:
+      return undefined;
+  }
 }
 
 function debugManagePayload(path: string, payload: unknown) {
