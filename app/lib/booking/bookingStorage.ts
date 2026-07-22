@@ -78,6 +78,9 @@ export type BookingItem = {
     cancellationCharge: number;
     cancelledAt?: string;
     cancelReason?: string;
+    backendCancellationId?: string;
+    backendCancellationStatus?: string;
+    supplierCancellationExecuted?: boolean;
   };
 
   refund?: {
@@ -85,6 +88,11 @@ export type BookingItem = {
     status: RefundStatus;
     initiatedAt?: string;
     completedAt?: string;
+    method?: "original_payment" | "wallet" | "unknown";
+    backendRefundId?: string;
+    backendRefundStatus?: string;
+    backendPaymentId?: string;
+    liveProviderRefundExecuted?: boolean;
   };
 };
 

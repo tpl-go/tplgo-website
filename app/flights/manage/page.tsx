@@ -15,6 +15,7 @@ import ManageMealsSection from "@/app/components/manage/flight/actions/ManageMea
 import ManageBaggageSection, {
   TravellerBaggageSelection,
 } from "@/app/components/manage/flight/actions/ManageBaggageSection";
+import CancelBookingEntrySection from "@/app/components/manage/flight/actions/CancelBookingEntrySection";
 
 import { buildManageQuote } from "@/app/lib/manage/managePricing";
 import { FlightManageBookingRecord } from "@/app/lib/manage/manageTypes";
@@ -26,7 +27,10 @@ import {
 import { FLIGHT_ANCILLARY_CATALOG } from "@/app/lib/flights/ancillaries/ancillaryCatalog";
 
 import {
+  cancelBooking,
   getAllBookings,
+  getRefundEstimate,
+  updateBooking,
   BOOKING_UPDATED_EVENT,
   type BookingItem,
 } from "@/app/lib/booking/bookingStorage";
@@ -38,6 +42,7 @@ import {
   saveFlightBaggageChanges,
 } from "@/app/lib/booking/flightManageUpdate";
 import {
+  executeBackendFlightCancellation,
   executeBackendSamePriceManage,
   prepareBackendManageRequest,
   persistBackendManageCache,
@@ -394,6 +399,7 @@ function FlightManagePageContent() {
   const [activeTab, setActiveTab] = useState<SidebarKey>("summary");
   const [isLoading, setIsLoading] = useState(true);
   const [bookingItem, setBookingItem] = useState<BookingItem | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
   const [manageSummary, setManageSummary] =
     useState<FlightManageBookingRecord>(emptyBookingSummary);
 
@@ -832,6 +838,105 @@ function FlightManagePageContent() {
     savePayloadToStorage(bookingItem.payloadStorageKey, payloadToSave);
   };
 
+  const handleCancelBooking = async () => {
+    if (!bookingItem || isCancelling) return;
+
+    const confirmed = window.confirm(
+      "Cancel this flight booking? Refund will be tracked against the original payment method."
+    );
+    if (!confirmed) return;
+
+    const reason = "Cancelled by user from Manage Booking";
+    const estimate = getRefundEstimate(bookingItem);
+    const payload = getBookingPayload<FlightManagePayload>(
+      bookingItem.payloadStorageKey
+    );
+
+    setIsCancelling(true);
+    try {
+      const backendResult = await executeBackendFlightCancellation({
+        booking: bookingItem,
+        reason,
+        payload,
+      });
+
+      if (!backendResult.ok && !backendResult.fallbackAllowed) {
+        alert(backendResult.error || "Backend cancellation request failed.");
+        return;
+      }
+
+      if (!backendResult.ok) {
+        const cancelled = cancelBooking(bookingItem.id, reason);
+        if (cancelled) {
+          setBookingItem(cancelled);
+          setManageSummary((current) => ({
+            ...current,
+            bookingStatus: "cancelled",
+          }));
+        }
+        alert("Booking cancelled locally. Backend cancellation was unavailable.");
+        return;
+      }
+
+      const refs = backendResult.payload;
+      const now = new Date().toISOString();
+      const nextBooking = updateBooking(bookingItem.id, {
+        status: "cancelled",
+        bookingStatus: normalizeManageBookingStatus(refs?.backendCancellationStatus),
+        cancelMeta: {
+          canCancel: false,
+          cancellationPolicyText: estimate.cancellationPolicyText,
+          refundableAmount:
+            Number(refs?.backendRefundAmount || 0) || estimate.refundableAmount,
+          cancellationCharge: estimate.cancellationCharge,
+          cancelledAt: now,
+          cancelReason: reason,
+          backendCancellationId: refs?.backendCancellationId,
+          backendCancellationStatus: refs?.backendCancellationStatus || "cancelled",
+          supplierCancellationExecuted: refs?.supplierCancellationExecuted === true,
+        },
+        refund: {
+          amount: Number(refs?.backendRefundAmount || 0) || estimate.refundableAmount,
+          status: normalizeRefundStatus(refs?.backendRefundStatus),
+          initiatedAt: now,
+          method: refs?.backendRefundMethod || "original_payment",
+          backendRefundId: refs?.backendRefundId,
+          backendRefundStatus: refs?.backendRefundStatus || "processing",
+          backendPaymentId: refs?.backendRefundPaymentId,
+          liveProviderRefundExecuted: refs?.liveProviderRefundExecuted === true,
+        },
+      });
+
+      if (payload && bookingItem.payloadStorageKey) {
+        savePayloadToStorage(bookingItem.payloadStorageKey, {
+          ...payload,
+          cancellationData: {
+            ...(payload.cancellationData as Record<string, unknown> | undefined),
+            backendCancellationId: refs?.backendCancellationId,
+            backendCancellationStatus: refs?.backendCancellationStatus || "cancelled",
+            backendRefundId: refs?.backendRefundId,
+            backendRefundStatus: refs?.backendRefundStatus || "processing",
+            backendRefundMethod: refs?.backendRefundMethod || "original_payment",
+            backendFullCancellationWalletCredit: 0,
+            liveProviderRefundExecuted: refs?.liveProviderRefundExecuted === true,
+            supplierCancellationExecuted: refs?.supplierCancellationExecuted === true,
+          },
+        });
+      }
+
+      if (nextBooking) setBookingItem(nextBooking);
+      setManageSummary((current) => ({
+        ...current,
+        bookingStatus: normalizeManageBookingStatus(refs?.backendCancellationStatus),
+      }));
+      alert("Booking cancellation recorded. Refund is processing to original payment method.");
+    } catch (error) {
+      console.error(error);
+      alert("Unable to cancel booking. Please try again.");
+    } finally {
+      setIsCancelling(false);
+    }
+  };
   if (isLoading) {
     return (
       <section className="bg-[#f8f9fb] px-4 py-10">
@@ -878,6 +983,7 @@ function FlightManagePageContent() {
         { key: "seats", label: "Seats", badge: "Paid" },
         { key: "meals", label: "Meals", badge: "Paid" },
         { key: "baggage", label: "Baggage", badge: "Paid" },
+        { key: "cancel-booking", label: "Cancel Booking" },
       ]}
     >
       {activeTab === "summary" && (
@@ -958,10 +1064,48 @@ function FlightManagePageContent() {
           />
         </div>
       )}
+
+      {activeTab === "cancel-booking" && (
+        <CancelBookingEntrySection
+          bookingId={bookingItem.backendBookingRef || manageSummary.bookingId}
+          pnr={manageSummary.pnr}
+          refundableAmount={
+            bookingItem.refund?.amount ||
+            bookingItem.cancelMeta?.refundableAmount ||
+            getRefundEstimate(bookingItem).refundableAmount
+          }
+          deductionAmount={
+            bookingItem.cancelMeta?.cancellationCharge ||
+            getRefundEstimate(bookingItem).cancellationCharge
+          }
+          onContinue={handleCancelBooking}
+          isSubmitting={isCancelling}
+          cancellationStatus={
+            bookingItem.cancelMeta?.backendCancellationStatus || bookingItem.bookingStatus
+          }
+          refundStatus={bookingItem.refund?.backendRefundStatus || bookingItem.refund?.status}
+          refundMethod={bookingItem.refund?.method || "original_payment"}
+          disableContinue={bookingItem.status === "cancelled"}
+        />
+      )}
     </ManageBookingLayout>
   );
 }
 
+function normalizeManageBookingStatus(value?: string): "confirmed" | "changed" | "cancelled" {
+  const normalized = String(value || "cancelled").toLowerCase();
+  if (normalized.includes("cancel")) return "cancelled";
+  if (normalized.includes("chang") || normalized.includes("modif")) return "changed";
+  return "confirmed";
+}
+function normalizeRefundStatus(value?: string): "processing" | "processed" | "failed" {
+  const normalized = String(value || "processing").toLowerCase();
+  if (normalized === "processed" || normalized === "completed" || normalized === "success") {
+    return "processed";
+  }
+  if (normalized === "failed") return "failed";
+  return "processing";
+}
 export default function FlightManagePage() {
   return (
     <Suspense fallback={<div />}>

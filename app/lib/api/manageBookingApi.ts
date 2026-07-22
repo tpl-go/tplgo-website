@@ -119,6 +119,43 @@ export type ManageSettlementResponse = {
   metadata?: Record<string, unknown>;
 };
 
+export type BookingCancellationResponse = {
+  bookingId?: string;
+  bookingRef?: string;
+  status?: string;
+  bookingStatus?: string;
+  cancellationId?: string;
+  cancellationStatus?: string;
+  refundId?: string;
+  refundStatus?: string;
+  refundMethod?: string;
+  refundAmount?: number;
+  amount?: number;
+  paymentId?: string;
+  liveProviderRefundExecuted?: boolean;
+  supplierCancellationExecuted?: boolean;
+  pnr?: string | null;
+  ticketNumber?: string | null;
+  metadata?: Record<string, unknown>;
+};
+
+export type BookingRefundReadbackResponse = {
+  bookingId?: string;
+  bookingRef?: string;
+  refunds?: BookingCancellationResponse[];
+  refund?: BookingCancellationResponse;
+  items?: BookingCancellationResponse[];
+  status?: string;
+  refundStatus?: string;
+  refundMethod?: string;
+  refundId?: string;
+  amount?: number;
+  refundAmount?: number;
+  paymentId?: string;
+  liveProviderRefundExecuted?: boolean;
+  supplierCancellationExecuted?: boolean;
+};
+
 const MANAGE_ENABLED_FLAG = "NEXT_PUBLIC_TPL_USE_BACKEND_MANAGE_BOOKING";
 const MANAGE_SERVICES_FLAG = "NEXT_PUBLIC_TPL_BACKEND_MANAGE_BOOKING_SERVICES";
 const MANAGE_FALLBACK_FLAG = "NEXT_PUBLIC_TPL_BACKEND_MANAGE_FALLBACK_TO_LOCAL";
@@ -267,6 +304,26 @@ export async function getManageCancellationSettlement(
 ): Promise<TplApiResult<ManageSettlementResponse>> {
   return tplApiRequest<ManageSettlementResponse>(
     `/api/v1/bookings/${encodeURIComponent(bookingId)}/manage/requests/${encodeURIComponent(requestId)}/cancellation`
+  );
+}
+
+export async function cancelBackendBooking(
+  bookingId: string,
+  payload: Record<string, unknown>,
+  idempotencyKey?: string
+): Promise<TplApiResult<BookingCancellationResponse>> {
+  return manageRequest<BookingCancellationResponse>(
+    `/api/v1/bookings/${encodeURIComponent(bookingId)}/cancel`,
+    payload,
+    idempotencyKey
+  );
+}
+
+export async function getRefundByBooking(
+  bookingId: string
+): Promise<TplApiResult<BookingRefundReadbackResponse>> {
+  return tplApiRequest<BookingRefundReadbackResponse>(
+    `/api/v1/refunds/by-booking/${encodeURIComponent(bookingId)}`
   );
 }
 

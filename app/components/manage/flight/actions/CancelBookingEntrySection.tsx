@@ -9,6 +9,11 @@ interface CancelBookingEntrySectionProps {
   deductionAmount: number;
   currency?: string;
   onContinue: () => void;
+  isSubmitting?: boolean;
+  cancellationStatus?: string;
+  refundStatus?: string;
+  refundMethod?: "original_payment" | "wallet" | "unknown";
+  disableContinue?: boolean;
 }
 
 export default function CancelBookingEntrySection({
@@ -18,8 +23,17 @@ export default function CancelBookingEntrySection({
   deductionAmount,
   currency = "INR",
   onContinue,
+  isSubmitting = false,
+  cancellationStatus,
+  refundStatus,
+  refundMethod = "original_payment",
+  disableContinue = false,
 }: CancelBookingEntrySectionProps) {
   const totalAmount = Number(refundableAmount || 0) + Number(deductionAmount || 0);
+  const normalizedCancellationStatus = cancellationStatus || "Final confirmation pending";
+  const normalizedRefundStatus = refundStatus || "Not started";
+  const refundMethodLabel =
+    refundMethod === "wallet" ? "Refund Wallet" : "Original Payment / Bank";
 
   return (
     <div className="space-y-5">
@@ -43,7 +57,7 @@ export default function CancelBookingEntrySection({
               Cancellation Status
             </p>
             <p className="mt-1 text-sm font-extrabold text-red-700">
-              Final confirmation pending
+              {normalizedCancellationStatus}
             </p>
           </div>
         </div>
@@ -52,7 +66,7 @@ export default function CancelBookingEntrySection({
       <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
         <InfoCard label="Booking ID" value={bookingId || "-"} />
         <InfoCard label="PNR" value={pnr || "-"} />
-        <InfoCard label="Refund Mode" value="Original Payment / Bank" />
+        <InfoCard label="Refund Mode" value={refundMethodLabel} />
       </div>
 
       <div className="rounded-[28px] border border-black/5 bg-white p-5 shadow-[0_10px_40px_rgba(0,0,0,0.04)] lg:p-6">
@@ -92,6 +106,11 @@ export default function CancelBookingEntrySection({
           />
         </div>
 
+        <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+          <InfoCard label="Cancellation Status" value={normalizedCancellationStatus} />
+          <InfoCard label="Refund Status" value={normalizedRefundStatus} />
+        </div>
+
         <div className="mt-6 rounded-[22px] border border-red-100 bg-[#fff7f7] px-4 py-4">
           <p className="text-sm font-semibold text-[#111827]">
             Important cancellation note
@@ -111,9 +130,10 @@ export default function CancelBookingEntrySection({
           <button
             type="button"
             onClick={onContinue}
-            className="h-[54px] rounded-full bg-[#111827] px-7 text-sm font-black text-white transition hover:bg-black"
+            disabled={isSubmitting || disableContinue}
+            className="h-[54px] rounded-full bg-[#111827] px-7 text-sm font-black text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Continue to Cancellation
+            {disableContinue ? "Cancellation Recorded" : isSubmitting ? "Cancelling..." : "Continue to Cancellation"}
           </button>
         </div>
       </div>

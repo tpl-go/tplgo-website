@@ -6,13 +6,17 @@ import {
 } from "@/app/lib/booking/bookingStorage";
 import {
   confirmManageUpgradePayment,
+  cancelBackendBooking,
   confirmSamePriceManageRequest,
   createManageQuote,
   createManageRequest,
   isBackendManageBookingEnabled,
   settleManageDowngrade,
   shouldFallbackToLocalManage,
+  getRefundByBooking,
   startManageUpgradePayment,
+  type BookingCancellationResponse,
+  type BookingRefundReadbackResponse,
   type ManageQuoteRequest,
 } from "@/app/lib/api/manageBookingApi";
 
@@ -60,6 +64,25 @@ export type BackendManageRefs = {
   backendManageSettlementStarted?: boolean;
 };
 
+export type BackendFlightCancellationRefs = {
+  backendCancellationId?: string;
+  backendCancellationStatus?: string;
+  backendRefundId?: string;
+  backendRefundStatus?: string;
+  backendRefundMethod?: "original_payment" | "wallet" | "unknown";
+  backendRefundAmount?: number;
+  backendRefundPaymentId?: string;
+  backendFullCancellationWalletCredit: 0;
+  liveProviderRefundExecuted?: boolean;
+  supplierCancellationExecuted?: boolean;
+};
+
+export type BackendFlightCancellationInput = {
+  booking: BookingItem;
+  reason?: string;
+  payload?: Record<string, unknown> | null;
+};
+
 export function isBackendManageEligible(
   serviceType: string,
   booking: BookingItem | null | undefined
@@ -83,6 +106,75 @@ export function resolveBackendBookingId(booking: BookingItem): string {
     stringValue(record.bookingRef) ||
     ""
   );
+}
+
+export function resolveBackendBookingRef(booking: BookingItem): string {
+  const record = booking as BookingItem & {
+    backendBookingRef?: string;
+    bookingRef?: string;
+    backendBookingId?: string;
+  };
+
+  return (
+    stringValue(record.backendBookingRef) ||
+    stringValue(record.bookingRef) ||
+    stringValue(record.backendBookingId) ||
+    ""
+  );
+}
+
+export async function executeBackendFlightCancellation(
+  input: BackendFlightCancellationInput
+): Promise<BackendManageOutcome<BackendFlightCancellationRefs>> {
+  if (!isBackendManageEligible("flight", input.booking)) {
+    return localFallback("Backend cancellation is disabled or unavailable.");
+  }
+
+  const backendBookingRef = resolveBackendBookingRef(input.booking);
+  if (!backendBookingRef) {
+    return localFallback("Backend booking reference is unavailable.");
+  }
+
+  const reason = input.reason || "Cancelled by user from Manage Booking";
+  const cancelKey = getOrCreateSessionKey(
+    `tpl_manage_cancel_key_${backendBookingRef}_${stableHash(reason)}`,
+    `booking:${backendBookingRef}:cancel:${stableHash({ reason, localBookingId: input.booking.id })}`
+  );
+
+  const cancelResult = await cancelBackendBooking(
+    backendBookingRef,
+    {
+      reason,
+      serviceType: "flight",
+      refundDestination: "original_payment_method",
+      metadata: {
+        source: "frontend-manage-cancellation",
+        localBookingId: input.booking.id,
+        payloadStorageKey: input.booking.payloadStorageKey,
+      },
+    },
+    cancelKey
+  );
+
+  if (!cancelResult.ok) {
+    return localFallback(cancelResult.error.message);
+  }
+
+  const refundResult = await getRefundByBooking(backendBookingRef);
+  if (!refundResult.ok) {
+    return {
+      ok: true,
+      fallbackAllowed: false,
+      payload: buildCancellationRefs(cancelResult.data, undefined),
+      error: refundResult.error.message,
+    };
+  }
+
+  return {
+    ok: true,
+    fallbackAllowed: false,
+    payload: buildCancellationRefs(cancelResult.data, refundResult.data),
+  };
 }
 
 export async function executeBackendSamePriceManage(
@@ -416,7 +508,7 @@ function buildMetadata(input: BackendManagePrepareInput): Record<string, unknown
   };
 }
 
-function localFallback(error: string): BackendManageOutcome<Record<string, unknown>> {
+function localFallback<T = Record<string, unknown>>(error: string): BackendManageOutcome<T> {
   return {
     ok: false,
     fallbackAllowed: shouldFallbackToLocalManage(),
@@ -431,6 +523,75 @@ function backendSettlementFailure(error: string): BackendManageOutcome<BackendMa
     fallbackAllowed: false,
     error,
   };
+}
+
+function buildCancellationRefs(
+  cancellation: BookingCancellationResponse,
+  refundReadback: BookingRefundReadbackResponse | undefined
+): BackendFlightCancellationRefs {
+  const refund = selectRefundRecord(cancellation, refundReadback);
+  const refundMethod = normalizeRefundMethod(
+    stringValue(refund.refundMethod) || stringValue(asRecord(refund.metadata).refundMethod)
+  );
+
+  return {
+    backendCancellationId:
+      stringValue(cancellation.cancellationId) ||
+      stringValue(asRecord(cancellation.metadata).cancellationId),
+    backendCancellationStatus:
+      stringValue(cancellation.cancellationStatus) ||
+      stringValue(cancellation.bookingStatus) ||
+      stringValue(cancellation.status) ||
+      "cancelled",
+    backendRefundId: stringValue(refund.refundId),
+    backendRefundStatus:
+      stringValue(refund.refundStatus) || stringValue(refund.status) || "processing",
+    backendRefundMethod: refundMethod,
+    backendRefundAmount: numberValue(refund.refundAmount) || numberValue(refund.amount),
+    backendRefundPaymentId: stringValue(refund.paymentId),
+    backendFullCancellationWalletCredit: 0,
+    liveProviderRefundExecuted: Boolean(refund.liveProviderRefundExecuted),
+    supplierCancellationExecuted: Boolean(cancellation.supplierCancellationExecuted),
+  };
+}
+
+function selectRefundRecord(
+  cancellation: BookingCancellationResponse,
+  refundReadback: BookingRefundReadbackResponse | undefined
+): BookingCancellationResponse {
+  if (!refundReadback) return cancellation;
+  if (refundReadback.refund) return refundReadback.refund;
+  if (Array.isArray(refundReadback.refunds) && refundReadback.refunds[0]) {
+    return refundReadback.refunds[0];
+  }
+  if (Array.isArray(refundReadback.items) && refundReadback.items[0]) {
+    return refundReadback.items[0];
+  }
+
+  return {
+    ...cancellation,
+    refundId: stringValue(refundReadback.refundId) || cancellation.refundId,
+    refundStatus: stringValue(refundReadback.refundStatus) || refundReadback.status || cancellation.refundStatus,
+    refundMethod: stringValue(refundReadback.refundMethod) || cancellation.refundMethod,
+    refundAmount: numberValue(refundReadback.refundAmount) || numberValue(refundReadback.amount) || cancellation.refundAmount,
+    paymentId: stringValue(refundReadback.paymentId) || cancellation.paymentId,
+    liveProviderRefundExecuted:
+      refundReadback.liveProviderRefundExecuted ?? cancellation.liveProviderRefundExecuted,
+  };
+}
+
+function normalizeRefundMethod(value: string): "original_payment" | "wallet" | "unknown" {
+  const normalized = value.trim().toLowerCase();
+  if (["original_payment", "original_payment_method", "payment", "source"].includes(normalized)) {
+    return "original_payment";
+  }
+  if (["wallet", "refund_wallet"].includes(normalized)) return "wallet";
+  return "unknown";
+}
+
+function numberValue(value: unknown): number {
+  const number = Number(value || 0);
+  return Number.isFinite(number) ? number : 0;
 }
 
 function getOrCreateSessionKey(storageKey: string, value: string): string {
