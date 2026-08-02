@@ -26,6 +26,11 @@ import {
   addWalletLedgerItem,
 } from "@/app/lib/wallet/walletStorage";
 import { confirmFlightBackendCheckout } from "@/app/lib/api/flightCheckoutIntegration";
+import {
+  formatFlightMoney,
+  normalizeFlightCurrency,
+  type FlightCurrency,
+} from "@/app/lib/flights/flightCurrency";
 
 type ConfirmationPayload = any;
 
@@ -572,6 +577,14 @@ export default function FlightConfirmationPage() {
         Number(data?.pricingSnapshot?.baseAfterOffer || 0) ||
         Number(pricing.baseAfterOffer || 0),
       totalBeforeWallet: Number(data?.pricingSnapshot?.totalBeforeWallet || 0),
+      currency: normalizeFlightCurrency(
+        data?.pricingSnapshot?.currency ||
+          paymentData?.currency ||
+          backendTestOrder?.currency ||
+          backendSimulation?.currency ||
+          reviewData?.backendOffer?.currency ||
+          reviewData?.pricing?.currency
+      ),
       appliedOfferCode:
         offerData?.code || offerData?.couponCode || offerData?.coupon || "",
       appliedOfferTitle:
@@ -645,6 +658,7 @@ export default function FlightConfirmationPage() {
     "-";
   const finalEarnedCreditAmount =
     earnedCreditAmount || data?.earnedCreditAmount || 0;
+  const displayCurrency = normalizeFlightCurrency(priceBreakup.currency);
 
   const handlePrint = () => {
     const finalBookingId = savedBooking?.id || data?.bookingId;
@@ -704,7 +718,7 @@ export default function FlightConfirmationPage() {
               confirmationRef={backendTestConfirmation?.confirmationRef}
               paymentStatus={backendTestConfirmation?.status || backendTestOrder?.status || "PAYMENT_PENDING_TEST_ONLY"}
               amount={Number(paymentData?.totalPaid || priceBreakup.totalAmount || 0)}
-              currency="INR"
+              currency={displayCurrency}
             />
           ) : null}
 
@@ -768,6 +782,11 @@ export default function FlightConfirmationPage() {
               }
 
               setShowLoginModal(true);
+            }}
+            onManageBooking={() => {
+              if (bookingId && bookingId !== "-") {
+                router.push(`/flights/manage?bookingId=${encodeURIComponent(bookingId)}`);
+              }
             }}
             onGoHome={() => router.push("/")}
           />
@@ -833,7 +852,7 @@ function FlightTestModeConfirmationPanel({
   confirmationRef?: string;
   paymentStatus: string;
   amount: number;
-  currency: "INR";
+  currency: FlightCurrency;
 }) {
   return (
     <section className="rounded-2xl border border-[#bfdbfe] bg-[#eff6ff] p-4 text-[#172554] md:p-5">
@@ -860,7 +879,7 @@ function FlightTestModeConfirmationPanel({
             {paymentStatus}
           </div>
           <div className="mt-1 text-[13px] font-extrabold text-[#111827]">
-            {currency === "INR" ? "₹" : currency} {Number(amount || 0).toLocaleString("en-IN")}
+            {formatFlightMoney(Number(amount || 0), currency)}
           </div>
         </div>
       </div>

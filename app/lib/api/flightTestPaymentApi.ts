@@ -1,4 +1,4 @@
-import { tplApiRequest, type TplApiResult } from "./tplApiClient";
+﻿import { tplApiRequest, type TplApiResult } from "./tplApiClient";
 
 export type BackendFlightTestPaymentOrderRequest = {
   amount: number;
@@ -33,25 +33,37 @@ export type BackendFlightTestPaymentOrderResponse = {
 
 export type BackendFlightRazorpayTestCheckout = {
   provider: "razorpay";
+  gateway?: "razorpay";
   mode: "test";
   keyId: string;
   orderId: string;
+  gatewayOrderId?: string;
   amountMinor: number;
+  amount?: number;
   currency: "INR";
   name: "TPL";
   description: string;
+  bookingDraftId?: string;
+  bookingRef?: string;
+  paymentId?: string;
+  paymentRef?: string;
   prefill?: {
     name?: string;
     email?: string;
     contact?: string;
   };
+  notes?: Record<string, string>;
   testOnly: true;
 };
 
 export type BackendFlightTestPaymentConfirmRequest = {
   paymentId: string;
   gatewayPaymentId?: string;
+  gatewayOrderId?: string;
   gatewaySignature?: string;
+  razorpay_payment_id?: string;
+  razorpay_order_id?: string;
+  razorpay_signature?: string;
   testOutcome?: "success" | "failure";
   idempotencyKey?: string;
 };

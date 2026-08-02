@@ -1,4 +1,5 @@
 import { tplApiRequest, type TplApiResult } from "./tplApiClient";
+import type { FlightCurrency } from "@/app/lib/flights/flightCurrency";
 
 export type BackendFlightBookingSimulationRequest = {
   searchId: string;
@@ -34,7 +35,7 @@ export type BackendFlightBookingSimulationRequest = {
   ancillaries?: Record<string, unknown>;
   clientPricingSnapshot?: {
     total: number;
-    currency: "INR";
+    currency: FlightCurrency;
   };
   idempotencyKey?: string;
 };
@@ -62,7 +63,7 @@ export type BackendFlightBookingSimulationResponse = {
     taxes: number;
     fees: number;
     total: number;
-    currency: "INR";
+    currency: FlightCurrency;
   };
   warnings: string[];
   nextAction: "test_payment_pending" | "refresh_price" | "search_again";

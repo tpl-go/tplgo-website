@@ -13,6 +13,7 @@ type Props = {
   onShareWhatsApp?: () => void;
   onSendEmail?: () => void;
   onGoToMyBookings?: () => void;
+  onManageBooking?: () => void;
   onGoHome?: () => void;
 };
 
@@ -27,6 +28,7 @@ export default function FlightConfirmationActionsCard({
   onShareWhatsApp,
   onSendEmail,
   onGoToMyBookings,
+  onManageBooking,
   onGoHome,
 }: Props) {
   const { isAuthenticated, openLoginModal } = useAuth();
@@ -220,6 +222,12 @@ export default function FlightConfirmationActionsCard({
               label="Go to My Bookings"
               icon="📁"
               onClick={handleMyBookingsClick}
+            />
+
+            <SecondaryActionButton
+              label="Manage Booking"
+              icon="⚙️"
+              onClick={onManageBooking}
             />
 
             <SecondaryActionButton

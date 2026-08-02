@@ -1,6 +1,11 @@
 "use client";
 
 import { Sparkles, BadgeCheck, Tag } from "lucide-react";
+import {
+  formatFlightMoney,
+  normalizeFlightCurrency,
+  type FlightCurrency,
+} from "@/app/lib/flights/flightCurrency";
 
 type WalletBreakdown = {
   promoUsed: number;
@@ -27,6 +32,7 @@ type PriceBreakup = {
   walletCalc?: WalletBreakdown;
 
   totalAmount: number;
+  currency?: FlightCurrency;
 };
 
 type Props = {
@@ -39,8 +45,8 @@ type Props = {
   onRetryPayment?: () => void;
 };
 
-function formatPrice(value: number) {
-  return `₹${Math.abs(Number(value || 0)).toLocaleString("en-IN")}`;
+function formatPrice(value: number, currency: FlightCurrency = "INR") {
+  return formatFlightMoney(Math.abs(Number(value || 0)), currency);
 }
 
 export default function FlightPaymentPriceCard({
@@ -53,6 +59,7 @@ export default function FlightPaymentPriceCard({
   onRetryPayment,
 }: Props) {
   const promoUsed = priceBreakup.walletCalc?.promoUsed || 0;
+  const currency = normalizeFlightCurrency(priceBreakup.currency);
   const earnedUsed = priceBreakup.walletCalc?.earnedUsed || 0;
   const refundUsed = priceBreakup.walletCalc?.refundUsed || 0;
 
@@ -76,7 +83,7 @@ export default function FlightPaymentPriceCard({
 
   return (
     <aside className="w-full">
-      <div className="md:sticky md:top-[110px] md:z-20">
+      <div className="xl:sticky xl:top-[110px] xl:z-20">
         <div className="overflow-hidden rounded-[24px] border border-[#d9e2ec] bg-white shadow-[0_12px_34px_rgba(15,23,42,0.08)]">
           {/* HEADER */}
           <div className="border-b border-[#e5e7eb] bg-white px-4 py-4">
@@ -116,7 +123,7 @@ export default function FlightPaymentPriceCard({
                   <div className="mt-1 flex items-center gap-2 text-[13px] font-bold text-[#ea580c]">
                     <Tag className="h-4 w-4" />
                     <span>
-                      You saved {formatPrice(finalAppliedOffer)} instantly
+                      You saved {formatPrice(finalAppliedOffer, currency)} instantly
                     </span>
                   </div>
                 </div>
@@ -126,13 +133,14 @@ export default function FlightPaymentPriceCard({
 
           {/* BODY */}
           <div className="border-b border-[#eef2f7] px-4 py-4">
-            <FareRow label="Base Fare" value={priceBreakup.baseFare} />
+            <FareRow label="Base Fare" value={priceBreakup.baseFare} currency={currency} />
 
             {finalAppliedOffer > 0 ? (
               <>
                 <FareRow
                   label="Applied Offer"
                   value={-finalAppliedOffer}
+                  currency={currency}
                   positiveOrange
                 />
 
@@ -140,40 +148,43 @@ export default function FlightPaymentPriceCard({
                   <FareRow
                     label="Base After Offer"
                     value={Number(priceBreakup.baseAfterOffer || 0)}
+                    currency={currency}
                   />
                 ) : null}
               </>
             ) : null}
 
-            <FareRow label="Taxes & Fees" value={taxesAndFees} />
+            <FareRow label="Taxes & Fees" value={taxesAndFees} currency={currency} />
 
             {priceBreakup.seatTotal > 0 ? (
-              <FareRow label="Seat Selection" value={priceBreakup.seatTotal} />
+              <FareRow label="Seat Selection" value={priceBreakup.seatTotal} currency={currency} />
             ) : null}
 
             {priceBreakup.mealTotal > 0 ? (
-              <FareRow label="Meal Selection" value={priceBreakup.mealTotal} />
+              <FareRow label="Meal Selection" value={priceBreakup.mealTotal} currency={currency} />
             ) : null}
 
             {priceBreakup.cabTotal > 0 ? (
-              <FareRow label="Cab" value={priceBreakup.cabTotal} />
+              <FareRow label="Cab" value={priceBreakup.cabTotal} currency={currency} />
             ) : null}
 
             {priceBreakup.insuranceTotal > 0 ? (
               <FareRow
                 label="Travel Insurance"
                 value={priceBreakup.insuranceTotal}
+                currency={currency}
               />
             ) : null}
 
             {priceBreakup.addonsTotal > 0 ? (
-              <FareRow label="Add-ons" value={priceBreakup.addonsTotal} />
+              <FareRow label="Add-ons" value={priceBreakup.addonsTotal} currency={currency} />
             ) : null}
 
             {priceBreakup.discount > 0 ? (
               <FareRow
                 label="Discount"
                 value={-priceBreakup.discount}
+                currency={currency}
                 positiveOrange
               />
             ) : null}
@@ -221,13 +232,13 @@ export default function FlightPaymentPriceCard({
 
                 {walletUsed > 0 || finalAppliedOffer > 0 ? (
                   <div className="mt-1 text-[12px] font-bold text-[#9ca3af] line-through">
-                    ₹{totalBeforeWallet.toLocaleString("en-IN")}
+                    {formatPrice(totalBeforeWallet, currency)}
                   </div>
                 ) : null}
               </div>
 
-              <div className="whitespace-nowrap text-[30px] font-extrabold text-[#111827]">
-                ₹{priceBreakup.totalAmount.toLocaleString("en-IN")}
+              <div className="whitespace-nowrap text-[24px] sm:text-[30px] font-extrabold text-[#111827]">
+                {formatPrice(priceBreakup.totalAmount, currency)}
               </div>
             </div>
           </div>
@@ -297,11 +308,13 @@ export default function FlightPaymentPriceCard({
 function FareRow({
   label,
   value,
+  currency,
   detail,
   positiveOrange = false,
 }: {
   label: string;
   value: number;
+  currency: FlightCurrency;
   detail?: string;
   positiveOrange?: boolean;
 }) {
@@ -333,7 +346,7 @@ function FareRow({
         }`}
       >
         {isNegative ? "-" : ""}
-        {formatPrice(value)}
+        {formatPrice(value, currency)}
       </div>
     </div>
   );

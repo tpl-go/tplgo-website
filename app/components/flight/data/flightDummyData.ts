@@ -1,7 +1,10 @@
+import type { FlightCurrency } from "@/app/lib/flights/flightCurrency";
+
 export type FlightFareOption = {
   id: string;
   title: string;
   price: number;
+  currency?: FlightCurrency;
   baggage: string;
   meals?: string;
   seatCharge?: string;
@@ -39,6 +42,7 @@ export type DummyFlight = {
     expiresAt?: string;
     backendRequestId?: string;
     priceTotal?: number;
+    currency?: FlightCurrency;
   };
 };
 

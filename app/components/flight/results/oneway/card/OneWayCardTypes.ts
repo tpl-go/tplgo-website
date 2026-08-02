@@ -1,7 +1,11 @@
+import type { FlightCurrency } from "@/app/lib/flights/flightCurrency";
+
 export type Fare = {
   id: string;
   title: string;
   price: string;
+  priceAmount?: number;
+  currency?: FlightCurrency;
   baggage: string;
   meals?: string;
   seatCharge?: string;

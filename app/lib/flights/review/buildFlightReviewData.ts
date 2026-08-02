@@ -1,3 +1,8 @@
+import {
+  normalizeFlightCurrency,
+  type FlightCurrency,
+} from "@/app/lib/flights/flightCurrency";
+
 export type FlightReviewPayload = {
   bookingType: "oneWay" | "roundTrip" | "multiCity";
   tripMode: "domestic" | "international";
@@ -14,11 +19,13 @@ export type FlightReviewPayload = {
     expiresAt?: string;
     backendRequestId?: string;
     priceTotal?: number;
+    currency?: FlightCurrency;
     priceConfirmationId?: string;
     priceStatus?: string;
     smokeRunId?: string;
   };
   pricing: {
+    currency?: FlightCurrency;
     perAdultBaseFare: number;
     baseFareTotal?: number;
     baseAfterOffer?: number;
@@ -135,6 +142,7 @@ function normalizePricing(payload: FlightReviewPayload) {
 
   return {
     ...pricing,
+    currency: normalizeFlightCurrency(pricing.currency),
     perAdultBaseFare,
     baseFareTotal,
     appliedOffer,
@@ -208,6 +216,7 @@ function normalizeBackendOffer(value: FlightReviewPayload["backendOffer"]): Flig
     ...(value.expiresAt ? { expiresAt: value.expiresAt } : {}),
     ...(value.backendRequestId ? { backendRequestId: value.backendRequestId } : {}),
     ...(Number.isFinite(Number(value.priceTotal)) ? { priceTotal: Number(value.priceTotal) } : {}),
+    currency: normalizeFlightCurrency(value.currency),
     ...(value.priceConfirmationId ? { priceConfirmationId: value.priceConfirmationId } : {}),
     ...(value.priceStatus ? { priceStatus: value.priceStatus } : {}),
     ...(value.smokeRunId ? { smokeRunId: value.smokeRunId } : {}),

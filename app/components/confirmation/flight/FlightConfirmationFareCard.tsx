@@ -1,6 +1,11 @@
 "use client";
 
 import { BadgeCheck, CreditCard, Sparkles, Tag } from "lucide-react";
+import {
+  formatFlightMoney,
+  normalizeFlightCurrency,
+  type FlightCurrency,
+} from "@/app/lib/flights/flightCurrency";
 
 type PriceBreakup = {
   baseFare?: number;
@@ -28,6 +33,7 @@ type PriceBreakup = {
   };
 
   totalAmount?: number;
+  currency?: FlightCurrency;
 };
 
 type Props = {
@@ -38,8 +44,8 @@ type Props = {
   earnedOnThisBooking?: number;
 };
 
-function formatPrice(value?: number) {
-  return `₹${Math.abs(Number(value || 0)).toLocaleString("en-IN")}`;
+function formatPrice(value?: number, currency: FlightCurrency = "INR") {
+  return formatFlightMoney(Math.abs(Number(value || 0)), currency);
 }
 
 function formatDateTime(value?: string | null) {
@@ -69,6 +75,7 @@ export default function FlightConfirmationFareCard({
     earnedUsed: 0,
     refundUsed: 0,
   };
+  const currency = normalizeFlightCurrency(priceBreakup?.currency);
 
   const promoUsed = Number(walletCalc.promoUsed || 0);
   const earnedUsed = Number(walletCalc.earnedUsed || 0);
@@ -174,7 +181,7 @@ export default function FlightConfirmationFareCard({
 
               <div className="mt-1 flex items-center gap-2 text-[13px] font-bold text-[#ea580c]">
                 <Tag className="h-4 w-4" />
-                <span>You saved {formatPrice(appliedOfferAmount)} instantly</span>
+                <span>You saved {formatPrice(appliedOfferAmount, currency)} instantly</span>
               </div>
             </div>
           </div>
@@ -210,32 +217,32 @@ export default function FlightConfirmationFareCard({
         </div>
 
         <div className="space-y-3">
-          <FareRow label="Base Fare" value={priceBreakup?.baseFare} />
-          <FareRow label="Taxes & Fees" value={taxesAndFees} />
+          <FareRow label="Base Fare" value={priceBreakup?.baseFare} currency={currency} />
+          <FareRow label="Taxes & Fees" value={taxesAndFees} currency={currency} />
 
           <Divider />
 
-          <FareRow label="Seat Selection" value={priceBreakup?.seatTotal} />
-          <FareRow label="Meal Charges" value={priceBreakup?.mealTotal} />
-          <FareRow label="Cab Charges" value={priceBreakup?.cabTotal} />
-          <FareRow label="Travel Insurance" value={priceBreakup?.insuranceTotal} />
-          <FareRow label="Add-ons" value={priceBreakup?.addonsTotal} />
+          <FareRow label="Seat Selection" value={priceBreakup?.seatTotal} currency={currency} />
+          <FareRow label="Meal Charges" value={priceBreakup?.mealTotal} currency={currency} />
+          <FareRow label="Cab Charges" value={priceBreakup?.cabTotal} currency={currency} />
+          <FareRow label="Travel Insurance" value={priceBreakup?.insuranceTotal} currency={currency} />
+          <FareRow label="Add-ons" value={priceBreakup?.addonsTotal} currency={currency} />
 
           <div className="-mt-1 rounded-[14px] border border-[#e5e7eb] bg-[#f8fafc] p-3">
-            <MiniInfoRow label="Gross Amount" value={formatPrice(grossAmount)} />
+            <MiniInfoRow label="Gross Amount" value={formatPrice(grossAmount, currency)} />
           </div>
 
-          <FareRow label="Offer Applied" value={-appliedOfferAmount} orange />
+          <FareRow label="Offer Applied" value={-appliedOfferAmount} currency={currency} orange />
 
           {Number(priceBreakup?.discount || 0) > 0 ? (
-            <FareRow label="Discount" value={-Number(priceBreakup?.discount)} orange />
+            <FareRow label="Discount" value={-Number(priceBreakup?.discount)} currency={currency} orange />
           ) : null}
 
-          <FareRow label="Amount After Offer" value={amountAfterOffer} />
+          <FareRow label="Amount After Offer" value={amountAfterOffer} currency={currency} />
 
           {walletUsed > 0 ? (
             <>
-              <FareRow label="TPL Credit" value={-walletUsed} orange />
+              <FareRow label="TPL Credit" value={-walletUsed} currency={currency} orange />
 
               <div className="rounded-[14px] border border-[#dbeafe] bg-[#f8fbff] p-3">
                 <div className="mb-2 text-[12px] font-extrabold text-[#1d4ed8]">
@@ -284,7 +291,7 @@ export default function FlightConfirmationFareCard({
               </div>
 
               <div className="whitespace-nowrap text-[25px] font-black leading-8 text-[#111827] md:text-[30px]">
-                ₹{totalPaid.toLocaleString("en-IN")}
+                {formatPrice(totalPaid, currency)}
               </div>
             </div>
           </div>
@@ -297,10 +304,12 @@ export default function FlightConfirmationFareCard({
 function FareRow({
   label,
   value,
+  currency,
   orange = false,
 }: {
   label: string;
   value?: number;
+  currency: FlightCurrency;
   orange?: boolean;
 }) {
   if (!value) return null;
@@ -323,7 +332,7 @@ function FareRow({
         }`}
       >
         {isNegative ? "-" : ""}
-        {formatPrice(value)}
+        {formatPrice(value, currency)}
       </div>
     </div>
   );
