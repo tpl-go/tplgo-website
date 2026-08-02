@@ -306,6 +306,12 @@ export function printFlightTicketFromConfirmation(params: {
   const paymentData = data?.paymentData || {};
   const seatMealData = data?.seatMealData || {};
   const contact = travellerValidation?.contactDetails || {};
+  const isBackendTestBooking = Boolean(
+    data?.backendTestPaymentConfirmation ||
+      data?.backendSimulation ||
+      data?.supplierBookingDisabled === true ||
+      data?.testStatus === "TPL_TEST_BOOKING_CONFIRMED"
+  );
 
   const firstJourney = reviewData?.journeys?.[0];
   const firstSegment = firstJourney?.segments?.[0];
@@ -329,9 +335,9 @@ export function printFlightTicketFromConfirmation(params: {
   const html = `
     <div class="ticket-shell">
       <div class="ticket-top">
-        <div class="brand-row">
-          <div class="brand">TPL</div>
-          <div class="status-pill">Booking Confirmed</div>
+          <div class="brand-row">
+            <div class="brand">TPL</div>
+          <div class="status-pill">${isBackendTestBooking ? "Test Confirmation" : "Booking Confirmed"}</div>
         </div>
 
         <div class="title">${routeTitle}</div>
@@ -359,6 +365,19 @@ export function printFlightTicketFromConfirmation(params: {
           </div>
         </div>
       </div>
+
+      ${
+        isBackendTestBooking
+          ? `<div class="section">
+              <div class="footer-note">
+                TPL test/simulation confirmation only. Supplier booking, PNR,
+                ticketing, live payment capture, cancellation, and refund
+                execution are disabled. PNR: Not issued in test mode. Ticket:
+                Not issued in test mode.
+              </div>
+            </div>`
+          : ""
+      }
 
       <div class="section">
         <h3 class="section-title">Journey Details</h3>
@@ -412,7 +431,7 @@ export function printFlightTicketFromConfirmation(params: {
 
       <div class="section">
         <div class="footer-note">
-          Keep this ticket with your booking ID for check-in, support, and future retrieval.
+          Keep this ${isBackendTestBooking ? "test confirmation summary" : "ticket"} with your booking ID for support and future retrieval.
           Please verify flight timings and airline rules before departure.
         </div>
       </div>

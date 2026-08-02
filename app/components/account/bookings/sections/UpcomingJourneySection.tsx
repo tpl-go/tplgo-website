@@ -11,6 +11,10 @@ import {
 import { shareBooking } from "@/app/lib/booking/bookingActionHelpers";
 import { printBookingDocument } from "@/app/lib/booking/print/bookingPrintDispatcher";
 import { getBookingServiceConfig } from "@/app/lib/booking/bookingServiceConfig";
+import {
+  formatFlightMoney,
+  normalizeFlightCurrency,
+} from "@/app/lib/flights/flightCurrency";
 
 import CancelBookingModal from "@/app/components/account/bookings/CancelBookingModal";
 import {
@@ -78,6 +82,40 @@ function isDomesticFlightBooking(booking: BookingItem) {
   if (digiEligible) return true;
 
   return false;
+}
+
+function isBackendTestFlightBooking(booking: BookingItem) {
+  if (booking.type !== "flight") return false;
+  const payload = getStoredBookingPayload(booking);
+  const safetyFlags = payload?.safetyFlags || {};
+
+  return Boolean(
+    payload?.supplierBookingDisabled === true ||
+      safetyFlags?.supplierBookingDisabled === true ||
+      payload?.backendTestPaymentConfirmation ||
+      payload?.backendSimulation ||
+      payload?.testStatus === "TPL_TEST_BOOKING_CONFIRMED" ||
+      booking.bookingStatus === "TPL_TEST_BOOKING_CONFIRMED"
+  );
+}
+
+function getFlightBookingCurrency(booking: BookingItem) {
+  const payload = getStoredBookingPayload(booking);
+  return normalizeFlightCurrency(
+    payload?.pricingSnapshot?.currency ||
+      payload?.paymentData?.currency ||
+      payload?.priceSnapshot?.currency
+  );
+}
+
+function getFlightPaymentStatus(booking: BookingItem) {
+  const payload = getStoredBookingPayload(booking);
+  return (
+    booking.paymentStatus ||
+    payload?.paymentData?.paymentStatus ||
+    payload?.payment?.status ||
+    "paid"
+  );
 }
 
 type UpcomingJourneySectionProps = {
@@ -153,6 +191,9 @@ export default function UpcomingJourneySection({
             const isVisa = booking.type === "visa";
             const showDigiYatra = isDomesticFlightBooking(booking);
             const isSmartPlanner = booking.type === "smart-planner";
+            const isBackendTestFlight = isBackendTestFlightBooking(booking);
+            const flightPaymentStatus =
+              booking.type === "flight" ? getFlightPaymentStatus(booking) : "";
 
             return (
               <div
@@ -174,6 +215,12 @@ export default function UpcomingJourneySection({
                         {showDigiYatra ? (
                           <span className="rounded-full border border-orange-200 bg-orange-50 px-2.5 py-1 text-[10px] font-semibold text-orange-700 md:px-3 md:text-[11px]">
                             Digi Yatra Eligible
+                          </span>
+                        ) : null}
+
+                        {isBackendTestFlight ? (
+                          <span className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-[10px] font-semibold text-blue-700 md:px-3 md:text-[11px]">
+                            TPL Test / Simulation
                           </span>
                         ) : null}
                       </div>
@@ -207,6 +254,24 @@ export default function UpcomingJourneySection({
                           </span>{" "}
                           {booking.travellersLabel || booking.travellers}
                         </p>
+                        {booking.type === "flight" ? (
+                          <>
+                            <p className="min-w-0 break-words">
+                              <span className="font-semibold text-slate-800">
+                                Payment:
+                              </span>{" "}
+                              {String(flightPaymentStatus).toUpperCase()}
+                            </p>
+                            {isBackendTestFlight ? (
+                              <p className="min-w-0 break-words">
+                                <span className="font-semibold text-slate-800">
+                                  PNR/Ticket:
+                                </span>{" "}
+                                Not issued in test mode
+                              </p>
+                            ) : null}
+                          </>
+                        ) : null}
                         {isSmartPlanner && booking.routeLabel ? (
                           <p className="min-w-0 break-words">
                             <span className="font-semibold text-slate-800">
@@ -231,7 +296,12 @@ export default function UpcomingJourneySection({
                         Total Amount
                       </p>
                       <p className="mt-1 text-[23px] font-bold leading-none text-slate-900 md:text-[28px]">
-                        {formatPrice(booking.amount)}
+                        {booking.type === "flight"
+                          ? formatFlightMoney(
+                              booking.amount,
+                              getFlightBookingCurrency(booking)
+                            )
+                          : formatPrice(booking.amount)}
                       </p>
                     </div>
                   </div>
@@ -240,9 +310,14 @@ export default function UpcomingJourneySection({
                 <div className="px-4 py-4 md:px-5">
                   <div className="grid grid-cols-2 gap-2 md:flex md:items-center md:overflow-x-auto md:pb-1">
                     <ActionButton
-                      label={config.downloadLabel}
+                      label={
+                        isBackendTestFlight
+                          ? "Test Summary Only"
+                          : config.downloadLabel
+                      }
                       onClick={() => handleDownloadTicket(booking)}
                       variant="primary"
+                      disabled={isBackendTestFlight}
                     />
 
                     <ActionButton
@@ -286,9 +361,14 @@ export default function UpcomingJourneySection({
 
                     {!isVisa && (
                       <ActionButton
-                        label="Cancel Booking"
+                        label={
+                          isBackendTestFlight
+                            ? "Cancellation Disabled"
+                            : "Cancel Booking"
+                        }
                         onClick={() => setCancelTarget(booking)}
                         variant="danger"
+                        disabled={isBackendTestFlight}
                       />
                     )}
                   </div>
@@ -324,10 +404,12 @@ function ActionButton({
   label,
   onClick,
   variant = "default",
+  disabled = false,
 }: {
   label: string;
   onClick: () => void;
   variant?: "default" | "primary" | "danger" | "success" | "orange";
+  disabled?: boolean;
 }) {
   const className =
     variant === "primary"
@@ -341,7 +423,12 @@ function ActionButton({
       : "min-h-10 rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 text-center text-[12px] font-semibold leading-4 text-orange-700 transition hover:bg-orange-100 md:whitespace-nowrap md:shrink-0";
 
   return (
-    <button type="button" onClick={onClick} className={className}>
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`${className} disabled:cursor-not-allowed disabled:opacity-60`}
+    >
       {label}
     </button>
   );

@@ -93,6 +93,19 @@ export default function FlightBookingDetailPage() {
   const offerData = payload?.offerData || null;
   const paymentData = payload?.paymentData || {};
   const managePayment = payload?.managePayment || {};
+  const backendTestConfirmation = payload?.backendTestPaymentConfirmation || null;
+  const isBackendTestBooking = Boolean(
+    backendTestConfirmation ||
+      payload?.backendSimulation ||
+      payload?.supplierBookingDisabled === true ||
+      payload?.testStatus === "TPL_TEST_BOOKING_CONFIRMED" ||
+      booking?.bookingStatus === "TPL_TEST_BOOKING_CONFIRMED"
+  );
+  const paymentStatus =
+    booking?.paymentStatus ||
+    paymentData?.paymentStatus ||
+    payload?.payment?.status ||
+    "paid";
 
   const priceBreakup = useMemo(() => {
     const pricing = reviewData?.pricing || {};
@@ -228,7 +241,7 @@ export default function FlightBookingDetailPage() {
 
             <div className="grid grid-cols-1 gap-3 p-4 md:grid-cols-2 md:gap-4 md:p-5 xl:grid-cols-4">
               <InfoCard label="Booking Status" value={capitalize(booking.status)} />
-              <InfoCard label="Payment Status" value="Paid" />
+              <InfoCard label="Payment Status" value={String(paymentStatus).toUpperCase()} />
               <InfoCard
                 label="Booked On"
                 value={formatDateTime(
@@ -248,6 +261,14 @@ export default function FlightBookingDetailPage() {
               <div className="rounded-2xl border border-[#e2e8f0] bg-[#f8fafc] px-4 py-4 text-[15px] font-bold text-[#0f172a]">
                 {routeTitle}
               </div>
+              {isBackendTestBooking ? (
+                <div className="mt-3 rounded-2xl border border-[#bfdbfe] bg-[#eff6ff] px-4 py-4 text-[13px] font-bold leading-5 text-[#1e3a8a]">
+                  TPL test/simulation booking. Supplier booking, live payment
+                  capture, PNR generation, ticketing, cancellation, and refund
+                  execution remain disabled. PNR: Not issued in test mode.
+                  Ticket: Not issued in test mode.
+                </div>
+              ) : null}
             </div>
           </div>
 

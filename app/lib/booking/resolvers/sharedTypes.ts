@@ -83,6 +83,9 @@ export type ResolvedPaymentData = {
   method?: string;
   paidAt?: string | null;
   totalPaid?: number;
+  currency?: string;
+  paymentStatus?: string;
+  paymentRef?: string;
 };
 
 export type ResolvedPriceBreakup = {
@@ -158,4 +161,11 @@ export type ResolvedFlightSource = {
   airlineSummary: string;
   journeyDateLabel: string | null;
   priceBreakup: ResolvedPriceBreakup;
+  testStatus?: string;
+  supplierBookingDisabled?: boolean;
+  bookingAllowed?: boolean;
+  ticketingAllowed?: boolean;
+  paymentCaptureAllowed?: boolean;
+  pnr?: string | null;
+  ticketNumber?: string | null;
 };

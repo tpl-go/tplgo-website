@@ -7,6 +7,7 @@ type Props = {
   email?: string;
   mobile?: string;
   isDomesticFlight?: boolean;
+  isBackendTestBooking?: boolean;
   onDigiYatra?: () => void;
   onDownloadPDF?: () => void;
   onPrint?: () => void;
@@ -22,6 +23,7 @@ export default function FlightConfirmationActionsCard({
   email,
   mobile,
   isDomesticFlight = false,
+  isBackendTestBooking = false,
   onDigiYatra,
   onDownloadPDF,
   onPrint,
@@ -195,13 +197,14 @@ export default function FlightConfirmationActionsCard({
             ) : null}
 
             <PrimaryActionButton
-              label="Download Ticket PDF"
+              label={isBackendTestBooking ? "Ticket Not Issued" : "Download Ticket PDF"}
               icon="⬇️"
               onClick={onDownloadPDF}
+              disabled={isBackendTestBooking}
             />
 
             <PrimaryActionButton
-              label="Print Ticket"
+              label={isBackendTestBooking ? "Print Test Summary" : "Print Ticket"}
               icon="🖨️"
               onClick={onPrint}
             />
@@ -318,15 +321,18 @@ function PrimaryActionButton({
   label,
   icon,
   onClick,
+  disabled = false,
 }: {
   label: string;
   icon: string;
   onClick?: () => void;
+  disabled?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      disabled={disabled}
       style={{
         width: "100%",
         minHeight: "48px",
@@ -336,7 +342,8 @@ function PrimaryActionButton({
         color: "#ffffff",
         fontSize: "14px",
         fontWeight: 900,
-        cursor: "pointer",
+        cursor: disabled ? "not-allowed" : "pointer",
+        opacity: disabled ? 0.62 : 1,
         padding: "0 16px",
         display: "flex",
         alignItems: "center",

@@ -35,6 +35,7 @@ import {
   type BookingItem,
 } from "@/app/lib/booking/bookingStorage";
 import { getBookingPayload } from "@/app/lib/booking/bookingActionHelpers";
+import { getBackendFirstBookingPayload } from "@/app/lib/api/bookingApi";
 import { resolveFlightBookingSource } from "@/app/lib/booking/resolvers/flightResolver";
 import {
   saveFlightSeatChanges,
@@ -335,7 +336,9 @@ function buildManageStateFromResolvedFlightSource(
   const isBackendTestBooking = Boolean(
     source.payload?.backendTestPaymentConfirmation ||
       source.payload?.backendSimulation ||
-      source.payload?.bookingMeta?.supplierBookingDisabled
+      source.payload?.bookingMeta?.supplierBookingDisabled ||
+      source.supplierBookingDisabled ||
+      source.testStatus === "TPL_TEST_BOOKING_CONFIRMED"
   );
   const summary: FlightManageBookingRecord = {
     bookingId: booking.id,
@@ -388,6 +391,23 @@ function buildManageStateFromResolvedFlightSource(
         (source.payload?.pricingSnapshot as { currency?: string } | undefined)?.currency ||
         "INR",
     },
+    paymentStatus:
+      source.paymentData?.paymentStatus ||
+      booking.paymentStatus ||
+      (isBackendTestBooking ? "paid" : undefined),
+    paymentRef:
+      source.paymentData?.paymentRef ||
+      source.payload?.paymentRef ||
+      booking.paymentId,
+    testStatus:
+      source.testStatus ||
+      source.payload?.backendTestPaymentConfirmation?.status ||
+      source.payload?.backendSimulation?.status,
+    supplierBookingDisabled: isBackendTestBooking,
+    bookingAllowed: source.bookingAllowed,
+    ticketingAllowed: source.ticketingAllowed,
+    paymentCaptureAllowed: source.paymentCaptureAllowed,
+    ticketNumber: source.ticketNumber,
   };
 
   return {
@@ -428,40 +448,72 @@ function FlightManagePageContent() {
   >([]);
 
   useEffect(() => {
+    let cancelled = false;
+
     if (!bookingId) {
       setIsLoading(false);
       return;
     }
 
-    const allBookings = getAllBookings();
-    const matchedBooking = allBookings.find(
-      (item) => item.id === bookingId && item.type === "flight"
-    );
+    const loadBooking = async () => {
+      const allBookings = getAllBookings();
+      let matchedBooking = allBookings.find(
+        (item) =>
+          item.type === "flight" &&
+          [
+            item.id,
+            item.bookingId,
+            item.backendBookingId,
+            item.backendBookingRef,
+            item.legacyFrontendId,
+          ]
+            .map((value) => String(value || "").trim())
+            .includes(bookingId)
+      );
 
-    if (!matchedBooking) {
-      setBookingItem(null);
+      let payload = matchedBooking
+        ? getBookingPayload<FlightManagePayload>(matchedBooking.payloadStorageKey)
+        : null;
+
+      if (!matchedBooking || !payload) {
+        const backendResult = await getBackendFirstBookingPayload<FlightManagePayload>(
+          bookingId,
+          "flight"
+        );
+        if (backendResult.booking) matchedBooking = backendResult.booking;
+        if (backendResult.payload) payload = backendResult.payload;
+      }
+
+      if (cancelled) return;
+
+      if (!matchedBooking) {
+        setBookingItem(null);
+        setIsLoading(false);
+        return;
+      }
+
+      const resolvedSource = resolveFlightBookingSource(matchedBooking, payload);
+      const hydrated = buildManageStateFromResolvedFlightSource(
+        matchedBooking,
+        resolvedSource
+      );
+
+      setBookingItem(matchedBooking);
+      setManageSummary(hydrated.summary);
+      setTravellers(hydrated.travellers);
+      setContact(hydrated.contact);
+      setSpecialRequest(hydrated.specialRequest);
+      setSeatSelections(hydrated.seats);
+      setMealSelections(hydrated.meals);
+      setBaggageSelections(hydrated.baggage);
       setIsLoading(false);
-      return;
-    }
+    };
 
-    const payload = getBookingPayload<FlightManagePayload>(
-      matchedBooking.payloadStorageKey
-    );
-    const resolvedSource = resolveFlightBookingSource(matchedBooking, payload);
-    const hydrated = buildManageStateFromResolvedFlightSource(
-      matchedBooking,
-      resolvedSource
-    );
+    void loadBooking();
 
-    setBookingItem(matchedBooking);
-    setManageSummary(hydrated.summary);
-    setTravellers(hydrated.travellers);
-    setContact(hydrated.contact);
-    setSpecialRequest(hydrated.specialRequest);
-    setSeatSelections(hydrated.seats);
-    setMealSelections(hydrated.meals);
-    setBaggageSelections(hydrated.baggage);
-    setIsLoading(false);
+    return () => {
+      cancelled = true;
+    };
   }, [bookingId]);
 
   const bookingForSummary = useMemo<FlightManageBookingRecord>(() => {
@@ -851,6 +903,10 @@ function FlightManagePageContent() {
 
   const handleCancelBooking = async () => {
     if (!bookingItem || isCancelling) return;
+    if (manageSummary.supplierBookingDisabled) {
+      alert("Cancellation is disabled for TPL flight test bookings.");
+      return;
+    }
 
     const confirmed = window.confirm(
       "Cancel this flight booking? Refund will be tracked against the original payment method."
@@ -994,7 +1050,13 @@ function FlightManagePageContent() {
         { key: "seats", label: "Seats", badge: "Paid" },
         { key: "meals", label: "Meals", badge: "Paid" },
         { key: "baggage", label: "Baggage", badge: "Paid" },
-        { key: "cancel-booking", label: "Cancel Booking" },
+        {
+          key: "cancel-booking",
+          label: manageSummary.supplierBookingDisabled
+            ? "Cancellation Disabled"
+            : "Cancel Booking",
+          disabled: manageSummary.supplierBookingDisabled,
+        },
       ]}
     >
       {activeTab === "summary" && (
