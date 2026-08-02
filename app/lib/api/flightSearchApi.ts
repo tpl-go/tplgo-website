@@ -3,6 +3,7 @@ import {
   normalizeFlightCurrency,
   type FlightCurrency,
 } from "@/app/lib/flights/flightCurrency";
+import { normalizeFlightBackendError } from "@/app/lib/flights/flightBackendIntegration";
 import { tplApiRequest, isTplApiConfigured } from "./tplApiClient";
 
 export type FlightSearchTripType = "oneway" | "roundtrip" | "multicity";
@@ -75,9 +76,13 @@ export type BackendFlightOffer = {
   baggageSummary: string;
   fareOptions: BackendFlightFareOption[];
   price: BackendFlightMoney;
+  expiresAt?: string;
   refundable: boolean;
   changeAllowed: boolean;
   cancellationAllowed: boolean;
+  bookingAllowed?: boolean;
+  ticketingAllowed?: boolean;
+  warnings?: string[];
 };
 
 export type BackendFlightSearchResponse = {
@@ -133,7 +138,20 @@ export async function searchBackendFlights(input: BackendFlightSearchRequest): P
       source: "local",
       error: {
         code: result.error.code,
-        message: result.error.message,
+        message: normalizeFlightBackendError(result.error.code, result.error.message),
+      },
+    };
+  }
+
+  if (!Array.isArray(result.data?.offers)) {
+    return {
+      ok: false,
+      flights: [],
+      requestId: result.requestId,
+      source: "local",
+      error: {
+        code: "TPL_API_INVALID_RESPONSE",
+        message: normalizeFlightBackendError("TPL_API_INVALID_RESPONSE"),
       },
     };
   }
@@ -143,6 +161,8 @@ export async function searchBackendFlights(input: BackendFlightSearchRequest): P
     flights: mapBackendFlightOffersToDummyFlights(result.data.offers, {
       searchId: result.data.searchId,
       backendRequestId: result.requestId,
+      source: result.data.source,
+      warnings: result.data.warnings,
     }),
     requestId: result.requestId,
     source: "backend",
@@ -151,15 +171,27 @@ export async function searchBackendFlights(input: BackendFlightSearchRequest): P
 
 export function mapBackendFlightOffersToDummyFlights(
   offers: BackendFlightOffer[],
-  context?: { searchId?: string; backendRequestId?: string }
+  context?: {
+    searchId?: string;
+    backendRequestId?: string;
+    source?: string;
+    warnings?: string[];
+  }
 ): DummyFlight[] {
-  return offers.map((offer, index) => mapBackendFlightOfferToDummyFlight(offer, index, context));
+  return offers
+    .filter(isUsableBackendFlightOffer)
+    .map((offer, index) => mapBackendFlightOfferToDummyFlight(offer, index, context));
 }
 
 function mapBackendFlightOfferToDummyFlight(
   offer: BackendFlightOffer,
   index: number,
-  context?: { searchId?: string; backendRequestId?: string }
+  context?: {
+    searchId?: string;
+    backendRequestId?: string;
+    source?: string;
+    warnings?: string[];
+  }
 ): DummyFlight {
   const itinerary = offer.itineraries[0];
   const firstSegment = itinerary?.segments[0];
@@ -205,9 +237,31 @@ function mapBackendFlightOfferToDummyFlight(
         ...(context.backendRequestId ? { backendRequestId: context.backendRequestId } : {}),
         ...(Number.isFinite(offer.price.total) ? { priceTotal: Number(offer.price.total) } : {}),
         currency,
+        providerLabel: safeProviderLabel(offer.source || context.source || offer.providerId),
+        source: safeProviderLabel(offer.source || context.source || "backend"),
+        bookingAllowed: offer.bookingAllowed === true,
+        ticketingAllowed: offer.ticketingAllowed === true,
+        ...(offer.expiresAt ? { expiresAt: offer.expiresAt } : {}),
+        warnings: [...(context.warnings || []), ...(offer.warnings || [])].filter(Boolean),
       },
     } : {}),
   };
+}
+
+function isUsableBackendFlightOffer(offer: BackendFlightOffer): boolean {
+  if (!offer || typeof offer !== "object") return false;
+  if (!offer.offerId || !offer.price || !Number.isFinite(Number(offer.price.total))) {
+    return false;
+  }
+  const itinerary = offer.itineraries?.[0];
+  return Boolean(itinerary?.segments?.length);
+}
+
+function safeProviderLabel(value: unknown): string {
+  return String(value || "TPL backend")
+    .replace(/[^a-zA-Z0-9 _.-]/g, "")
+    .trim()
+    .slice(0, 80);
 }
 
 function mapBackendFareOption(fare: BackendFlightFareOption, index: number): FlightFareOption {

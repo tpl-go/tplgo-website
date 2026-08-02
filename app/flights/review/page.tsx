@@ -21,8 +21,17 @@ import {
   type FlightReviewPayload,
 } from "@/app/lib/flights/review/buildFlightReviewData";
 import { normalizeFlightCurrency } from "@/app/lib/flights/flightCurrency";
-import { confirmBackendFlightPrice } from "@/app/lib/api/flightPriceApi";
+import {
+  confirmBackendFlightPrice,
+  type BackendFlightPriceConfirmResponse,
+} from "@/app/lib/api/flightPriceApi";
 import { simulateBackendFlightBooking } from "@/app/lib/api/flightBookingSimulationApi";
+import {
+  assertSafeFlightSimulationFlags,
+  isFlightBackendStateExpired,
+  normalizeFlightBackendError,
+  validateAndMapFlightTravellers,
+} from "@/app/lib/flights/flightBackendIntegration";
 import { applyBenefitPricing } from "@/app/lib/pricing/applyBenefitPricing";
 import { getWallet } from "@/app/lib/wallet/walletStorage";
 import {
@@ -143,6 +152,12 @@ const [wallet, setWallet] = useState({
   const [backendPriceState, setBackendPriceState] = useState<"idle" | "checking" | "confirmed" | "changed" | "expired" | "failed">("idle");
   const [backendSimulationState, setBackendSimulationState] = useState<"idle" | "creating" | "failed">("idle");
   const [backendBlockerMessage, setBackendBlockerMessage] = useState("");
+  const [pendingPriceChange, setPendingPriceChange] = useState<{
+    total: number;
+    previousTotal: number;
+    currency: string;
+    response: BackendFlightPriceConfirmResponse;
+  } | null>(null);
 
   const [timeLeft, setTimeLeft] = useState(10 * 60);
   const [isExpired, setIsExpired] = useState(false);
@@ -340,7 +355,7 @@ const finalTotalAmount = benefitPricing.finalPayable;
     : backendSimulationState === "creating"
     ? "Creating simulated booking draft."
     : backendPriceState === "changed"
-    ? "Price changed. Please refresh latest fare before continuing."
+    ? "Price changed. Please accept the latest fare before continuing."
     : backendPriceState === "expired"
     ? "Backend fare expired. Please search again."
     : backendPriceState === "failed"
@@ -582,6 +597,27 @@ const isInternationalFlight =
           </div>
         )}
 
+        {pendingPriceChange ? (
+          <div className="mb-4 rounded-xl border border-[#fed7aa] bg-[#fff7ed] px-4 py-3">
+            <div className="text-[14px] font-black text-[#9a3412]">
+              Backend fare changed
+            </div>
+            <div className="mt-1 text-[13px] font-semibold leading-5 text-[#7c2d12]">
+              Previous total: {pendingPriceChange.currency}{" "}
+              {pendingPriceChange.previousTotal.toLocaleString("en-IN")} · New total:{" "}
+              {pendingPriceChange.currency}{" "}
+              {pendingPriceChange.total.toLocaleString("en-IN")}
+            </div>
+            <button
+              type="button"
+              onClick={() => acceptBackendPriceChange()}
+              className="mt-3 h-10 rounded-xl bg-[#111827] px-4 text-[13px] font-black text-white"
+            >
+              Accept Latest Fare
+            </button>
+          </div>
+        ) : null}
+
         <div
           className="max-md:flex-col"
           style={{
@@ -720,6 +756,22 @@ seatTotal={seatMealData.seatTotal}
 
       if (!priceReady?.backendOffer?.priceConfirmationId) return;
       nextReviewData = priceReady;
+      if (isFlightBackendStateExpired(priceReady.backendOffer.expiresAt)) {
+        setBackendPriceState("expired");
+        setBackendBlockerMessage("Backend fare expired. Please search again.");
+        return;
+      }
+
+      const mappedTravellers = validateAndMapFlightTravellers(
+        travellerValidation,
+        priceReady.passengers
+      );
+
+      if (!mappedTravellers.ok) {
+        setBackendSimulationState("failed");
+        setBackendBlockerMessage(mappedTravellers.errors[0] || "Traveller details are invalid.");
+        return;
+      }
 
       setBackendSimulationState("creating");
       setBackendBlockerMessage("");
@@ -729,10 +781,10 @@ seatTotal={seatMealData.seatTotal}
         ...(priceReady.backendOffer.fareId ? { fareId: priceReady.backendOffer.fareId } : {}),
         priceConfirmationId: priceReady.backendOffer.priceConfirmationId,
         passengers: priceReady.passengers,
-        travellers: buildBackendTravellers(travellerValidation, priceReady.passengers),
-        contactDetails: buildBackendContactDetails(travellerValidation),
+        travellers: mappedTravellers.travellers,
+        contactDetails: mappedTravellers.contactDetails,
         clientPricingSnapshot: {
-          total: finalTotalAmount,
+          total: Number(priceReady.backendOffer.priceTotal || finalTotalAmount),
           currency: normalizeFlightCurrency(priceReady.backendOffer.currency),
         },
         idempotencyKey: buildFlightSmokeIdempotencyKey(`flight-sim:${priceReady.backendOffer.priceConfirmationId}`, priceReady.backendOffer.smokeRunId),
@@ -740,8 +792,17 @@ seatTotal={seatMealData.seatTotal}
 
       if (!simulation.ok) {
         setBackendSimulationState("failed");
-        setBackendBlockerMessage(simulation.error.message || "Could not create simulated booking draft.");
+        setBackendBlockerMessage(
+          normalizeFlightBackendError(simulation.error.code, simulation.error.message)
+        );
         setShowRefreshNotice(true);
+        return;
+      }
+
+      const simulationFlagErrors = assertSafeFlightSimulationFlags(simulation.data);
+      if (simulationFlagErrors.length > 0) {
+        setBackendSimulationState("failed");
+        setBackendBlockerMessage(simulationFlagErrors[0]);
         return;
       }
 
@@ -816,22 +877,42 @@ seatTotal={seatMealData.seatTotal}
     });
 
     if (!result.ok) {
-      setBackendPriceState(result.error.code.includes("EXPIRED") ? "expired" : "failed");
-      setBackendBlockerMessage(result.error.message || "Could not confirm latest backend fare.");
+      const isExpiredError = result.error.code.includes("EXPIRED");
+      setBackendPriceState(isExpiredError ? "expired" : "failed");
+      setBackendBlockerMessage(
+        normalizeFlightBackendError(result.error.code, result.error.message)
+      );
       setShowRefreshNotice(true);
       return null;
     }
 
     if (result.data.status === "price_changed") {
       setBackendPriceState("changed");
-      setBackendBlockerMessage("Price changed. Please refresh latest fare before continuing.");
+      setPendingPriceChange({
+        total: result.data.price.total,
+        previousTotal: Number(result.data.previousTotal || source.backendOffer.priceTotal || 0),
+        currency: normalizeFlightCurrency(result.data.price.currency),
+        response: result.data,
+      });
+      setBackendBlockerMessage("Price changed. Please accept the latest fare before continuing.");
+      setShowRefreshNotice(true);
+      return null;
+    }
+
+    if (result.data.status === "expired") {
+      setBackendPriceState("expired");
+      setBackendBlockerMessage("Backend fare expired. Please search again.");
       setShowRefreshNotice(true);
       return null;
     }
 
     if (result.data.status !== "confirmed") {
-      setBackendPriceState("failed");
-      setBackendBlockerMessage("Latest fare is not available. Please search again.");
+      setBackendPriceState(result.data.status === "provider_pending" ? "failed" : "failed");
+      setBackendBlockerMessage(
+        result.data.status === "provider_pending"
+          ? "Provider fare confirmation is pending. Please retry price refresh."
+          : "Latest fare is not available. Please search again."
+      );
       setShowRefreshNotice(true);
       return null;
     }
@@ -864,6 +945,39 @@ seatTotal={seatMealData.seatTotal}
     setBackendPriceState("confirmed");
     return updated;
   }
+
+  function acceptBackendPriceChange() {
+    if (!reviewData?.backendOffer || !pendingPriceChange) return;
+    const result = pendingPriceChange.response;
+    const updated: FlightReviewPayload = {
+      ...reviewData,
+      backendOffer: {
+        ...reviewData.backendOffer,
+        priceConfirmationId: result.priceConfirmationId,
+        priceStatus: "confirmed",
+        expiresAt: result.expiresAt,
+        priceTotal: result.price.total,
+        currency: normalizeFlightCurrency(result.price.currency),
+      },
+      pricing: {
+        ...reviewData.pricing,
+        currency: normalizeFlightCurrency(result.price.currency),
+        perAdultBaseFare: result.price.baseFare / Math.max(reviewData.passengers.adults, 1),
+        baseFareTotal: result.price.baseFare,
+        tax: result.price.taxes,
+        surcharge: result.price.fees,
+        totalAmount: result.price.total,
+      },
+    };
+    setPendingPriceChange(null);
+    setReviewData(updated);
+    saveFlightReviewPayload(updated);
+    setBackendBlockerMessage("");
+    setBackendPriceState("confirmed");
+    setTimeLeft(10 * 60);
+    setIsExpired(false);
+    setShowRefreshNotice(false);
+  }
 }
 
 function buildFlightSmokeIdempotencyKey(baseKey: string, smokeRunId?: string) {
@@ -881,40 +995,6 @@ function sanitizeSmokeRunId(value?: string) {
 
   return String(value || "").trim().replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 80);
 }
-function buildBackendTravellers(
-  travellerValidation: TravellerValidationPayload | null,
-  passengers: FlightReviewPayload["passengers"]
-) {
-  const source = Array.isArray(travellerValidation?.travellers) ? travellerValidation.travellers : [];
-  const types: Array<"adult" | "child" | "infant"> = [
-    ...Array.from({ length: passengers.adults }, () => "adult" as const),
-    ...Array.from({ length: passengers.children }, () => "child" as const),
-    ...Array.from({ length: passengers.infants }, () => "infant" as const),
-  ];
-
-  return types.map((type, index) => {
-    const traveller = source[index] || {};
-    return {
-      type,
-      ...(typeof traveller.title === "string" && traveller.title ? { title: traveller.title } : {}),
-      firstName: String(traveller.firstName || traveller.name || `Traveller${index + 1}`),
-      lastName: String(traveller.lastName || "."),
-      ...(typeof traveller.dateOfBirth === "string" && traveller.dateOfBirth ? { dateOfBirth: traveller.dateOfBirth } : {}),
-      ...(typeof traveller.gender === "string" && traveller.gender ? { gender: traveller.gender } : {}),
-      ...(typeof traveller.nationality === "string" && traveller.nationality ? { nationality: traveller.nationality } : {}),
-    };
-  });
-}
-
-function buildBackendContactDetails(travellerValidation: TravellerValidationPayload | null) {
-  const contact: Partial<TravellerValidationPayload["contactDetails"]> = travellerValidation?.contactDetails || {};
-  return {
-    countryCode: contact.countryCode || "+91",
-    mobile: contact.mobile || "9999999999",
-    email: contact.email || "guest@example.com",
-  };
-}
-
 function getBackendOfferSnapshotTotal(
   source: FlightReviewPayload,
   fallbackTotal: number

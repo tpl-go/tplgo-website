@@ -36,6 +36,15 @@ import {
   openRazorpayTestCheckout,
 } from "@/app/lib/api/razorpayCheckoutClient";
 import {
+  FLIGHT_INR_TEST_PAYMENT_UNSUPPORTED_MESSAGE,
+  assertSafeFlightSimulationFlags,
+  getBackendAmountAuthority,
+  isFlightBackendStateExpired,
+  normalizeFlightBackendError,
+  sanitizeFlightStoragePayload,
+  validateAndMapFlightTravellers,
+} from "@/app/lib/flights/flightBackendIntegration";
+import {
   isInrFlightCurrency,
   normalizeFlightCurrency,
   type FlightCurrency,
@@ -123,29 +132,6 @@ function sanitizeRazorpayContact(value: unknown): string {
 }
 
 
-function sanitizeFlightPaymentStoragePayload<T>(value: T): T {
-  const blockedKeys = new Set([
-    "gatewaySignature",
-    "razorpay_signature",
-    "rawRazorpay",
-    "rawResponse",
-    "razorpayResponse",
-  ]);
-
-  if (Array.isArray(value)) {
-    return value.map((item) => sanitizeFlightPaymentStoragePayload(item)) as T;
-  }
-
-  if (value && typeof value === "object") {
-    return Object.fromEntries(
-      Object.entries(value as Record<string, unknown>)
-        .filter(([key]) => !blockedKeys.has(key))
-        .map(([key, item]) => [key, sanitizeFlightPaymentStoragePayload(item)])
-    ) as T;
-  }
-
-  return value;
-}
 function buildFlightSmokeIdempotencyKey(baseKey: string, smokeRunId?: string) {
   const cleanSmokeRunId = sanitizeSmokeRunId(smokeRunId);
   return cleanSmokeRunId ? `${baseKey}:smoke:${cleanSmokeRunId}` : baseKey;
@@ -179,9 +165,6 @@ function isBackendOfferTestPaymentExpected(payload: StoredPayload | null) {
   );
 }
 
-const FLIGHT_INR_TEST_PAYMENT_UNSUPPORTED_MESSAGE =
-  "This provider fare is currently not eligible for INR test payment.";
-
 function getBackendDraftCurrency(payload: StoredPayload | null): FlightCurrency {
   return normalizeFlightCurrency(
     payload?.backendSimulation?.currency ||
@@ -190,48 +173,12 @@ function getBackendDraftCurrency(payload: StoredPayload | null): FlightCurrency 
   );
 }
 
+function safeStoreFlightPaymentPayload(key: string, value: unknown) {
+  sessionStorage.setItem(key, JSON.stringify(sanitizeFlightStoragePayload(value)));
+}
+
 function hasBackendFlightDraft(payload: StoredPayload | null): boolean {
   return Boolean(payload?.backendSimulation?.bookingDraftId);
-}
-
-function buildBackendTravellersForPayment(
-  travellerValidation: StoredPayload["travellerValidation"],
-  passengers: StoredPayload["reviewData"]["passengers"]
-) {
-  const source = Array.isArray(travellerValidation?.travellers)
-    ? travellerValidation.travellers
-    : [];
-  const types: Array<"adult" | "child" | "infant"> = [
-    ...Array.from({ length: passengers?.adults || 1 }, () => "adult" as const),
-    ...Array.from({ length: passengers?.children || 0 }, () => "child" as const),
-    ...Array.from({ length: passengers?.infants || 0 }, () => "infant" as const),
-  ];
-
-  return types.map((type, index) => {
-    const traveller = source[index] || {};
-    return {
-      type,
-      ...(typeof traveller.title === "string" && traveller.title ? { title: traveller.title } : {}),
-      firstName: String(traveller.firstName || traveller.name || `Traveller${index + 1}`),
-      lastName: String(traveller.lastName || "."),
-      ...(typeof traveller.dateOfBirth === "string" && traveller.dateOfBirth ? { dateOfBirth: traveller.dateOfBirth } : {}),
-      ...(typeof traveller.gender === "string" && traveller.gender ? { gender: traveller.gender } : {}),
-      ...(typeof traveller.nationality === "string" && traveller.nationality ? { nationality: traveller.nationality } : {}),
-    };
-  });
-}
-
-function buildBackendContactDetailsForPayment(
-  travellerValidation: StoredPayload["travellerValidation"],
-  mobile: string,
-  email: string
-) {
-  const contact = travellerValidation?.contactDetails || {};
-  return {
-    countryCode: contact.countryCode || "+91",
-    mobile: mobile || contact.mobile || "9999999999",
-    email: email || contact.email || "guest@example.com",
-  };
 }
 
 function getActiveUser() {
@@ -515,7 +462,22 @@ const finalTotalAmount =
       });
 
       if (!priceResult.ok) {
-        throw new Error(priceResult.error.message || "Could not confirm latest backend fare.");
+        throw new Error(
+          normalizeFlightBackendError(priceResult.error.code, priceResult.error.message)
+        );
+      }
+
+      if (priceResult.data.status === "price_changed") {
+        throw new Error("Price changed. Please return to review and accept the latest fare.");
+      }
+
+      if (priceResult.data.status !== "confirmed") {
+        throw new Error(
+          normalizeFlightBackendError(
+            priceResult.data.status,
+            "Could not confirm latest backend fare."
+          )
+        );
       }
 
       priceConfirmationId = priceResult.data.priceConfirmationId;
@@ -540,23 +502,28 @@ const finalTotalAmount =
       throw new Error("Backend price confirmation was missing.");
     }
 
+    const mappedTravellers = validateAndMapFlightTravellers(
+      travellerValidation,
+      nextReviewData.passengers
+    );
+
+    if (!mappedTravellers.ok) {
+      throw new Error(mappedTravellers.errors[0] || "Traveller details are invalid.");
+    }
+
     const simulation = await simulateBackendFlightBooking({
       searchId: backendOffer.searchId,
       offerId: backendOffer.offerId,
       ...(backendOffer.fareId ? { fareId: backendOffer.fareId } : {}),
       priceConfirmationId,
       passengers: nextReviewData.passengers,
-      travellers: buildBackendTravellersForPayment(
-        travellerValidation,
-        nextReviewData.passengers
-      ),
-      contactDetails: buildBackendContactDetailsForPayment(
-        travellerValidation,
-        confirmationMobile,
-        confirmationEmail
-      ),
+      travellers: mappedTravellers.travellers,
+      contactDetails: mappedTravellers.contactDetails,
       clientPricingSnapshot: {
-        total: priceBreakup.totalAmount,
+        total: getBackendAmountAuthority({
+          reviewData: nextReviewData,
+          backendSimulation: sourcePayload.backendSimulation,
+        }).amount,
         currency: normalizeFlightCurrency(nextReviewData.backendOffer?.currency),
       },
       idempotencyKey: buildFlightSmokeIdempotencyKey(
@@ -566,7 +533,14 @@ const finalTotalAmount =
     });
 
     if (!simulation.ok) {
-      throw new Error(simulation.error.message || "Could not create simulated booking draft.");
+      throw new Error(
+        normalizeFlightBackendError(simulation.error.code, simulation.error.message)
+      );
+    }
+
+    const simulationFlagErrors = assertSafeFlightSimulationFlags(simulation.data);
+    if (simulationFlagErrors.length > 0) {
+      throw new Error(simulationFlagErrors[0]);
     }
 
     const nextPayload: StoredPayload = {
@@ -591,16 +565,22 @@ const finalTotalAmount =
       },
     };
 
-    sessionStorage.setItem(
-      "tplFlightBookingReviewData",
-      JSON.stringify(sanitizeFlightPaymentStoragePayload(nextPayload))
-    );
+    safeStoreFlightPaymentPayload("tplFlightBookingReviewData", nextPayload);
     setStoredPayload(nextPayload);
     return nextPayload;
   };
 
   const handleMockPayment = async (shouldSucceed = true) => {
-    if (!selectedPaymentMethod || isExpired || paymentActionState === "processing") return;
+    if (
+      !selectedPaymentMethod ||
+      isExpired ||
+      paymentActionState === "processing" ||
+      backendPaymentStep === "creating_order" ||
+      backendPaymentStep === "opening_razorpay" ||
+      backendPaymentStep === "verifying_payment"
+    ) {
+      return;
+    }
 
     setPaymentActionState("processing");
     setBackendPaymentStep("idle");
@@ -644,6 +624,9 @@ const finalTotalAmount =
 
         if (paymentPayload?.backendSimulation?.bookingDraftId) {
           const bookingDraftId = paymentPayload.backendSimulation.bookingDraftId;
+          if (isFlightBackendStateExpired(paymentPayload.backendSimulation.expiresAt)) {
+            throw new Error("Booking draft expired. Please refresh price and try again.");
+          }
           const draftCurrency = getBackendDraftCurrency(paymentPayload);
           if (!isInrFlightCurrency(draftCurrency)) {
             setBackendPaymentStep("failed");
@@ -652,8 +635,9 @@ const finalTotalAmount =
           }
 
           setBackendPaymentStep("creating_order");
+          const backendAuthority = getBackendAmountAuthority(paymentPayload);
           const testOrder = await createFlightTestPaymentOrder(bookingDraftId, {
-            amount: priceBreakup.totalAmount,
+            amount: backendAuthority.amount,
             currency: "INR",
             paymentMethod: getFlightTestPaymentMethod(selectedPaymentMethod),
             contactDetails: {
@@ -667,7 +651,9 @@ const finalTotalAmount =
             if (testOrder.error.code === "FLIGHT_PAYMENT_CURRENCY_UNSUPPORTED") {
               throw new Error(FLIGHT_INR_TEST_PAYMENT_UNSUPPORTED_MESSAGE);
             }
-            throw new Error(testOrder.error.message || "Could not create test payment order.");
+            throw new Error(
+              normalizeFlightBackendError(testOrder.error.code, testOrder.error.message)
+            );
           }
 
           const checkoutPayload = testOrder.data.checkout;
@@ -682,6 +668,9 @@ const finalTotalAmount =
           const razorpayCheckoutResult = useRazorpayTestCheckout
             ? await openRazorpayTestCheckout(checkoutPayload)
             : null;
+          if (useRazorpayTestCheckout && !razorpayCheckoutResult?.gatewayPaymentId) {
+            throw new Error("Payment was cancelled. No booking was confirmed.");
+          }
 
           setBackendPaymentStep("verifying_payment");
           const paymentIdentifier =
@@ -706,7 +695,14 @@ const finalTotalAmount =
           });
 
           if (!testConfirm.ok || testConfirm.data.status !== "TPL_TEST_BOOKING_CONFIRMED") {
-            throw new Error(testConfirm.ok ? "Test payment was not confirmed." : testConfirm.error.message);
+            throw new Error(
+              testConfirm.ok
+                ? "Test payment was not confirmed."
+                : normalizeFlightBackendError(
+                    testConfirm.error.code,
+                    testConfirm.error.message
+                  )
+            );
           }
 
           const hasPersistedBackendBooking =
@@ -751,10 +747,7 @@ const finalTotalAmount =
               ticketNumber: null,
             },
           };
-          sessionStorage.setItem(
-            "tplFlightBookingReviewData",
-            JSON.stringify(sanitizeFlightPaymentStoragePayload(updatedReviewPayload))
-          );
+          safeStoreFlightPaymentPayload("tplFlightBookingReviewData", updatedReviewPayload);
           setStoredPayload(updatedReviewPayload as StoredPayload);
         } else {
         if (isRazorpayTestCheckoutEnabled()) {
@@ -830,10 +823,7 @@ const finalTotalAmount =
             ...backendStart.payload,
             ...backendStart.refs,
           };
-          sessionStorage.setItem(
-            "tplFlightBookingReviewData",
-            JSON.stringify(sanitizeFlightPaymentStoragePayload(updatedReviewPayload))
-          );
+          safeStoreFlightPaymentPayload("tplFlightBookingReviewData", updatedReviewPayload);
           setStoredPayload(updatedReviewPayload as StoredPayload);
         }
         }
@@ -1083,10 +1073,7 @@ leadTraveller: {
       setPaymentActionState("success");
       setBackendPaymentStep(backendTestConfirmation ? "confirmed" : "idle");
 
-      sessionStorage.setItem(
-        "tplFlightConfirmationData",
-        JSON.stringify(sanitizeFlightPaymentStoragePayload(confirmationPayload))
-      );
+      safeStoreFlightPaymentPayload("tplFlightConfirmationData", confirmationPayload);
 
       window.location.href = "/flights/confirmation";
     } else {

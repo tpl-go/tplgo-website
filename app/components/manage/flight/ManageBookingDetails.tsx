@@ -2,6 +2,7 @@
 
 import React from "react";
 import { FlightManageBookingRecord } from "@/app/lib/manage/manageTypes";
+import { formatFlightMoney, normalizeFlightCurrency } from "@/app/lib/flights/flightCurrency";
 
 interface ManageBookingDetailsProps {
   booking: FlightManageBookingRecord;
@@ -97,8 +98,19 @@ export default function ManageBookingDetails({
             Total Paid
           </p>
           <p className="mt-1 text-lg font-bold text-[#111827]">
-            ₹{booking.baseFareSnapshot.totalPaidAmount.toLocaleString("en-IN")}
+            {formatFlightMoney(
+              booking.baseFareSnapshot.totalPaidAmount,
+              normalizeFlightCurrency(booking.baseFareSnapshot.currency)
+            )}
           </p>
+        </div>
+        <div className="mt-3 grid gap-2 text-[12px] font-bold leading-5 text-[#475569] md:grid-cols-2">
+          <div className="rounded-2xl bg-[#f8f9fb] px-4 py-3">
+            PNR: {booking.pnr || "Not issued in test mode"}
+          </div>
+          <div className="rounded-2xl bg-[#f8f9fb] px-4 py-3">
+            Ticket: Not issued in test mode
+          </div>
         </div>
       </div>
     </div>

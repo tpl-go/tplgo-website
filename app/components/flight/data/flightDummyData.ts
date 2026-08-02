@@ -43,6 +43,11 @@ export type DummyFlight = {
     backendRequestId?: string;
     priceTotal?: number;
     currency?: FlightCurrency;
+    providerLabel?: string;
+    source?: string;
+    bookingAllowed?: boolean;
+    ticketingAllowed?: boolean;
+    warnings?: string[];
   };
 };
 

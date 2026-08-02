@@ -26,6 +26,7 @@ import {
   addWalletLedgerItem,
 } from "@/app/lib/wallet/walletStorage";
 import { confirmFlightBackendCheckout } from "@/app/lib/api/flightCheckoutIntegration";
+import { sanitizeFlightStoragePayload } from "@/app/lib/flights/flightBackendIntegration";
 import {
   formatFlightMoney,
   normalizeFlightCurrency,
@@ -85,27 +86,7 @@ function withCanonicalBackendBooking(payload: ConfirmationPayload): Confirmation
 
 
 function sanitizeFlightConfirmationStoragePayload<T>(value: T): T {
-  const blockedKeys = new Set([
-    "gatewaySignature",
-    "razorpay_signature",
-    "rawRazorpay",
-    "rawResponse",
-    "razorpayResponse",
-  ]);
-
-  if (Array.isArray(value)) {
-    return value.map((item) => sanitizeFlightConfirmationStoragePayload(item)) as T;
-  }
-
-  if (value && typeof value === "object") {
-    return Object.fromEntries(
-      Object.entries(value as Record<string, unknown>)
-        .filter(([key]) => !blockedKeys.has(key))
-        .map(([key, item]) => [key, sanitizeFlightConfirmationStoragePayload(item)])
-    ) as T;
-  }
-
-  return value;
+  return sanitizeFlightStoragePayload(value);
 }
 function creditEarnedForFlightBooking(params: {
   mobile: string;
@@ -618,8 +599,15 @@ export default function FlightConfirmationPage() {
   if (!data) {
     return (
       <main className="min-h-screen flex items-center justify-center bg-[#eef3f8]">
-        <div className="bg-white p-6 rounded-xl border font-semibold">
-          No confirmation data found.
+        <div className="max-w-md rounded-xl border bg-white p-6 font-semibold text-[#374151]">
+          <div className="text-[16px] font-black text-[#111827]">
+            No confirmation data found.
+          </div>
+          <div className="mt-2 text-[13px] leading-5">
+            Open the booking from My Bookings if it was saved, or retry payment
+            confirmation from the payment page. TPL will not create supplier PNR
+            or ticket details from missing browser state.
+          </div>
         </div>
       </main>
     );

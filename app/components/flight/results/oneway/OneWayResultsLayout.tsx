@@ -21,9 +21,12 @@ import {
   isBackendFlightSearchFallbackEnabled,
   searchBackendFlights,
   type BackendFlightSearchRequest,
-  type FlightSearchCabinClass,
 } from "@/app/lib/api/flightSearchApi";
 import { formatFlightMoney, normalizeFlightCurrency } from "@/app/lib/flights/flightCurrency";
+import {
+  isFlightBackendStateExpired,
+  validateFlightSearchState,
+} from "@/app/lib/flights/flightBackendIntegration";
 
 type OneWayResultsLayoutProps = {
   fromCity: string;
@@ -130,6 +133,18 @@ export default function OneWayResultsLayout({
   const [sortType, setSortType] = useState("cheapest");
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [backendFlights, setBackendFlights] = useState<DummyFlight[] | null>(null);
+  const [backendSearchState, setBackendSearchState] = useState<{
+    status:
+      | "initial"
+      | "loading"
+      | "success"
+      | "no_results"
+      | "error"
+      | "expired";
+    message: string;
+    requestId?: string;
+    retryNonce: number;
+  }>({ status: "initial", message: "", retryNonce: 0 });
 
   const localFlights = useMemo(() => {
     return generateDummyFlights(fromCity, toCity);
@@ -145,10 +160,21 @@ export default function OneWayResultsLayout({
 
     if (!isBackendFlightSearchEnabled() || !backendSearchRequest) {
       setBackendFlights(null);
+      setBackendSearchState((current) => ({
+        ...current,
+        status: "initial",
+        message: backendSearchRequest ? "" : "Complete a valid one-way search to load backend fares.",
+      }));
       return () => {
         active = false;
       };
     }
+
+    setBackendSearchState((current) => ({
+      ...current,
+      status: "loading",
+      message: "Loading backend flight fares.",
+    }));
 
     searchBackendFlights(backendSearchRequest)
       .then((result) => {
@@ -156,22 +182,43 @@ export default function OneWayResultsLayout({
 
         if (result.ok) {
           setBackendFlights(result.flights);
+          setBackendSearchState((current) => ({
+            ...current,
+            status: result.flights.length > 0 ? "success" : "no_results",
+            message:
+              result.flights.length > 0
+                ? ""
+                : "No backend fares were returned for this search.",
+            requestId: result.requestId,
+          }));
           return;
         }
 
         setBackendFlights(isBackendFlightSearchFallbackEnabled() ? null : []);
+        setBackendSearchState((current) => ({
+          ...current,
+          status: "error",
+          message: result.error.message,
+          requestId: result.requestId,
+        }));
       })
       .catch(() => {
         if (!active) return;
         setBackendFlights(isBackendFlightSearchFallbackEnabled() ? null : []);
+        setBackendSearchState((current) => ({
+          ...current,
+          status: "error",
+          message: "TPL backend is unavailable. Please retry.",
+        }));
       });
 
     return () => {
       active = false;
     };
-  }, [backendSearchRequest]);
+  }, [backendSearchRequest, backendSearchState.retryNonce]);
 
   const baseFlights = backendFlights ?? localFlights;
+  const backendSearchActive = isBackendFlightSearchEnabled() && Boolean(backendSearchRequest);
 
   const { minPrice, maxPrice, minDuration, maxDuration } = useMemo(() => {
     if (!baseFlights.length) {
@@ -827,7 +874,42 @@ export default function OneWayResultsLayout({
         <FlightsSortBar sortType={sortType} onSortChange={setSortType} />
 
         <div className="max-w-full space-y-2.5 pb-1 lg:space-y-3 lg:pb-0">
-          {finalFlights.length > 0 ? (
+          {backendSearchActive && backendSearchState.status === "loading" ? (
+            <BackendSearchNotice title="Loading fares" message="Fetching normalized fares from TPL backend." />
+          ) : backendSearchActive && backendSearchState.status === "error" ? (
+            <BackendSearchNotice
+              title="Backend search failed"
+              message={backendSearchState.message}
+              onRetry={() =>
+                setBackendSearchState((current) => ({
+                  ...current,
+                  retryNonce: current.retryNonce + 1,
+                }))
+              }
+            />
+          ) : backendSearchActive && backendSearchState.status === "no_results" ? (
+            <BackendSearchNotice
+              title="No backend fares"
+              message={backendSearchState.message}
+              onRetry={() =>
+                setBackendSearchState((current) => ({
+                  ...current,
+                  retryNonce: current.retryNonce + 1,
+                }))
+              }
+            />
+          ) : backendSearchActive && backendSearchState.status === "expired" ? (
+            <BackendSearchNotice
+              title="Search expired"
+              message="Backend fare hold expired. Retry search to load fresh fares."
+              onRetry={() =>
+                setBackendSearchState((current) => ({
+                  ...current,
+                  retryNonce: current.retryNonce + 1,
+                }))
+              }
+            />
+          ) : finalFlights.length > 0 ? (
             finalFlights.map((card: any) => (
               <OneWayFlightResultCard
                 key={card.id}
@@ -847,7 +929,12 @@ export default function OneWayResultsLayout({
                 promo={card.promo}
                 stopDetails={card.stopDetails}
                 backendFares={card.fares}
-                backendOffer={card.backendOffer}
+                backendOffer={
+                  card.backendOffer &&
+                  !isFlightBackendStateExpired(card.backendOffer.expiresAt)
+                    ? card.backendOffer
+                    : undefined
+                }
               />
             ))
           ) : (
@@ -908,39 +995,34 @@ export default function OneWayResultsLayout({
 }
 
 function buildBackendFlightSearchRequest(state: FlightState): BackendFlightSearchRequest | null {
-  const firstSegment = state.segments[0];
-  const origin = firstSegment?.from?.code?.trim().toUpperCase();
-  const destination = firstSegment?.to?.code?.trim().toUpperCase();
-  const departureDate = formatBackendDate(firstSegment?.departure);
-
-  if (!origin || !destination || !departureDate) return null;
-
-  return {
-    tripType: "oneway",
-    origin,
-    destination,
-    departureDate,
-    adults: Math.max(Number(state.travellers.adults) || 1, 1),
-    children: Math.max(Number(state.travellers.children) || 0, 0),
-    infants: Math.max(Number(state.travellers.infants) || 0, 0),
-    cabinClass: normalizeCabinClass(state.travellers.cabin),
-    currency: "INR",
-    nonStop: false,
-    maxResults: 30,
-  };
+  const validation = validateFlightSearchState(state);
+  return validation.ok ? validation.request : null;
 }
 
-function normalizeCabinClass(value: string): FlightSearchCabinClass {
-  if (value === "Premium Economy" || value === "Business" || value === "First") {
-    return value;
-  }
-  return "Economy";
-}
-
-function formatBackendDate(value: Date | null | undefined): string | null {
-  if (!value || Number.isNaN(value.getTime())) return null;
-  const year = value.getFullYear();
-  const month = String(value.getMonth() + 1).padStart(2, "0");
-  const day = String(value.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+function BackendSearchNotice({
+  title,
+  message,
+  onRetry,
+}: {
+  title: string;
+  message: string;
+  onRetry?: () => void;
+}) {
+  return (
+    <div className="rounded-2xl border border-[#d9e2ec] bg-white px-4 py-8 text-center sm:px-6 sm:py-10">
+      <div className="text-[15px] font-black text-[#111827]">{title}</div>
+      <div className="mx-auto mt-2 max-w-xl text-[13px] font-semibold leading-5 text-[#64748b]">
+        {message}
+      </div>
+      {onRetry ? (
+        <button
+          type="button"
+          onClick={onRetry}
+          className="mt-4 h-10 rounded-xl bg-[#111827] px-5 text-[13px] font-black text-white"
+        >
+          Retry
+        </button>
+      ) : null}
+    </div>
+  );
 }

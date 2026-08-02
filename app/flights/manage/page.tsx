@@ -332,9 +332,17 @@ function buildManageStateFromResolvedFlightSource(
     }
   );
 
+  const isBackendTestBooking = Boolean(
+    source.payload?.backendTestPaymentConfirmation ||
+      source.payload?.backendSimulation ||
+      source.payload?.bookingMeta?.supplierBookingDisabled
+  );
   const summary: FlightManageBookingRecord = {
     bookingId: booking.id,
     pnr:
+      isBackendTestBooking
+        ? "Not issued in test mode"
+        :
       source.payload?.confirmationData?.pnr ||
       source.payload?.pnr ||
       "PNR Pending",
@@ -375,7 +383,10 @@ function buildManageStateFromResolvedFlightSource(
     })),
     baseFareSnapshot: {
       totalPaidAmount: source.priceBreakup.totalAmount || booking.amount || 0,
-      currency: "INR",
+      currency:
+        (source.priceBreakup as { currency?: string }).currency ||
+        (source.payload?.pricingSnapshot as { currency?: string } | undefined)?.currency ||
+        "INR",
     },
   };
 
