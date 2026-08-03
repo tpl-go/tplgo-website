@@ -14,6 +14,12 @@ export type RoomVariant = {
   availableRooms: number;
   amenities?: string[];
   roomView?: string[];
+  backendRoomId?: string;
+  backendRateId?: string;
+  currency?: string;
+  expiresAt?: string;
+  bookingAllowed?: boolean;
+  supplierBookingDisabled?: boolean;
 };
 
 export type BaseProperty = {
@@ -55,6 +61,23 @@ export type Hotel = BaseProperty & {
   checkInTime: string;
   checkOutTime: string;
   coupleFriendly?: boolean;
+  backendHotel?: {
+    searchId: string;
+    hotelId: string;
+    sourceLabel: string;
+    currency: string;
+    expiresAt?: string;
+    warnings: string[];
+    available: boolean;
+    bookingAllowed: boolean;
+    supplierBookingDisabled: boolean;
+    description?: string;
+    policies?: Array<{
+      type: string;
+      title: string;
+      description: string;
+    }>;
+  };
 };
 
 export type Homestay = BaseProperty & {

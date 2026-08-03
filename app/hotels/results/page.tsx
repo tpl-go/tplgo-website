@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, SlidersHorizontal } from "lucide-react";
 import HotelResultsSearchBar from "@/app/components/hotel/results/HotelResultsSearchBar";
@@ -13,6 +13,13 @@ import HotelResultsFilters, {
 } from "@/app/components/hotel/results/HotelResultsFilters";
 import { hotelResultsDummy } from "@/app/data/stays/hotels/hotelResultsDummy";
 import SmartResultsOfferStrip from "@/app/components/smartOffers/SmartResultsOfferStrip";
+import {
+  mapBackendHotelToUiHotel,
+  searchHotels,
+  toHotelSafeError,
+  validateHotelSearchInput,
+} from "@/app/lib/hotels/hotelBackendIntegration";
+import type { Hotel } from "@/app/data/stays/types";
 
 type HotelSortOption =
   | "tplGuaranteed"
@@ -76,6 +83,75 @@ function HotelResultsPageContent() {
     useState<HotelSortOption>("popularity");
   const [filters, setFilters] = useState<HotelFilterState>(INITIAL_FILTERS);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [backendHotels, setBackendHotels] = useState<Hotel[]>([]);
+  const [backendState, setBackendState] = useState<
+    "initial" | "loading" | "success" | "no-results" | "error" | "malformed" | "expired"
+  >("initial");
+  const [backendError, setBackendError] = useState("");
+  const [retryKey, setRetryKey] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    const roomOccupancies = parseRoomOccupancies(searchParams.get("roomOccupancies"));
+    const validation = validateHotelSearchInput({
+      destination: city,
+      checkIn: searchParams.get("checkIn"),
+      checkOut: searchParams.get("checkOut"),
+      rooms: roomOccupancies,
+      maxPrice: searchParams.get("price"),
+    });
+
+    if (!validation.ok) {
+      setBackendState("initial");
+      setBackendHotels([]);
+      setBackendError(validation.error);
+      return;
+    }
+
+    setBackendState("loading");
+    setBackendError("");
+    setBackendHotels([]);
+
+    searchHotels(validation.request)
+      .then((result) => {
+        if (!active) return;
+        if (!result.ok) {
+          const safe = toHotelSafeError(result.error);
+          setBackendState(result.status === 0 ? "error" : "error");
+          setBackendError(safe.message);
+          return;
+        }
+        if (!Array.isArray(result.data?.hotels)) {
+          setBackendState("malformed");
+          setBackendError("Hotel backend returned an unexpected response. Please retry.");
+          return;
+        }
+        if (isExpired(result.data.expiresAt)) {
+          setBackendState("expired");
+          setBackendError("Hotel search has expired. Please search again.");
+          return;
+        }
+        const mapped = result.data.hotels.map((hotel) =>
+          mapBackendHotelToUiHotel(hotel, {
+            searchId: result.data.searchId,
+            source: result.data.source,
+            expiresAt: result.data.expiresAt,
+            warnings: result.data.warnings,
+          })
+        );
+        setBackendHotels(mapped);
+        setBackendState(mapped.length ? "success" : "no-results");
+      })
+      .catch((error) => {
+        if (!active) return;
+        setBackendState("error");
+        setBackendError(toHotelSafeError(error).message);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [city, retryKey, searchParams]);
 
   const cityHotels = useMemo(() => {
     return hotelResultsDummy.filter(
@@ -84,7 +160,7 @@ function HotelResultsPageContent() {
   }, [city]);
 
   const fallbackHotels = useMemo(() => hotelResultsDummy.slice(0, 4), []);
-  const sourceHotels = cityHotels.length > 0 ? cityHotels : fallbackHotels;
+  const sourceHotels = backendHotels.length > 0 ? backendHotels : cityHotels.length > 0 ? cityHotels : fallbackHotels;
 
   const filteredHotels = useMemo(() => {
     return sourceHotels.filter((hotel) => {
@@ -497,7 +573,32 @@ function HotelResultsPageContent() {
               Showing Properties in {city}
             </div>
 
-            {cityHotels.length === 0 && (
+            {backendState === "loading" && (
+              <div className="mb-4 rounded-lg border border-[#bfdbfe] bg-[#eff6ff] px-4 py-3 text-sm font-semibold text-[#1d4ed8]">
+                Searching TPL hotel backend...
+              </div>
+            )}
+
+            {backendState === "error" || backendState === "malformed" || backendState === "expired" ? (
+              <div className="mb-4 rounded-lg border border-[#fecaca] bg-[#fff1f2] px-4 py-3 text-sm font-semibold text-[#b91c1c]">
+                {backendError}
+                <button
+                  type="button"
+                  onClick={() => setRetryKey((value) => value + 1)}
+                  className="ml-3 rounded-md bg-white px-3 py-1 text-xs font-black text-[#b91c1c]"
+                >
+                  Retry
+                </button>
+              </div>
+            ) : null}
+
+            {backendState === "no-results" ? (
+              <div className="mb-4 rounded-lg border border-[#d9e2ec] bg-white px-4 py-6 text-center text-sm font-semibold text-[#374151]">
+                No hotels found from TPL backend for {city}.
+              </div>
+            ) : null}
+
+            {backendState !== "success" && cityHotels.length === 0 && (
               <div className="mb-4 rounded-lg border border-[#f3e8a3] bg-[#fffbea] px-4 py-3 text-sm font-semibold text-[#92400e]">
                 No exact hotel match found for{" "}
                 <span className="font-extrabold">{city}</span>. Showing featured
@@ -579,6 +680,21 @@ function HotelResultsPageContent() {
       )}
     </main>
   );
+}
+
+function parseRoomOccupancies(value: string | null) {
+  try {
+    const parsed = value ? JSON.parse(value) : null;
+    return Array.isArray(parsed) ? parsed : [{ adults: 2, children: 0 }];
+  } catch {
+    return [{ adults: 2, children: 0 }];
+  }
+}
+
+function isExpired(value?: string) {
+  if (!value) return false;
+  const date = new Date(value);
+  return !Number.isNaN(date.getTime()) && date.getTime() <= Date.now();
 }
 
 export default function HotelResultsPage() {

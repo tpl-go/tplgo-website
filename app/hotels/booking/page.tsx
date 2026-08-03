@@ -16,6 +16,16 @@ import HotelBookingOffersSection, {
   HotelOfferItem,
 } from "@/app/components/booking/hotel/HotelBookingOffersSection";
 import type { Hotel, RoomVariant } from "@/app/data/stays/types";
+import {
+  createTplRequestId,
+} from "@/app/lib/api/tplApiClient";
+import {
+  isExpired,
+  simulateHotelBooking,
+  toHotelSafeError,
+  validateHotelGuestInput,
+  type HotelBackendQuoteResponse,
+} from "@/app/lib/hotels/hotelBackendIntegration";
 import { applyBenefitPricing } from "@/app/lib/pricing/applyBenefitPricing";
 import { getWallet } from "@/app/lib/wallet/walletStorage";
 import {
@@ -37,6 +47,21 @@ function getActiveUser() {
 type StoredHotelPayload = {
   hotel: Hotel;
   selectedVariant: RoomVariant | null;
+  searchId?: string;
+  hotelId?: string;
+  roomId?: string;
+  rateId?: string;
+  quoteId?: string;
+  backendQuote?: HotelBackendQuoteResponse;
+  backendSnapshot?: {
+    amount: string;
+    currency: string;
+    expiresAt: string;
+    bookingAllowed: false;
+    supplierBookingDisabled: true;
+    sourceLabel: string;
+    warnings: string[];
+  };
   searchMeta: {
     city: string;
     checkIn: string;
@@ -44,6 +69,11 @@ type StoredHotelPayload = {
     rooms: number;
     adults: number;
     children?: number;
+    roomOccupancies?: Array<{
+      adults: number;
+      children: number;
+      childAges?: number[];
+    }>;
   };
   timestamp: number;
 };
@@ -138,6 +168,8 @@ export default function HotelBookPage() {
   const [selectedVariant, setSelectedVariant] =
     useState<RoomVariant | null>(null);
   const [loading, setLoading] = useState(true);
+  const [simulationLoading, setSimulationLoading] = useState(false);
+  const [simulationError, setSimulationError] = useState("");
 
   const [wallet, setWallet] = useState({
     promoCredit: 0,
@@ -402,7 +434,8 @@ export default function HotelBookPage() {
     isTripSecureDone &&
     isCabDone &&
     isAddonsDone &&
-    timeLeft > 0;
+    timeLeft > 0 &&
+    !simulationLoading;
 
   const blockerMessage =
     timeLeft === 0
@@ -415,6 +448,8 @@ export default function HotelBookPage() {
       ? "Please complete Cab section."
       : !isAddonsDone
       ? "Please complete Add-ons section."
+      : simulationLoading
+      ? "Creating backend hotel booking draft..."
       : "";
 
   if (loading || !hotel) {
@@ -592,8 +627,74 @@ export default function HotelBookPage() {
               canProceed={canProceed}
               blockerMessage={blockerMessage}
               buttonLabel="Proceed to Payment"
-              onProceed={() => {
+              onProceed={async () => {
                 if (!canProceed) return;
+                setSimulationError("");
+
+                if (!sessionData?.backendSnapshot || !sessionData.searchId || !sessionData.hotelId || !sessionData.roomId || !sessionData.rateId || !sessionData.quoteId) {
+                  setSimulationError("Backend hotel quote is missing. Please select the hotel again from results.");
+                  return;
+                }
+
+                if (isExpired(sessionData.backendSnapshot.expiresAt)) {
+                  setSimulationError("Hotel quote has expired. Please select the hotel again.");
+                  return;
+                }
+
+                const roomOccupancy =
+                  sessionData.searchMeta.roomOccupancies?.[0] || {
+                    adults,
+                    children,
+                    childAges: children ? Array.from({ length: children }, () => 7) : undefined,
+                  };
+
+                const guestCheck = validateHotelGuestInput({
+                  guests: guestValidation.guests,
+                  contactDetails: guestValidation.contactDetails,
+                  occupancy: roomOccupancy,
+                });
+
+                if (!guestCheck.ok) {
+                  setSimulationError(guestCheck.error);
+                  return;
+                }
+
+                setSimulationLoading(true);
+
+                const simulation = await simulateHotelBooking({
+                  searchId: sessionData.searchId,
+                  hotelId: sessionData.hotelId,
+                  roomId: sessionData.roomId,
+                  rateId: sessionData.rateId,
+                  quoteId: sessionData.quoteId,
+                  expectedTotal: sessionData.backendSnapshot.amount,
+                  expectedCurrency: sessionData.backendSnapshot.currency,
+                  occupancy: roomOccupancy,
+                  primaryGuest: guestCheck.primaryGuest,
+                  acceptedPriceChange: sessionData.backendQuote?.status === "price_changed",
+                  idempotencyKey: createTplRequestId("tpl_hotel_draft"),
+                });
+
+                setSimulationLoading(false);
+
+                if (!simulation.ok) {
+                  setSimulationError(toHotelSafeError(simulation.error).message);
+                  return;
+                }
+
+                if (
+                  !simulation.data.bookingDraftId ||
+                  !simulation.data.bookingRef ||
+                  simulation.data.bookingAllowed !== false ||
+                  simulation.data.supplierBookingDisabled !== true ||
+                  simulation.data.supplierReservationId !== null ||
+                  simulation.data.supplierConfirmationNumber !== null ||
+                  simulation.data.priceSnapshot.total !== sessionData.backendSnapshot.amount ||
+                  simulation.data.priceSnapshot.currency !== sessionData.backendSnapshot.currency
+                ) {
+                  setSimulationError("Backend hotel draft failed safety validation. Please retry.");
+                  return;
+                }
 
                 const payload = {
                   serviceType: "hotel",
@@ -706,6 +807,19 @@ export default function HotelBookPage() {
                   specialRequest,
                   finalTotal,
                   timerLeft: timeLeft,
+                  backendHotel: {
+                    searchId: sessionData.searchId,
+                    hotelId: sessionData.hotelId,
+                    roomId: sessionData.roomId,
+                    rateId: sessionData.rateId,
+                    quoteId: sessionData.quoteId,
+                    quote: sessionData.backendQuote,
+                    draft: simulation.data,
+                    snapshot: sessionData.backendSnapshot,
+                    testOnly: true,
+                    supplierBookingDisabled: true,
+                    bookingAllowed: false,
+                  },
                   timestamp: Date.now(),
                 };
 
@@ -717,6 +831,12 @@ export default function HotelBookPage() {
                 router.push("/hotels/payment");
               }}
             />
+
+            {simulationError ? (
+              <div className="rounded-xl border border-[#fecaca] bg-[#fff1f2] px-4 py-3 text-[13px] font-bold text-[#b91c1c]">
+                {simulationError}
+              </div>
+            ) : null}
 
             <HotelBookingOffersSection
               offers={HOTEL_OFFERS}

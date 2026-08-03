@@ -181,7 +181,7 @@ export default function HotelConfirmationActionsCard({
             }}
           >
             <PrimaryActionButton
-              label="Download Voucher"
+              label="Print Test Confirmation"
               icon="⬇️"
               onClick={onDownloadVoucher}
             />
@@ -193,7 +193,7 @@ export default function HotelConfirmationActionsCard({
             />
 
             <SecondaryActionButton
-              label="Print Voucher"
+              label="Print Test Confirmation"
               icon="🖨️"
               onClick={onPrintVoucher}
             />
@@ -253,9 +253,8 @@ export default function HotelConfirmationActionsCard({
               fontWeight: 600,
             }}
           >
-            Keep your booking ID ready while downloading voucher, printing stay
-            confirmation, contacting support, or retrieving this hotel booking
-            later.
+            Keep your booking ID ready for support or retrieval. This is a TPL
+            test confirmation only, not a supplier hotel voucher.
           </div>
         </div>
       </div>

@@ -348,6 +348,9 @@ function HotelManagePageContent() {
   };
 
   const handleRoomChangeContinue = () => {
+    alert("Room/add-on changes are unavailable for hotel test confirmations in this batch. No supplier action, refund, wallet change, or payment action was executed.");
+    return;
+    /*
     if (!booking?.payloadStorageKey || !payload || !activeRoomVariant) return;
 
     const nextPayload = {
@@ -365,6 +368,7 @@ function HotelManagePageContent() {
     window.location.href = `/manage/payment?bookingId=${encodeURIComponent(
       booking.id
     )}&section=room-addons&type=hotel`;
+    */
   };
 
   if (isLoading) {
@@ -398,6 +402,9 @@ function HotelManagePageContent() {
       city={city}
       checkInLabel={formatDateOnly(checkIn)}
     >
+      <div className="mb-4 rounded-2xl border border-[#bfdbfe] bg-[#eff6ff] px-4 py-3 text-[13px] font-bold leading-5 text-[#1d4ed8]">
+        TPL hotel test confirmation. Supplier reservation is absent, supplier confirmation is absent, and cancellation/refund/upgrade/downgrade/wallet actions are unavailable in this batch.
+      </div>
       {activeTab === "summary" && (
         <HotelManageSummary
           bookingStatus={booking.status}

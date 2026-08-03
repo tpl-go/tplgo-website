@@ -17,15 +17,18 @@ import { expireBooking } from "@/app/data/booking/expireBooking";
 
 import {
   getWallet,
-  saveWallet,
-  addWalletLedgerItem,
   type Wallet,
 } from "@/app/lib/wallet/walletStorage";
+import { createTplRequestId } from "@/app/lib/api/tplApiClient";
 import {
-  confirmHotelBackendCheckout,
-  startHotelBackendCheckout,
-  type HotelBackendCheckoutRefs,
-} from "@/app/lib/api/hotelCheckoutIntegration";
+  confirmHotelTestPayment,
+  getHotelBookingDraft,
+  isExpired as isBackendExpired,
+  startHotelTestPayment,
+  toHotelSafeError,
+  type HotelBackendDraft,
+  type HotelBackendPaymentConfirmResponse,
+} from "@/app/lib/hotels/hotelBackendIntegration";
 
 import { applyBenefitPricing } from "@/app/lib/pricing/applyBenefitPricing";
 
@@ -121,6 +124,26 @@ type StoredHotelPaymentPayload = {
   };
 
   manageBookingReady?: boolean;
+  backendHotel?: {
+    searchId: string;
+    hotelId: string;
+    roomId: string;
+    rateId: string;
+    quoteId: string;
+    draft: HotelBackendDraft;
+    snapshot: {
+      amount: string;
+      currency: string;
+      expiresAt: string;
+      bookingAllowed: false;
+      supplierBookingDisabled: true;
+      sourceLabel: string;
+      warnings: string[];
+    };
+    testOnly: true;
+    supplierBookingDisabled: true;
+    bookingAllowed: false;
+  };
 };
 
 function getActiveUser() {
@@ -203,6 +226,7 @@ export default function HotelPaymentPage() {
 
   const [timeLeft, setTimeLeft] = useState(10 * 60);
   const [isExpired, setIsExpired] = useState(false);
+  const [paymentError, setPaymentError] = useState("");
 
   useEffect(() => {
     const raw =
@@ -390,7 +414,10 @@ const tplCredit =
 
 const totalBeforeWallet = benefitPricing.payableBeforeRefundWallet;
 
-const finalPayable = benefitPricing.finalPayable;
+const backendAuthoritativeAmount = Number(
+  storedPayload.backendHotel?.draft?.priceSnapshot.total || benefitPricing.finalPayable
+);
+const finalPayable = backendAuthoritativeAmount;
 
 const earnedOnThisBooking = Math.floor(
   Number(benefitPricing.baseAfterOffer || 0) * 0.02
@@ -405,8 +432,8 @@ const priceBreakup = {
   tripSecureTotal: tripSecureSelected ? tripSecureAmount : 0,
   cabTotal,
   addOnsTotal,
-  tplCredit,
-  appliedOffer: benefitPricing.offerDiscount,
+  tplCredit: 0,
+  appliedOffer: 0,
   totalAmount: finalPayable,
   walletBreakdown: {
     promoUsed: savedPromoUsed,
@@ -415,10 +442,12 @@ const priceBreakup = {
   },
   totalBeforeWallet,
   baseAfterOffer: benefitPricing.baseAfterOffer,
-  earnedOnThisBooking,
+  earnedOnThisBooking: 0,
 };
 
-  const buildConfirmationPayload = () => {
+  const buildConfirmationPayload = (backendConfirm: HotelBackendPaymentConfirmResponse) => {
+    const backendConfirmation = backendConfirm.confirmation;
+    const backendDraft = storedPayload.backendHotel?.draft;
     const guests =
       storedPayload.guestValidation?.travellers ||
       storedPayload.guestValidation?.guests ||
@@ -427,31 +456,46 @@ const priceBreakup = {
     const contactDetails = storedPayload.guestValidation?.contactDetails;
     const leadGuest = guests?.[0] || {};
 
-    const bookingId = `HTL-${Date.now()}`;
+    const bookingId = backendConfirm.bookingRef || backendDraft?.bookingRef || `HTL-${Date.now()}`;
     const hotelName = getHotelName(hotel);
     const city = getHotelCity(hotel, searchMeta);
     const address = getHotelAddress(hotel, searchMeta);
+    const backendTotal = Number(backendConfirmation?.pricing?.total || backendDraft?.priceSnapshot.total || finalPayable);
+    const backendBase = Number(backendConfirmation?.pricing?.base || backendDraft?.priceSnapshot.base || subtotal);
+    const backendTaxes = Number(backendConfirmation?.pricing?.taxes || backendDraft?.priceSnapshot.taxes || taxes);
 
     return {
       bookingId,
-      bookingStatus: "Confirmed",
-      paymentStatus: "Paid",
-      bookedOn: new Date().toISOString(),
+      bookingDraftId: backendConfirm.bookingDraftId,
+      bookingRef: backendConfirm.bookingRef,
+      bookingStatus: "TPL Test Confirmed",
+      paymentStatus: "paid",
+      bookedOn: backendConfirmation?.createdAt || new Date().toISOString(),
+      simulationMode: true,
+      supplierBookingDisabled: true,
+      bookingAllowed: false,
+      supplierReservationId: null,
+      supplierConfirmationNumber: null,
+      supplierReservationLabel: "Not created in test mode",
+      supplierConfirmationLabel: "Not issued in test mode",
+      testDisclaimer:
+        "TPL test confirmation only. Supplier hotel reservation has not been created.",
 
-      hotelName,
+      hotelName: backendConfirmation?.hotel?.name || hotelName,
       city,
       address,
       location: city,
 
       roomType:
+        backendConfirmation?.room?.roomName ||
         selectedVariant?.name ||
         (selectedVariant as unknown as { roomType?: string })?.roomType ||
         (selectedVariant as unknown as { title?: string })?.title ||
         "Selected Room",
 
-      checkInDate: searchMeta.checkIn,
-      checkOutDate: searchMeta.checkOut,
-      nights,
+      checkInDate: backendConfirmation?.stay?.checkIn || searchMeta.checkIn,
+      checkOutDate: backendConfirmation?.stay?.checkOut || searchMeta.checkOut,
+      nights: backendConfirmation?.stay?.nights || nights,
       rooms,
       guests: (searchMeta.adults || 0) + (searchMeta.children || 0),
 
@@ -483,30 +527,31 @@ const priceBreakup = {
         : [],
 
       fare: {
-  baseFare: subtotal,
-  taxesAndFees: taxes,
-  discount: benefitPricing.offerDiscount + tplCredit,
-  baseAfterOffer: benefitPricing.baseAfterOffer,
-  earnedCreditAmount: earnedOnThisBooking,
+  baseFare: backendBase,
+  taxesAndFees: backendTaxes,
+  discount: 0,
+  baseAfterOffer: backendBase,
+  earnedCreditAmount: 0,
         oldTplCredit,
-        walletUsed,
+        walletUsed: 0,
         addOns:
           (tripSecureSelected ? tripSecureAmount : 0) +
           cabTotal +
           addOnsTotal,
-        totalBeforeWallet,
-        totalPaid: finalPayable,
-        totalAmount: finalPayable,
+        totalBeforeWallet: backendTotal,
+        totalPaid: backendTotal,
+        totalAmount: backendTotal,
+        currency: backendConfirmation?.pricing?.currency || backendDraft?.priceSnapshot.currency || "INR",
         walletBreakdown: {
-          promoUsed: savedPromoUsed,
-          earnedUsed: savedEarnedUsed,
-          refundUsed: savedRefundUsed,
+          promoUsed: 0,
+          earnedUsed: 0,
+          refundUsed: 0,
           promoAvailable: storedPayload.walletBreakdown?.promoAvailable,
           earnedAvailable: storedPayload.walletBreakdown?.earnedAvailable,
           refundWalletAvailable:
             storedPayload.walletBreakdown?.refundWalletAvailable,
-          totalWalletUsed: walletUsed,
-          earnedOnThisBooking,
+          totalWalletUsed: 0,
+          earnedOnThisBooking: 0,
         },
       },
 
@@ -514,13 +559,19 @@ const priceBreakup = {
 
       paymentData: {
         method: selectedPaymentMethod || "Online Payment",
-        totalPaid: finalPayable,
+        totalPaid: backendTotal,
         paidAt: new Date().toISOString(),
-        walletUsed,
-        promoUsed: savedPromoUsed,
-        earnedUsed: savedEarnedUsed,
-        refundUsed: savedRefundUsed,
+        walletUsed: 0,
+        promoUsed: 0,
+        earnedUsed: 0,
+        refundUsed: 0,
       },
+      paymentReferenceSafe:
+        backendConfirmation?.paymentReferenceSafe || {
+          paymentId: backendConfirm.paymentId,
+          paymentRef: backendConfirm.paymentRef,
+          gateway: "mock",
+        },
 
       bookingMeta: {
         bookingId,
@@ -534,8 +585,8 @@ const priceBreakup = {
       selectedVariant,
       searchMeta,
       specialRequest: storedPayload.specialRequest || "",
-      appliedOffer: benefitPricing.offerDiscount || 0,
-      tplCredit,
+      appliedOffer: 0,
+      tplCredit: 0,
       oldTplCredit,
       appliedOfferCode: storedPayload.appliedOfferCode || "",
       appliedOfferTitle: storedPayload.appliedOfferTitle || "",
@@ -554,143 +605,106 @@ const priceBreakup = {
         selected: tripSecureSelected,
         amount: tripSecureSelected ? tripSecureAmount : 0,
       },
+      backendHotel: {
+        ...(storedPayload.backendHotel || {}),
+        paymentConfirm: backendConfirm,
+      },
     };
   };
 
   const handleMockPayment = async (shouldSucceed = true) => {
-    if (!selectedPaymentMethod || isExpired) return;
+    if (!selectedPaymentMethod || isExpired || paymentActionState === "processing") return;
 
     setPaymentActionState("processing");
+    setPaymentError("");
     startPaymentProcess();
 
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    if (!shouldSucceed) {
+      handlePaymentFailure();
+      setPaymentActionState("failure");
+      return;
+    }
 
-    if (shouldSucceed) {
-      const backendRawPayload = {
-        ...storedPayload,
-        selectedPaymentMethod,
-        paymentMethod: selectedPaymentMethod,
-        paymentStatus: "paid",
-        paymentState: "success",
-        priceBreakup,
-        pricing: priceBreakup,
-        fareBreakup: {
-          ...(storedPayload.fareBreakup || {}),
-          ...priceBreakup,
-        },
-        walletBreakdown: {
-          ...(storedPayload.walletBreakdown || {}),
-          promoUsed: savedPromoUsed,
-          earnedUsed: savedEarnedUsed,
-          refundUsed: savedRefundUsed,
-          totalWalletUsed: walletUsed,
-          earnedOnThisBooking,
-        },
-        finalTotal: finalPayable,
-      };
+    const draft = storedPayload.backendHotel?.draft;
+    if (!draft?.bookingDraftId) {
+      setPaymentActionState("failure");
+      setPaymentError("Backend hotel booking draft not found. Please restart from review.");
+      return;
+    }
 
-      const backendStart = await startHotelBackendCheckout(
-        backendRawPayload as Record<string, unknown>
-      );
-      let backendRefs: HotelBackendCheckoutRefs = backendStart.refs;
+    if (isBackendExpired(draft.expiresAt)) {
+      setPaymentActionState("failure");
+      setPaymentError("Hotel booking draft has expired. Please restart from review.");
+      return;
+    }
 
-      if (backendStart.attempted) {
-        const updatedBookingPayload = {
-          ...backendRawPayload,
-          ...backendStart.refs,
-        };
+    if (draft.supplierBookingDisabled !== true || draft.bookingAllowed !== false) {
+      setPaymentActionState("failure");
+      setPaymentError("Hotel draft failed supplier-disabled safety checks.");
+      return;
+    }
 
-        sessionStorage.setItem(
-          "tplHotelBookingData",
-          JSON.stringify(updatedBookingPayload)
-        );
+    if (draft.priceSnapshot.currency !== "INR") {
+      setPaymentActionState("failure");
+      setPaymentError("Hotel payment is currently available only for INR quotes.");
+      return;
+    }
 
-        setStoredPayload(updatedBookingPayload as StoredHotelPaymentPayload);
-      }
+    const readback = await getHotelBookingDraft(draft.bookingDraftId);
+    if (!readback.ok) {
+      setPaymentActionState("failure");
+      setPaymentError(toHotelSafeError(readback.error).message);
+      return;
+    }
 
-      const activeMobile = activeUser?.mobile || "";
+    const start = await startHotelTestPayment(draft.bookingDraftId, {
+      amount: readback.data.booking.priceSnapshot.total,
+      currency: "INR",
+      paymentMethod: selectedPaymentMethod === "card" ? "razorpay" : "mock",
+      contactDetails: storedPayload.guestValidation?.contactDetails
+        ? {
+            mobile: storedPayload.guestValidation.contactDetails.mobile,
+            email: storedPayload.guestValidation.contactDetails.email,
+          }
+        : undefined,
+      idempotencyKey: createTplRequestId("tpl_hotel_pay_start"),
+    });
 
-      if (activeMobile) {
-        const latestWallet = getWallet(activeMobile);
+    if (!start.ok) {
+      setPaymentActionState("failure");
+      setPaymentError(toHotelSafeError(start.error).message);
+      return;
+    }
 
-        const nextWallet: Wallet = {
-          promoCredit: Math.max(
-            Number(latestWallet.promoCredit || 0) - Number(savedPromoUsed || 0),
-            0
-          ),
-          earnedCredit: Math.max(
-            Number(latestWallet.earnedCredit || 0) -
-              Number(savedEarnedUsed || 0),
-            0
-          ),
-          refundableBalance: Math.max(
-            Number(latestWallet.refundableBalance || 0) -
-              Number(savedRefundUsed || 0),
-            0
-          ),
-        };
+    if (start.data.amount !== readback.data.booking.priceSnapshot.total || start.data.currency !== "INR") {
+      setPaymentActionState("failure");
+      setPaymentError("Backend hotel payment amount validation failed.");
+      return;
+    }
 
-        saveWallet(nextWallet, activeMobile);
-        setWallet(nextWallet);
+    const confirm = await confirmHotelTestPayment(draft.bookingDraftId, {
+      paymentId: start.data.paymentId,
+      gatewayPaymentId: `tpl_test_${start.data.paymentId}`,
+      testOutcome: "success",
+      idempotencyKey: createTplRequestId("tpl_hotel_pay_confirm"),
+    });
 
-        if (Number(savedPromoUsed || 0) > 0) {
-          addWalletLedgerItem(
-            {
-              type: "wallet_used",
-              title: "TPL Promo Credit Used",
-              description: "Promo credit used for hotel booking payment",
-              amount: Number(savedPromoUsed || 0),
-            },
-            activeMobile
-          );
-        }
+    if (!confirm.ok) {
+      setPaymentActionState("failure");
+      setPaymentError(toHotelSafeError(confirm.error).message);
+      return;
+    }
 
-        if (Number(savedEarnedUsed || 0) > 0) {
-          addWalletLedgerItem(
-            {
-              type: "wallet_used",
-              title: "TPL Earned Credit Used",
-              description: "Earned credit used for hotel booking payment",
-              amount: Number(savedEarnedUsed || 0),
-            },
-            activeMobile
-          );
-        }
-
-        if (Number(savedRefundUsed || 0) > 0) {
-          addWalletLedgerItem(
-            {
-              type: "wallet_used",
-              title: "Refund Wallet Used",
-              description: "Refund wallet used for hotel booking payment",
-              amount: Number(savedRefundUsed || 0),
-            },
-            activeMobile
-          );
-        }
-      }
+    if (confirm.data.status !== "TPL_CONFIRMED" || confirm.data.supplierReservationId !== null || confirm.data.supplierConfirmationNumber !== null) {
+      setPaymentActionState("failure");
+      setPaymentError("Backend hotel confirmation failed supplier-disabled safety checks.");
+      return;
+    }
 
       handlePaymentSuccess();
       confirmBooking();
 
-      let confirmationPayload = buildConfirmationPayload();
-
-      if (backendRefs.backendCheckoutId) {
-        const backendConfirm = await confirmHotelBackendCheckout({
-          ...confirmationPayload,
-          ...backendRefs,
-        });
-
-        backendRefs = {
-          ...backendRefs,
-          ...backendConfirm.refs,
-        };
-
-        confirmationPayload = {
-          ...confirmationPayload,
-          ...backendRefs,
-        };
-      }
+      const confirmationPayload = buildConfirmationPayload(confirm.data);
 
       try {
         sessionStorage.setItem(
@@ -713,10 +727,6 @@ const priceBreakup = {
       setTimeout(() => {
         router.push("/hotels/confirmation");
       }, 600);
-    } else {
-      handlePaymentFailure();
-      setPaymentActionState("failure");
-    }
   };
 
   return (
@@ -758,12 +768,20 @@ const priceBreakup = {
           </span>
 
           <span className="inline-flex h-[30px] items-center justify-center rounded-full border border-[#d9e2ec] bg-white px-3 font-extrabold text-[#0f766e]">
-            SAFE & SECURED
+            TEST PAYMENT ONLY
           </span>
         </div>
       </div>
 
       <div className="mx-auto max-w-7xl px-3 py-3 md:px-4 md:py-6">
+        <div className="mb-4 rounded-xl border border-[#bfdbfe] bg-[#eff6ff] px-4 py-3 text-[13px] font-bold leading-5 text-[#1d4ed8]">
+          Backend hotel draft payment. Amount and INR currency are owned by TPL backend. Supplier hotel reservation is not created in this test flow.
+        </div>
+        {paymentError ? (
+          <div className="mb-4 rounded-xl border border-[#fecaca] bg-[#fff1f2] px-4 py-3 text-[13px] font-bold leading-5 text-[#b91c1c]">
+            {paymentError}
+          </div>
+        ) : null}
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(300px,0.39fr)] lg:items-start lg:gap-[18px]">
           <div className="flex min-w-0 flex-col gap-4">
             <HotelPaymentTopSummary

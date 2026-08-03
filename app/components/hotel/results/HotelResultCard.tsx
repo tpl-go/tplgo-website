@@ -4,6 +4,15 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import LoginModal from "@/app/components/common/LoginModal";
 import type { Hotel } from "@/app/data/stays/types";
+import {
+  createHotelQuote,
+  getHotelDetails,
+  getHotelRates,
+  isExpired,
+  mapBackendHotelToUiHotel,
+  moneyToDecimal,
+  toHotelSafeError,
+} from "@/app/lib/hotels/hotelBackendIntegration";
 
 import {
   calculateSmartOfferDiscount,
@@ -63,6 +72,7 @@ export default function HotelResultCard({ hotel }: Props) {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showGalleryModal, setShowGalleryModal] = useState(false);
   const [showRatingPopup, setShowRatingPopup] = useState(false);
+  const [selectionLoading, setSelectionLoading] = useState(false);
 
   const [smartOffer, setSmartOffer] = useState<SmartOfferItem | null>(null);
   const [activeUser, setActiveUser] = useState<ActiveUser | null>(null);
@@ -130,7 +140,8 @@ export default function HotelResultCard({ hotel }: Props) {
 
   const amenityLine = (hotel.amenities || []).slice(0, 4).join(" • ");
 
-  const handleCardClick = () => {
+  const handleCardClick = async () => {
+    if (selectionLoading) return;
     const params = new URLSearchParams(window.location.search);
     const city = params.get("city") || hotel.city || "";
     const checkIn = params.get("checkIn") || "";
@@ -148,16 +159,83 @@ export default function HotelResultCard({ hotel }: Props) {
       rooms >= 1 &&
       Number.isFinite(adults) &&
       adults >= 1 &&
-      firstVariant;
+      (firstVariant || hotel.backendHotel);
 
     if (!hasValidSearch) {
       alert("Please select destination, dates and guests before booking.");
       return;
     }
 
-    const payload = {
-      hotel,
-      selectedVariant: firstVariant || null,
+    try {
+      setSelectionLoading(true);
+      const backendMeta = hotel.backendHotel;
+      let selectedHotel = hotel;
+      let selectedVariant = firstVariant || null;
+      let backendQuote = null;
+
+      if (backendMeta?.searchId && backendMeta.hotelId) {
+        if (isExpired(backendMeta.expiresAt)) {
+          alert("Hotel search has expired. Please search again.");
+          return;
+        }
+        const [detailsResult, ratesResult] = await Promise.all([
+          getHotelDetails(backendMeta.hotelId, backendMeta.searchId),
+          getHotelRates(backendMeta.hotelId, backendMeta.searchId),
+        ]);
+        if (!detailsResult.ok) {
+          alert(toHotelSafeError(detailsResult.error).message);
+          return;
+        }
+        if (!ratesResult.ok) {
+          alert(toHotelSafeError(ratesResult.error).message);
+          return;
+        }
+        const firstRate = ratesResult.data.rates?.[0];
+        if (!firstRate) {
+          alert("No available backend rate found for this hotel.");
+          return;
+        }
+        if (isExpired(firstRate.expiresAt)) {
+          alert("Selected room rate has expired. Please refresh rates.");
+          return;
+        }
+        selectedHotel = mapBackendHotelToUiHotel(detailsResult.data, {
+          searchId: backendMeta.searchId,
+          source: ratesResult.data.source,
+          expiresAt: ratesResult.data.expiresAt,
+          warnings: ratesResult.data.warnings,
+          rates: ratesResult.data.rates,
+        });
+        selectedVariant = selectedHotel.variants[0] || null;
+        const quoteResult = await createHotelQuote({
+          searchId: backendMeta.searchId,
+          hotelId: backendMeta.hotelId,
+          roomId: firstRate.roomId,
+          rateId: firstRate.rateId,
+          clientPriceSnapshot: {
+            total: firstRate.price.total,
+            currency: firstRate.price.currency,
+          },
+        });
+        if (!quoteResult.ok) {
+          alert(toHotelSafeError(quoteResult.error).message);
+          return;
+        }
+        if (quoteResult.data.status === "unavailable" || quoteResult.data.status === "expired") {
+          alert(toHotelSafeError({ code: "HOTEL_RATE_UNAVAILABLE", message: "" }).message);
+          return;
+        }
+        backendQuote = quoteResult.data;
+      }
+
+      if (!selectedVariant) {
+        alert("No available room rate found for this hotel.");
+        return;
+      }
+
+      const payload = {
+      hotel: selectedHotel,
+      selectedVariant,
       searchMeta: {
         city,
         checkIn,
@@ -165,7 +243,25 @@ export default function HotelResultCard({ hotel }: Props) {
         rooms: Math.max(rooms, 1),
         adults: Math.max(adults, 1),
         children: Math.max(Number(params.get("children") || "0"), 0),
+        roomOccupancies: parseRoomOccupancies(params.get("roomOccupancies")),
       },
+      ...(backendMeta && selectedVariant.backendRoomId && selectedVariant.backendRateId && backendQuote ? {
+        searchId: backendMeta.searchId,
+        hotelId: backendMeta.hotelId,
+        roomId: selectedVariant.backendRoomId,
+        rateId: selectedVariant.backendRateId,
+        quoteId: backendQuote.quoteId,
+        backendQuote,
+        backendSnapshot: {
+          amount: backendQuote.price.total || moneyToDecimal(selectedVariant.price),
+          currency: backendQuote.currency || selectedVariant.currency || "INR",
+          expiresAt: backendQuote.expiresAt,
+          bookingAllowed: false,
+          supplierBookingDisabled: true,
+          sourceLabel: backendMeta.sourceLabel,
+          warnings: backendQuote.warnings || [],
+        },
+      } : {}),
       timestamp: Date.now(),
     };
 
@@ -175,6 +271,9 @@ export default function HotelResultCard({ hotel }: Props) {
     );
 
     router.push("/hotels/booking");
+    } finally {
+      setSelectionLoading(false);
+    }
   };
 
   return (
@@ -392,7 +491,7 @@ export default function HotelResultCard({ hotel }: Props) {
               }}
               className="mt-3 h-11 w-full rounded-xl bg-[#0b74ff] px-4 text-[13px] font-black text-white md:hidden"
             >
-              View Detail
+              {selectionLoading ? "Loading..." : "View Detail"}
             </button>
 
             {firstVariant?.availableRooms ? (
@@ -498,4 +597,13 @@ export default function HotelResultCard({ hotel }: Props) {
       )}
     </>
   );
+}
+
+function parseRoomOccupancies(value: string | null) {
+  try {
+    const parsed = value ? JSON.parse(value) : null;
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
 }

@@ -52,7 +52,7 @@ function resolveHotelName(payload: any) {
     hotel?.name ||
     hotel?.hotelName ||
     hotel?.propertyName ||
-    "Hotel Booking Confirmed"
+    "Hotel Test Confirmation"
   );
 }
 
@@ -167,7 +167,8 @@ export default function HotelConfirmationPage() {
       const safePaidAt =
         parsed?.paidAt || parsed?.bookedOn || new Date().toISOString();
 
-      const earnedAmount = Number(
+      const isBackendHotelTestFlow = parsed?.backendHotel || parsed?.simulationMode === true;
+      const earnedAmount = isBackendHotelTestFlow ? 0 : Number(
         parsed?.earnedCreditAmount ||
           parsed?.fare?.walletBreakdown?.earnedOnThisBooking ||
           parsed?.paymentData?.earnedCreditAmount ||
@@ -252,7 +253,7 @@ const payloadStorageKey = `tpl_booking_payload_hotel_${safePaidAt}_${mobile}_${l
           email,
         });
 
-        creditEarnedForHotelBooking({
+        if (!isBackendHotelTestFlow) creditEarnedForHotelBooking({
           mobile,
           bookingId: existingBooking.id,
           earnedAmount,
@@ -304,7 +305,7 @@ const payloadStorageKey = `tpl_booking_payload_hotel_${safePaidAt}_${mobile}_${l
           email,
         });
 
-        creditEarnedForHotelBooking({
+        if (!isBackendHotelTestFlow) creditEarnedForHotelBooking({
           mobile,
           bookingId: newBooking.id,
           earnedAmount,
@@ -323,7 +324,7 @@ const payloadStorageKey = `tpl_booking_payload_hotel_${safePaidAt}_${mobile}_${l
       });
 
       if (parsed?.bookingId) {
-        creditEarnedForHotelBooking({
+        if (!isBackendHotelTestFlow) creditEarnedForHotelBooking({
           mobile,
           bookingId: parsed.bookingId,
           earnedAmount,
@@ -525,10 +526,10 @@ const payloadStorageKey = `tpl_booking_payload_hotel_${safePaidAt}_${mobile}_${l
 
           <div className="min-w-0 flex-1">
             <div className="truncate text-[14px] font-black text-[#111827]">
-              Hotel Confirmed
+              Hotel Test Confirmation
             </div>
             <div className="text-[11px] font-semibold text-[#64748b]">
-              Booking voucher generated
+              No supplier voucher issued
             </div>
           </div>
         </div>
@@ -536,10 +537,10 @@ const payloadStorageKey = `tpl_booking_payload_hotel_${safePaidAt}_${mobile}_${l
 
       <div className="border-b border-green-200 bg-green-50 px-3 py-3 text-center md:py-4">
         <div className="text-[16px] font-black text-green-700 md:text-lg">
-          🎉 Hotel Booking Confirmed
+          TPL Hotel Test Confirmation
         </div>
         <div className="text-[12px] font-semibold text-green-600 md:text-sm">
-          Your hotel voucher is successfully generated
+          Supplier reservation: Not created in test mode. Supplier confirmation: Not issued in test mode.
         </div>
 
         {finalEarnedCreditAmount > 0 ? (

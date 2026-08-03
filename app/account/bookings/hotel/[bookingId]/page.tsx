@@ -237,6 +237,9 @@ export default function HotelBookingDetailPage() {
           <div className="mt-1 break-words text-[12px] text-slate-600 md:text-sm">
             Booking ID: {booking.id}
           </div>
+          <div className="mt-3 rounded-xl border border-[#bfdbfe] bg-[#eff6ff] px-4 py-3 text-[13px] font-bold leading-5 text-[#1d4ed8]">
+            TPL hotel test confirmation only. Supplier reservation: Not created in test mode. Supplier confirmation: Not issued in test mode.
+          </div>
         </div>
       </div>
 

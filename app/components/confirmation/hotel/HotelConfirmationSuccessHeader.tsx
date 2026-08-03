@@ -73,7 +73,7 @@ export default function HotelConfirmationSuccessHeader({
 }: Props) {
   const bookingStatusText =
     bookingStatus === "confirmed"
-      ? "Booking Confirmed"
+      ? "TPL Test Confirmation"
       : bookingStatus === "pending"
       ? "Booking Pending"
       : "Booking Failed";
@@ -241,9 +241,8 @@ export default function HotelConfirmationSuccessHeader({
                 maxWidth: "860px",
               }}
             >
-              Your hotel reservation has been successfully created. Keep your
-              booking ID handy for voucher download, print, support and future
-              booking retrieval.
+              TPL test payment is confirmed. Supplier hotel reservation has not
+              been created and no supplier confirmation has been issued.
             </div>
 
             {earnedOnThisBooking > 0 ? (
