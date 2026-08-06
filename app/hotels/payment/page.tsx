@@ -29,6 +29,13 @@ import {
   type HotelBackendDraft,
   type HotelBackendPaymentConfirmResponse,
 } from "@/app/lib/hotels/hotelBackendIntegration";
+import {
+  type BackendRazorpayTestCheckout,
+  isRazorpayTestCheckoutEnabled,
+  isValidRazorpayTestCheckoutPayload,
+  openRazorpayTestCheckout,
+  type RazorpayTestCheckoutResult,
+} from "@/app/lib/api/razorpayCheckoutClient";
 
 import { applyBenefitPricing } from "@/app/lib/pricing/applyBenefitPricing";
 
@@ -200,6 +207,52 @@ function parseLocalDate(value: string) {
     : new Date(value);
 
   return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function buildDevelopmentHotelRazorpayCheckout(
+  start: {
+    bookingDraftId: string;
+    bookingRef: string;
+    paymentId: string;
+    paymentRef: string;
+    amount: string;
+    currency: "INR";
+  },
+  storedPayload: StoredHotelPaymentPayload
+): BackendRazorpayTestCheckout | null {
+  if (process.env.NODE_ENV === "production") return null;
+
+  const amount = Number(start.amount);
+  if (!Number.isFinite(amount) || amount <= 0 || start.currency !== "INR") {
+    return null;
+  }
+
+  const contact = storedPayload.guestValidation?.contactDetails;
+  return {
+    provider: "razorpay",
+    gateway: "razorpay",
+    mode: "test",
+    keyId: "rzp_test_tpl_local_checkout",
+    orderId: `order_${start.paymentId}`,
+    amountMinor: Math.round(amount * 100),
+    amount,
+    currency: "INR",
+    name: "TPL",
+    description: `TPL hotel test payment ${start.bookingRef}`,
+    bookingDraftId: start.bookingDraftId,
+    bookingRef: start.bookingRef,
+    paymentId: start.paymentId,
+    paymentRef: start.paymentRef,
+    prefill: {
+      email: contact?.email,
+      contact: contact?.mobile,
+    },
+    notes: {
+      testOnly: "true",
+      source: "tpl_hotel_local_test_checkout",
+    },
+    testOnly: true,
+  };
 }
 
 export default function HotelPaymentPage() {
@@ -657,10 +710,11 @@ const priceBreakup = {
       return;
     }
 
+    const useRazorpayMethod = selectedPaymentMethod === "cards";
     const start = await startHotelTestPayment(draft.bookingDraftId, {
       amount: readback.data.booking.priceSnapshot.total,
       currency: "INR",
-      paymentMethod: selectedPaymentMethod === "card" ? "razorpay" : "mock",
+      paymentMethod: useRazorpayMethod ? "razorpay" : "mock",
       contactDetails: storedPayload.guestValidation?.contactDetails
         ? {
             mobile: storedPayload.guestValidation.contactDetails.mobile,
@@ -682,9 +736,37 @@ const priceBreakup = {
       return;
     }
 
+    let razorpayResult: RazorpayTestCheckoutResult | null = null;
+    if (useRazorpayMethod) {
+      const checkout =
+        isValidRazorpayTestCheckoutPayload(start.data.checkout)
+          ? start.data.checkout
+          : buildDevelopmentHotelRazorpayCheckout(start.data, storedPayload);
+
+      if (isRazorpayTestCheckoutEnabled() && checkout) {
+        try {
+          razorpayResult = await openRazorpayTestCheckout(checkout);
+        } catch (error) {
+          setPaymentActionState("failure");
+          setPaymentError(
+            error instanceof Error
+              ? error.message
+              : "Razorpay test checkout was cancelled. Backend confirmation was not submitted."
+          );
+          return;
+        }
+      } else {
+        setPaymentActionState("failure");
+        setPaymentError("Razorpay test checkout is unavailable for this hotel draft.");
+        return;
+      }
+    }
+
     const confirm = await confirmHotelTestPayment(draft.bookingDraftId, {
       paymentId: start.data.paymentId,
-      gatewayPaymentId: `tpl_test_${start.data.paymentId}`,
+      gatewayPaymentId:
+        razorpayResult?.gatewayPaymentId || `tpl_test_${start.data.paymentId}`,
+      gatewaySignature: razorpayResult?.gatewaySignature,
       testOutcome: "success",
       idempotencyKey: createTplRequestId("tpl_hotel_pay_confirm"),
     });

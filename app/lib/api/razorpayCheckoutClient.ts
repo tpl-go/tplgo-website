@@ -1,5 +1,3 @@
-import type { BackendFlightRazorpayTestCheckout } from "./flightTestPaymentApi";
-
 type RazorpayCheckoutResponse = {
   razorpay_payment_id?: string;
   razorpay_order_id?: string;
@@ -50,7 +48,33 @@ export type RazorpayTestCheckoutResult = {
   gatewaySignature: string;
 };
 
+export type BackendRazorpayTestCheckout = {
+  provider: "razorpay";
+  gateway?: "razorpay";
+  mode: "test";
+  keyId: string;
+  orderId: string;
+  gatewayOrderId?: string;
+  amountMinor: number;
+  amount?: number;
+  currency: "INR";
+  name: string;
+  description: string;
+  bookingDraftId?: string;
+  bookingRef?: string;
+  paymentId?: string;
+  paymentRef?: string;
+  prefill?: {
+    name?: string;
+    email?: string;
+    contact?: string;
+  };
+  notes?: Record<string, string>;
+  testOnly: true;
+};
+
 export function isRazorpayTestCheckoutEnabled(): boolean {
+  if (process.env.NODE_ENV !== "production") return true;
   return (
     process.env.NEXT_PUBLIC_PAYMENT_GATEWAY_TEST_ENABLED === "true" &&
     process.env.NEXT_PUBLIC_RAZORPAY_CHECKOUT_ENABLED === "true"
@@ -58,8 +82,8 @@ export function isRazorpayTestCheckoutEnabled(): boolean {
 }
 
 export function isValidRazorpayTestCheckoutPayload(
-  checkout: BackendFlightRazorpayTestCheckout | undefined
-): checkout is BackendFlightRazorpayTestCheckout {
+  checkout: BackendRazorpayTestCheckout | undefined
+): checkout is BackendRazorpayTestCheckout {
   return Boolean(
     checkout &&
       checkout.provider === "razorpay" &&
@@ -73,7 +97,7 @@ export function isValidRazorpayTestCheckoutPayload(
 }
 
 export async function openRazorpayTestCheckout(
-  checkout: BackendFlightRazorpayTestCheckout
+  checkout: BackendRazorpayTestCheckout
 ): Promise<RazorpayTestCheckoutResult> {
   if (!isRazorpayTestCheckoutEnabled()) {
     throw new Error("Razorpay test checkout is disabled.");
@@ -110,7 +134,7 @@ export async function openRazorpayTestCheckout(
       prefill: checkout.prefill,
       notes: {
         testOnly: "true",
-        source: "tpl_flight_test_checkout",
+        source: "tpl_test_checkout",
       },
       theme: {
         color: "#ef4444",

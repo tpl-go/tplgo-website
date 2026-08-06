@@ -20,6 +20,7 @@ const excludedPrefixes = [
   "/creator",
   "/creator-studio",
   "/flights",
+  "/hotels",
   "/manage",
 ];
 

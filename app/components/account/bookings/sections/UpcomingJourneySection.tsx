@@ -99,6 +99,19 @@ function isBackendTestFlightBooking(booking: BookingItem) {
   );
 }
 
+function isBackendTestHotelBooking(booking: BookingItem) {
+  if (booking.type !== "hotel") return false;
+  const payload = getStoredBookingPayload(booking);
+
+  return Boolean(
+    payload?.simulationMode === true ||
+      payload?.backendHotel ||
+      payload?.supplierBookingDisabled === true ||
+      payload?.bookingAllowed === false ||
+      booking.bookingStatus === "TPL Test Confirmed"
+  );
+}
+
 function getFlightBookingCurrency(booking: BookingItem) {
   const payload = getStoredBookingPayload(booking);
   return normalizeFlightCurrency(
@@ -192,6 +205,9 @@ export default function UpcomingJourneySection({
             const showDigiYatra = isDomesticFlightBooking(booking);
             const isSmartPlanner = booking.type === "smart-planner";
             const isBackendTestFlight = isBackendTestFlightBooking(booking);
+            const isBackendTestHotel = isBackendTestHotelBooking(booking);
+            const isBackendTestBooking =
+              isBackendTestFlight || isBackendTestHotel;
             const flightPaymentStatus =
               booking.type === "flight" ? getFlightPaymentStatus(booking) : "";
 
@@ -218,7 +234,7 @@ export default function UpcomingJourneySection({
                           </span>
                         ) : null}
 
-                        {isBackendTestFlight ? (
+                        {isBackendTestBooking ? (
                           <span className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-[10px] font-semibold text-blue-700 md:px-3 md:text-[11px]">
                             TPL Test / Simulation
                           </span>
@@ -272,6 +288,28 @@ export default function UpcomingJourneySection({
                             ) : null}
                           </>
                         ) : null}
+                        {isBackendTestHotel ? (
+                          <>
+                            <p className="min-w-0 break-words">
+                              <span className="font-semibold text-slate-800">
+                                Payment:
+                              </span>{" "}
+                              {String(booking.paymentStatus || "paid").toUpperCase()}
+                            </p>
+                            <p className="min-w-0 break-words">
+                              <span className="font-semibold text-slate-800">
+                                Supplier:
+                              </span>{" "}
+                              Not created in test mode
+                            </p>
+                            <p className="min-w-0 break-words">
+                              <span className="font-semibold text-slate-800">
+                                Voucher:
+                              </span>{" "}
+                              Not issued in test mode
+                            </p>
+                          </>
+                        ) : null}
                         {isSmartPlanner && booking.routeLabel ? (
                           <p className="min-w-0 break-words">
                             <span className="font-semibold text-slate-800">
@@ -311,18 +349,21 @@ export default function UpcomingJourneySection({
                   <div className="grid grid-cols-2 gap-2 md:flex md:items-center md:overflow-x-auto md:pb-1">
                     <ActionButton
                       label={
-                        isBackendTestFlight
+                        isBackendTestBooking
                           ? "Test Summary Only"
                           : config.downloadLabel
                       }
                       onClick={() => handleDownloadTicket(booking)}
                       variant="primary"
-                      disabled={isBackendTestFlight}
+                      disabled={isBackendTestBooking}
                     />
 
                     <ActionButton
-                      label={config.shareLabel}
+                      label={
+                        isBackendTestHotel ? "Share Test Summary" : config.shareLabel
+                      }
                       onClick={() => handleShare(booking)}
+                      disabled={isBackendTestHotel}
                     />
 
                     <ActionButton
@@ -362,13 +403,13 @@ export default function UpcomingJourneySection({
                     {!isVisa && (
                       <ActionButton
                         label={
-                          isBackendTestFlight
+                          isBackendTestBooking
                             ? "Cancellation Disabled"
                             : "Cancel Booking"
                         }
                         onClick={() => setCancelTarget(booking)}
                         variant="danger"
-                        disabled={isBackendTestFlight}
+                        disabled={isBackendTestBooking}
                       />
                     )}
                   </div>

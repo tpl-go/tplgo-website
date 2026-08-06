@@ -140,49 +140,11 @@ export default function HotelPaymentOptionSection({
       {activeOption === "cards" && (
         <ExpandedBox>
           <div className="text-[15px] font-extrabold text-[#111827]">
-            Card Details
+            Razorpay Test Checkout
           </div>
-
-          <div className="mt-4">
-            <label className="mb-2 block text-[13px] font-bold text-[#374151]">
-              Card Number
-            </label>
-            <input
-              placeholder="1234 5678 9012 3456"
-              className="h-[46px] w-full rounded-[10px] border border-[#d1d5db] px-[14px] text-[14px] text-[#111827] outline-none"
-            />
-          </div>
-
-          <div className="mt-[14px] grid grid-cols-2 gap-[14px]">
-            <div>
-              <label className="mb-2 block text-[13px] font-bold text-[#374151]">
-                Expiry
-              </label>
-              <input
-                placeholder="MM/YY"
-                className="h-[46px] w-full rounded-[10px] border border-[#d1d5db] px-[14px] text-[14px] text-[#111827] outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="mb-2 block text-[13px] font-bold text-[#374151]">
-                CVV
-              </label>
-              <input
-                placeholder="123"
-                className="h-[46px] w-full rounded-[10px] border border-[#d1d5db] px-[14px] text-[14px] text-[#111827] outline-none"
-              />
-            </div>
-          </div>
-
-          <div className="mt-[14px]">
-            <label className="mb-2 block text-[13px] font-bold text-[#374151]">
-              Name on Card
-            </label>
-            <input
-              placeholder="Enter card holder name"
-              className="h-[46px] w-full rounded-[10px] border border-[#d1d5db] px-[14px] text-[14px] text-[#111827] outline-none"
-            />
+          <div className="mt-3 rounded-xl border border-[#bfdbfe] bg-[#eff6ff] p-3 text-[13px] font-bold leading-5 text-[#1d4ed8]">
+            TPL will open Razorpay test checkout using backend-provided public
+            checkout fields. Do not enter or store card details on this page.
           </div>
         </ExpandedBox>
       )}

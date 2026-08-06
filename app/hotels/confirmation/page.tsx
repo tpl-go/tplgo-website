@@ -526,10 +526,10 @@ const payloadStorageKey = `tpl_booking_payload_hotel_${safePaidAt}_${mobile}_${l
 
           <div className="min-w-0 flex-1">
             <div className="truncate text-[14px] font-black text-[#111827]">
-              Hotel Test Confirmation
+              TPL Test Confirmation
             </div>
             <div className="text-[11px] font-semibold text-[#64748b]">
-              No supplier voucher issued
+              No supplier voucher issued. Voucher: Not Issued
             </div>
           </div>
         </div>
@@ -537,10 +537,11 @@ const payloadStorageKey = `tpl_booking_payload_hotel_${safePaidAt}_${mobile}_${l
 
       <div className="border-b border-green-200 bg-green-50 px-3 py-3 text-center md:py-4">
         <div className="text-[16px] font-black text-green-700 md:text-lg">
-          TPL Hotel Test Confirmation
+          TPL Test Confirmation
         </div>
-        <div className="text-[12px] font-semibold text-green-600 md:text-sm">
+        <div className="text-[12px] font-semibold leading-5 text-green-600 md:text-sm">
           Supplier reservation: Not created in test mode. Supplier confirmation: Not issued in test mode.
+          Voucher: Not Issued.
         </div>
 
         {finalEarnedCreditAmount > 0 ? (
