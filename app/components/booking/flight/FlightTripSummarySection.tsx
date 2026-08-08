@@ -1,10 +1,14 @@
 "use client";
 
 import FlightJourneyCard from "./FlightJourneyCard";
+import type { FlightReviewAncillaryOption } from "./FlightSeatMealSection";
 import { FlightReviewPayload } from "@/app/lib/flights/review/buildFlightReviewData";
 
 type Props = {
   reviewData: FlightReviewPayload;
+  paidBaggageOptions?: FlightReviewAncillaryOption[];
+  selectedAncillaryIds?: string[];
+  onAncillaryToggle?: (id: string) => void;
 };
 
 type JourneySegmentUI = {
@@ -86,7 +90,12 @@ function extractCode(value?: string) {
   return value;
 }
 
-export default function FlightTripSummarySection({ reviewData }: Props) {
+export default function FlightTripSummarySection({
+  reviewData,
+  paidBaggageOptions = [],
+  selectedAncillaryIds = [],
+  onAncillaryToggle,
+}: Props) {
   const journeys = reviewData.journeys || [];
   const isInternational = reviewData.tripMode === "international";
 
@@ -210,6 +219,9 @@ export default function FlightTripSummarySection({ reviewData }: Props) {
                     ? `Included Check-in baggage per person - ${firstSegment.checkinBaggage}`
                     : "Included Check-in baggage per person - 15 KGS"
                 }
+                paidBaggageOptions={paidBaggageOptions}
+                selectedAncillaryIds={selectedAncillaryIds}
+                onAncillaryToggle={onAncillaryToggle}
               />
             </div>
           );

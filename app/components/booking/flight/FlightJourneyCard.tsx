@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react";
 import FlightSegmentBlock from "./FlightSegmentBlock";
+import { formatFlightMoney } from "@/app/lib/flights/flightCurrency";
+import type { FlightReviewAncillaryOption } from "./FlightSeatMealSection";
 
 type LayoverInfo = {
   duration: string;
@@ -52,6 +54,9 @@ type Props = {
   cancellationRules?: FareRuleRow[];
   dateChangeRules?: FareRuleRow[];
   includedCheckInText?: string;
+  paidBaggageOptions?: FlightReviewAncillaryOption[];
+  selectedAncillaryIds?: string[];
+  onAncillaryToggle?: (id: string) => void;
 };
 
 export default function FlightJourneyCard({
@@ -67,6 +72,9 @@ export default function FlightJourneyCard({
   cancellationRules = [],
   dateChangeRules = [],
   includedCheckInText = "Included Check-in baggage per person - 15 KGS",
+  paidBaggageOptions = [],
+  selectedAncillaryIds = [],
+  onAncillaryToggle,
 }: Props) {
   const [showFareRules, setShowFareRules] = useState(false);
   const [fareRuleTab, setFareRuleTab] = useState<"cancellation" | "dateChange">(
@@ -98,6 +106,7 @@ export default function FlightJourneyCard({
   const actionStripBg = includedCheckInText.toLowerCase().includes("0 kg")
     ? "#f7dce2"
     : "#eef8fb";
+  const availablePaidBaggage = paidBaggageOptions.filter((item) => item.available);
 
   return (
     <>
@@ -281,27 +290,69 @@ export default function FlightJourneyCard({
             gap: "14px",
           }}
         >
-          <div
-            style={{
-              fontSize: "12px",
-              color: "#4b5563",
-              fontWeight: 500,
-            }}
-          >
-            {baggageAlertText}
-          </div>
+          {availablePaidBaggage.length > 0 ? (
+            <>
+              <div
+                style={{
+                  fontSize: "12px",
+                  color: "#4b5563",
+                  fontWeight: 500,
+                }}
+              >
+                Extra baggage options are supplier provided and backend quoted.
+              </div>
 
-          <div
-            className="max-md:min-h-10"
-            style={{
-              color: "#64748b",
-              fontSize: "13px",
-              fontWeight: 700,
-              whiteSpace: "nowrap",
-            }}
-          >
-            EXTRA BAGGAGE UNAVAILABLE
-          </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", justifyContent: "flex-end" }}>
+                {availablePaidBaggage.map((item) => {
+                  const selected = selectedAncillaryIds.includes(item.id);
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => onAncillaryToggle?.(item.id)}
+                      style={{
+                        minHeight: "34px",
+                        border: selected ? "2px solid #1d9bf0" : "1px solid #d9e2ec",
+                        background: selected ? "#ffffff" : "rgba(255,255,255,0.72)",
+                        color: "#1f2937",
+                        fontSize: "12px",
+                        fontWeight: 800,
+                        padding: "6px 10px",
+                        cursor: "pointer",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {item.label} · {formatFlightMoney(item.displayPrice.amount, item.displayPrice.currency)}
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          ) : (
+            <>
+              <div
+                style={{
+                  fontSize: "12px",
+                  color: "#4b5563",
+                  fontWeight: 500,
+                }}
+              >
+                {baggageAlertText}
+              </div>
+
+              <div
+                className="max-md:min-h-10"
+                style={{
+                  color: "#64748b",
+                  fontSize: "13px",
+                  fontWeight: 700,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                EXTRA BAGGAGE UNAVAILABLE
+              </div>
+            </>
+          )}
         </div>
       </div>
 

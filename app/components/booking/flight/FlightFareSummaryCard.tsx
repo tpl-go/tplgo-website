@@ -43,12 +43,14 @@ type Props = {
   cabTotal?: number;
   insuranceTotal?: number;
   addonsTotal?: number;
+  baggageTotal?: number;
 
   seatStatus?: "pending" | "selected" | "skipped";
   mealStatus?: "pending" | "selected" | "skipped";
   cabStatus?: "pending" | "selected" | "skipped";
   insuranceStatus?: "pending" | "selected" | "skipped";
   addonsStatus?: "pending" | "selected" | "skipped";
+  baggageStatus?: "pending" | "selected" | "skipped";
 
   totalAmount: number;
   canProceed: boolean;
@@ -84,12 +86,14 @@ export default function FlightFareSummaryCard({
   cabTotal = 0,
   insuranceTotal = 0,
   addonsTotal = 0,
+  baggageTotal = 0,
 
   seatStatus = "pending",
   mealStatus = "pending",
   cabStatus = "pending",
   insuranceStatus = "pending",
   addonsStatus = "pending",
+  baggageStatus = "skipped",
 
   totalAmount,
   canProceed,
@@ -127,6 +131,7 @@ export default function FlightFareSummaryCard({
     surcharge +
     seatTotal +
     mealTotal +
+    baggageTotal +
     cabTotal +
     insuranceTotal +
     addonsTotal;
@@ -234,6 +239,12 @@ export default function FlightFareSummaryCard({
               <StatusRow label="Meal Selection" value="Skipped" />
             ) : (
               <FareRow label="Meal Selection" value={mealTotal} currency={currency} />
+            )}
+
+            {baggageStatus === "skipped" ? (
+              <StatusRow label="Extra Baggage" value="Skipped" />
+            ) : (
+              <FareRow label="Extra Baggage" value={baggageTotal} currency={currency} />
             )}
 
             {cabStatus === "skipped" ? (

@@ -1,6 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { formatFlightMoney, type FlightCurrency } from "@/app/lib/flights/flightCurrency";
+
+export type FlightReviewAncillaryOption = {
+  id: string;
+  label: string;
+  code?: string;
+  available: boolean;
+  displayPrice: {
+    amount: number;
+    currency: FlightCurrency;
+  };
+};
 
 type SeatMealPayload = {
   seats: {
@@ -22,6 +34,12 @@ type SeatMealPayload = {
 type Props = {
   isTravellerComplete: boolean;
   travellerCount: number;
+  seatOptions?: FlightReviewAncillaryOption[];
+  mealOptions?: FlightReviewAncillaryOption[];
+  selectedAncillaryIds?: string[];
+  isLoadingAncillaries?: boolean;
+  ancillaryMessage?: string;
+  onAncillaryToggle?: (id: string) => void;
   onChange?: (payload: SeatMealPayload) => void;
 };
 
@@ -37,9 +55,17 @@ const EMPTY_SEAT_MEAL_PAYLOAD: SeatMealPayload = {
 export default function FlightSeatMealSection({
   isTravellerComplete,
   travellerCount,
+  seatOptions = [],
+  mealOptions = [],
+  selectedAncillaryIds = [],
+  isLoadingAncillaries = false,
+  ancillaryMessage = "",
+  onAncillaryToggle,
   onChange,
 }: Props) {
   const [isOpen, setIsOpen] = useState(true);
+  const hasRealSeats = seatOptions.some((item) => item.available);
+  const hasRealMeals = mealOptions.some((item) => item.available);
 
   useEffect(() => {
     onChange?.(EMPTY_SEAT_MEAL_PAYLOAD);
@@ -93,25 +119,93 @@ export default function FlightSeatMealSection({
               <div style={{ fontSize: "18px", fontWeight: 800, color: "#111827" }}>
                 Seat selection
               </div>
-              <div style={bodyCopyStyle}>
-                Not available for this fare yet. No seat numbers or seat prices have been
-                added to your total.
-              </div>
+              {isLoadingAncillaries ? (
+                <div style={bodyCopyStyle}>Checking supplier seat availability.</div>
+              ) : hasRealSeats ? (
+                <OptionList
+                  options={seatOptions}
+                  selectedIds={selectedAncillaryIds}
+                  onToggle={onAncillaryToggle}
+                />
+              ) : (
+                <div style={bodyCopyStyle}>
+                  Not available for this fare yet. No seat numbers or seat prices have been
+                  added to your total.
+                </div>
+              )}
 
               <div style={{ ...dividerStyle, marginTop: "16px" }} />
 
               <div style={{ marginTop: "16px", fontSize: "18px", fontWeight: 800, color: "#111827" }}>
                 Meal preference
               </div>
-              <div style={bodyCopyStyle}>
-                Not available for this fare. Meal products and prices will appear only when
-                confirmed by the supplier through a backend quote.
-              </div>
+              {isLoadingAncillaries ? (
+                <div style={bodyCopyStyle}>Checking supplier meal availability.</div>
+              ) : hasRealMeals ? (
+                <OptionList
+                  options={mealOptions}
+                  selectedIds={selectedAncillaryIds}
+                  onToggle={onAncillaryToggle}
+                />
+              ) : (
+                <div style={bodyCopyStyle}>
+                  Not available for this fare. Meal products and prices will appear only when
+                  confirmed by the supplier through a backend quote.
+                </div>
+              )}
+
+              {ancillaryMessage ? (
+                <div style={{ ...bodyCopyStyle, color: "#92400e" }}>{ancillaryMessage}</div>
+              ) : null}
             </div>
           )}
         </div>
       )}
     </section>
+  );
+}
+
+function OptionList({
+  options,
+  selectedIds,
+  onToggle,
+}: {
+  options: FlightReviewAncillaryOption[];
+  selectedIds: string[];
+  onToggle?: (id: string) => void;
+}) {
+  return (
+    <div style={{ marginTop: "12px", display: "grid", gap: "10px" }}>
+      {options.filter((item) => item.available).map((item) => {
+        const selected = selectedIds.includes(item.id);
+        return (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => onToggle?.(item.id)}
+            style={{
+              minHeight: "44px",
+              border: selected ? "2px solid #1d9bf0" : "1px solid #d9e2ec",
+              background: selected ? "#eef8fb" : "#ffffff",
+              padding: "10px 12px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "12px",
+              cursor: "pointer",
+              textAlign: "left",
+            }}
+          >
+            <span style={{ fontSize: "14px", fontWeight: 800, color: "#111827" }}>
+              {item.label}
+            </span>
+            <span style={{ whiteSpace: "nowrap", fontSize: "13px", fontWeight: 800, color: "#374151" }}>
+              {formatFlightMoney(item.displayPrice.amount, item.displayPrice.currency)}
+            </span>
+          </button>
+        );
+      })}
+    </div>
   );
 }
 

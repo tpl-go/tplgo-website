@@ -29,6 +29,13 @@ import {
   confirmBackendFlightPrice,
   type BackendFlightPriceConfirmResponse,
 } from "@/app/lib/api/flightPriceApi";
+import {
+  fetchBackendFlightAncillaries,
+  quoteBackendFlightAncillaries,
+  type BackendFlightAncillaryOption,
+  type BackendFlightAncillaryQuote,
+  type BackendFlightAncillarySet,
+} from "@/app/lib/api/flightAncillaryApi";
 import { simulateBackendFlightBooking } from "@/app/lib/api/flightBookingSimulationApi";
 import {
   assertSafeFlightSimulationFlags,
@@ -155,6 +162,11 @@ const [wallet, setWallet] = useState({
   const [selectedOffer, setSelectedOffer] = useState<FlightOfferItem | null>(null);
   const [backendPriceState, setBackendPriceState] = useState<"idle" | "checking" | "confirmed" | "changed" | "expired" | "failed">("idle");
   const [backendSimulationState, setBackendSimulationState] = useState<"idle" | "creating" | "failed">("idle");
+  const [ancillaryState, setAncillaryState] = useState<"idle" | "loading" | "ready" | "quoting" | "failed">("idle");
+  const [ancillarySet, setAncillarySet] = useState<BackendFlightAncillarySet | null>(null);
+  const [selectedAncillaryIds, setSelectedAncillaryIds] = useState<string[]>([]);
+  const [ancillaryQuote, setAncillaryQuote] = useState<BackendFlightAncillaryQuote | null>(null);
+  const [ancillaryMessage, setAncillaryMessage] = useState("");
   const [backendBlockerMessage, setBackendBlockerMessage] = useState("");
   const [pendingPriceChange, setPendingPriceChange] = useState<{
     total: number;
@@ -182,6 +194,11 @@ const [wallet, setWallet] = useState({
 
     void refreshBackendPrice(reviewData);
   }, [reviewData, backendPriceState]);
+
+  useEffect(() => {
+    if (!reviewData?.backendOffer?.priceConfirmationId) return;
+    void loadBackendAncillaries(reviewData);
+  }, [reviewData?.backendOffer?.priceConfirmationId, reviewData?.backendOffer?.displayPrice?.currency]);
 
   useEffect(() => {
     if (timeLeft <= 0) {
@@ -348,7 +365,11 @@ const tplCredit =
 
 const totalBeforeWallet = benefitPricing.payableBeforeRefundWallet;
 
-const finalTotalAmount = benefitPricing.finalPayable;
+const backendAncillaryTotals = summarizeBackendAncillaryQuote(ancillaryQuote);
+
+const finalTotalAmount = ancillaryQuote
+  ? Number(ancillaryQuote.displayTotal.amount || benefitPricing.finalPayable)
+  : benefitPricing.finalPayable;
 
   const isTravellerDone = travellerValidation?.canProceed ?? false;
 
@@ -635,7 +656,12 @@ const isInternationalFlight =
                 overflow: "hidden",
               }}
             >
-              <FlightTripSummarySection reviewData={reviewData} />
+              <FlightTripSummarySection
+                reviewData={reviewData}
+                paidBaggageOptions={ancillarySet?.paidBaggage || []}
+                selectedAncillaryIds={selectedAncillaryIds}
+                onAncillaryToggle={handleAncillaryToggle}
+              />
 
               <FlightTravellerSection
                 bookingType={reviewData.bookingType}
@@ -647,6 +673,12 @@ const isInternationalFlight =
               <FlightSeatMealSection
                 isTravellerComplete={isSeatMealUnlocked}
                 travellerCount={totalTravellers}
+                seatOptions={ancillarySet?.seats || []}
+                mealOptions={ancillarySet?.meals || []}
+                selectedAncillaryIds={selectedAncillaryIds}
+                isLoadingAncillaries={ancillaryState === "loading" || ancillaryState === "quoting"}
+                ancillaryMessage={ancillaryMessage}
+                onAncillaryToggle={handleAncillaryToggle}
                 onChange={setSeatMealData}
               />
 
@@ -693,14 +725,16 @@ walletBreakdown={{
 earnedOnThisBooking={Math.floor(benefitPricing.baseAfterOffer * 0.02)}
 refundWalletAvailable={wallet.refundableBalance}
 useRefundWallet={true}
-seatTotal={seatMealData.seatTotal}
+seatTotal={backendAncillaryTotals.seats}
               
-              mealTotal={seatMealData.mealTotal}
+              mealTotal={backendAncillaryTotals.meals}
+              baggageTotal={backendAncillaryTotals.paidBaggage}
               cabTotal={cabData.cabPrice}
               insuranceTotal={insuranceData.insurancePrice}
               addonsTotal={addonsData.addonsPrice}
-              seatStatus={seatMealData.seatStatus}
-              mealStatus={seatMealData.mealStatus}
+              seatStatus={backendAncillaryTotals.seats > 0 ? "selected" : seatMealData.seatStatus}
+              mealStatus={backendAncillaryTotals.meals > 0 ? "selected" : seatMealData.mealStatus}
+              baggageStatus={backendAncillaryTotals.paidBaggage > 0 ? "selected" : "skipped"}
               cabStatus={cabData.cabStatus}
               insuranceStatus={insuranceData.insuranceStatus}
               addonsStatus={addonsData.addonsStatus}
@@ -872,6 +906,16 @@ seatTotal={seatMealData.seatTotal}
     : null,
 
     timerLeft: timeLeft,
+    backendAncillaryQuote: ancillaryQuote
+      ? {
+          quoteId: ancillaryQuote.quoteId,
+          ancillarySetId: ancillaryQuote.ancillarySetId,
+          selectedAncillaryIds,
+          displayTotal: ancillaryQuote.displayTotal,
+          payableQuote: ancillaryQuote.payableQuote,
+          expiresAt: ancillaryQuote.expiresAt,
+        }
+      : null,
   };
 
   if (backendSimulationMetadata) {
@@ -886,6 +930,66 @@ seatTotal={seatMealData.seatTotal}
   );
 
   router.push("/flights/payment");
+  }
+
+  async function loadBackendAncillaries(source: FlightReviewPayload) {
+    const backendOffer = source.backendOffer;
+    if (!backendOffer?.priceConfirmationId) return;
+    setAncillaryState("loading");
+    setAncillaryMessage("");
+    const result = await fetchBackendFlightAncillaries(backendOffer.offerId, {
+      searchId: backendOffer.searchId,
+      priceConfirmationId: backendOffer.priceConfirmationId,
+      displayCurrency: normalizeFlightCurrency(backendOffer.displayPrice?.currency || source.pricing?.currency || readFlightDisplayCurrencyPreference()),
+    });
+    if (!result.ok) {
+      setAncillaryState("failed");
+      setAncillarySet(null);
+      setSelectedAncillaryIds([]);
+      setAncillaryQuote(null);
+      setAncillaryMessage(normalizeFlightBackendError(result.error.code, result.error.message));
+      return;
+    }
+    setAncillarySet(result.data);
+    setSelectedAncillaryIds((current) => current.filter((id) => allBackendAncillaryOptions(result.data).some((item) => item.id === id)));
+    setAncillaryState("ready");
+    setAncillaryMessage(result.data.warnings[0] || "");
+    await quoteSelectedAncillaries([], result.data, source);
+  }
+
+  async function handleAncillaryToggle(id: string) {
+    if (!ancillarySet || !reviewData?.backendOffer?.priceConfirmationId) return;
+    const nextSelected = selectedAncillaryIds.includes(id)
+      ? selectedAncillaryIds.filter((item) => item !== id)
+      : [...selectedAncillaryIds, id];
+    setSelectedAncillaryIds(nextSelected);
+    await quoteSelectedAncillaries(nextSelected, ancillarySet, reviewData);
+  }
+
+  async function quoteSelectedAncillaries(
+    selectedIds: string[],
+    sourceSet: BackendFlightAncillarySet,
+    sourceReviewData: FlightReviewPayload
+  ) {
+    const backendOffer = sourceReviewData.backendOffer;
+    if (!backendOffer?.priceConfirmationId) return;
+    setAncillaryState("quoting");
+    const result = await quoteBackendFlightAncillaries(backendOffer.offerId, {
+      searchId: backendOffer.searchId,
+      priceConfirmationId: backendOffer.priceConfirmationId,
+      ancillarySetId: sourceSet.ancillarySetId,
+      displayCurrency: normalizeFlightCurrency(backendOffer.displayPrice?.currency || sourceReviewData.pricing?.currency || readFlightDisplayCurrencyPreference()),
+      selectedAncillaryIds: selectedIds,
+    });
+    if (!result.ok) {
+      setAncillaryState("failed");
+      setAncillaryQuote(null);
+      setAncillaryMessage(normalizeFlightBackendError(result.error.code, result.error.message));
+      return;
+    }
+    setAncillaryQuote(result.data);
+    setAncillaryState("ready");
+    setAncillaryMessage(result.data.warnings[0] || "");
   }
 
   async function refreshBackendPrice(source: FlightReviewPayload): Promise<FlightReviewPayload | null> {
@@ -1083,5 +1187,28 @@ function getBackendDisplayPrice(
   return {
     amount: Number(response.price?.total || 0),
     currency: normalizeFlightCurrency(response.price?.currency || fallbackCurrency),
+  };
+}
+
+function allBackendAncillaryOptions(set: BackendFlightAncillarySet): BackendFlightAncillaryOption[] {
+  return [...(set.seats || []), ...(set.paidBaggage || []), ...(set.meals || [])];
+}
+
+function summarizeBackendAncillaryQuote(quote: BackendFlightAncillaryQuote | null) {
+  const totals = {
+    seats: 0,
+    paidBaggage: 0,
+    meals: 0,
+  };
+  for (const item of quote?.selectedAncillaries || []) {
+    const amount = Number(item.displayPrice?.amount || 0);
+    if (item.category === "seat") totals.seats += amount;
+    if (item.category === "paid_baggage") totals.paidBaggage += amount;
+    if (item.category === "meal") totals.meals += amount;
+  }
+  return {
+    seats: Math.round(totals.seats * 100) / 100,
+    paidBaggage: Math.round(totals.paidBaggage * 100) / 100,
+    meals: Math.round(totals.meals * 100) / 100,
   };
 }
