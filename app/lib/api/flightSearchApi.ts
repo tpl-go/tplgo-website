@@ -1,6 +1,8 @@
 import type { DummyFlight, FlightFareOption, FlightStopDetail } from "@/app/components/flight/data/flightDummyData";
 import {
   normalizeFlightCurrency,
+  type FlightDisplayPriceSnapshot,
+  type FlightPriceSnapshot,
   type FlightCurrency,
 } from "@/app/lib/flights/flightCurrency";
 import { normalizeFlightBackendError } from "@/app/lib/flights/flightBackendIntegration";
@@ -20,6 +22,7 @@ export type BackendFlightSearchRequest = {
   infants: number;
   cabinClass: FlightSearchCabinClass;
   currency: "INR";
+  displayCurrency?: FlightCurrency;
   nonStop: boolean;
   maxResults: number;
 };
@@ -30,6 +33,30 @@ export type BackendFlightMoney = {
   fees: number;
   total: number;
   currency: FlightCurrency;
+};
+
+export type BackendFlightSupplierPrice = {
+  amount: number;
+  currency: FlightCurrency;
+};
+
+export type BackendFlightDisplayPrice = BackendFlightSupplierPrice & {
+  fxRate?: string;
+  fxSource?: string;
+  fxTimestamp?: string;
+  roundingVersion?: string;
+};
+
+export type BackendFlightBaggageAllowance = {
+  cabin?: string;
+  checked?: string;
+  summary?: string;
+  source: "provider" | "not_provided";
+};
+
+export type BackendFlightAvailability = {
+  seatsRemaining?: number;
+  source: "provider" | "not_provided";
 };
 
 export type BackendFlightSegment = {
@@ -76,6 +103,10 @@ export type BackendFlightOffer = {
   baggageSummary: string;
   fareOptions: BackendFlightFareOption[];
   price: BackendFlightMoney;
+  supplierPrice?: BackendFlightSupplierPrice;
+  displayPrice?: BackendFlightDisplayPrice;
+  baggageAllowance?: BackendFlightBaggageAllowance;
+  availability?: BackendFlightAvailability;
   expiresAt?: string;
   refundable: boolean;
   changeAllowed: boolean;
@@ -200,17 +231,32 @@ function mapBackendFlightOfferToDummyFlight(
   const arriveMinutes = minutesFromDateTime(lastSegment?.arrival.at);
   const durationMinutes = durationToMinutes(itinerary?.duration || firstSegment?.duration) || minutesBetween(departMinutes, arriveMinutes);
   const stops = Math.max(itinerary?.stops ?? Math.max((itinerary?.segments.length ?? 1) - 1, 0), 0);
-  const currency = normalizeFlightCurrency(offer.price.currency);
-  const basePrice = Number(offer.price.total || offer.price.baseFare || 0);
+  const displayPrice = normalizeDisplayPrice(offer.displayPrice, offer.price);
+  const supplierPrice = normalizeSupplierPrice(offer.supplierPrice, offer.price);
+  const currency = normalizeFlightCurrency(displayPrice.currency);
+  const basePrice = Number(displayPrice.amount || offer.price.total || offer.price.baseFare || 0);
   const fareOptions = offer.fareOptions.length ? offer.fareOptions : [{
     fareId: `${offer.offerId}-published`,
     label: "Published",
-    baggageSummary: offer.baggageSummary,
-    price: offer.price,
+    baggageSummary: providerBaggageSummary(offer),
+    price: {
+      ...offer.price,
+      total: displayPrice.amount,
+      currency,
+    },
     refundable: offer.refundable,
     changeAllowed: offer.changeAllowed,
     cancellationAllowed: offer.cancellationAllowed,
   }];
+  const displayFareOptions = fareOptions.map((fare) => ({
+    ...fare,
+    baggageSummary: fare.baggageSummary || providerBaggageSummary(offer),
+    price: {
+      ...fare.price,
+      total: displayPrice.amount,
+      currency,
+    },
+  }));
 
   return {
     id: offer.offerId || `backend-flight-${index + 1}`,
@@ -226,17 +272,23 @@ function mapBackendFlightOfferToDummyFlight(
     basePrice,
     tag: index === 0 ? "recommended" : stops === 0 ? "fastest" : "cheapest",
     timing: index === 0 ? "Backend matched fare" : stops === 0 ? "Non-stop backend fare" : "Backend fare option",
-    promo: "TPL backend search result. Pricing is search-only until offer confirmation is enabled.",
+    promo: supplierPrice.currency !== currency
+      ? `Supplier fare ${supplierPrice.currency} ${supplierPrice.amount}. Display converted by TPL backend.`
+      : "TPL backend search result. Pricing is search-only until offer confirmation is enabled.",
     stopDetails: mapStopDetails(itinerary?.segments ?? []),
-    fares: fareOptions.map((fare, fareIndex) => mapBackendFareOption(fare, fareIndex)),
+    fares: displayFareOptions.map((fare, fareIndex) => mapBackendFareOption(fare, fareIndex)),
     ...(context?.searchId ? {
       backendOffer: {
         searchId: context.searchId,
         offerId: offer.offerId,
-        ...(fareOptions[0]?.fareId ? { fareId: fareOptions[0].fareId } : {}),
+        ...(displayFareOptions[0]?.fareId ? { fareId: displayFareOptions[0].fareId } : {}),
         ...(context.backendRequestId ? { backendRequestId: context.backendRequestId } : {}),
-        ...(Number.isFinite(offer.price.total) ? { priceTotal: Number(offer.price.total) } : {}),
+        ...(Number.isFinite(displayPrice.amount) ? { priceTotal: Number(displayPrice.amount) } : {}),
         currency,
+        supplierPrice,
+        displayPrice,
+        baggageAllowance: offer.baggageAllowance,
+        availability: offer.availability,
         providerLabel: safeProviderLabel(offer.source || context.source || offer.providerId),
         source: safeProviderLabel(offer.source || context.source || "backend"),
         bookingAllowed: offer.bookingAllowed === true,
@@ -277,6 +329,37 @@ function mapBackendFareOption(fare: BackendFlightFareOption, index: number): Fli
     cancellationFee: fare.cancellationAllowed ? "As per fare rules" : "Not permitted",
     dateChangeFee: fare.changeAllowed ? "As per fare rules" : "Not permitted",
   };
+}
+
+function normalizeSupplierPrice(
+  supplierPrice: BackendFlightSupplierPrice | undefined,
+  fallback: BackendFlightMoney
+): FlightPriceSnapshot {
+  return {
+    amount: Number(supplierPrice?.amount ?? fallback.total ?? 0),
+    currency: normalizeFlightCurrency(supplierPrice?.currency || fallback.currency),
+  };
+}
+
+function normalizeDisplayPrice(
+  displayPrice: BackendFlightDisplayPrice | undefined,
+  fallback: BackendFlightMoney
+): FlightDisplayPriceSnapshot {
+  return {
+    amount: Number(displayPrice?.amount ?? fallback.total ?? 0),
+    currency: normalizeFlightCurrency(displayPrice?.currency || fallback.currency),
+    ...(displayPrice?.fxRate ? { fxRate: displayPrice.fxRate } : {}),
+    ...(displayPrice?.fxSource ? { fxSource: displayPrice.fxSource } : {}),
+    ...(displayPrice?.fxTimestamp ? { fxTimestamp: displayPrice.fxTimestamp } : {}),
+    ...(displayPrice?.roundingVersion ? { roundingVersion: displayPrice.roundingVersion } : {}),
+  };
+}
+
+function providerBaggageSummary(offer: BackendFlightOffer): string {
+  if (offer.baggageAllowance?.source === "provider" && offer.baggageAllowance.summary) {
+    return offer.baggageAllowance.summary;
+  }
+  return offer.baggageSummary || "Not provided by supplier";
 }
 
 function mapStopDetails(segments: BackendFlightSegment[]): FlightStopDetail[] {

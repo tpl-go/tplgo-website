@@ -38,6 +38,40 @@ type Props = {
     backendRequestId?: string;
     priceTotal?: number;
     currency?: FlightCurrency;
+    supplierPrice?: {
+      amount: number;
+      currency: FlightCurrency;
+    };
+    displayPrice?: {
+      amount: number;
+      currency: FlightCurrency;
+      fxRate?: string;
+      fxSource?: string;
+      fxTimestamp?: string;
+      roundingVersion?: string;
+    };
+    paymentQuote?: {
+      supplierAmount: number;
+      supplierCurrency: FlightCurrency;
+      displayAmount: number;
+      displayCurrency: FlightCurrency;
+      payableAmount: number;
+      payableCurrency: FlightCurrency;
+      fxRate?: string;
+      fxTimestamp?: string;
+      expiresAt: string;
+      quoteId: string;
+    };
+    baggageAllowance?: {
+      cabin?: string;
+      checked?: string;
+      summary?: string;
+      source: "provider" | "not_provided";
+    };
+    availability?: {
+      seatsRemaining?: number;
+      source: "provider" | "not_provided";
+    };
     smokeRunId?: string;
   };
 };
@@ -79,6 +113,39 @@ function parseFareNumber(value: string) {
 
 function formatFare(value: number, currency: FlightCurrency) {
   return formatFlightMoney(Math.max(0, value), currency);
+}
+
+function providerBaggageText(backendOffer: Props["backendOffer"]) {
+  if (backendOffer?.baggageAllowance?.source === "provider" && backendOffer.baggageAllowance.summary) {
+    return backendOffer.baggageAllowance.summary;
+  }
+  return "Not provided by supplier";
+}
+
+function providerCabinBaggage(backendOffer: Props["backendOffer"]) {
+  if (backendOffer?.baggageAllowance?.source === "provider" && backendOffer.baggageAllowance.cabin) {
+    return backendOffer.baggageAllowance.cabin;
+  }
+  return "Cabin not provided";
+}
+
+function providerCheckedBaggage(backendOffer: Props["backendOffer"]) {
+  if (backendOffer?.baggageAllowance?.source === "provider" && backendOffer.baggageAllowance.checked) {
+    return backendOffer.baggageAllowance.checked;
+  }
+  return "Checked not provided";
+}
+
+function availabilityLabel(backendOffer: Props["backendOffer"]) {
+  const seats = Number(backendOffer?.availability?.seatsRemaining);
+  if (
+    backendOffer?.availability?.source === "provider" &&
+    Number.isFinite(seats) &&
+    seats > 0
+  ) {
+    return `${seats} seats left`;
+  }
+  return "Subject to recheck";
 }
 
 function normalizeSearchDate(value: string | null | undefined) {
@@ -553,8 +620,8 @@ export default function FlightResultCard(props: Props) {
               departureDate,
               arrivalDate,
               duration: payload.duration,
-              cabinBaggage: "7 Kg / Adult",
-              checkinBaggage: "15 Kg / Adult",
+              checkinBaggage: providerCheckedBaggage(backendOffer),
+              cabinBaggage: providerCabinBaggage(backendOffer),
               aircraft: "",
               terminalFrom: fromCity,
               terminalTo: toCity,
@@ -653,6 +720,10 @@ export default function FlightResultCard(props: Props) {
             onToggleDetails={toggleDetails}
             onToggleCompare={toggleCompare}
             onBookNow={handleBookNow}
+            baggageSummary={providerBaggageText(backendOffer)}
+            cabinBaggage={providerCabinBaggage(backendOffer)}
+            checkedBaggage={providerCheckedBaggage(backendOffer)}
+            availabilityLabel={availabilityLabel(backendOffer)}
           />
         </div>
       </div>

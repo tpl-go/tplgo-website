@@ -2,6 +2,7 @@ import type { FlightState } from "@/app/components/flight/hooks";
 import type { FlightSearchCabinClass } from "@/app/lib/api/flightSearchApi";
 import {
   normalizeFlightCurrency,
+  readFlightDisplayCurrencyPreference,
   type FlightCurrency,
 } from "@/app/lib/flights/flightCurrency";
 import type { FlightReviewPayload } from "@/app/lib/flights/review/buildFlightReviewData";
@@ -70,6 +71,7 @@ export type FlightSearchValidationResult =
         infants: number;
         cabinClass: FlightSearchCabinClass;
         currency: "INR";
+        displayCurrency?: FlightCurrency;
         nonStop: false;
         maxResults: number;
       };
@@ -152,6 +154,7 @@ export function validateFlightSearchState(
       infants,
       cabinClass,
       currency: "INR",
+      displayCurrency: readFlightDisplayCurrencyPreference(),
       nonStop: false,
       maxResults: 30,
     },
@@ -256,10 +259,21 @@ export function isFlightBackendStateExpired(expiresAt?: string): boolean {
 export function getBackendAmountAuthority(payload: {
   backendSimulation?: { currency?: FlightCurrency };
   reviewData?: {
-    backendOffer?: { priceTotal?: number; currency?: FlightCurrency };
+    backendOffer?: {
+      priceTotal?: number;
+      currency?: FlightCurrency;
+      displayPrice?: { amount?: number; currency?: FlightCurrency };
+      paymentQuote?: { payableAmount?: number; payableCurrency?: FlightCurrency };
+    };
     pricing?: { totalAmount?: number; currency?: FlightCurrency };
   };
 }): { amount: number; currency: FlightCurrency } {
+  const payableAmount = Number(payload.reviewData?.backendOffer?.paymentQuote?.payableAmount || 0);
+  const payableCurrency = normalizeFlightCurrency(payload.reviewData?.backendOffer?.paymentQuote?.payableCurrency);
+  if (Number.isFinite(payableAmount) && payableAmount > 0) {
+    return { amount: payableAmount, currency: payableCurrency };
+  }
+
   const backendTotal = Number(payload.reviewData?.backendOffer?.priceTotal || 0);
   const pricingTotal = Number(payload.reviewData?.pricing?.totalAmount || 0);
   return {

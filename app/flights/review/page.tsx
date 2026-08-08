@@ -20,7 +20,11 @@ import {
   saveFlightReviewPayload,
   type FlightReviewPayload,
 } from "@/app/lib/flights/review/buildFlightReviewData";
-import { normalizeFlightCurrency } from "@/app/lib/flights/flightCurrency";
+import {
+  formatFlightMoney,
+  normalizeFlightCurrency,
+  readFlightDisplayCurrencyPreference,
+} from "@/app/lib/flights/flightCurrency";
 import {
   confirmBackendFlightPrice,
   type BackendFlightPriceConfirmResponse,
@@ -267,6 +271,11 @@ const [wallet, setWallet] = useState({
     (reviewData.passengers?.infants || 0);
 
   const perAdultBaseFare = reviewData.pricing?.perAdultBaseFare || 0;
+  const reviewCurrency = normalizeFlightCurrency(
+    reviewData.backendOffer?.displayPrice?.currency ||
+      reviewData.pricing?.currency ||
+      readFlightDisplayCurrencyPreference()
+  );
 
 const baseFare =
   Number((reviewData.pricing as any)?.baseFareTotal || 0) ||
@@ -275,7 +284,7 @@ const baseFare =
   const tax = reviewData.pricing?.tax || 0;
   const surcharge = reviewData.pricing?.surcharge || 0;
   const discount = reviewData.pricing?.discount || 0;
-const activeSmartOffer = getSmartActiveOfferItem();
+const activeSmartOffer = reviewCurrency === "INR" ? getSmartActiveOfferItem() : null;
 
 const smartMappedOffer =
   activeSmartOffer && !selectedOffer
@@ -300,7 +309,9 @@ const payloadAppliedOffer = Number(
 );
 
 const appliedOfferAmount =
-  payloadAppliedOffer > 0
+  reviewCurrency !== "INR"
+    ? 0
+    : payloadAppliedOffer > 0
     ? payloadAppliedOffer
     : Number(finalSelectedOffer?.discountAmount || 0);
 
@@ -318,9 +329,9 @@ const benefitPricing = applyBenefitPricing({
 
   offerDiscount: appliedOfferAmount,
 
-  promoCredit: wallet.promoCredit,
-  earnedCredit: wallet.earnedCredit,
-  refundWallet: wallet.refundableBalance,
+  promoCredit: reviewCurrency === "INR" ? wallet.promoCredit : 0,
+  earnedCredit: reviewCurrency === "INR" ? wallet.earnedCredit : 0,
+  refundWallet: reviewCurrency === "INR" ? wallet.refundableBalance : 0,
 });
 
 const walletCalc = {
@@ -603,10 +614,8 @@ const isInternationalFlight =
               Backend fare changed
             </div>
             <div className="mt-1 text-[13px] font-semibold leading-5 text-[#7c2d12]">
-              Previous total: {pendingPriceChange.currency}{" "}
-              {pendingPriceChange.previousTotal.toLocaleString("en-IN")} · New total:{" "}
-              {pendingPriceChange.currency}{" "}
-              {pendingPriceChange.total.toLocaleString("en-IN")}
+              Previous total: {formatFlightMoney(pendingPriceChange.previousTotal, normalizeFlightCurrency(pendingPriceChange.currency))} · New total:{" "}
+              {formatFlightMoney(pendingPriceChange.total, normalizeFlightCurrency(pendingPriceChange.currency))}
             </div>
             <button
               type="button"
@@ -683,6 +692,7 @@ const isInternationalFlight =
           >
             <FlightFareSummaryCard
               travellerCount={travellerCount}
+              currency={reviewCurrency}
               perAdultBaseFare={perAdultBaseFare}
               baseFare={baseFare}
               tax={tax}
@@ -786,7 +796,15 @@ seatTotal={seatMealData.seatTotal}
         clientPricingSnapshot: {
           total: Number(priceReady.backendOffer.priceTotal || finalTotalAmount),
           currency: normalizeFlightCurrency(priceReady.backendOffer.currency),
+          ...(priceReady.backendOffer.displayPrice ? {
+            displayTotal: priceReady.backendOffer.displayPrice.amount,
+            displayCurrency: normalizeFlightCurrency(priceReady.backendOffer.displayPrice.currency),
+          } : {}),
+          ...(priceReady.backendOffer.paymentQuote?.quoteId ? {
+            paymentQuoteId: priceReady.backendOffer.paymentQuote.quoteId,
+          } : {}),
         },
+        acceptedPriceChange: priceReady.backendOffer.priceStatus === "price_changed",
         idempotencyKey: buildFlightSmokeIdempotencyKey(`flight-sim:${priceReady.backendOffer.priceConfirmationId}`, priceReady.backendOffer.smokeRunId),
       });
 
@@ -813,7 +831,7 @@ seatTotal={seatMealData.seatTotal}
         bookingRef: simulation.data.bookingRef,
         priceConfirmationId: simulation.data.priceConfirmationId,
         expiresAt: simulation.data.expiresAt,
-        currency: normalizeFlightCurrency(simulation.data.priceSnapshot.currency),
+        currency: normalizeFlightCurrency(simulation.data.displayPriceSnapshot?.currency || simulation.data.priceSnapshot.currency),
         ...(priceReady.backendOffer.backendRequestId ? { backendRequestId: priceReady.backendOffer.backendRequestId } : {}),
       };
       nextReviewData = {
@@ -822,7 +840,11 @@ seatTotal={seatMealData.seatTotal}
           ...priceReady.backendOffer,
           priceConfirmationId: simulation.data.priceConfirmationId,
           expiresAt: simulation.data.expiresAt,
-          currency: normalizeFlightCurrency(simulation.data.priceSnapshot.currency),
+          supplierPrice: simulation.data.supplierPriceSnapshot || priceReady.backendOffer.supplierPrice,
+          displayPrice: simulation.data.displayPriceSnapshot || priceReady.backendOffer.displayPrice,
+          paymentQuote: simulation.data.paymentQuote || priceReady.backendOffer.paymentQuote,
+          priceTotal: Number(simulation.data.displayPriceSnapshot?.amount || priceReady.backendOffer.priceTotal || 0),
+          currency: normalizeFlightCurrency(simulation.data.displayPriceSnapshot?.currency || priceReady.backendOffer.currency),
         },
       };
       saveFlightReviewPayload(nextReviewData);
@@ -870,9 +892,17 @@ seatTotal={seatMealData.seatTotal}
       ...(source.backendOffer.fareId ? { fareId: source.backendOffer.fareId } : {}),
       passengers: source.passengers,
       currency: "INR",
+      displayCurrency: normalizeFlightCurrency(source.backendOffer.displayPrice?.currency || source.pricing?.currency || readFlightDisplayCurrencyPreference()),
       clientOfferSnapshot: {
         total: getBackendOfferSnapshotTotal(source, finalTotalAmount),
         currency: normalizeFlightCurrency(source.backendOffer.currency),
+        ...(source.backendOffer.displayPrice ? {
+          displayTotal: source.backendOffer.displayPrice.amount,
+          displayCurrency: normalizeFlightCurrency(source.backendOffer.displayPrice.currency),
+        } : {}),
+        ...(source.backendOffer.paymentQuote?.quoteId ? {
+          paymentQuoteId: source.backendOffer.paymentQuote.quoteId,
+        } : {}),
       },
     });
 
@@ -886,12 +916,13 @@ seatTotal={seatMealData.seatTotal}
       return null;
     }
 
+    const displayPrice = getBackendDisplayPrice(result.data, source);
     if (result.data.status === "price_changed") {
       setBackendPriceState("changed");
       setPendingPriceChange({
-        total: result.data.price.total,
-        previousTotal: Number(result.data.previousTotal || source.backendOffer.priceTotal || 0),
-        currency: normalizeFlightCurrency(result.data.price.currency),
+        total: displayPrice.amount,
+        previousTotal: Number(source.backendOffer.displayPrice?.amount || source.backendOffer.priceTotal || 0),
+        currency: normalizeFlightCurrency(displayPrice.currency),
         response: result.data,
       });
       setBackendBlockerMessage("Price changed. Please accept the latest fare before continuing.");
@@ -924,17 +955,20 @@ seatTotal={seatMealData.seatTotal}
         priceConfirmationId: result.data.priceConfirmationId,
         priceStatus: result.data.status,
         expiresAt: result.data.expiresAt,
-        priceTotal: result.data.price.total,
-        currency: normalizeFlightCurrency(result.data.price.currency),
+        supplierPrice: result.data.supplierPrice || source.backendOffer.supplierPrice,
+        displayPrice,
+        paymentQuote: result.data.paymentQuote,
+        priceTotal: displayPrice.amount,
+        currency: normalizeFlightCurrency(displayPrice.currency),
       },
       pricing: {
         ...source.pricing,
-        currency: normalizeFlightCurrency(result.data.price.currency),
-        perAdultBaseFare: result.data.price.baseFare / Math.max(source.passengers.adults, 1),
-        baseFareTotal: result.data.price.baseFare,
-        tax: result.data.price.taxes,
-        surcharge: result.data.price.fees,
-        totalAmount: result.data.price.total,
+        currency: normalizeFlightCurrency(displayPrice.currency),
+        perAdultBaseFare: displayPrice.amount / Math.max(source.passengers.adults, 1),
+        baseFareTotal: displayPrice.amount,
+        tax: 0,
+        surcharge: 0,
+        totalAmount: displayPrice.amount,
       },
     };
     setReviewData(updated);
@@ -949,24 +983,28 @@ seatTotal={seatMealData.seatTotal}
   function acceptBackendPriceChange() {
     if (!reviewData?.backendOffer || !pendingPriceChange) return;
     const result = pendingPriceChange.response;
+    const displayPrice = getBackendDisplayPrice(result, reviewData);
     const updated: FlightReviewPayload = {
       ...reviewData,
       backendOffer: {
         ...reviewData.backendOffer,
         priceConfirmationId: result.priceConfirmationId,
-        priceStatus: "confirmed",
+        priceStatus: result.status,
         expiresAt: result.expiresAt,
-        priceTotal: result.price.total,
-        currency: normalizeFlightCurrency(result.price.currency),
+        supplierPrice: result.supplierPrice || reviewData.backendOffer.supplierPrice,
+        displayPrice,
+        paymentQuote: result.paymentQuote,
+        priceTotal: displayPrice.amount,
+        currency: normalizeFlightCurrency(displayPrice.currency),
       },
       pricing: {
         ...reviewData.pricing,
-        currency: normalizeFlightCurrency(result.price.currency),
-        perAdultBaseFare: result.price.baseFare / Math.max(reviewData.passengers.adults, 1),
-        baseFareTotal: result.price.baseFare,
-        tax: result.price.taxes,
-        surcharge: result.price.fees,
-        totalAmount: result.price.total,
+        currency: normalizeFlightCurrency(displayPrice.currency),
+        perAdultBaseFare: displayPrice.amount / Math.max(reviewData.passengers.adults, 1),
+        baseFareTotal: displayPrice.amount,
+        tax: 0,
+        surcharge: 0,
+        totalAmount: displayPrice.amount,
       },
     };
     setPendingPriceChange(null);
@@ -999,7 +1037,7 @@ function getBackendOfferSnapshotTotal(
   source: FlightReviewPayload,
   fallbackTotal: number
 ) {
-  const backendTotal = Number(source.backendOffer?.priceTotal);
+  const backendTotal = Number(source.backendOffer?.displayPrice?.amount || source.backendOffer?.priceTotal);
   if (Number.isFinite(backendTotal) && backendTotal > 0) {
     return backendTotal;
   }
@@ -1016,4 +1054,29 @@ function getBackendOfferSnapshotTotal(
   }
 
   return Math.round(Number(source.pricing?.totalAmount || fallbackTotal || 0));
+}
+
+function getBackendDisplayPrice(
+  response: BackendFlightPriceConfirmResponse,
+  source: FlightReviewPayload
+) {
+  const fallbackCurrency = normalizeFlightCurrency(
+    source.backendOffer?.displayPrice?.currency ||
+      source.pricing?.currency ||
+      readFlightDisplayCurrencyPreference()
+  );
+  if (response.displayPrice && Number.isFinite(Number(response.displayPrice.amount))) {
+    return {
+      amount: Number(response.displayPrice.amount),
+      currency: normalizeFlightCurrency(response.displayPrice.currency || fallbackCurrency),
+      ...(response.displayPrice.fxRate ? { fxRate: response.displayPrice.fxRate } : {}),
+      ...(response.displayPrice.fxSource ? { fxSource: response.displayPrice.fxSource } : {}),
+      ...(response.displayPrice.fxTimestamp ? { fxTimestamp: response.displayPrice.fxTimestamp } : {}),
+      ...(response.displayPrice.roundingVersion ? { roundingVersion: response.displayPrice.roundingVersion } : {}),
+    };
+  }
+  return {
+    amount: Number(response.price?.total || 0),
+    currency: normalizeFlightCurrency(response.price?.currency || fallbackCurrency),
+  };
 }

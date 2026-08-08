@@ -1,5 +1,10 @@
 import { tplApiRequest, type TplApiResult } from "./tplApiClient";
-import type { FlightCurrency } from "@/app/lib/flights/flightCurrency";
+import type {
+  FlightCurrency,
+  FlightDisplayPriceSnapshot,
+  FlightPaymentQuoteSnapshot,
+  FlightPriceSnapshot,
+} from "@/app/lib/flights/flightCurrency";
 
 export type BackendFlightBookingSimulationRequest = {
   searchId: string;
@@ -36,6 +41,9 @@ export type BackendFlightBookingSimulationRequest = {
   clientPricingSnapshot?: {
     total: number;
     currency: FlightCurrency;
+    displayTotal?: number;
+    displayCurrency?: FlightCurrency;
+    paymentQuoteId?: string;
   };
   idempotencyKey?: string;
 };
@@ -65,6 +73,9 @@ export type BackendFlightBookingSimulationResponse = {
     total: number;
     currency: FlightCurrency;
   };
+  supplierPriceSnapshot?: FlightPriceSnapshot;
+  displayPriceSnapshot?: FlightDisplayPriceSnapshot;
+  paymentQuote?: FlightPaymentQuoteSnapshot;
   warnings: string[];
   nextAction: "test_payment_pending" | "refresh_price" | "search_again";
 };

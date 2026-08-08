@@ -1,4 +1,9 @@
-import type { FlightCurrency } from "@/app/lib/flights/flightCurrency";
+import type {
+  FlightCurrency,
+  FlightDisplayPriceSnapshot,
+  FlightPaymentQuoteSnapshot,
+  FlightPriceSnapshot,
+} from "@/app/lib/flights/flightCurrency";
 
 export type FlightFareOption = {
   id: string;
@@ -43,6 +48,19 @@ export type DummyFlight = {
     backendRequestId?: string;
     priceTotal?: number;
     currency?: FlightCurrency;
+    supplierPrice?: FlightPriceSnapshot;
+    displayPrice?: FlightDisplayPriceSnapshot;
+    paymentQuote?: FlightPaymentQuoteSnapshot;
+    baggageAllowance?: {
+      cabin?: string;
+      checked?: string;
+      summary?: string;
+      source: "provider" | "not_provided";
+    };
+    availability?: {
+      seatsRemaining?: number;
+      source: "provider" | "not_provided";
+    };
     providerLabel?: string;
     source?: string;
     bookingAllowed?: boolean;

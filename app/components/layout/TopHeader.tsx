@@ -6,6 +6,12 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/hooks/useAuth";
 import AccountDropdown from "@/app/components/account/AccountDropdown";
 import HeaderPrintModal from "@/app/components/common/print/HeaderPrintModal";
+import {
+  getSupportedFlightDisplayCurrencies,
+  readFlightDisplayCurrencyPreference,
+  saveFlightDisplayCurrencyPreference,
+  type FlightCurrency,
+} from "@/app/lib/flights/flightCurrency";
 
 type TopHeaderProps = {
   onChatWithAI?: () => void;
@@ -17,10 +23,12 @@ export default function TopHeader({ onChatWithAI }: TopHeaderProps) {
   const [openMenu, setOpenMenu] = useState<"account" | null>(null);
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [displayCurrency, setDisplayCurrency] = useState<FlightCurrency>("INR");
 
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   const { openLoginModal, user, isAuthenticated, logout } = useAuth();
+  const supportedCurrencies = getSupportedFlightDisplayCurrencies();
 
   const closeMenus = () => {
     setOpenMenu(null);
@@ -71,6 +79,16 @@ export default function TopHeader({ onChatWithAI }: TopHeaderProps) {
       window.removeEventListener("TPL_OPEN_AI_TRAVEL_EXPERT", handleOpenAITravelExpert);
     };
   }, [onChatWithAI]);
+
+  useEffect(() => {
+    setDisplayCurrency(readFlightDisplayCurrencyPreference());
+  }, []);
+
+  const handleCurrencyChange = (value: string) => {
+    const next = value as FlightCurrency;
+    setDisplayCurrency(next);
+    saveFlightDisplayCurrencyPreference(next);
+  };
 
   return (
     <>
@@ -159,10 +177,14 @@ export default function TopHeader({ onChatWithAI }: TopHeaderProps) {
             {/* DESKTOP CURRENCY */}
             <div className="hidden md:flex items-center gap-1 bg-gray-100 px-2 py-1 rounded">
               <span className="text-black text-sm">💱</span>
-              <select className="bg-transparent text-black text-sm font-semibold outline-none cursor-pointer">
-                <option>INR</option>
-                <option>USD</option>
-                <option>EUR</option>
+              <select
+                value={displayCurrency}
+                onChange={(event) => handleCurrencyChange(event.target.value)}
+                className="bg-transparent text-black text-sm font-semibold outline-none cursor-pointer"
+              >
+                {supportedCurrencies.map((currency) => (
+                  <option key={currency} value={currency}>{currency}</option>
+                ))}
               </select>
             </div>
 
@@ -188,10 +210,14 @@ export default function TopHeader({ onChatWithAI }: TopHeaderProps) {
             {/* MOBILE CURRENCY */}
             <div className="md:hidden flex items-center gap-1 bg-gray-100 px-1 h-8 rounded-lg">
               <span className="text-[11px]">💱</span>
-              <select className="bg-transparent text-[10px] font-semibold text-black outline-none cursor-pointer w-[40px]">
-                <option>INR</option>
-                <option>USD</option>
-                <option>EUR</option>
+              <select
+                value={displayCurrency}
+                onChange={(event) => handleCurrencyChange(event.target.value)}
+                className="bg-transparent text-[10px] font-semibold text-black outline-none cursor-pointer w-[40px]"
+              >
+                {supportedCurrencies.map((currency) => (
+                  <option key={currency} value={currency}>{currency}</option>
+                ))}
               </select>
             </div>
 

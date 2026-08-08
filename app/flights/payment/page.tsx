@@ -22,7 +22,10 @@ import {
   startFlightBackendCheckout,
   type FlightBackendCheckoutRefs,
 } from "@/app/lib/api/flightCheckoutIntegration";
-import { confirmBackendFlightPrice } from "@/app/lib/api/flightPriceApi";
+import {
+  confirmBackendFlightPrice,
+  type BackendFlightPriceConfirmResponse,
+} from "@/app/lib/api/flightPriceApi";
 import { simulateBackendFlightBooking } from "@/app/lib/api/flightBookingSimulationApi";
 import {
   confirmFlightTestPayment,
@@ -167,10 +170,36 @@ function isBackendOfferTestPaymentExpected(payload: StoredPayload | null) {
 
 function getBackendDraftCurrency(payload: StoredPayload | null): FlightCurrency {
   return normalizeFlightCurrency(
-    payload?.backendSimulation?.currency ||
+    payload?.reviewData?.backendOffer?.paymentQuote?.payableCurrency ||
+      payload?.backendSimulation?.currency ||
       payload?.reviewData?.backendOffer?.currency ||
       payload?.reviewData?.pricing?.currency
   );
+}
+
+function getBackendDisplayPrice(
+  response: BackendFlightPriceConfirmResponse,
+  sourceReviewData: any
+) {
+  const fallbackCurrency = normalizeFlightCurrency(
+    sourceReviewData?.backendOffer?.displayPrice?.currency ||
+      sourceReviewData?.pricing?.currency ||
+      sourceReviewData?.backendOffer?.currency
+  );
+  if (response.displayPrice && Number.isFinite(Number(response.displayPrice.amount))) {
+    return {
+      amount: Number(response.displayPrice.amount),
+      currency: normalizeFlightCurrency(response.displayPrice.currency || fallbackCurrency),
+      ...(response.displayPrice.fxRate ? { fxRate: response.displayPrice.fxRate } : {}),
+      ...(response.displayPrice.fxSource ? { fxSource: response.displayPrice.fxSource } : {}),
+      ...(response.displayPrice.fxTimestamp ? { fxTimestamp: response.displayPrice.fxTimestamp } : {}),
+      ...(response.displayPrice.roundingVersion ? { roundingVersion: response.displayPrice.roundingVersion } : {}),
+    };
+  }
+  return {
+    amount: Number(response.price?.total || 0),
+    currency: normalizeFlightCurrency(response.price?.currency || fallbackCurrency),
+  };
 }
 
 function safeStoreFlightPaymentPayload(key: string, value: unknown) {
@@ -455,9 +484,21 @@ const finalTotalAmount =
         ...(backendOffer.fareId ? { fareId: backendOffer.fareId } : {}),
         passengers: sourceReviewData.passengers,
         currency: "INR",
+        displayCurrency: normalizeFlightCurrency(
+          backendOffer.displayPrice?.currency ||
+            sourceReviewData.pricing?.currency ||
+            backendOffer.currency
+        ),
         clientOfferSnapshot: {
-          total: Number(backendOffer.priceTotal || priceBreakup.totalAmount || 0),
+          total: Number(backendOffer.displayPrice?.amount || backendOffer.priceTotal || priceBreakup.totalAmount || 0),
           currency: normalizeFlightCurrency(backendOffer.currency),
+          ...(backendOffer.displayPrice ? {
+            displayTotal: backendOffer.displayPrice.amount,
+            displayCurrency: normalizeFlightCurrency(backendOffer.displayPrice.currency),
+          } : {}),
+          ...(backendOffer.paymentQuote?.quoteId ? {
+            paymentQuoteId: backendOffer.paymentQuote.quoteId,
+          } : {}),
         },
       });
 
@@ -480,6 +521,7 @@ const finalTotalAmount =
         );
       }
 
+      const displayPrice = getBackendDisplayPrice(priceResult.data, sourceReviewData);
       priceConfirmationId = priceResult.data.priceConfirmationId;
       nextReviewData = {
         ...sourceReviewData,
@@ -488,12 +530,16 @@ const finalTotalAmount =
           priceConfirmationId,
           priceStatus: priceResult.data.status,
           expiresAt: priceResult.data.expiresAt,
-          priceTotal: priceResult.data.price.total,
-          currency: normalizeFlightCurrency(priceResult.data.price.currency),
+          supplierPrice: priceResult.data.supplierPrice || backendOffer.supplierPrice,
+          displayPrice,
+          paymentQuote: priceResult.data.paymentQuote,
+          priceTotal: displayPrice.amount,
+          currency: normalizeFlightCurrency(displayPrice.currency),
         },
         pricing: {
           ...(sourceReviewData.pricing || {}),
-          currency: normalizeFlightCurrency(priceResult.data.price.currency),
+          currency: normalizeFlightCurrency(displayPrice.currency),
+          totalAmount: displayPrice.amount,
         },
       };
     }
@@ -524,7 +570,14 @@ const finalTotalAmount =
           reviewData: nextReviewData,
           backendSimulation: sourcePayload.backendSimulation,
         }).amount,
-        currency: normalizeFlightCurrency(nextReviewData.backendOffer?.currency),
+        currency: getBackendDraftCurrency({ reviewData: nextReviewData }),
+        ...(nextReviewData.backendOffer?.displayPrice ? {
+          displayTotal: nextReviewData.backendOffer.displayPrice.amount,
+          displayCurrency: normalizeFlightCurrency(nextReviewData.backendOffer.displayPrice.currency),
+        } : {}),
+        ...(nextReviewData.backendOffer?.paymentQuote?.quoteId ? {
+          paymentQuoteId: nextReviewData.backendOffer.paymentQuote.quoteId,
+        } : {}),
       },
       idempotencyKey: buildFlightSmokeIdempotencyKey(
         `flight-sim:${priceConfirmationId}`,
@@ -551,7 +604,11 @@ const finalTotalAmount =
           ...nextReviewData.backendOffer,
           priceConfirmationId: simulation.data.priceConfirmationId,
           expiresAt: simulation.data.expiresAt,
-          currency: normalizeFlightCurrency(simulation.data.priceSnapshot.currency),
+          supplierPrice: simulation.data.supplierPriceSnapshot || nextReviewData.backendOffer?.supplierPrice,
+          displayPrice: simulation.data.displayPriceSnapshot || nextReviewData.backendOffer?.displayPrice,
+          paymentQuote: simulation.data.paymentQuote || nextReviewData.backendOffer?.paymentQuote,
+          priceTotal: Number(simulation.data.displayPriceSnapshot?.amount || nextReviewData.backendOffer?.priceTotal || 0),
+          currency: normalizeFlightCurrency(simulation.data.displayPriceSnapshot?.currency || nextReviewData.backendOffer?.currency),
         },
       },
       backendSimulation: {
@@ -560,7 +617,7 @@ const finalTotalAmount =
         bookingRef: simulation.data.bookingRef,
         priceConfirmationId: simulation.data.priceConfirmationId,
         expiresAt: simulation.data.expiresAt,
-        currency: normalizeFlightCurrency(simulation.data.priceSnapshot.currency),
+        currency: normalizeFlightCurrency(simulation.data.paymentQuote?.payableCurrency || simulation.data.priceSnapshot.currency),
         ...(backendOffer.backendRequestId ? { backendRequestId: backendOffer.backendRequestId } : {}),
       },
     };

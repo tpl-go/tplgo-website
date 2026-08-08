@@ -37,6 +37,10 @@ type Props = {
     stopDetails: StopDetail[];
     selectedFare: Fare;
   }) => void;
+  baggageSummary?: string;
+  cabinBaggage?: string;
+  checkedBaggage?: string;
+  availabilityLabel?: string;
 };
 
 export default function OneWayCardMainRow({
@@ -61,6 +65,10 @@ export default function OneWayCardMainRow({
   onToggleDetails,
   onToggleCompare,
   onBookNow,
+  baggageSummary = "Not provided by supplier",
+  cabinBaggage = "Cabin not provided",
+  checkedBaggage = "Checked not provided",
+  availabilityLabel = "Subject to recheck",
 }: Props) {
   const compactVisibleFares = (() => {
     if (showAllFares) return fares;
@@ -141,7 +149,7 @@ export default function OneWayCardMainRow({
                 <div className="mt-0.5 text-[11px] font-semibold text-[#64748b]">{code}</div>
               </div>
             </div>
-            <div className="shrink-0 rounded-full bg-[#fff1f2] px-2.5 py-1 text-[10px] font-extrabold text-[#be123c]">9 seats left</div>
+            <div className="shrink-0 rounded-full bg-[#fff1f2] px-2.5 py-1 text-[10px] font-extrabold text-[#be123c]">{availabilityLabel}</div>
           </div>
 
           <div className="px-3.5 py-3">
@@ -168,8 +176,8 @@ export default function OneWayCardMainRow({
             </div>
 
             <div className="mt-3 flex flex-wrap gap-1.5">
-              <span className="rounded-full bg-[#eff6ff] px-2.5 py-1 text-[10px] font-extrabold text-[#2563eb]">7kg cabin</span>
-              <span className="rounded-full bg-[#ecfdf5] px-2.5 py-1 text-[10px] font-extrabold text-[#047857]">15kg check-in</span>
+              <span className="rounded-full bg-[#eff6ff] px-2.5 py-1 text-[10px] font-extrabold text-[#2563eb]">{cabinBaggage}</span>
+              <span className="rounded-full bg-[#ecfdf5] px-2.5 py-1 text-[10px] font-extrabold text-[#047857]">{checkedBaggage}</span>
               <button type="button" onClick={onToggleCompare} className="rounded-full bg-[#f8fafc] px-2.5 py-1 text-[10px] font-extrabold text-[#2563eb]">Compare fares</button>
             </div>
           </div>
@@ -236,7 +244,7 @@ export default function OneWayCardMainRow({
 
         <div className="shrink-0 xl:mt-6">
           <div className="inline-flex rounded-full bg-[#fdecee] px-2.5 py-1 text-[11px] font-medium text-[#c2415d] sm:text-[12px]">
-            Seats left: 9
+            {availabilityLabel}
           </div>
         </div>
 
@@ -285,7 +293,7 @@ export default function OneWayCardMainRow({
           </div>
 
           <div className="mt-3 inline-flex rounded-full bg-[#e8f2ff] px-2 py-1 text-[10px] font-medium text-[#2563eb] sm:mt-6 sm:px-2.5 sm:text-[11px]">
-            7kg Cabin • 15kg Check-in
+            {baggageSummary}
           </div>
 
           <button

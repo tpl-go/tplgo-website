@@ -1,5 +1,8 @@
 import {
   normalizeFlightCurrency,
+  type FlightDisplayPriceSnapshot,
+  type FlightPaymentQuoteSnapshot,
+  type FlightPriceSnapshot,
   type FlightCurrency,
 } from "@/app/lib/flights/flightCurrency";
 
@@ -20,6 +23,9 @@ export type FlightReviewPayload = {
     backendRequestId?: string;
     priceTotal?: number;
     currency?: FlightCurrency;
+    supplierPrice?: FlightPriceSnapshot;
+    displayPrice?: FlightDisplayPriceSnapshot;
+    paymentQuote?: FlightPaymentQuoteSnapshot;
     priceConfirmationId?: string;
     priceStatus?: string;
     smokeRunId?: string;
@@ -217,6 +223,36 @@ function normalizeBackendOffer(value: FlightReviewPayload["backendOffer"]): Flig
     ...(value.backendRequestId ? { backendRequestId: value.backendRequestId } : {}),
     ...(Number.isFinite(Number(value.priceTotal)) ? { priceTotal: Number(value.priceTotal) } : {}),
     currency: normalizeFlightCurrency(value.currency),
+    ...(value.supplierPrice ? {
+      supplierPrice: {
+        amount: Number(value.supplierPrice.amount || 0),
+        currency: normalizeFlightCurrency(value.supplierPrice.currency),
+      },
+    } : {}),
+    ...(value.displayPrice ? {
+      displayPrice: {
+        amount: Number(value.displayPrice.amount || 0),
+        currency: normalizeFlightCurrency(value.displayPrice.currency),
+        ...(value.displayPrice.fxRate ? { fxRate: value.displayPrice.fxRate } : {}),
+        ...(value.displayPrice.fxSource ? { fxSource: value.displayPrice.fxSource } : {}),
+        ...(value.displayPrice.fxTimestamp ? { fxTimestamp: value.displayPrice.fxTimestamp } : {}),
+        ...(value.displayPrice.roundingVersion ? { roundingVersion: value.displayPrice.roundingVersion } : {}),
+      },
+    } : {}),
+    ...(value.paymentQuote ? {
+      paymentQuote: {
+        supplierAmount: Number(value.paymentQuote.supplierAmount || 0),
+        supplierCurrency: normalizeFlightCurrency(value.paymentQuote.supplierCurrency),
+        displayAmount: Number(value.paymentQuote.displayAmount || 0),
+        displayCurrency: normalizeFlightCurrency(value.paymentQuote.displayCurrency),
+        payableAmount: Number(value.paymentQuote.payableAmount || 0),
+        payableCurrency: normalizeFlightCurrency(value.paymentQuote.payableCurrency),
+        ...(value.paymentQuote.fxRate ? { fxRate: value.paymentQuote.fxRate } : {}),
+        ...(value.paymentQuote.fxTimestamp ? { fxTimestamp: value.paymentQuote.fxTimestamp } : {}),
+        expiresAt: value.paymentQuote.expiresAt,
+        quoteId: value.paymentQuote.quoteId,
+      },
+    } : {}),
     ...(value.priceConfirmationId ? { priceConfirmationId: value.priceConfirmationId } : {}),
     ...(value.priceStatus ? { priceStatus: value.priceStatus } : {}),
     ...(value.smokeRunId ? { smokeRunId: value.smokeRunId } : {}),

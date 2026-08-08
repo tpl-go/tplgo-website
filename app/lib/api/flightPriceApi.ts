@@ -1,5 +1,10 @@
 import { tplApiRequest, type TplApiResult } from "./tplApiClient";
-import type { FlightCurrency } from "@/app/lib/flights/flightCurrency";
+import type {
+  FlightCurrency,
+  FlightDisplayPriceSnapshot,
+  FlightPaymentQuoteSnapshot,
+  FlightPriceSnapshot,
+} from "@/app/lib/flights/flightCurrency";
 
 export type BackendFlightPriceConfirmRequest = {
   searchId: string;
@@ -10,9 +15,13 @@ export type BackendFlightPriceConfirmRequest = {
     infants: number;
   };
   currency: "INR";
+  displayCurrency?: FlightCurrency;
   clientOfferSnapshot?: {
     total: number;
     currency: FlightCurrency;
+    displayTotal?: number;
+    displayCurrency?: FlightCurrency;
+    paymentQuoteId?: string;
   };
 };
 
@@ -34,6 +43,9 @@ export type BackendFlightPriceConfirmResponse = {
     total: number;
     currency: FlightCurrency;
   };
+  supplierPrice?: FlightPriceSnapshot;
+  displayPrice?: FlightDisplayPriceSnapshot;
+  paymentQuote?: FlightPaymentQuoteSnapshot;
   priceChanged: boolean;
   previousTotal?: number;
   ticketingAllowed: false;

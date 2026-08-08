@@ -22,7 +22,12 @@ import {
   searchBackendFlights,
   type BackendFlightSearchRequest,
 } from "@/app/lib/api/flightSearchApi";
-import { formatFlightMoney, normalizeFlightCurrency } from "@/app/lib/flights/flightCurrency";
+import {
+  formatFlightMoney,
+  normalizeFlightCurrency,
+  readFlightDisplayCurrencyPreference,
+  type FlightCurrency,
+} from "@/app/lib/flights/flightCurrency";
 import {
   isFlightBackendStateExpired,
   validateFlightSearchState,
@@ -138,6 +143,7 @@ export default function OneWayResultsLayout({
   const [selectedDate] = useState(initialSelectedDate);
   const [sortType, setSortType] = useState("cheapest");
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [requestedDisplayCurrency, setRequestedDisplayCurrency] = useState<FlightCurrency>("INR");
   const [backendFlights, setBackendFlights] = useState<DummyFlight[] | null>(null);
   const [backendSearchState, setBackendSearchState] = useState<{
     status:
@@ -156,9 +162,20 @@ export default function OneWayResultsLayout({
     return generateDummyFlights(fromCity, toCity);
   }, [fromCity, toCity]);
 
+  useEffect(() => {
+    setRequestedDisplayCurrency(readFlightDisplayCurrencyPreference());
+    const syncCurrency = () => setRequestedDisplayCurrency(readFlightDisplayCurrencyPreference());
+    window.addEventListener("TPL_FLIGHT_CURRENCY_UPDATED", syncCurrency as EventListener);
+    window.addEventListener("storage", syncCurrency);
+    return () => {
+      window.removeEventListener("TPL_FLIGHT_CURRENCY_UPDATED", syncCurrency as EventListener);
+      window.removeEventListener("storage", syncCurrency);
+    };
+  }, []);
+
   const backendSearchRequest = useMemo(
-    () => buildBackendFlightSearchRequest(state),
-    [state]
+    () => buildBackendFlightSearchRequest(state, requestedDisplayCurrency),
+    [state, requestedDisplayCurrency]
   );
 
   useEffect(() => {
@@ -1009,9 +1026,12 @@ export default function OneWayResultsLayout({
   );
 }
 
-function buildBackendFlightSearchRequest(state: FlightState): BackendFlightSearchRequest | null {
+function buildBackendFlightSearchRequest(
+  state: FlightState,
+  displayCurrency: FlightCurrency
+): BackendFlightSearchRequest | null {
   const validation = validateFlightSearchState(state);
-  return validation.ok ? validation.request : null;
+  return validation.ok ? { ...validation.request, displayCurrency } : null;
 }
 
 function BackendSearchNotice({

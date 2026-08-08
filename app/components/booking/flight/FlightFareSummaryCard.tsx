@@ -8,6 +8,11 @@ import {
   getSmartActiveOfferItem,
   SmartOfferItem,
 } from "@/app/lib/smartOffers";
+import {
+  formatFlightMoney,
+  normalizeFlightCurrency,
+  type FlightCurrency,
+} from "@/app/lib/flights/flightCurrency";
 
 type WalletBreakdown = {
   promoUsed: number;
@@ -17,6 +22,7 @@ type WalletBreakdown = {
 
 type Props = {
   travellerCount: number;
+  currency?: FlightCurrency;
   perAdultBaseFare: number;
 
   baseFare: number;
@@ -51,12 +57,13 @@ type Props = {
   onProceed: () => void;
 };
 
-function formatPrice(value: number) {
-  return `₹${Math.abs(value || 0).toLocaleString("en-IN")}`;
+function formatPrice(value: number, currency: FlightCurrency = "INR") {
+  return formatFlightMoney(Math.abs(value || 0), currency);
 }
 
 export default function FlightFareSummaryCard({
   travellerCount,
+  currency: inputCurrency = "INR",
   perAdultBaseFare,
 
   baseFare,
@@ -90,6 +97,7 @@ export default function FlightFareSummaryCard({
   buttonLabel = "Proceed to Book",
   onProceed,
 }: Props) {
+  const currency = normalizeFlightCurrency(inputCurrency);
   const [smartOffer, setSmartOffer] =
     useState<SmartOfferItem | null>(null);
 
@@ -193,7 +201,7 @@ export default function FlightFareSummaryCard({
                     <Tag className="h-4 w-4" />
 
                     <span>
-                      You saved {formatPrice(finalAppliedOffer)} instantly
+                      You saved {formatPrice(finalAppliedOffer, currency)} instantly
                     </span>
                   </div>
                 </div>
@@ -208,29 +216,30 @@ export default function FlightFareSummaryCard({
               value={baseFare}
               detail={
                 travellerCount > 1
-                  ? `₹${perAdultBaseFare.toLocaleString("en-IN")} x ${travellerCount}`
+                  ? `${formatPrice(perAdultBaseFare, currency)} x ${travellerCount}`
                   : undefined
               }
+              currency={currency}
             />
 
-            <FareRow label="Taxes & Fees" value={taxesAndFees} />
+            <FareRow label="Taxes & Fees" value={taxesAndFees} currency={currency} />
 
             {seatStatus === "skipped" ? (
               <StatusRow label="Seat Selection" value="Skipped" />
             ) : (
-              <FareRow label="Seat Selection" value={seatTotal} />
+              <FareRow label="Seat Selection" value={seatTotal} currency={currency} />
             )}
 
             {mealStatus === "skipped" ? (
               <StatusRow label="Meal Selection" value="Skipped" />
             ) : (
-              <FareRow label="Meal Selection" value={mealTotal} />
+              <FareRow label="Meal Selection" value={mealTotal} currency={currency} />
             )}
 
             {cabStatus === "skipped" ? (
               <StatusRow label="Cab" value="Skipped" />
             ) : (
-              <FareRow label="Cab" value={cabTotal} />
+              <FareRow label="Cab" value={cabTotal} currency={currency} />
             )}
 
             {insuranceStatus === "skipped" ? (
@@ -239,13 +248,14 @@ export default function FlightFareSummaryCard({
               <FareRow
                 label="Travel Insurance"
                 value={insuranceTotal}
+                currency={currency}
               />
             )}
 
             {addonsStatus === "skipped" ? (
               <StatusRow label="Add-ons" value="Skipped" />
             ) : (
-              <FareRow label="Add-ons" value={addonsTotal} />
+              <FareRow label="Add-ons" value={addonsTotal} currency={currency} />
             )}
 
             <FareRow
@@ -255,12 +265,14 @@ export default function FlightFareSummaryCard({
                   : "Applied Offer"
               }
               value={-finalAppliedOffer}
+              currency={currency}
               positiveOrange
             />
 
             <FareRow
               label="Discount"
               value={-discount}
+              currency={currency}
               positiveOrange
             />
 
@@ -269,6 +281,7 @@ export default function FlightFareSummaryCard({
                 <FareRow
                   label="TPL Credit"
                   value={-tplCredit}
+                  currency={currency}
                   positiveOrange
                 />
 
@@ -284,6 +297,7 @@ export default function FlightFareSummaryCard({
                       <MiniWalletRow
                         label="Promo Credit"
                         value={promoUsed}
+                        currency={currency}
                       />
                     ) : null}
 
@@ -291,6 +305,7 @@ export default function FlightFareSummaryCard({
                       <MiniWalletRow
                         label="Earned Credit"
                         value={earnedUsed}
+                        currency={currency}
                       />
                     ) : null}
 
@@ -298,13 +313,14 @@ export default function FlightFareSummaryCard({
                       <MiniWalletRow
                         label="Refund Wallet"
                         value={refundUsed}
+                        currency={currency}
                       />
                     ) : null}
                   </div>
                 )}
               </>
             ) : (
-              <FareRow label="TPL Credit" value={0} />
+              <FareRow label="TPL Credit" value={0} currency={currency} />
             )}
 
             {refundWalletAvailable > 0 &&
@@ -326,10 +342,7 @@ export default function FlightFareSummaryCard({
                     </span>
 
                     <span className="mt-1 block text-[12px] font-semibold leading-[18px] text-[#6b7280]">
-                      Available balance ₹
-                      {refundWalletAvailable.toLocaleString(
-                        "en-IN"
-                      )}
+                      Available balance {formatPrice(refundWalletAvailable, currency)}
                     </span>
                   </span>
                 </label>
@@ -338,8 +351,7 @@ export default function FlightFareSummaryCard({
 
             {earnedOnThisBooking > 0 ? (
               <div className="mt-1 rounded-[14px] border border-[#fed7aa] bg-[linear-gradient(135deg,#fff7ed,#ffffff)] p-3 text-[12px] font-extrabold leading-[18px] text-[#ea580c]">
-                🎉 You will earn ₹
-                {earnedOnThisBooking.toLocaleString("en-IN")} TPL
+                You will earn {formatPrice(earnedOnThisBooking, currency)} TPL
                 Earned Credit after this booking.
               </div>
             ) : null}
@@ -353,7 +365,7 @@ export default function FlightFareSummaryCard({
               </div>
 
               <div className="whitespace-nowrap text-[30px] font-extrabold text-[#111827] max-md:text-[24px]">
-                ₹{totalAmount.toLocaleString("en-IN")}
+                {formatPrice(totalAmount, currency)}
               </div>
             </div>
           </div>
@@ -394,11 +406,13 @@ function FareRow({
   value,
   detail,
   positiveOrange = false,
+  currency = "INR",
 }: {
   label: string;
   value: number;
   detail?: string;
   positiveOrange?: boolean;
+  currency?: FlightCurrency;
 }) {
   const isNegative = value < 0;
 
@@ -426,7 +440,7 @@ function FareRow({
         }`}
       >
         {isNegative ? "-" : ""}
-        {formatPrice(value)}
+        {formatPrice(value, currency)}
       </div>
     </div>
   );
@@ -435,9 +449,11 @@ function FareRow({
 function MiniWalletRow({
   label,
   value,
+  currency = "INR",
 }: {
   label: string;
   value: number;
+  currency?: FlightCurrency;
 }) {
   return (
     <div className="mt-1.5 flex items-center justify-between gap-3">
@@ -446,7 +462,7 @@ function MiniWalletRow({
       </span>
 
       <span className="whitespace-nowrap text-[12px] font-extrabold text-[#ea580c]">
-        -₹{Number(value || 0).toLocaleString("en-IN")}
+        -{formatPrice(Number(value || 0), currency)}
       </span>
     </div>
   );
