@@ -54,7 +54,6 @@ import {
 } from "@/app/lib/flights/flightCurrency";
 
 import FlightPaymentTopSummary from "@/app/components/payment/flight/FlightPaymentTopSummary";
-import FlightPaymentInsuranceCard from "@/app/components/payment/flight/FlightPaymentInsuranceCard";
 import FlightPaymentOptionSection from "@/app/components/payment/flight/FlightPaymentOptionSection";
 import FlightPaymentPriceCard from "@/app/components/payment/flight/FlightPaymentPriceCard";
 
@@ -240,8 +239,6 @@ export default function FlightPaymentPage() {
   >("idle");
   const [paymentFailureMessage, setPaymentFailureMessage] = useState("");
   const [storedPayload, setStoredPayload] = useState<StoredPayload | null>(null);
-  const [insuranceSelected, setInsuranceSelected] = useState(false);
-  const [insuranceAmount, setInsuranceAmount] = useState(0);
   const [activeUser, setActiveUser] = useState<any>(null);
   const [wallet, setWallet] = useState<Wallet>({
     promoCredit: 0,
@@ -263,14 +260,6 @@ export default function FlightPaymentPage() {
     try {
       const parsed: StoredPayload = JSON.parse(raw);
       setStoredPayload(parsed);
-
-      if (
-        parsed?.insuranceData?.insurancePrice &&
-        parsed.insuranceData.insurancePrice > 0
-      ) {
-        setInsuranceSelected(true);
-        setInsuranceAmount(parsed.insuranceData.insurancePrice);
-      }
 
       if (typeof parsed?.timerLeft === "number" && parsed.timerLeft > 0) {
         setTimeLeft(parsed.timerLeft);
@@ -353,10 +342,32 @@ export default function FlightPaymentPage() {
 
   const reviewData = storedPayload?.reviewData;
   const travellerValidation = storedPayload?.travellerValidation;
-  const seatMealData = storedPayload?.seatMealData || {};
-  const cabData = storedPayload?.cabData || {};
-  const addonsData = storedPayload?.addonsData || {};
   const offerData = storedPayload?.offerData || null;
+  const safeSeatMealData = {
+    seats: [],
+    meals: [],
+    seatTotal: 0,
+    mealTotal: 0,
+    seatStatus: "skipped" as const,
+    mealStatus: "skipped" as const,
+  };
+  const safeCabData = {
+    cabType: "none" as const,
+    cabStatus: "skipped" as const,
+    cabLabel: "Cab not available",
+    cabPrice: 0,
+  };
+  const safeInsuranceData = {
+    insuranceStatus: "skipped" as const,
+    insuranceLabel: "Travel insurance not available",
+    insurancePrice: 0,
+  };
+  const safeAddonsData = {
+    addonsStatus: "skipped" as const,
+    addonsLabel: "Add-ons not available",
+    addonsPrice: 0,
+    selectedItems: [],
+  };
 
   const totalTravellers =
     (reviewData?.passengers?.adults || 0) +
@@ -370,14 +381,12 @@ export default function FlightPaymentPage() {
     totalTravellers;
     const tax = reviewData?.pricing?.tax || 0;
     const surcharge = reviewData?.pricing?.surcharge || 0;
-    const seatTotal = seatMealData?.seatTotal || 0;
-    const mealTotal = seatMealData?.mealTotal || 0;
-    const cabTotal = cabData?.cabPrice || 0;
-    const addonsTotal = addonsData?.addonsPrice || 0;
+    const seatTotal = 0;
+    const mealTotal = 0;
+    const cabTotal = 0;
+    const addonsTotal = 0;
     const appliedOffer = offerData?.discountAmount || 0;
     const discount = reviewData?.pricing?.discount || 0;
-    const oldTplCredit = reviewData?.pricing?.tplCredit || 0;
-
     const benefitPricing = applyBenefitPricing({
   baseAmount: baseFare,
 
@@ -387,9 +396,7 @@ export default function FlightPaymentPage() {
   seatCharges: seatTotal,
   mealCharges: mealTotal,
   cabCharges: cabTotal,
-  insuranceCharges: insuranceSelected
-    ? insuranceAmount
-    : 0,
+  insuranceCharges: 0,
 
   addOns: addonsTotal,
 
@@ -434,7 +441,7 @@ const finalTotalAmount =
   seatTotal,
   mealTotal,
   cabTotal,
-  insuranceTotal: insuranceSelected ? insuranceAmount : 0,
+  insuranceTotal: 0,
   addonsTotal,
   appliedOffer,
   discount,
@@ -447,11 +454,6 @@ const finalTotalAmount =
   }, [
     reviewData,
     totalTravellers,
-    seatMealData,
-    cabData,
-    addonsData,
-    insuranceSelected,
-    insuranceAmount,
     offerData,
     activeUser,
     wallet,
@@ -824,13 +826,10 @@ const finalTotalAmount =
           },
           reviewData,
           travellerValidation,
-          seatMealData,
-          cabData,
-          insuranceData: {
-            insuranceStatus: insuranceSelected ? "selected" : "skipped",
-            insurancePrice: insuranceSelected ? insuranceAmount : 0,
-          },
-          addonsData,
+          seatMealData: safeSeatMealData,
+          cabData: safeCabData,
+          insuranceData: safeInsuranceData,
+          addonsData: safeAddonsData,
           offerData,
           walletData: priceBreakup.walletCalc,
           walletBreakdown: priceBreakup.walletCalc,
@@ -975,13 +974,10 @@ const finalTotalAmount =
           : {}),
         reviewData,
         travellerValidation,
-        seatMealData,
-        cabData,
-        insuranceData: {
-          insuranceStatus: insuranceSelected ? "selected" : "skipped",
-          insurancePrice: insuranceSelected ? insuranceAmount : 0,
-        },
-        addonsData,
+        seatMealData: safeSeatMealData,
+        cabData: safeCabData,
+        insuranceData: safeInsuranceData,
+        addonsData: safeAddonsData,
         offerData,
         walletData: priceBreakup.walletCalc,
         walletBreakdown: priceBreakup.walletCalc,
@@ -1257,16 +1253,10 @@ leadTraveller: {
             <FlightPaymentTopSummary
               reviewData={reviewData}
               travellerValidation={travellerValidation}
-              seatMealData={storedPayload?.seatMealData}
-              cabData={storedPayload?.cabData}
-              insuranceData={{
-                insuranceStatus: insuranceSelected ? "selected" : "skipped",
-                insuranceLabel: insuranceSelected
-                  ? "Travel Insurance Added"
-                  : "Travel Insurance Skipped",
-                insurancePrice: insuranceSelected ? insuranceAmount : 0,
-              }}
-              addonsData={storedPayload?.addonsData}
+              seatMealData={safeSeatMealData}
+              cabData={safeCabData}
+              insuranceData={safeInsuranceData}
+              addonsData={safeAddonsData}
               offerData={storedPayload?.offerData}
             />
 
@@ -1333,23 +1323,6 @@ leadTraveller: {
                 ) : null}
               </div>
             </div>
-
-            <FlightPaymentInsuranceCard
-              totalTravellers={totalTravellers}
-              defaultSelected={insuranceSelected}
-              pricePerTraveller={
-                totalTravellers > 0
-                  ? Math.round(
-                      (storedPayload?.insuranceData?.insurancePrice ||
-                        349 * totalTravellers) / totalTravellers
-                    )
-                  : 349
-              }
-              onSelectionChange={({ selected, totalInsuranceAmount }) => {
-                setInsuranceSelected(selected);
-                setInsuranceAmount(totalInsuranceAmount);
-              }}
-            />
 
             <FlightPaymentOptionSection
               payableAmount={priceBreakup.totalAmount}

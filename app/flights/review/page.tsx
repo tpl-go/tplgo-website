@@ -123,26 +123,26 @@ export default function FlightReviewPage() {
     meals: [],
     seatTotal: 0,
     mealTotal: 0,
-    seatStatus: "pending",
-    mealStatus: "pending",
+    seatStatus: "skipped",
+    mealStatus: "skipped",
   });
 
   const [cabData, setCabData] = useState<CabPayload>({
     cabType: "none",
-    cabStatus: "pending",
-    cabLabel: "No cab selected",
+    cabStatus: "skipped",
+    cabLabel: "Cab not available",
     cabPrice: 0,
   });
 
   const [insuranceData, setInsuranceData] = useState<InsurancePayload>({
-    insuranceStatus: "pending",
-    insuranceLabel: "No insurance selected",
+    insuranceStatus: "skipped",
+    insuranceLabel: "Travel insurance not available",
     insurancePrice: 0,
   });
 
   const [addonsData, setAddonsData] = useState<AddonsPayload>({
-    addonsStatus: "pending",
-    addonsLabel: "No add-on selected",
+    addonsStatus: "skipped",
+    addonsLabel: "Add-ons not available",
     addonsPrice: 0,
   });
 
@@ -321,11 +321,11 @@ const benefitPricing = applyBenefitPricing({
   taxes: tax,
   fees: surcharge,
 
-  seatCharges: seatMealData.seatTotal,
-  mealCharges: seatMealData.mealTotal,
-  cabCharges: cabData.cabPrice,
-  insuranceCharges: insuranceData.insurancePrice,
-  addOns: addonsData.addonsPrice,
+  seatCharges: 0,
+  mealCharges: 0,
+  cabCharges: 0,
+  insuranceCharges: 0,
+  addOns: 0,
 
   offerDiscount: appliedOfferAmount,
 
@@ -352,13 +352,6 @@ const finalTotalAmount = benefitPricing.finalPayable;
 
   const isTravellerDone = travellerValidation?.canProceed ?? false;
 
-  const isSeatMealDone =
-    seatMealData.seatStatus !== "pending" &&
-    seatMealData.mealStatus !== "pending";
-
-  const isCabDone = cabData.cabStatus !== "pending";
-  const isInsuranceDone = insuranceData.insuranceStatus !== "pending";
-
   const blockerMessage = backendBlockerMessage
     ? backendBlockerMessage
     : backendPriceState === "checking"
@@ -377,12 +370,6 @@ const finalTotalAmount = benefitPricing.finalPayable;
     ? "Session expired. Please refresh price and continue again."
     : !isTravellerDone
     ? "Please fill Traveller Detail first."
-    : !isSeatMealDone
-    ? "Please complete Seat & Meal section."
-    : !isCabDone
-    ? "Please complete Cab section."
-    : !isInsuranceDone
-    ? "Please complete Travel Insurance section."
     : "";
 
   const canProceed =
@@ -393,10 +380,7 @@ const finalTotalAmount = benefitPricing.finalPayable;
     backendPriceState !== "failed" &&
     backendSimulationState !== "creating" &&
     backendSimulationState !== "failed" &&
-    isTravellerDone &&
-    isSeatMealDone &&
-    isCabDone &&
-    isInsuranceDone;
+    isTravellerDone;
 
 const reviewText = JSON.stringify(reviewData || {}).toLowerCase();
 
@@ -417,9 +401,9 @@ const isInternationalFlight =
   const isSeatMealUnlocked =
     travellerValidation?.allRequiredTravellersCompleted ?? false;
 
-  const isCabUnlocked = isSeatMealDone;
-  const isInsuranceUnlocked = isCabDone;
-  const isAddonsUnlocked = isInsuranceDone;
+  const isCabUnlocked = isTravellerDone;
+  const isInsuranceUnlocked = isTravellerDone;
+  const isAddonsUnlocked = isTravellerDone;
   const bookingTypeLabel =
     reviewData.bookingType === "multiCity"
       ? "Multi City"
@@ -853,10 +837,31 @@ seatTotal={seatMealData.seatTotal}
   const payload = {
     reviewData: nextReviewData,
     travellerValidation,
-    seatMealData,
-    cabData,
-    insuranceData,
-    addonsData,
+    seatMealData: {
+      seats: [],
+      meals: [],
+      seatTotal: 0,
+      mealTotal: 0,
+      seatStatus: "skipped",
+      mealStatus: "skipped",
+    },
+    cabData: {
+      cabType: "none",
+      cabStatus: "skipped",
+      cabLabel: "Cab not available",
+      cabPrice: 0,
+    },
+    insuranceData: {
+      insuranceStatus: "skipped",
+      insuranceLabel: "Travel insurance not available",
+      insurancePrice: 0,
+    },
+    addonsData: {
+      addonsStatus: "skipped",
+      addonsLabel: "Add-ons not available",
+      addonsPrice: 0,
+      selectedItems: [],
+    },
 
     offerData:
   finalSelectedOffer

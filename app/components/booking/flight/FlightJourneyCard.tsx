@@ -39,11 +39,6 @@ type FareRuleRow = {
   value: string;
 };
 
-type BaggageOption = {
-  label: string;
-  price: number;
-};
-
 type Props = {
   title: string;
   routeLabel: string;
@@ -56,7 +51,6 @@ type Props = {
   segments: Segment[];
   cancellationRules?: FareRuleRow[];
   dateChangeRules?: FareRuleRow[];
-  baggageOptions?: BaggageOption[];
   includedCheckInText?: string;
 };
 
@@ -70,33 +64,14 @@ export default function FlightJourneyCard({
   cabinClass,
   isInternational = false,
   segments,
-  cancellationRules = [
-    { timeframe: "0 hours to 2 hours*", value: "ADULT: Non Refundable" },
-    { timeframe: "2 hours to 365 days*", value: "ADULT: ₹ 4,300 + ₹ 350" },
-  ],
-  dateChangeRules = [
-    {
-      timeframe: "0 hours to 2 hours*",
-      value: "ADULT: Non Changeable",
-    },
-    {
-      timeframe: "2 hours to 365 days*",
-      value: "ADULT: ₹ 3,000 + ₹ 350 + Fare difference",
-    },
-  ],
-  baggageOptions = [
-    { label: "Additional 3 KG", price: 1800 },
-    { label: "Additional 5 KG", price: 3000 },
-    { label: "Additional 10 KG", price: 6000 },
-    { label: "Additional 15 KG", price: 9000 },
-  ],
+  cancellationRules = [],
+  dateChangeRules = [],
   includedCheckInText = "Included Check-in baggage per person - 15 KGS",
 }: Props) {
   const [showFareRules, setShowFareRules] = useState(false);
   const [fareRuleTab, setFareRuleTab] = useState<"cancellation" | "dateChange">(
     "cancellation"
   );
-  const [showBaggageModal, setShowBaggageModal] = useState(false);
 
   const activeRules =
     fareRuleTab === "cancellation" ? cancellationRules : dateChangeRules;
@@ -117,7 +92,7 @@ export default function FlightJourneyCard({
       return `Check-in baggage is not included for ${codeText}. You can buy extra baggage from the airline counter.`;
     }
 
-    return "Got excess baggage? Don't stress, buy extra check-in baggage allowance.";
+    return "Extra paid baggage is not available for this fare yet.";
   }, [includedCheckInText, segments, routeLabel]);
 
   const actionStripBg = includedCheckInText.toLowerCase().includes("0 kg")
@@ -316,22 +291,17 @@ export default function FlightJourneyCard({
             {baggageAlertText}
           </div>
 
-          <button
-            type="button"
-            onClick={() => setShowBaggageModal(true)}
+          <div
             className="max-md:min-h-10"
             style={{
-              border: "none",
-              background: "transparent",
-              color: "#0ea5e9",
+              color: "#64748b",
               fontSize: "13px",
               fontWeight: 700,
-              cursor: "pointer",
               whiteSpace: "nowrap",
             }}
           >
-            ADD BAGGAGE
-          </button>
+            EXTRA BAGGAGE UNAVAILABLE
+          </div>
         </div>
       </div>
 
@@ -391,46 +361,50 @@ export default function FlightJourneyCard({
                 </div>
 
                 <div style={{ padding: "14px 16px 18px 16px" }}>
-                  <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    border: "1px solid #d9e2ec",
-                    overflowX: "auto",
-                  }}
-                >
-                    <div style={tableHeadStyle}>
-                      Time frame
-                      <div style={tableSubHeadStyle}>
-                        (From Scheduled Flight departure)
+                  {activeRules.length > 0 ? (
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 1fr",
+                        border: "1px solid #d9e2ec",
+                        overflowX: "auto",
+                      }}
+                    >
+                      <div style={tableHeadStyle}>
+                        Time frame
+                        <div style={tableSubHeadStyle}>
+                          From scheduled flight departure
+                        </div>
                       </div>
+
+                      <div style={tableHeadStyle}>
+                        Supplier rule
+                        <div style={tableSubHeadStyle}>Provider supplied</div>
+                      </div>
+
+                      {activeRules.map((row, index) => (
+                        <FragmentRow
+                          key={index}
+                          left={row.timeframe}
+                          right={row.value}
+                        />
+                      ))}
                     </div>
-
-                    <div style={tableHeadStyle}>
-                      {fareRuleTab === "cancellation"
-                        ? "Airline Fee + MMT Fee"
-                        : "Airline Fee + MMT Fee + Fare difference"}
-                      <div style={tableSubHeadStyle}>(Per passenger)</div>
+                  ) : (
+                    <div
+                      style={{
+                        border: "1px solid #d9e2ec",
+                        background: "#ffffff",
+                        padding: "16px",
+                        fontSize: "14px",
+                        fontWeight: 600,
+                        color: "#4b5563",
+                        lineHeight: "22px",
+                      }}
+                    >
+                      Fare rules not provided by supplier. Please recheck before booking.
                     </div>
-
-                    {activeRules.map((row, index) => (
-                      <FragmentRow
-                        key={index}
-                        left={row.timeframe}
-                        right={row.value}
-                      />
-                    ))}
-                  </div>
-
-                  <div
-                    style={{
-                      marginTop: "12px",
-                      fontSize: "14px",
-                      color: "#4b5563",
-                    }}
-                  >
-                    *From the Time of Departure
-                  </div>
+                  )}
                 </div>
               </div>
 
@@ -444,155 +418,8 @@ export default function FlightJourneyCard({
                   lineHeight: "22px",
                 }}
               >
-                <strong>*Important:</strong> The Airline fee is indicative.
-                Mentioned charges are per passenger. All refunds / changes remain
-                subject to airline approval and applicable fare rules.
-              </div>
-
-              {fareRuleTab === "dateChange" && (
-                <div
-                  style={{
-                    marginTop: "10px",
-                    padding: "12px 16px",
-                    background: "#eef8fb",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: "12px",
-                    fontSize: "14px",
-                    fontWeight: 700,
-                    color: "#0284c7",
-                  }}
-                >
-                  <span>Add Free Date Change for ₹ 99</span>
-                  <button
-                    type="button"
-                    style={{
-                      border: "none",
-                      background: "transparent",
-                      color: "#0ea5e9",
-                      fontWeight: 800,
-                      cursor: "pointer",
-                    }}
-                  >
-                    ADD
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </ModalOverlay>
-      )}
-
-      {showBaggageModal && (
-        <ModalOverlay onClose={() => setShowBaggageModal(false)}>
-          <div className="max-md:!max-h-[92vh] max-md:!w-full max-md:overflow-y-auto max-md:rounded-xl" style={modalCardStyle}>
-            <div style={modalHeaderStyle}>
-              <div
-                style={{
-                  fontSize: "18px",
-                  fontWeight: 800,
-                  color: "#111827",
-                }}
-              >
-                Add Extra Baggage
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setShowBaggageModal(false)}
-                style={closeBtnStyle}
-              >
-                ×
-              </button>
-            </div>
-
-            <div className="max-md:p-4" style={{ padding: "18px 22px 22px 22px" }}>
-              <div
-                style={{
-                  display: "inline-block",
-                  background: "#1457d6",
-                  color: "#ffffff",
-                  padding: "12px 16px",
-                  minWidth: "230px",
-                  marginBottom: "18px",
-                }}
-              >
-                <div style={{ fontSize: "22px", fontWeight: 700 }}>
-                  {routeLabel}
-                </div>
-                <div
-                  style={{
-                    marginTop: "4px",
-                    fontSize: "13px",
-                    opacity: 0.85,
-                  }}
-                >
-                  Selection pending
-                </div>
-              </div>
-
-              <div
-                style={{
-                  fontSize: "16px",
-                  color: "#374151",
-                  marginBottom: "22px",
-                }}
-              >
-                {includedCheckInText}
-              </div>
-
-              <div style={{ display: "grid", gap: "18px" }}>
-                {baggageOptions.map((item, index) => (
-                  <div
-                    key={index}
-                    className="max-md:!grid-cols-1 max-md:gap-2"
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "1fr 140px 140px",
-                      alignItems: "center",
-                      gap: "16px",
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontSize: "16px",
-                        fontWeight: 500,
-                        color: "#111827",
-                      }}
-                    >
-                      {item.label}
-                    </div>
-
-                    <div
-                      className="max-md:text-left"
-                      style={{
-                        textAlign: "right",
-                        fontSize: "18px",
-                        fontWeight: 700,
-                        color: "#111827",
-                      }}
-                    >
-                      ₹ {item.price.toLocaleString("en-IN")}
-                    </div>
-
-                    <button
-                      type="button"
-                      className="max-md:w-full"
-                      style={{
-                        height: "44px",
-                        border: "1px solid #d9e2ec",
-                        background: "#ffffff",
-                        fontSize: "16px",
-                        fontWeight: 700,
-                        color: "#111827",
-                        cursor: "pointer",
-                      }}
-                    >
-                      Add ＋
-                    </button>
-                  </div>
-                ))}
+                <strong>Important:</strong> Refunds and changes remain subject to
+                airline approval and supplier-provided fare rules.
               </div>
             </div>
           </div>

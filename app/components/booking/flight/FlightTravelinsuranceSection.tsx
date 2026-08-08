@@ -1,11 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
-
-type InsuranceStatus = "pending" | "selected" | "skipped";
+import { useEffect, useState } from "react";
 
 type InsurancePayload = {
-  insuranceStatus: InsuranceStatus;
+  insuranceStatus: "pending" | "selected" | "skipped";
   insuranceLabel: string;
   insurancePrice: number;
 };
@@ -15,54 +13,21 @@ type Props = {
   onChange?: (payload: InsurancePayload) => void;
 };
 
-const INSURANCE_PRICE_PER_TRAVELLER = 349;
+const EMPTY_INSURANCE_PAYLOAD: InsurancePayload = {
+  insuranceStatus: "skipped",
+  insuranceLabel: "Travel insurance not available",
+  insurancePrice: 0,
+};
 
 export default function FlightTravelinsuranceSection({
   isEnabled,
   onChange,
 }: Props) {
   const [isOpen, setIsOpen] = useState(true);
-  const [selectedOption, setSelectedOption] = useState<"yes" | "no" | "pending">(
-    "pending"
-  );
 
-  const insuranceStatus: InsuranceStatus = useMemo(() => {
-    if (selectedOption === "yes") return "selected";
-    if (selectedOption === "no") return "skipped";
-    return "pending";
-  }, [selectedOption]);
-
-  const insurancePrice = selectedOption === "yes" ? INSURANCE_PRICE_PER_TRAVELLER : 0;
-
-  const summaryText =
-    insuranceStatus === "selected"
-      ? `Trip Secure selected - ₹${insurancePrice.toLocaleString("en-IN")}`
-      : insuranceStatus === "skipped"
-      ? "Travel Insurance skipped"
-      : "No travel insurance selected";
-
-  const pushChange = (option: "yes" | "no" | "pending") => {
-    const nextStatus: InsuranceStatus =
-      option === "yes" ? "selected" : option === "no" ? "skipped" : "pending";
-
-    const nextPrice = option === "yes" ? INSURANCE_PRICE_PER_TRAVELLER : 0;
-
-    onChange?.({
-      insuranceStatus: nextStatus,
-      insuranceLabel:
-        option === "yes"
-          ? "Trip Secure selected"
-          : option === "no"
-          ? "Travel Insurance skipped"
-          : "No travel insurance selected",
-      insurancePrice: nextPrice,
-    });
-  };
-
-  const handleSelect = (option: "yes" | "no") => {
-    setSelectedOption(option);
-    pushChange(option);
-  };
+  useEffect(() => {
+    onChange?.(EMPTY_INSURANCE_PAYLOAD);
+  }, [onChange]);
 
   return (
     <section id="travel-insurance">
@@ -72,31 +37,9 @@ export default function FlightTravelinsuranceSection({
         onClick={() => setIsOpen((prev) => !prev)}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-          <span
-            style={{
-              width: "18px",
-              height: "18px",
-              borderRadius: "999px",
-              background: isEnabled ? "#22c55e" : "#d9534f",
-              color: "#fff",
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: "12px",
-              fontWeight: 800,
-            }}
-          >
-            {isEnabled ? "✓" : "!"}
-          </span>
+          <span style={statusDotStyle}>i</span>
 
-          <h3
-            style={{
-              margin: 0,
-              fontSize: "18px",
-              fontWeight: 800,
-              color: "#1f2937",
-            }}
-          >
+          <h3 style={{ margin: 0, fontSize: "18px", fontWeight: 800, color: "#1f2937" }}>
             Travel Insurance
           </h3>
         </div>
@@ -117,158 +60,20 @@ export default function FlightTravelinsuranceSection({
       {isOpen && (
         <div
           className="max-md:p-3"
-          style={{
-            padding: "18px",
-            background: "#ffffff",
-            borderTop: "1px solid #e5e7eb",
-          }}
+          style={{ padding: "18px", background: "#ffffff", borderTop: "1px solid #e5e7eb" }}
         >
-          {!isEnabled ? (
-            <div style={lockedBoxStyle}>
-              <div style={{ fontSize: "18px", fontWeight: 800, color: "#111827" }}>
-                Travel Insurance locked
-              </div>
-              <div
-                style={{
-                  marginTop: "8px",
-                  fontSize: "14px",
-                  color: "#6b7280",
-                  lineHeight: "22px",
-                }}
-              >
-                Please complete Cab section first to continue with Travel Insurance.
-              </div>
+          <div style={cardStyle}>
+            <div style={{ fontSize: "18px", fontWeight: 800, color: "#111827" }}>
+              Travel insurance coming soon
             </div>
-          ) : (
-            <div
-              className="max-md:p-3"
-              style={{
-                border: "1px solid #d9e2ec",
-                background: "#eef8ff",
-                padding: "18px",
-              }}
-            >
-              <div style={{ fontSize: "22px", fontWeight: 800, color: "#111827" }}>
-                Trip Secure
-              </div>
-
-              <div
-                className="max-md:text-[16px]"
-                style={{
-                  marginTop: "8px",
-                  fontSize: "18px",
-                  fontWeight: 800,
-                  color: "#111827",
-                }}
-              >
-                ₹349 <span style={{ fontSize: "14px", fontWeight: 600 }}>/ Traveller</span>
-              </div>
-
-              <div
-                style={{
-                  marginTop: "8px",
-                  fontSize: "14px",
-                  color: "#4b5563",
-                  lineHeight: "22px",
-                }}
-              >
-                {summaryText}
-              </div>
-
-              <div
-                className="max-md:!grid-cols-1"
-                style={{
-                  marginTop: "16px",
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr 1fr 160px",
-                  gap: "12px",
-                }}
-              >
-                <BenefitCard title="24x7 Support" subtitle="Lost Baggage Assistance" />
-                <BenefitCard title="Up to ₹5,500" subtitle="Missed Flight" />
-                <BenefitCard title="Up to ₹4,000" subtitle="Trip Cancellation" />
-                <div
-                  style={{
-                    border: "1px solid #d9e2ec",
-                    background: "#ffffff",
-                    minHeight: "74px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontWeight: 700,
-                    color: "#0284c7",
-                  }}
-                >
-                  View All Benefits →
-                </div>
-              </div>
-
-              <div
-                style={{
-                  marginTop: "16px",
-                  padding: "10px 12px",
-                  background: "#f6fbff",
-                  border: "1px solid #dbeafe",
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  color: "#374151",
-                }}
-              >
-                Recommended for your travel.
-              </div>
-
-              <div style={{ marginTop: "18px", display: "grid", gap: "10px" }}>
-                <label style={radioRowStyle}>
-                  <input
-                    type="radio"
-                    name="trip-secure"
-                    checked={selectedOption === "yes"}
-                    onChange={() => handleSelect("yes")}
-                  />
-                  <span>Yes, secure my trip.</span>
-                </label>
-
-                <label style={radioRowStyle}>
-                  <input
-                    type="radio"
-                    name="trip-secure"
-                    checked={selectedOption === "no"}
-                    onChange={() => handleSelect("no")}
-                  />
-                  <span>No, I will book without trip secure.</span>
-                </label>
-              </div>
+            <div style={bodyCopyStyle}>
+              Insurance is not available for purchase in this flight checkout. No insurance
+              premium or coverage has been added to your fare.
             </div>
-          )}
+          </div>
         </div>
       )}
     </section>
-  );
-}
-
-function BenefitCard({
-  title,
-  subtitle,
-}: {
-  title: string;
-  subtitle: string;
-}) {
-  return (
-    <div
-      style={{
-        border: "1px solid #d9e2ec",
-        background: "#ffffff",
-        padding: "14px",
-        minHeight: "74px",
-      }}
-    >
-      <div style={{ fontSize: "16px", fontWeight: 700, color: "#111827" }}>
-        {title}
-      </div>
-      <div style={{ marginTop: "4px", fontSize: "13px", color: "#4b5563" }}>
-        {subtitle}
-      </div>
-    </div>
   );
 }
 
@@ -285,17 +90,29 @@ const sectionHeaderStyle: React.CSSProperties = {
   cursor: "pointer",
 };
 
-const lockedBoxStyle: React.CSSProperties = {
-  border: "1px solid #f3d2d0",
-  background: "#fff7f7",
+const statusDotStyle: React.CSSProperties = {
+  width: "18px",
+  height: "18px",
+  borderRadius: "999px",
+  background: "#94a3b8",
+  color: "#fff",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  fontSize: "12px",
+  fontWeight: 900,
+  fontFamily: "Arial, sans-serif",
+};
+
+const cardStyle: React.CSSProperties = {
+  border: "1px solid #d9e2ec",
+  background: "#f8fbff",
   padding: "18px",
 };
 
-const radioRowStyle: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: "10px",
-  fontSize: "15px",
-  fontWeight: 600,
-  color: "#111827",
+const bodyCopyStyle: React.CSSProperties = {
+  marginTop: "8px",
+  fontSize: "14px",
+  color: "#4b5563",
+  lineHeight: "22px",
 };
