@@ -7,6 +7,7 @@ import MultiCityInternationalFilters from "./multicity/filters/MultiCityInternat
 import MultiCityCombinedFilters from "./multicity/filters/MultiCityCombinedFilters";
 import { MultiCityCombinedFiltersState } from "./multicity/filters/filterTypes";
 import { MultiCityLeg } from "../data/multicityFlights";
+import type { FlightCurrency } from "@/app/lib/flights/flightCurrency";
 
 export type FlightsFiltersState = {
   popular: string[];
@@ -49,6 +50,7 @@ type Props = {
   toCity?: string;
   minPrice?: number;
   maxPrice?: number;
+  priceCurrency?: FlightCurrency;
   departureAirportOptions?: AirportOption[];
   minDuration?: number;
   maxDuration?: number;
@@ -104,6 +106,7 @@ export default function FlightsFiltersSidebar({
   toCity = "",
   minPrice = 0,
   maxPrice = 0,
+  priceCurrency = "INR",
   departureAirportOptions = [],
   minDuration = 0,
   maxDuration = 0,
@@ -144,6 +147,7 @@ export default function FlightsFiltersSidebar({
             toCity={toCity}
             minPrice={minPrice}
             maxPrice={maxPrice}
+            priceCurrency={priceCurrency}
             minDuration={minDuration}
             maxDuration={maxDuration}
             minLayoverDuration={minLayoverDuration}
@@ -165,6 +169,7 @@ export default function FlightsFiltersSidebar({
           toCity={toCity}
           minPrice={minPrice}
           maxPrice={maxPrice}
+          priceCurrency={priceCurrency}
           departureAirportOptions={departureAirportOptions}
         />
       </div>

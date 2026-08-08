@@ -1,6 +1,10 @@
 "use client";
 
 import { FlightsFiltersState } from "../../FlightsFiltersSidebar";
+import {
+  formatFlightMoney,
+  type FlightCurrency,
+} from "@/app/lib/flights/flightCurrency";
 
 type SimpleOption = {
   id: string;
@@ -16,6 +20,7 @@ type Props = {
   toCity: string;
   minPrice: number;
   maxPrice: number;
+  priceCurrency?: FlightCurrency;
   minDuration: number;
   maxDuration: number;
   minLayoverDuration: number;
@@ -104,6 +109,7 @@ export default function OneWayInternationalFilters({
   toCity,
   minPrice,
   maxPrice,
+  priceCurrency = "INR",
   minDuration,
   maxDuration,
   minLayoverDuration,
@@ -291,7 +297,10 @@ export default function OneWayInternationalFilters({
     appliedChips.push({
       key: "priceRange",
       value: "priceRange",
-      label: `₹ ${priceRange[0].toLocaleString("en-IN")} - ₹ ${priceRange[1].toLocaleString("en-IN")}`,
+      label: `${formatFlightMoney(
+        priceRange[0],
+        priceCurrency
+      )} - ${formatFlightMoney(priceRange[1], priceCurrency)}`,
     });
   }
 
@@ -425,8 +434,8 @@ export default function OneWayInternationalFilters({
             className="w-full accent-[#0ea5e9]"
           />
           <div className="flex items-center justify-between text-[15px] text-[#111827]">
-            <span>₹ {priceRange[0].toLocaleString("en-IN")}</span>
-            <span>₹ {priceRange[1].toLocaleString("en-IN")}</span>
+            <span>{formatFlightMoney(priceRange[0], priceCurrency)}</span>
+            <span>{formatFlightMoney(priceRange[1], priceCurrency)}</span>
           </div>
         </div>
       </div>

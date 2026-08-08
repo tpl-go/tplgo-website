@@ -21,7 +21,7 @@ export function formatFlightMoney(
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
       currency: safeCurrency,
-      currencyDisplay: "symbol",
+      currencyDisplay: safeCurrency === "INR" ? "symbol" : "code",
       maximumFractionDigits: safeCurrency === "INR" ? 0 : 2,
     }).format(safeAmount);
   } catch {

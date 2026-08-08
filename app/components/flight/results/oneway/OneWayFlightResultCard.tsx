@@ -405,9 +405,14 @@ export default function FlightResultCard(props: Props) {
     [selectedFare.price, selectedFare.priceAmount]
   );
 
+  const selectedCurrency = selectedFare.currency || displayCurrency;
+
   const selectedOfferDiscount = useMemo(
-    () => calculateOfferDiscount(selectedBaseFare, activeOffer),
-    [selectedBaseFare, activeOffer]
+    () =>
+      selectedCurrency === "INR"
+        ? calculateOfferDiscount(selectedBaseFare, activeOffer)
+        : 0,
+    [selectedBaseFare, activeOffer, selectedCurrency]
   );
 
   const selectedBaseAfterOffer = Math.max(
@@ -416,7 +421,6 @@ export default function FlightResultCard(props: Props) {
   );
 
   const earnedOnThisFare = Math.round(selectedBaseAfterOffer * 0.02);
-  const selectedCurrency = selectedFare.currency || displayCurrency;
   const displayFareAfterOffer = formatFare(selectedBaseAfterOffer, selectedCurrency);
 
   const selectedFareForDetails: Fare = useMemo(

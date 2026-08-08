@@ -1,5 +1,10 @@
 "use client";
 
+import {
+  formatFlightMoney,
+  type FlightCurrency,
+} from "@/app/lib/flights/flightCurrency";
+
 type FiltersState = {
   popular: string[];
   departureAirports: string[];
@@ -25,6 +30,7 @@ type Props = {
   toCity: string;
   minPrice: number;
   maxPrice: number;
+  priceCurrency?: FlightCurrency;
   departureAirportOptions: AirportOption[];
 };
 
@@ -117,6 +123,7 @@ export default function OneWayDomesticFilters({
   toCity,
   minPrice,
   maxPrice,
+  priceCurrency = "INR",
   departureAirportOptions,
 }: Props) {
   const dynamicDefaultPriceRange: [number, number] = [minPrice, maxPrice];
@@ -252,9 +259,10 @@ export default function OneWayDomesticFilters({
     appliedChips.push({
       key: "priceRange",
       value: "priceRange",
-      label: `₹ ${priceRange[0].toLocaleString(
-        "en-IN"
-      )} - ₹ ${priceRange[1].toLocaleString("en-IN")}`,
+      label: `${formatFlightMoney(
+        priceRange[0],
+        priceCurrency
+      )} - ${formatFlightMoney(priceRange[1], priceCurrency)}`,
     });
   }
 
@@ -420,8 +428,8 @@ export default function OneWayDomesticFilters({
           />
 
           <div className="flex items-center justify-between text-[15px] text-[#111827]">
-            <span>₹ {priceRange[0].toLocaleString("en-IN")}</span>
-            <span>₹ {priceRange[1].toLocaleString("en-IN")}</span>
+            <span>{formatFlightMoney(priceRange[0], priceCurrency)}</span>
+            <span>{formatFlightMoney(priceRange[1], priceCurrency)}</span>
           </div>
         </div>
       </div>

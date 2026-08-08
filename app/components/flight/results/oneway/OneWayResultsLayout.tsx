@@ -120,6 +120,12 @@ function getEffectiveFlightPrice(flight: FlightPriceLike): number {
   return farePrices.length ? Math.min(...farePrices) : 0;
 }
 
+function getEffectiveFlightCurrency(flight: any) {
+  return normalizeFlightCurrency(
+    flight?.backendOffer?.currency || flight?.fares?.[0]?.currency
+  );
+}
+
 export default function OneWayResultsLayout({
   fromCity,
   toCity,
@@ -219,6 +225,10 @@ export default function OneWayResultsLayout({
 
   const baseFlights = backendFlights ?? localFlights;
   const backendSearchActive = isBackendFlightSearchEnabled() && Boolean(backendSearchRequest);
+  const displayCurrency = useMemo(
+    () => getEffectiveFlightCurrency(baseFlights.find((flight: any) => flight?.backendOffer) || baseFlights[0]),
+    [baseFlights]
+  );
 
   const { minPrice, maxPrice, minDuration, maxDuration } = useMemo(() => {
     if (!baseFlights.length) {
@@ -291,7 +301,10 @@ export default function OneWayResultsLayout({
         departureAirportMap.set(departAirportId, {
           id: departAirportId,
           label: departAirportName,
-          price: `₹ ${getEffectiveFlightPrice(flight).toLocaleString("en-IN")}`,
+          price: formatFlightMoney(
+            getEffectiveFlightPrice(flight),
+            getEffectiveFlightCurrency(flight)
+          ),
         });
       }
     });
@@ -415,9 +428,10 @@ export default function OneWayResultsLayout({
       chips.push({
         key: "priceRange",
         value: "priceRange",
-        label: `₹${safePriceRange[0].toLocaleString(
-          "en-IN"
-        )} - ₹${safePriceRange[1].toLocaleString("en-IN")}`,
+        label: `${formatFlightMoney(
+          safePriceRange[0],
+          displayCurrency
+        )} - ${formatFlightMoney(safePriceRange[1], displayCurrency)}`,
       });
     }
 
@@ -755,6 +769,7 @@ export default function OneWayResultsLayout({
       toCity={toCity}
       minPrice={minPrice}
       maxPrice={maxPrice}
+      priceCurrency={displayCurrency}
       departureAirportOptions={departureAirportOptions}
       minDuration={minDuration}
       maxDuration={maxDuration}
@@ -923,7 +938,7 @@ export default function OneWayResultsLayout({
                 arriveCity={toCity}
                 price={formatFlightMoney(
                   getEffectiveFlightPrice(card),
-                  normalizeFlightCurrency(card.backendOffer?.currency)
+                  getEffectiveFlightCurrency(card)
                 )}
                 timing={card.timing}
                 promo={card.promo}
