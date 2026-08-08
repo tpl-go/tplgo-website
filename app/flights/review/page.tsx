@@ -674,6 +674,7 @@ const isInternationalFlight =
                 isTravellerComplete={isSeatMealUnlocked}
                 travellerCount={totalTravellers}
                 seatOptions={ancillarySet?.seats || []}
+                seatMaps={ancillarySet?.seatMaps || []}
                 mealOptions={ancillarySet?.meals || []}
                 selectedAncillaryIds={selectedAncillaryIds}
                 isLoadingAncillaries={ancillaryState === "loading" || ancillaryState === "quoting"}

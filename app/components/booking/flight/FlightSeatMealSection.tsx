@@ -14,6 +14,16 @@ export type FlightReviewAncillaryOption = {
   };
 };
 
+export type FlightReviewSeatMap = {
+  seatMapId: string;
+  segmentRef: string;
+  cabin?: string;
+  rows: Array<{
+    rowNumber: string;
+    seats: FlightReviewAncillaryOption[];
+  }>;
+};
+
 type SeatMealPayload = {
   seats: {
     travellerId: string;
@@ -35,6 +45,7 @@ type Props = {
   isTravellerComplete: boolean;
   travellerCount: number;
   seatOptions?: FlightReviewAncillaryOption[];
+  seatMaps?: FlightReviewSeatMap[];
   mealOptions?: FlightReviewAncillaryOption[];
   selectedAncillaryIds?: string[];
   isLoadingAncillaries?: boolean;
@@ -56,6 +67,7 @@ export default function FlightSeatMealSection({
   isTravellerComplete,
   travellerCount,
   seatOptions = [],
+  seatMaps = [],
   mealOptions = [],
   selectedAncillaryIds = [],
   isLoadingAncillaries = false,
@@ -65,6 +77,7 @@ export default function FlightSeatMealSection({
 }: Props) {
   const [isOpen, setIsOpen] = useState(true);
   const hasRealSeats = seatOptions.some((item) => item.available);
+  const hasRealSeatMap = seatMaps.some((map) => map.rows.some((row) => row.seats.length > 0));
   const hasRealMeals = mealOptions.some((item) => item.available);
 
   useEffect(() => {
@@ -121,6 +134,12 @@ export default function FlightSeatMealSection({
               </div>
               {isLoadingAncillaries ? (
                 <div style={bodyCopyStyle}>Checking supplier seat availability.</div>
+              ) : hasRealSeatMap ? (
+                <SeatMapView
+                  seatMaps={seatMaps}
+                  selectedIds={selectedAncillaryIds}
+                  onToggle={onAncillaryToggle}
+                />
               ) : hasRealSeats ? (
                 <OptionList
                   options={seatOptions}
@@ -162,6 +181,72 @@ export default function FlightSeatMealSection({
         </div>
       )}
     </section>
+  );
+}
+
+function SeatMapView({
+  seatMaps,
+  selectedIds,
+  onToggle,
+}: {
+  seatMaps: FlightReviewSeatMap[];
+  selectedIds: string[];
+  onToggle?: (id: string) => void;
+}) {
+  return (
+    <div style={{ marginTop: "12px", display: "grid", gap: "14px" }}>
+      {seatMaps.map((seatMap, index) => (
+        <div key={seatMap.seatMapId} style={seatMapPanelStyle}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px", flexWrap: "wrap" }}>
+            <span style={{ fontSize: "13px", fontWeight: 900, color: "#111827" }}>
+              Segment {index + 1}
+            </span>
+            {seatMap.cabin ? (
+              <span style={{ fontSize: "12px", fontWeight: 800, color: "#4b5563", textTransform: "capitalize" }}>
+                {seatMap.cabin.replace(/_/g, " ")}
+              </span>
+            ) : null}
+          </div>
+
+          <div style={{ marginTop: "10px", display: "grid", gap: "8px" }}>
+            {seatMap.rows.map((row) => (
+              <div key={`${seatMap.seatMapId}-${row.rowNumber}`} style={seatMapRowStyle}>
+                <span style={seatMapRowLabelStyle}>{row.rowNumber}</span>
+                <div style={seatMapSeatGridStyle}>
+                  {row.seats.map((seat) => {
+                    const selected = selectedIds.includes(seat.id);
+                    const isFree = Number(seat.displayPrice.amount || 0) === 0;
+                    return (
+                      <button
+                        key={seat.id}
+                        type="button"
+                        disabled={!seat.available}
+                        onClick={() => onToggle?.(seat.id)}
+                        title={seat.available ? `${seat.label} ${formatFlightMoney(seat.displayPrice.amount, seat.displayPrice.currency)}` : `${seat.label} unavailable`}
+                        style={{
+                          ...seatButtonStyle,
+                          border: selected ? "2px solid #1d9bf0" : "1px solid #d9e2ec",
+                          background: !seat.available ? "#f3f4f6" : selected ? "#eef8fb" : "#ffffff",
+                          color: seat.available ? "#111827" : "#9ca3af",
+                          cursor: seat.available ? "pointer" : "not-allowed",
+                        }}
+                      >
+                        <span style={{ fontSize: "12px", fontWeight: 900 }}>{seat.code || seat.label}</span>
+                        {seat.available ? (
+                          <span style={{ fontSize: "10px", fontWeight: 800 }}>
+                            {isFree ? "Free" : formatFlightMoney(seat.displayPrice.amount, seat.displayPrice.currency)}
+                          </span>
+                        ) : null}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -240,6 +325,43 @@ const cardStyle: React.CSSProperties = {
   border: "1px solid #d9e2ec",
   background: "#f8fbff",
   padding: "18px",
+};
+
+const seatMapPanelStyle: React.CSSProperties = {
+  border: "1px solid #d9e2ec",
+  background: "#ffffff",
+  padding: "12px",
+};
+
+const seatMapRowStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "32px minmax(0, 1fr)",
+  alignItems: "center",
+  gap: "8px",
+};
+
+const seatMapRowLabelStyle: React.CSSProperties = {
+  fontSize: "12px",
+  fontWeight: 900,
+  color: "#4b5563",
+  textAlign: "center",
+};
+
+const seatMapSeatGridStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(54px, 1fr))",
+  gap: "8px",
+};
+
+const seatButtonStyle: React.CSSProperties = {
+  minHeight: "48px",
+  padding: "6px 4px",
+  display: "inline-flex",
+  flexDirection: "column",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: "2px",
+  textAlign: "center",
 };
 
 const lockedBoxStyle: React.CSSProperties = {

@@ -22,6 +22,16 @@ export type BackendFlightAncillaryOption = {
   details?: Record<string, unknown>;
 };
 
+export type BackendFlightAncillarySeatMap = {
+  seatMapId: string;
+  segmentRef: string;
+  cabin?: string;
+  rows: Array<{
+    rowNumber: string;
+    seats: BackendFlightAncillaryOption[];
+  }>;
+};
+
 export type BackendFlightAncillarySet = {
   ancillarySetId: string;
   searchId: string;
@@ -31,6 +41,7 @@ export type BackendFlightAncillarySet = {
   source: "mock-flight" | "amadeus-test" | "duffel-test" | "tripjack-test" | string;
   expiresAt: string;
   seats: BackendFlightAncillaryOption[];
+  seatMaps?: BackendFlightAncillarySeatMap[];
   paidBaggage: BackendFlightAncillaryOption[];
   meals: BackendFlightAncillaryOption[];
   capabilities: {
