@@ -3,6 +3,15 @@ import { NextRequest, NextResponse } from "next/server";
 const LOCAL_BACKEND_BASE_URL = "http://127.0.0.1:4000";
 const ALLOWED_PREFIX = "api/v1/";
 
+function getBackendBaseUrl() {
+  return (
+    process.env.TPL_BACKEND_BASE_URL ||
+    process.env.TPL_API_BASE_URL ||
+    process.env.NEXT_PUBLIC_TPL_API_BASE_URL ||
+    LOCAL_BACKEND_BASE_URL
+  ).replace(/\/$/, "");
+}
+
 type RouteContext = {
   params: Promise<{ path?: string[] }>;
 };
@@ -27,7 +36,7 @@ async function proxyTplBackendRequest(
     );
   }
 
-  const targetUrl = new URL(`${LOCAL_BACKEND_BASE_URL}/${backendPath}`);
+  const targetUrl = new URL(`${getBackendBaseUrl()}/${backendPath}`);
   targetUrl.search = request.nextUrl.search;
 
   const headers = new Headers();
