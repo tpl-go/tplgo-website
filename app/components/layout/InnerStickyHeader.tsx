@@ -5,6 +5,12 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/app/hooks/useAuth";
 import AccountDropdown from "@/app/components/account/AccountDropdown";
+import {
+  getSupportedFlightDisplayCurrencies,
+  readFlightDisplayCurrencyPreference,
+  saveFlightDisplayCurrencyPreference,
+  type FlightCurrency,
+} from "@/app/lib/flights/flightCurrency";
 
 const services = [
   { label: "Home", icon: "🏠", href: "/" },
@@ -37,6 +43,8 @@ export default function InnerStickyHeader() {
 
   const { openLoginModal, user, isAuthenticated, logout } = useAuth();
   const [accountOpen, setAccountOpen] = useState(false);
+  const [displayCurrency, setDisplayCurrency] = useState<FlightCurrency>("INR");
+  const supportedCurrencies = getSupportedFlightDisplayCurrencies();
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -49,6 +57,16 @@ export default function InnerStickyHeader() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    setDisplayCurrency(readFlightDisplayCurrencyPreference());
+  }, []);
+
+  const handleCurrencyChange = (value: string) => {
+    const next = value as FlightCurrency;
+    setDisplayCurrency(next);
+    saveFlightDisplayCurrencyPreference(next);
+  };
 
   const handleLogout = () => {
     logout();
@@ -100,10 +118,14 @@ export default function InnerStickyHeader() {
 
           <div className="flex h-9 items-center gap-1 rounded-lg bg-slate-100 px-2">
             <span className="text-sm">💱</span>
-            <select className="bg-transparent text-xs font-bold text-slate-800 outline-none">
-              <option>INR</option>
-              <option>USD</option>
-              <option>EUR</option>
+            <select
+              value={displayCurrency}
+              onChange={(event) => handleCurrencyChange(event.target.value)}
+              className="bg-transparent text-xs font-bold text-slate-800 outline-none"
+            >
+              {supportedCurrencies.map((currency) => (
+                <option key={currency} value={currency}>{currency}</option>
+              ))}
             </select>
           </div>
 
@@ -163,10 +185,14 @@ export default function InnerStickyHeader() {
 
             <div className="flex h-8 items-center gap-1 rounded-lg bg-slate-100 px-1.5">
               <span className="text-[11px]">💱</span>
-              <select className="w-[42px] bg-transparent text-[10px] font-bold text-slate-800 outline-none">
-                <option>INR</option>
-                <option>USD</option>
-                <option>EUR</option>
+              <select
+                value={displayCurrency}
+                onChange={(event) => handleCurrencyChange(event.target.value)}
+                className="w-[42px] bg-transparent text-[10px] font-bold text-slate-800 outline-none"
+              >
+                {supportedCurrencies.map((currency) => (
+                  <option key={currency} value={currency}>{currency}</option>
+                ))}
               </select>
             </div>
 
