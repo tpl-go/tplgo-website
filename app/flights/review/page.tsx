@@ -301,7 +301,8 @@ const baseFare =
   const tax = reviewData.pricing?.tax || 0;
   const surcharge = reviewData.pricing?.surcharge || 0;
   const discount = reviewData.pricing?.discount || 0;
-const activeSmartOffer = reviewCurrency === "INR" ? getSmartActiveOfferItem() : null;
+const supplierBackedReview = Boolean(reviewData.backendOffer);
+const activeSmartOffer = reviewCurrency === "INR" && !supplierBackedReview ? getSmartActiveOfferItem() : null;
 
 const smartMappedOffer =
   activeSmartOffer && !selectedOffer
@@ -325,8 +326,9 @@ const payloadAppliedOffer = Number(
   (reviewData.pricing as any)?.appliedOffer || 0
 );
 
-const appliedOfferAmount =
-  reviewCurrency !== "INR"
+const appliedOfferAmount = supplierBackedReview
+  ? 0
+  : reviewCurrency !== "INR"
     ? 0
     : payloadAppliedOffer > 0
     ? payloadAppliedOffer
@@ -346,9 +348,9 @@ const benefitPricing = applyBenefitPricing({
 
   offerDiscount: appliedOfferAmount,
 
-  promoCredit: reviewCurrency === "INR" ? wallet.promoCredit : 0,
-  earnedCredit: reviewCurrency === "INR" ? wallet.earnedCredit : 0,
-  refundWallet: reviewCurrency === "INR" ? wallet.refundableBalance : 0,
+  promoCredit: reviewCurrency === "INR" && !supplierBackedReview ? wallet.promoCredit : 0,
+  earnedCredit: reviewCurrency === "INR" && !supplierBackedReview ? wallet.earnedCredit : 0,
+  refundWallet: reviewCurrency === "INR" && !supplierBackedReview ? wallet.refundableBalance : 0,
 });
 
 const walletCalc = {
@@ -723,9 +725,9 @@ walletBreakdown={{
   earnedUsed: walletCalc.earnedUsed,
   refundUsed: walletCalc.refundUsed,
 }}
-earnedOnThisBooking={Math.floor(benefitPricing.baseAfterOffer * 0.02)}
-refundWalletAvailable={wallet.refundableBalance}
-useRefundWallet={true}
+earnedOnThisBooking={0}
+refundWalletAvailable={supplierBackedReview ? 0 : wallet.refundableBalance}
+useRefundWallet={!supplierBackedReview}
 seatTotal={backendAncillaryTotals.seats}
               
               mealTotal={backendAncillaryTotals.meals}
@@ -1063,6 +1065,7 @@ seatTotal={backendAncillaryTotals.seats}
       backendOffer: {
         ...source.backendOffer,
         priceConfirmationId: result.data.priceConfirmationId,
+        ...(result.data.fareId ? { fareId: result.data.fareId } : { fareId: undefined }),
         priceStatus: result.data.status,
         expiresAt: result.data.expiresAt,
         supplierPrice: result.data.supplierPrice || source.backendOffer.supplierPrice,
