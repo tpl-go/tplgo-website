@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect } from "react";
 import { ArrowLeftRight, ChevronDown } from "lucide-react";
-import { AIRPORTS } from "../utils";
+import { AIRPORTS, type Airport } from "../utils";
+import { searchBackendAirports } from "@/app/lib/api/locationAutocompleteApi";
 
 type Props = {
   state: any;
@@ -21,6 +22,10 @@ export default function AirportSelect({
 
   const [openFrom, setOpenFrom] = useState(false);
   const [openTo, setOpenTo] = useState(false);
+  const [fromQuery, setFromQuery] = useState("");
+  const [toQuery, setToQuery] = useState("");
+  const [fromOptions, setFromOptions] = useState<Airport[]>(AIRPORTS);
+  const [toOptions, setToOptions] = useState<Airport[]>(AIRPORTS);
   const [fromPosition, setFromPosition] = useState<"top" | "bottom">("bottom");
   const [toPosition, setToPosition] = useState<"top" | "bottom">("bottom");
 
@@ -70,6 +75,38 @@ export default function AirportSelect({
       setToPosition("bottom");
     }
   }, [openTo]);
+
+  useEffect(() => {
+    if (!openFrom) return;
+    let active = true;
+    const timeout = window.setTimeout(() => {
+      searchBackendAirports(fromQuery, 12).then((results) => {
+        if (!active) return;
+        setFromOptions(results.length ? results : filterLocalAirports(fromQuery));
+      });
+    }, 180);
+
+    return () => {
+      active = false;
+      window.clearTimeout(timeout);
+    };
+  }, [openFrom, fromQuery]);
+
+  useEffect(() => {
+    if (!openTo) return;
+    let active = true;
+    const timeout = window.setTimeout(() => {
+      searchBackendAirports(toQuery, 12).then((results) => {
+        if (!active) return;
+        setToOptions(results.length ? results : filterLocalAirports(toQuery));
+      });
+    }, 180);
+
+    return () => {
+      active = false;
+      window.clearTimeout(timeout);
+    };
+  }, [openTo, toQuery]);
 
   const defaultFrom = AIRPORTS.find((a) => a.code === "DEL");
   const defaultTo = AIRPORTS.find((a) => a.code === "BOM");
@@ -197,13 +234,23 @@ export default function AirportSelect({
                 : "top-[90px]"
             }`}
           >
-            {AIRPORTS.map((a) => (
+            <input
+              value={fromQuery}
+              onChange={(event) => setFromQuery(event.target.value)}
+              className="sticky top-0 z-10 w-full border-b border-gray-200 bg-white px-4 py-2 text-sm text-black outline-none"
+              placeholder="Search city or airport"
+              autoFocus
+            />
+            {fromOptions.map((a) => (
               <div
                 key={a.code}
                 onClick={() => handleFromSelect(a)}
                 className="cursor-pointer px-4 py-2 text-black hover:bg-gray-100"
               >
                 {a.city} ({a.code})
+                <span className="block truncate text-[11px] text-gray-500">
+                  {a.name}{a.country ? `, ${a.country}` : ""}
+                </span>
               </div>
             ))}
           </div>
@@ -302,13 +349,23 @@ export default function AirportSelect({
                 : "top-[90px]"
             }`}
           >
-            {AIRPORTS.map((a) => (
+            <input
+              value={toQuery}
+              onChange={(event) => setToQuery(event.target.value)}
+              className="sticky top-0 z-10 w-full border-b border-gray-200 bg-white px-4 py-2 text-sm text-black outline-none"
+              placeholder="Search city or airport"
+              autoFocus
+            />
+            {toOptions.map((a) => (
               <div
                 key={a.code}
                 onClick={() => handleToSelect(a)}
                 className="cursor-pointer px-4 py-2 text-black hover:bg-gray-100"
               >
                 {a.city} ({a.code})
+                <span className="block truncate text-[11px] text-gray-500">
+                  {a.name}{a.country ? `, ${a.country}` : ""}
+                </span>
               </div>
             ))}
           </div>
@@ -316,4 +373,19 @@ export default function AirportSelect({
       </div>
     </div>
   );
+}
+
+function filterLocalAirports(query: string): Airport[] {
+  const normalized = query.trim().toLowerCase();
+  if (normalized.length < 2) return AIRPORTS;
+  return AIRPORTS.filter((airport) => {
+    const haystack = [
+      airport.code,
+      airport.city,
+      airport.name,
+      airport.country,
+      ...(airport.aliases || []),
+    ].join(" ").toLowerCase();
+    return haystack.includes(normalized);
+  });
 }

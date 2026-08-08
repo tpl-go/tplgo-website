@@ -119,7 +119,7 @@ export function isBackendFlightSearchEnabled(): boolean {
 }
 
 export function isBackendFlightSearchFallbackEnabled(): boolean {
-  return readBoolean(process.env.NEXT_PUBLIC_TPL_BACKEND_FLIGHT_SEARCH_FALLBACK_TO_LOCAL, true);
+  return readBoolean(process.env.NEXT_PUBLIC_TPL_BACKEND_FLIGHT_SEARCH_FALLBACK_TO_LOCAL, false);
 }
 
 export async function searchBackendFlights(input: BackendFlightSearchRequest): Promise<FlightBackendSearchResult> {

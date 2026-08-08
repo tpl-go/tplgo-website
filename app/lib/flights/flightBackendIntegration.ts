@@ -17,6 +17,22 @@ const SUPPORTED_CABINS = new Set([
 ]);
 
 const BACKEND_ERROR_MESSAGES: Record<string, string> = {
+  PROVIDER_NOT_CONFIGURED:
+    "Flight provider is not configured. Please retry later.",
+  PROVIDER_AUTH_FAILED:
+    "Flight provider authentication failed. Please retry later.",
+  PROVIDER_TIMEOUT:
+    "Flight provider timed out. Please retry the search.",
+  PROVIDER_RATE_LIMITED:
+    "Flight provider is busy. Please wait briefly and retry.",
+  PROVIDER_SEARCH_FAILED:
+    "Flight search failed. Please retry.",
+  PROVIDER_MAPPING_FAILED:
+    "Flight provider returned an unreadable response. Please retry.",
+  PROVIDER_OFFER_EXPIRED:
+    "Selected fare expired. Please search again.",
+  PROVIDER_OFFER_UNAVAILABLE:
+    "Selected fare is no longer available. Please search again.",
   FLIGHT_PROVIDER_NOT_CONFIGURED:
     "Flight provider is not configured. Please retry later.",
   FLIGHT_PROVIDER_TIMEOUT:
@@ -44,7 +60,7 @@ export type FlightSearchValidationResult =
   | {
       ok: true;
       request: {
-        tripType: "oneway";
+        tripType: "oneway" | "roundtrip";
         origin: string;
         destination: string;
         departureDate: string;
@@ -117,8 +133,8 @@ export function validateFlightSearchState(
   if (!SUPPORTED_CABINS.has(state.travellers.cabin || "")) {
     errors.push("Selected cabin class is not supported.");
   }
-  if (state.tripType !== "oneway") {
-    errors.push("Production backend search is currently enabled for one-way flights.");
+  if (state.tripType === "multicity") {
+    errors.push("Production backend search is currently enabled for one-way and round-trip flights.");
   }
 
   if (errors.length > 0) return { ok: false, errors };
@@ -126,7 +142,7 @@ export function validateFlightSearchState(
   return {
     ok: true,
     request: {
-      tripType: "oneway",
+      tripType: state.tripType === "roundtrip" ? "roundtrip" : "oneway",
       origin,
       destination,
       departureDate: departureDate || "",

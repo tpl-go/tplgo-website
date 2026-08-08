@@ -7,6 +7,8 @@ export type Airport = {
   city: string;
   name: string;
   country: string;
+  aliases?: string[];
+  popularRank?: number;
 };
 
 export const AIRPORTS: Airport[] = [
