@@ -34,13 +34,23 @@ export type FlightState = {
   travellers: TravellerState;
 };
 
+function getDefaultAirport(code: string): Airport | null {
+  return AIRPORTS.find((airport) => airport.code === code) ?? null;
+}
+
+function getTodayDate(): Date {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return today;
+}
+
 export const initialFlightState: FlightState = {
   tripType: "oneway",
   segments: [
     {
-      from: null,
-      to: null,
-      departure: null,
+      from: getDefaultAirport("DEL"),
+      to: getDefaultAirport("BOM"),
+      departure: getTodayDate(),
     },
   ],
   returnDate: null,
