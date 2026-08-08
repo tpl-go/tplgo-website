@@ -122,10 +122,29 @@ function providerBaggageText(backendOffer: Props["backendOffer"]) {
   return "Not provided by supplier";
 }
 
+function providerBaggageSummaryPart(backendOffer: Props["backendOffer"], kind: "cabin" | "checked") {
+  if (backendOffer?.baggageAllowance?.source !== "provider" || !backendOffer.baggageAllowance.summary) {
+    return "";
+  }
+  const parts = backendOffer.baggageAllowance.summary
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const match = parts.find((part) => {
+    const normalized = part.toLowerCase();
+    return kind === "cabin"
+      ? normalized.includes("carry") || normalized.includes("cabin")
+      : normalized.includes("checked") || normalized.includes("check-in");
+  });
+  return match || "";
+}
+
 function providerCabinBaggage(backendOffer: Props["backendOffer"]) {
   if (backendOffer?.baggageAllowance?.source === "provider" && backendOffer.baggageAllowance.cabin) {
     return backendOffer.baggageAllowance.cabin;
   }
+  const summaryPart = providerBaggageSummaryPart(backendOffer, "cabin");
+  if (summaryPart) return summaryPart;
   return "Cabin not provided";
 }
 
@@ -133,6 +152,8 @@ function providerCheckedBaggage(backendOffer: Props["backendOffer"]) {
   if (backendOffer?.baggageAllowance?.source === "provider" && backendOffer.baggageAllowance.checked) {
     return backendOffer.baggageAllowance.checked;
   }
+  const summaryPart = providerBaggageSummaryPart(backendOffer, "checked");
+  if (summaryPart) return summaryPart;
   return "Checked not provided";
 }
 
