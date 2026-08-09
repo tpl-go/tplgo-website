@@ -375,6 +375,42 @@ export default function FlightPaymentPage() {
       (reviewData?.passengers?.infants || 0) || 1;
 
   const priceBreakup = useMemo(() => {
+    const backendAuthority = reviewData?.backendOffer
+      ? getBackendAmountAuthority({
+          reviewData,
+          backendSimulation: storedPayload?.backendSimulation,
+        })
+      : null;
+    if (backendAuthority) {
+      const supplierBase = Number(reviewData?.backendOffer?.supplierPrice?.baseFare || 0);
+      const supplierTaxes = Number(reviewData?.backendOffer?.supplierPrice?.taxes || 0);
+      const supplierFees = Number(reviewData?.backendOffer?.supplierPrice?.fees || 0);
+      const displayTotal = Number(backendAuthority.amount || 0);
+      return {
+        currency: backendAuthority.currency,
+        baseFare: supplierBase > 0 ? supplierBase : displayTotal,
+        tax: supplierTaxes,
+        surcharge: supplierFees,
+        seatTotal: 0,
+        mealTotal: 0,
+        cabTotal: 0,
+        insuranceTotal: 0,
+        addonsTotal: 0,
+        appliedOffer: 0,
+        discount: 0,
+        tplCredit: 0,
+        walletCalc: {
+          promoUsed: 0,
+          earnedUsed: 0,
+          refundUsed: 0,
+          finalPayable: displayTotal,
+        },
+        totalBeforeWallet: displayTotal,
+        baseAfterOffer: supplierBase > 0 ? supplierBase : displayTotal,
+        totalAmount: displayTotal,
+      };
+    }
+
     const baseFare =
   Number(reviewData?.pricing?.baseFareTotal || 0) ||
   (reviewData?.pricing?.perAdultBaseFare || 0) *
@@ -453,6 +489,7 @@ const finalTotalAmount =
 };
   }, [
     reviewData,
+    storedPayload?.backendSimulation,
     totalTravellers,
     offerData,
     activeUser,
@@ -460,7 +497,9 @@ const finalTotalAmount =
   ]);
 
   const earnedOnThisBooking = Number(
-  storedPayload?.earnedCreditAmount ||
+  reviewData?.backendOffer
+    ? 0
+    : storedPayload?.earnedCreditAmount ||
     Math.floor(
       Number(priceBreakup.baseAfterOffer || 0) * 0.02
     )
