@@ -31,6 +31,11 @@ type ValidationTraveller = {
   firstName: string;
   lastName: string;
   gender: string;
+  dateOfBirth?: string;
+  nationality?: string;
+  passportNumber?: string;
+  passportIssuingCountry?: string;
+  passportExpiryDate?: string;
 };
 
 type ValidationPayload = {
@@ -92,6 +97,14 @@ function splitFullName(fullName?: string) {
     firstName,
     lastName,
   };
+}
+
+function buildIsoDate(year?: string, month?: string, day?: string) {
+  const cleanYear = String(year || "").trim();
+  const cleanMonth = String(month || "").trim().padStart(2, "0");
+  const cleanDay = String(day || "").trim().padStart(2, "0");
+  if (!/^\d{4}$/.test(cleanYear) || !/^\d{2}$/.test(cleanMonth) || !/^\d{2}$/.test(cleanDay)) return "";
+  return `${cleanYear}-${cleanMonth}-${cleanDay}`;
 }
 
 function getDisplayNameFromUser(user: any) {
@@ -159,11 +172,11 @@ export default function FlightTravellerSection({
   const [savedInternationalTravellers, setSavedInternationalTravellers] =
     useState<InternationalTravellerForm[]>([]);
 
-  const [contactDetails, setContactDetails] = useState<ContactDetails>({
-    countryCode: "+91",
-    mobile: "",
-    email: "",
-  });
+const [contactDetails, setContactDetails] = useState<ContactDetails>({
+  countryCode: "+91",
+  mobile: "",
+  email: "",
+});
 
   const [gstDetails, setGstDetails] = useState<GstDetails>({
     hasGst: false,
@@ -188,7 +201,7 @@ export default function FlightTravellerSection({
 
       setContactDetails((prev) => ({
         ...prev,
-        mobile: String(user.mobile || "").replace(/\D/g, "").slice(0, 10),
+        mobile: String(user.mobile || "").replace(/\D/g, "").slice(0, 15),
         email: user.email || profile.email || prev.email,
       }));
 
@@ -268,22 +281,32 @@ export default function FlightTravellerSection({
 
   const contactValid = useMemo(() => {
     const emailOk = /\S+@\S+\.\S+/.test(contactDetails.email.trim());
-    const mobileOk = /^[0-9]{10}$/.test(contactDetails.mobile.trim());
+    const mobileOk = /^[0-9]{8,15}$/.test(contactDetails.mobile.trim());
     return emailOk && mobileOk;
   }, [contactDetails]);
 
   const canProceed = allRequiredTravellersCompleted && contactValid;
 
   const validationTravellers: ValidationTraveller[] = useMemo(() => {
-    return travellerCards.map((item) => ({
-      id: item.id,
-      travellerType: item.travellerType,
-      label: item.label,
-      firstName: item.firstName,
-      lastName: item.lastName,
-      gender: item.gender,
-    }));
-  }, [travellerCards]);
+    return travellerCards.map((item) => {
+      const domestic = savedDomesticTravellers.find((traveller) => traveller.id === item.id);
+      const international = savedInternationalTravellers.find((traveller) => traveller.id === item.id);
+      const source = international || domestic;
+      return {
+        id: item.id,
+        travellerType: item.travellerType,
+        label: item.label,
+        firstName: item.firstName,
+        lastName: item.lastName,
+        gender: item.gender,
+        ...(source ? { dateOfBirth: buildIsoDate(source.dateOfBirthYear, source.dateOfBirthMonth, source.dateOfBirthDay) } : {}),
+        ...(international?.passportNo ? { passportNumber: international.passportNo } : {}),
+        ...(international?.passportIssuingCountry ? { passportIssuingCountry: international.passportIssuingCountry } : {}),
+        ...(international ? { passportExpiryDate: buildIsoDate(international.passportExpiryYear, international.passportExpiryMonth, international.passportExpiryDay) } : {}),
+        ...(international?.passportIssuingCountry ? { nationality: international.passportIssuingCountry } : {}),
+      };
+    });
+  }, [travellerCards, savedDomesticTravellers, savedInternationalTravellers]);
 
   useEffect(() => {
     onValidationChange?.({
@@ -586,6 +609,10 @@ export default function FlightTravellerSection({
                       }
                     >
                       <option value="+91">India (+91)</option>
+                      <option value="+971">UAE (+971)</option>
+                      <option value="+44">UK (+44)</option>
+                      <option value="+1">USA (+1)</option>
+                      <option value="+65">Singapore (+65)</option>
                     </select>
                   </Field>
 
@@ -598,7 +625,7 @@ export default function FlightTravellerSection({
                       onChange={(e) =>
                         setContactDetails((prev) => ({
                           ...prev,
-                          mobile: e.target.value.replace(/\D/g, "").slice(0, 10),
+                          mobile: e.target.value.replace(/\D/g, "").slice(0, 15),
                         }))
                       }
                     />

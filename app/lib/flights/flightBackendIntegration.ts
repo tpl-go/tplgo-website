@@ -92,6 +92,9 @@ export type TravellerValidationResult =
         dateOfBirth?: string;
         gender?: string;
         nationality?: string;
+        passportNumber?: string;
+        passportIssuingCountry?: string;
+        passportExpiryDate?: string;
       }>;
       contactDetails: {
         countryCode: string;
@@ -206,6 +209,15 @@ export function validateAndMapFlightTravellers(
       ...(safeName(traveller?.nationality)
         ? { nationality: safeName(traveller?.nationality) }
         : {}),
+      ...(safePassport(traveller?.passportNumber || traveller?.passportNo)
+        ? { passportNumber: safePassport(traveller?.passportNumber || traveller?.passportNo) }
+        : {}),
+      ...(safeName(traveller?.passportIssuingCountry)
+        ? { passportIssuingCountry: safeName(traveller?.passportIssuingCountry) }
+        : {}),
+      ...(safeDate(traveller?.passportExpiryDate)
+        ? { passportExpiryDate: safeDate(traveller?.passportExpiryDate) }
+        : {}),
     };
   });
 
@@ -213,7 +225,7 @@ export function validateAndMapFlightTravellers(
   const mobile = String(contact?.mobile || contact?.phone || "").replace(/\D/g, "");
   const email = String(contact?.email || "").trim().toLowerCase();
 
-  if (!/^\d{10}$/.test(mobile)) errors.push("A valid 10 digit contact phone is required.");
+  if (!/^\d{8,15}$/.test(mobile)) errors.push("A valid contact phone is required.");
   if (!/\S+@\S+\.\S+/.test(email)) errors.push("A valid contact email is required.");
 
   if (errors.length > 0) return { ok: false, errors };
@@ -376,6 +388,10 @@ function asRecord(value: unknown): Record<string, unknown> | null {
 
 function safeName(value: unknown): string {
   return String(value || "").trim().replace(/\s+/g, " ").slice(0, 80);
+}
+
+function safePassport(value: unknown): string {
+  return String(value || "").trim().replace(/\s+/g, " ").slice(0, 30).toUpperCase();
 }
 
 function safeDate(value: unknown): string {
