@@ -22,6 +22,12 @@ export type BackendFlightAncillaryOption = {
   details?: Record<string, unknown>;
 };
 
+export type BackendFlightAncillarySelection = {
+  id: string;
+  travellerRef: string;
+  segmentRef: string;
+};
+
 export type BackendFlightAncillarySeatMap = {
   seatMapId: string;
   segmentRef: string;
@@ -96,6 +102,7 @@ export function quoteBackendFlightAncillaries(
     ancillarySetId: string;
     displayCurrency?: FlightCurrency;
     selectedAncillaryIds: string[];
+    selectedAncillarySelections?: BackendFlightAncillarySelection[];
   }
 ): Promise<TplApiResult<BackendFlightAncillaryQuote>> {
   return tplApiRequest<BackendFlightAncillaryQuote>(

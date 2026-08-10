@@ -1091,19 +1091,11 @@ function FlightManagePageContent() {
       )}
 
       {activeTab === "seats" && (
-        <div className="space-y-5">
-          <ManageSeatsSection
-            travellers={travellers}
-            value={seatSelections}
-            onChange={setSeatSelections}
-          />
-          <ManageActionPanel
-            quote={seatQuote}
-            onContinue={() =>
-              handleMoneyContinue("seats", seatQuote.settlementMode)
-            }
-          />
-        </div>
+        <ManageSeatsSection
+          travellers={travellers}
+          value={seatSelections}
+          onChange={setSeatSelections}
+        />
       )}
 
       {activeTab === "meals" && (

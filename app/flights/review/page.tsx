@@ -35,6 +35,7 @@ import {
   type BackendFlightAncillaryOption,
   type BackendFlightAncillaryQuote,
   type BackendFlightAncillarySet,
+  type BackendFlightAncillarySelection,
 } from "@/app/lib/api/flightAncillaryApi";
 import { simulateBackendFlightBooking } from "@/app/lib/api/flightBookingSimulationApi";
 import {
@@ -165,6 +166,7 @@ const [wallet, setWallet] = useState({
   const [ancillaryState, setAncillaryState] = useState<"idle" | "loading" | "ready" | "quoting" | "failed">("idle");
   const [ancillarySet, setAncillarySet] = useState<BackendFlightAncillarySet | null>(null);
   const [selectedAncillaryIds, setSelectedAncillaryIds] = useState<string[]>([]);
+  const [selectedSeatAssignments, setSelectedSeatAssignments] = useState<BackendFlightAncillarySelection[]>([]);
   const [ancillaryQuote, setAncillaryQuote] = useState<BackendFlightAncillaryQuote | null>(null);
   const [ancillaryMessage, setAncillaryMessage] = useState("");
   const [backendBlockerMessage, setBackendBlockerMessage] = useState("");
@@ -679,9 +681,11 @@ const isInternationalFlight =
                 seatMaps={ancillarySet?.seatMaps || []}
                 mealOptions={ancillarySet?.meals || []}
                 selectedAncillaryIds={selectedAncillaryIds}
+                selectedSeatAssignments={selectedSeatAssignments}
                 isLoadingAncillaries={ancillaryState === "loading" || ancillaryState === "quoting"}
                 ancillaryMessage={ancillaryMessage}
                 onAncillaryToggle={handleAncillaryToggle}
+                onSeatAssignmentsChange={handleSeatAssignmentsChange}
                 onChange={setSeatMealData}
               />
 
@@ -955,6 +959,11 @@ seatTotal={backendAncillaryTotals.seats}
     }
     setAncillarySet(result.data);
     setSelectedAncillaryIds((current) => current.filter((id) => allBackendAncillaryOptions(result.data).some((item) => item.id === id)));
+    setSelectedSeatAssignments((current) =>
+      current.filter((selection) =>
+        allBackendAncillaryOptions(result.data).some((item) => item.id === selection.id)
+      )
+    );
     setAncillaryState("ready");
     setAncillaryMessage(result.data.warnings[0] || "");
     await quoteSelectedAncillaries([], result.data, source);
@@ -966,13 +975,31 @@ seatTotal={backendAncillaryTotals.seats}
       ? selectedAncillaryIds.filter((item) => item !== id)
       : [...selectedAncillaryIds, id];
     setSelectedAncillaryIds(nextSelected);
-    await quoteSelectedAncillaries(nextSelected, ancillarySet, reviewData);
+    await quoteSelectedAncillaries(
+      nextSelected,
+      ancillarySet,
+      reviewData,
+      selectedSeatAssignments.filter((item) => nextSelected.includes(item.id))
+    );
+  }
+
+  async function handleSeatAssignmentsChange(assignments: BackendFlightAncillarySelection[]) {
+    if (!ancillarySet || !reviewData?.backendOffer?.priceConfirmationId) return;
+    const nonSeatSelectedIds = selectedAncillaryIds.filter((id) => {
+      const option = allBackendAncillaryOptions(ancillarySet).find((item) => item.id === id);
+      return option?.category !== "seat";
+    });
+    const nextSelected = [...nonSeatSelectedIds, ...assignments.map((item) => item.id)];
+    setSelectedSeatAssignments(assignments);
+    setSelectedAncillaryIds(nextSelected);
+    await quoteSelectedAncillaries(nextSelected, ancillarySet, reviewData, assignments);
   }
 
   async function quoteSelectedAncillaries(
     selectedIds: string[],
     sourceSet: BackendFlightAncillarySet,
-    sourceReviewData: FlightReviewPayload
+    sourceReviewData: FlightReviewPayload,
+    seatAssignments: BackendFlightAncillarySelection[] = selectedSeatAssignments
   ) {
     const backendOffer = sourceReviewData.backendOffer;
     if (!backendOffer?.priceConfirmationId) return;
@@ -983,6 +1010,7 @@ seatTotal={backendAncillaryTotals.seats}
       ancillarySetId: sourceSet.ancillarySetId,
       displayCurrency: normalizeFlightCurrency(backendOffer.displayPrice?.currency || sourceReviewData.pricing?.currency || readFlightDisplayCurrencyPreference()),
       selectedAncillaryIds: selectedIds,
+      selectedAncillarySelections: seatAssignments.filter((item) => selectedIds.includes(item.id)),
     });
     if (!result.ok) {
       setAncillaryState("failed");
