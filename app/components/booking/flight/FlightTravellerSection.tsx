@@ -1,4 +1,4 @@
-"use client";
+"u  const handleInternationalSave = (travellers: InternationalTravellerForm[]) => {e client";
 
 import { useEffect, useMemo, useState } from "react";
 import AddDomesticTravellerModal, {
@@ -67,6 +67,11 @@ type TravellerCardItem = {
   firstName: string;
   lastName: string;
   gender: string;
+  dateOfBirth?: string;
+  nationality?: string;
+  passportNumber?: string;
+  passportIssuingCountry?: string;
+  passportExpiryDate?: string;
 };
 
 function getActiveUser() {
@@ -318,11 +323,11 @@ const [contactDetails, setContactDetails] = useState<ContactDetails>({
         firstName: item.firstName,
         lastName: item.lastName,
         gender: item.gender,
-        ...(source ? { dateOfBirth: buildIsoDate(source.dateOfBirthYear, source.dateOfBirthMonth, source.dateOfBirthDay) } : {}),
-        ...(international?.passportNo ? { passportNumber: international.passportNo } : {}),
-        ...(international?.passportIssuingCountry ? { passportIssuingCountry: international.passportIssuingCountry } : {}),
-        ...(international ? { passportExpiryDate: buildIsoDate(international.passportExpiryYear, international.passportExpiryMonth, international.passportExpiryDay) } : {}),
-        ...(international?.passportIssuingCountry ? { nationality: international.passportIssuingCountry } : {}),
+        ...(resolveTravellerDateOfBirth(item, source) ? { dateOfBirth: resolveTravellerDateOfBirth(item, source) } : {}),
+        ...(resolvePassportNumber(item, international) ? { passportNumber: resolvePassportNumber(item, international) } : {}),
+        ...(resolvePassportIssuingCountry(item, international) ? { passportIssuingCountry: resolvePassportIssuingCountry(item, international) } : {}),
+        ...(resolvePassportExpiryDate(item, international) ? { passportExpiryDate: resolvePassportExpiryDate(item, international) } : {}),
+        ...(resolveNationality(item, international) ? { nationality: resolveNationality(item, international) } : {}),
       };
     });
   }, [travellerCards, savedDomesticTravellers, savedInternationalTravellers]);
@@ -373,11 +378,14 @@ const [contactDetails, setContactDetails] = useState<ContactDetails>({
 
       if (!matched) return card;
 
+      const dateOfBirth = buildIsoDate(matched.dateOfBirthYear, matched.dateOfBirthMonth, matched.dateOfBirthDay);
+
       return {
         ...card,
         firstName: matched.firstName,
         lastName: matched.lastName,
         gender: matched.gender,
+        ...(dateOfBirth ? { dateOfBirth } : {}),
       };
     });
 
@@ -393,11 +401,19 @@ const [contactDetails, setContactDetails] = useState<ContactDetails>({
 
       if (!matched) return card;
 
+      const dateOfBirth = buildIsoDate(matched.dateOfBirthYear, matched.dateOfBirthMonth, matched.dateOfBirthDay);
+      const passportExpiryDate = buildIsoDate(matched.passportExpiryYear, matched.passportExpiryMonth, matched.passportExpiryDay);
+
       return {
         ...card,
         firstName: matched.firstName,
         lastName: matched.lastName,
         gender: matched.gender,
+        ...(dateOfBirth ? { dateOfBirth } : {}),
+        ...(matched.passportNo ? { passportNumber: matched.passportNo } : {}),
+        ...(matched.passportIssuingCountry ? { passportIssuingCountry: matched.passportIssuingCountry } : {}),
+        ...(passportExpiryDate ? { passportExpiryDate } : {}),
+        ...(matched.passportIssuingCountry ? { nationality: matched.passportIssuingCountry } : {}),
       };
     });
 
@@ -884,6 +900,28 @@ const inputStyle: React.CSSProperties = {
   outline: "none",
   background: "#ffffff",
 };
+
+function resolveTravellerDateOfBirth(item: TravellerCardItem, source?: DomesticTravellerForm | InternationalTravellerForm) {
+  if (item.dateOfBirth) return item.dateOfBirth;
+  return source ? buildIsoDate(source.dateOfBirthYear, source.dateOfBirthMonth, source.dateOfBirthDay) : "";
+}
+
+function resolvePassportNumber(item: TravellerCardItem, source?: InternationalTravellerForm) {
+  return item.passportNumber || source?.passportNo || "";
+}
+
+function resolvePassportIssuingCountry(item: TravellerCardItem, source?: InternationalTravellerForm) {
+  return item.passportIssuingCountry || source?.passportIssuingCountry || "";
+}
+
+function resolvePassportExpiryDate(item: TravellerCardItem, source?: InternationalTravellerForm) {
+  if (item.passportExpiryDate) return item.passportExpiryDate;
+  return source ? buildIsoDate(source.passportExpiryYear, source.passportExpiryMonth, source.passportExpiryDay) : "";
+}
+
+function resolveNationality(item: TravellerCardItem, source?: InternationalTravellerForm) {
+  return item.nationality || source?.passportIssuingCountry || "";
+}
 
 function getTravellerFieldError(fieldErrors: Record<string, string>, index: number) {
   const prefix = `travellers.${index}.`;
