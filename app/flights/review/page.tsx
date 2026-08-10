@@ -42,6 +42,7 @@ import {
   assertSafeFlightSimulationFlags,
   isFlightBackendStateExpired,
   normalizeFlightBackendError,
+  sanitizeFlightStoragePayload,
   validateAndMapFlightTravellers,
 } from "@/app/lib/flights/flightBackendIntegration";
 import { applyBenefitPricing } from "@/app/lib/pricing/applyBenefitPricing";
@@ -59,6 +60,25 @@ function getActiveUser() {
     return raw ? JSON.parse(raw)?.user : null;
   } catch {
     return null;
+  }
+}
+
+function saveFlightPaymentPayloadForNavigation(payload: unknown): { ok: true } | { ok: false; message: string } {
+  if (typeof window === "undefined") {
+    return { ok: false, message: "Payment can only be opened in the browser." };
+  }
+
+  try {
+    sessionStorage.setItem(
+      "tplFlightBookingReviewData",
+      JSON.stringify(sanitizeFlightStoragePayload(payload))
+    );
+    return { ok: true };
+  } catch {
+    return {
+      ok: false,
+      message: "Could not prepare the payment page. Please refresh the fare and try again.",
+    };
   }
 }
 
@@ -957,12 +977,19 @@ seatTotal={backendAncillaryTotals.seats}
     });
   }
 
-  sessionStorage.setItem(
-    "tplFlightBookingReviewData",
-    JSON.stringify(payload)
-  );
+  const paymentPayloadSaved = saveFlightPaymentPayloadForNavigation(payload);
+  if (!paymentPayloadSaved.ok) {
+    setBackendSimulationState("failed");
+    setBackendBlockerMessage(paymentPayloadSaved.message);
+    return;
+  }
 
-  router.push("/flights/payment");
+  try {
+    router.push("/flights/payment");
+  } catch {
+    setBackendSimulationState("failed");
+    setBackendBlockerMessage("Could not open the payment page. Please retry.");
+  }
   }
 
   async function loadBackendAncillaries(source: FlightReviewPayload) {
