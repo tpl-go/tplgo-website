@@ -17,6 +17,8 @@ type Segment = {
 
   departureTime: string;
   arrivalTime: string;
+  departureLocalContext?: string;
+  arrivalLocalContext?: string;
 
   duration: string;
   stopCount: number;
@@ -148,6 +150,11 @@ const showCompactLayover =
                   >
                     {seg.departureTime}
                   </div>
+                  {seg.departureLocalContext ? (
+                    <div className="mt-0.5 text-[10px] font-bold leading-3 text-[#64748b]">
+                      {seg.departureLocalContext}
+                    </div>
+                  ) : null}
                   <div
                     className="max-md:break-words max-md:text-[11px]"
                     style={{
@@ -243,6 +250,11 @@ const showCompactLayover =
                   >
                     {seg.arrivalTime}
                   </div>
+                  {seg.arrivalLocalContext ? (
+                    <div className="mt-0.5 text-[10px] font-bold leading-3 text-[#64748b]">
+                      {seg.arrivalLocalContext}
+                    </div>
+                  ) : null}
                   <div
                     className="max-md:break-words max-md:text-[11px]"
                     style={{

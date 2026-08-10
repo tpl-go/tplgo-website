@@ -26,6 +26,8 @@ type Segment = {
 
   departureTime: string;
   arrivalTime: string;
+  departureLocalContext?: string;
+  arrivalLocalContext?: string;
 
   duration: string;
   stopCount: number;

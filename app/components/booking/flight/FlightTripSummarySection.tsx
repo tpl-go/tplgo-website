@@ -3,6 +3,13 @@
 import FlightJourneyCard from "./FlightJourneyCard";
 import type { FlightReviewAncillaryOption } from "./FlightSeatMealSection";
 import { FlightReviewPayload } from "@/app/lib/flights/review/buildFlightReviewData";
+import {
+  formatAirportLocalDate,
+  formatAirportLocalTime,
+  formatDayOffset,
+  formatDurationFromSchedule,
+  type FlightScheduleEndpoint,
+} from "@/app/lib/flights/flightScheduleTime";
 
 type Props = {
   reviewData: FlightReviewPayload;
@@ -24,6 +31,8 @@ type JourneySegmentUI = {
   departureTime: string;
   arrivalTime: string;
   duration: string;
+  departureLocalContext?: string;
+  arrivalLocalContext?: string;
   stopCount: number;
   baggage: string;
   cabinClass: string;
@@ -31,6 +40,11 @@ type JourneySegmentUI = {
     duration: string;
     airport: string;
     code: string;
+  };
+  schedule?: {
+    departure?: FlightScheduleEndpoint;
+    arrival?: FlightScheduleEndpoint;
+    dayOffset?: number;
   };
 };
 
@@ -148,7 +162,9 @@ export default function FlightTripSummarySection({
               ? `${firstSegment.from} → ${lastSegment.to}`
               : `Flight ${journeyIndex + 1}`;
 
-          const dateLabel = formatJourneyDate(firstSegment?.departureDate);
+          const dateLabel =
+            formatAirportLocalDate(firstSegment?.schedule?.departure, "") ||
+            formatJourneyDate(firstSegment?.departureDate);
 
           const stopText = getStopText(dynamicStopCount);
 
@@ -173,15 +189,27 @@ export default function FlightTripSummarySection({
               toCity: segment.to || "",
               toCode: extractCode(segment.toCode || segment.to),
               toAirport: segment.terminalTo || segment.to || "",
-              departureTime: segment.departureTime || "",
-              arrivalTime: segment.arrivalTime || "",
-              duration: segment.duration || "",
+              departureTime: formatAirportLocalTime(segment.schedule?.departure, segment.departureTime || ""),
+              arrivalTime: `${formatAirportLocalTime(segment.schedule?.arrival, segment.arrivalTime || "")}${formatDayOffset(segment.schedule?.dayOffset) ? ` ${formatDayOffset(segment.schedule?.dayOffset)}` : ""}`,
+              duration: formatDurationFromSchedule({
+                departure: segment.schedule?.departure,
+                arrival: segment.schedule?.arrival,
+                duration: segment.duration,
+                dayOffset: segment.schedule?.dayOffset,
+              }, segment.duration || ""),
+              departureLocalContext: segment.schedule?.departure?.airport
+                ? `${segment.schedule.departure.airport} local time`
+                : undefined,
+              arrivalLocalContext: segment.schedule?.arrival?.airport
+                ? `${segment.schedule.arrival.airport} local time`
+                : undefined,
               stopCount: dynamicStopCount,
               baggage:
                 segment.cabinBaggage ||
                 segment.checkinBaggage ||
                 "7 Kg / Adult",
               cabinClass: reviewData.cabinClass || "Economy",
+              schedule: segment.schedule,
               layover:
                 journey.layovers && journey.layovers[segmentIndex]
                   ? {

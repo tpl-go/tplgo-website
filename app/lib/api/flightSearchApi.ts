@@ -68,13 +68,22 @@ export type BackendFlightSegment = {
     airport: string;
     terminal?: string;
     at: string;
+    localDateTime?: string;
+    timeZone?: string;
+    utcDateTime?: string;
+    offset?: string;
   };
   arrival: {
     airport: string;
     terminal?: string;
     at: string;
+    localDateTime?: string;
+    timeZone?: string;
+    utcDateTime?: string;
+    offset?: string;
   };
   duration: string;
+  dayOffset?: number;
   aircraft?: string;
 };
 
@@ -291,6 +300,7 @@ function mapBackendFlightOfferToDummyFlight(
         availability: offer.availability,
         providerLabel: safeProviderLabel(offer.source || context.source || offer.providerId),
         source: safeProviderLabel(offer.source || context.source || "backend"),
+        itineraries: offer.itineraries,
         bookingAllowed: offer.bookingAllowed === true,
         ticketingAllowed: offer.ticketingAllowed === true,
         ...(offer.expiresAt ? { expiresAt: offer.expiresAt } : {}),
@@ -388,9 +398,7 @@ function minutesFromDateTime(value: string | undefined): number {
   if (!value) return 0;
   const match = value.match(/T(\d{2}):(\d{2})/);
   if (match) return Number(match[1] || 0) * 60 + Number(match[2] || 0);
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return 0;
-  return parsed.getHours() * 60 + parsed.getMinutes();
+  return 0;
 }
 
 function minutesBetween(departMinutes: number, arriveMinutes: number): number {

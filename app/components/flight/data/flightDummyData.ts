@@ -5,6 +5,33 @@ import type {
   FlightPriceSnapshot,
 } from "@/app/lib/flights/flightCurrency";
 
+type FlightScheduleEndpointSnapshot = {
+  airport: string;
+  terminal?: string;
+  at: string;
+  localDateTime?: string;
+  timeZone?: string;
+  utcDateTime?: string;
+  offset?: string;
+};
+
+type FlightItinerarySnapshot = {
+  itineraryId: string;
+  duration: string;
+  stops: number;
+  segments: Array<{
+    segmentId: string;
+    airlineCode: string;
+    airlineName: string;
+    flightNumber: string;
+    departure: FlightScheduleEndpointSnapshot;
+    arrival: FlightScheduleEndpointSnapshot;
+    duration: string;
+    dayOffset?: number;
+    aircraft?: string;
+  }>;
+};
+
 export type FlightFareOption = {
   id: string;
   title: string;
@@ -63,6 +90,7 @@ export type DummyFlight = {
     };
     providerLabel?: string;
     source?: string;
+    itineraries?: FlightItinerarySnapshot[];
     bookingAllowed?: boolean;
     ticketingAllowed?: boolean;
     warnings?: string[];

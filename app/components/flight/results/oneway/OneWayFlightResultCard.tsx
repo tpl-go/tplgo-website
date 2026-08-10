@@ -14,6 +14,13 @@ import {
   type FlightCurrency,
 } from "@/app/lib/flights/flightCurrency";
 import { saveFlightReviewPayload } from "@/app/lib/flights/review/buildFlightReviewData";
+import {
+  formatAirportLocalDate,
+  formatAirportLocalTime,
+  formatDayOffset,
+  formatDurationFromSchedule,
+} from "@/app/lib/flights/flightScheduleTime";
+import type { BackendFlightItinerary, BackendFlightSegment } from "@/app/lib/api/flightSearchApi";
 
 type Props = {
   airline: string;
@@ -72,6 +79,7 @@ type Props = {
       seatsRemaining?: number;
       source: "provider" | "not_provided";
     };
+    itineraries?: BackendFlightItinerary[];
     smokeRunId?: string;
   };
 };
@@ -562,8 +570,16 @@ export default function FlightResultCard(props: Props) {
     const from = fromCity || fromCode || payload.departCity || "";
     const to = toCity || toCode || payload.arriveCity || "";
 
-    const departureDate = normalizeSearchDate(searchParams.get("departure"));
-    const arrivalDate = departureDate;
+    const backendItinerary = backendOffer?.itineraries?.[0];
+    const backendFirstSegment = backendItinerary?.segments?.[0];
+    const backendLastSegment =
+      backendItinerary?.segments?.[Math.max((backendItinerary?.segments?.length || 1) - 1, 0)] || backendFirstSegment;
+    const departureDate =
+      formatBackendSegmentDate(backendFirstSegment, "departure") ||
+      normalizeSearchDate(searchParams.get("departure"));
+    const arrivalDate =
+      formatBackendSegmentDate(backendLastSegment, "arrival") ||
+      departureDate;
 
     const rawFare =
       Number(selectedFare.priceAmount || 0) || parseFareNumber(selectedFare.price);
@@ -628,8 +644,9 @@ export default function FlightResultCard(props: Props) {
       journeys: [
         {
           journeyLabel: "Flight 1",
-          segments: [
-            {
+          segments: buildReviewSegmentsFromBackend({
+            backendItinerary,
+            fallback: {
               airline: payload.airline,
               flightNumber: payload.code,
               from,
@@ -647,7 +664,7 @@ export default function FlightResultCard(props: Props) {
               terminalFrom: fromCity,
               terminalTo: toCity,
             },
-          ],
+          }),
           layovers: payload.stopDetails.map((item) => ({
             airport: item.airport,
             code: item.airport,
@@ -791,6 +808,78 @@ export default function FlightResultCard(props: Props) {
       </OneWayModal>
     </>
   );
+}
+
+function buildReviewSegmentsFromBackend(input: {
+  backendItinerary?: BackendFlightItinerary;
+  fallback: {
+    airline: string;
+    flightNumber: string;
+    from: string;
+    to: string;
+    fromCode: string;
+    toCode: string;
+    departureTime: string;
+    arrivalTime: string;
+    departureDate: string;
+    arrivalDate: string;
+    duration: string;
+    checkinBaggage: string;
+    cabinBaggage: string;
+    aircraft: string;
+    terminalFrom: string;
+    terminalTo: string;
+  };
+}) {
+  const segments = input.backendItinerary?.segments || [];
+  if (!segments.length) return [input.fallback];
+  return segments.map((segment) => ({
+    airline: segment.airlineName || segment.airlineCode || input.fallback.airline,
+    flightNumber: segment.flightNumber || input.fallback.flightNumber,
+    from: segment.departure.airport || input.fallback.from,
+    to: segment.arrival.airport || input.fallback.to,
+    fromCode: segment.departure.airport || input.fallback.fromCode,
+    toCode: segment.arrival.airport || input.fallback.toCode,
+    departureTime: formatAirportLocalTime(segment.departure, input.fallback.departureTime),
+    arrivalTime: `${formatAirportLocalTime(segment.arrival, input.fallback.arrivalTime)}${formatDayOffset(segment.dayOffset) ? ` ${formatDayOffset(segment.dayOffset)}` : ""}`,
+    departureDate: formatBackendSegmentDate(segment, "departure") || input.fallback.departureDate,
+    arrivalDate: formatBackendSegmentDate(segment, "arrival") || input.fallback.arrivalDate,
+    duration: formatDurationFromSchedule({
+      departure: segment.departure,
+      arrival: segment.arrival,
+      duration: segment.duration,
+      dayOffset: segment.dayOffset,
+    }, input.fallback.duration),
+    checkinBaggage: input.fallback.checkinBaggage,
+    cabinBaggage: input.fallback.cabinBaggage,
+    aircraft: segment.aircraft || "",
+    terminalFrom: segment.departure.terminal ? `Terminal ${segment.departure.terminal}` : segment.departure.airport,
+    terminalTo: segment.arrival.terminal ? `Terminal ${segment.arrival.terminal}` : segment.arrival.airport,
+    schedule: {
+      departure: {
+        airport: segment.departure.airport,
+        at: segment.departure.at,
+        localDateTime: segment.departure.localDateTime,
+        timeZone: segment.departure.timeZone,
+        utcDateTime: segment.departure.utcDateTime,
+        offset: segment.departure.offset,
+      },
+      arrival: {
+        airport: segment.arrival.airport,
+        at: segment.arrival.at,
+        localDateTime: segment.arrival.localDateTime,
+        timeZone: segment.arrival.timeZone,
+        utcDateTime: segment.arrival.utcDateTime,
+        offset: segment.arrival.offset,
+      },
+      dayOffset: segment.dayOffset,
+    },
+  }));
+}
+
+function formatBackendSegmentDate(segment: BackendFlightSegment | undefined, endpoint: "departure" | "arrival") {
+  if (!segment) return "";
+  return formatAirportLocalDate(segment[endpoint], "");
 }
 
 function getSmokeRunId(searchParams: URLSearchParams): string {

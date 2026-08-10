@@ -75,6 +75,25 @@ export type FlightReviewPayload = {
       terminalTo?: string;
       fromCode?: string;
       toCode?: string;
+      schedule?: {
+        departure?: {
+          airport?: string;
+          at?: string;
+          localDateTime?: string;
+          timeZone?: string;
+          utcDateTime?: string;
+          offset?: string;
+        };
+        arrival?: {
+          airport?: string;
+          at?: string;
+          localDateTime?: string;
+          timeZone?: string;
+          utcDateTime?: string;
+          offset?: string;
+        };
+        dayOffset?: number;
+      };
     }>;
     layovers?: Array<{
       airport: string;

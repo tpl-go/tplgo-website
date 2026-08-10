@@ -186,89 +186,114 @@ export default function AircraftSeatMap({
         </div>
       ) : null}
 
-      <div className="overflow-x-auto rounded-[28px] border border-[#d9e2ec] bg-[#f8fbff] px-3 py-4">
-        <div className="mx-auto min-w-max max-w-max">
-          <div className="mx-auto h-10 w-[78%] rounded-t-[90%] border border-b-0 border-[#cbd5e1] bg-white" />
-          <div className="border-x border-[#cbd5e1] bg-white px-3 py-4 shadow-sm">
-            <div className="mb-3 flex items-center justify-center gap-3 text-[11px] font-black uppercase tracking-[0.18em] text-[#64748b]">
-              <span className="h-px w-12 bg-[#cbd5e1]" />
-              Cabin
-              <span className="h-px w-12 bg-[#cbd5e1]" />
-            </div>
+      <div className="overflow-x-auto rounded-[28px] border border-[#d9e2ec] bg-[#f8fbff] px-3 py-5">
+        <div className="relative mx-auto min-w-max max-w-max px-10 py-2">
+          <div
+            className="mx-auto h-14 w-[66%] border-x-2 border-t-2 border-[#94a3b8] bg-gradient-to-b from-white to-[#f8fafc] shadow-sm"
+            style={{ borderRadius: "999px 999px 18px 18px / 100% 100% 18px 18px" }}
+            aria-hidden="true"
+          >
+            <div className="mx-auto mt-3 h-1.5 w-12 rounded-full bg-[#cbd5e1]" />
+          </div>
 
-            <div className="space-y-2">
-              {derived.rows.map((row) => (
-                <div
-                  key={`${activeMap.seatMapId}-${row.rowNumber}`}
-                  className="grid items-center gap-2"
-                  style={{ gridTemplateColumns: "34px max-content 34px" }}
-                >
-                  <span className="text-center text-xs font-black text-[#64748b]">{row.rowNumber}</span>
-                  <div className="flex items-center gap-2">
-                    {row.groups.map((group, groupIndex) => (
-                      <div key={`${row.rowNumber}-${groupIndex}`} className="flex items-center gap-1.5">
-                        {groupIndex > 0 ? <div className="w-5" aria-hidden="true" /> : null}
-                        {group.map((seat) => {
-                          const selected = selectedIds.has(seat.id);
-                          const usedByOtherTraveller = selectedAssignments.some(
-                            (item) =>
-                              item.id === seat.id &&
-                              item.segmentRef === (seat.segmentRefs?.[0] || activeMap.segmentRef) &&
-                              item.travellerRef !== activeTraveller?.id
-                          );
-                          const stateLabel = seat.available
-                            ? selected
-                              ? "selected"
-                              : Number(seat.displayPrice.amount || 0) === 0
-                              ? "free"
-                              : "paid"
-                            : "unavailable";
-                          const featureLabels = getSeatFeatureLabels(seat, row, derived);
-                          const disabled = !seat.available || usedByOtherTraveller || mode === "manage";
+          <div className="relative">
+            <div
+              className="pointer-events-none absolute left-[-34px] top-[38%] h-24 w-10 rounded-l-[90%] border border-r-0 border-[#cbd5e1] bg-[#eef6ff]"
+              aria-hidden="true"
+            />
+            <div
+              className="pointer-events-none absolute right-[-34px] top-[38%] h-24 w-10 rounded-r-[90%] border border-l-0 border-[#cbd5e1] bg-[#eef6ff]"
+              aria-hidden="true"
+            />
 
-                          return (
-                            <button
-                              key={seat.id}
-                              type="button"
-                              disabled={disabled}
-                              aria-pressed={selected}
-                              aria-label={buildSeatAriaLabel(seat, stateLabel, featureLabels, usedByOtherTraveller)}
-                              title={buildSeatAriaLabel(seat, stateLabel, featureLabels, usedByOtherTraveller)}
-                              onClick={() => selectSeat(seat)}
-                              className={cn(
-                                "flex h-[52px] w-[52px] flex-col items-center justify-center rounded-[10px] border text-center transition focus:outline-none focus:ring-2 focus:ring-[#1d9bf0] focus:ring-offset-2",
-                                selected
-                                  ? "border-[#1d9bf0] bg-[#e8f6fd] text-[#0f172a] shadow-sm"
-                                  : seat.available
-                                  ? "border-[#cbd5e1] bg-white text-[#0f172a] hover:border-[#1d9bf0]"
-                                  : "border-[#e5e7eb] bg-[#f3f4f6] text-[#9ca3af]",
-                                usedByOtherTraveller || mode === "manage"
-                                  ? "cursor-not-allowed opacity-60"
-                                  : ""
-                              )}
-                            >
-                              <span className="text-[12px] font-black leading-4">{seat.code || seat.label}</span>
-                              {seat.available ? (
-                                <span className="text-[9px] font-black leading-3 text-[#475569]">
-                                  {Number(seat.displayPrice.amount || 0) === 0
-                                    ? "Free"
-                                    : formatCompactMoney(seat)}
-                                </span>
-                              ) : (
-                                <span className="text-[9px] font-black leading-3">Taken</span>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    ))}
-                  </div>
-                  <span className="text-center text-xs font-black text-[#64748b]">{row.rowNumber}</span>
+            <div className="rounded-[34px] border-2 border-[#94a3b8] bg-[#f8fafc] p-2 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.82),0_16px_34px_rgba(15,23,42,0.08)]">
+              <div className="rounded-[26px] border border-[#d9e2ec] bg-white px-4 py-4">
+                <div className="mb-4 flex items-center justify-center gap-3 text-[11px] font-black uppercase tracking-[0.18em] text-[#64748b]">
+                  <span className="h-px w-12 bg-[#cbd5e1]" />
+                  Cabin
+                  <span className="h-px w-12 bg-[#cbd5e1]" />
                 </div>
-              ))}
+
+                <div className="space-y-2">
+                  {derived.rows.map((row) => (
+                    <div
+                      key={`${activeMap.seatMapId}-${row.rowNumber}`}
+                      className="grid items-center gap-2"
+                      style={{ gridTemplateColumns: "34px max-content 34px" }}
+                    >
+                      <span className="text-center text-xs font-black text-[#64748b]">{row.rowNumber}</span>
+                      <div className="flex items-center gap-2">
+                        {row.groups.map((group, groupIndex) => (
+                          <div key={`${row.rowNumber}-${groupIndex}`} className="flex items-center gap-1.5">
+                            {groupIndex > 0 ? <div className="w-7 border-t border-dashed border-[#cbd5e1]" aria-hidden="true" /> : null}
+                            {group.map((seat) => {
+                              const selected = selectedIds.has(seat.id);
+                              const usedByOtherTraveller = selectedAssignments.some(
+                                (item) =>
+                                  item.id === seat.id &&
+                                  item.segmentRef === (seat.segmentRefs?.[0] || activeMap.segmentRef) &&
+                                  item.travellerRef !== activeTraveller?.id
+                              );
+                              const stateLabel = seat.available
+                                ? selected
+                                  ? "selected"
+                                  : Number(seat.displayPrice.amount || 0) === 0
+                                  ? "free"
+                                  : "paid"
+                                : "unavailable";
+                              const featureLabels = getSeatFeatureLabels(seat, row, derived);
+                              const disabled = !seat.available || usedByOtherTraveller || mode === "manage";
+
+                              return (
+                                <button
+                                  key={seat.id}
+                                  type="button"
+                                  disabled={disabled}
+                                  aria-pressed={selected}
+                                  aria-label={buildSeatAriaLabel(seat, stateLabel, featureLabels, usedByOtherTraveller)}
+                                  title={buildSeatAriaLabel(seat, stateLabel, featureLabels, usedByOtherTraveller)}
+                                  onClick={() => selectSeat(seat)}
+                                  className={cn(
+                                    "flex h-[52px] w-[52px] flex-col items-center justify-center rounded-[10px] border text-center transition focus:outline-none focus:ring-2 focus:ring-[#1d9bf0] focus:ring-offset-2",
+                                    selected
+                                      ? "border-[#1d9bf0] bg-[#e8f6fd] text-[#0f172a] shadow-sm"
+                                      : seat.available
+                                      ? "border-[#cbd5e1] bg-white text-[#0f172a] hover:border-[#1d9bf0]"
+                                      : "border-[#e5e7eb] bg-[#f3f4f6] text-[#9ca3af]",
+                                    usedByOtherTraveller || mode === "manage"
+                                      ? "cursor-not-allowed opacity-60"
+                                      : ""
+                                  )}
+                                >
+                                  <span className="text-[12px] font-black leading-4">{seat.code || seat.label}</span>
+                                  {seat.available ? (
+                                    <span className="text-[9px] font-black leading-3 text-[#475569]">
+                                      {Number(seat.displayPrice.amount || 0) === 0
+                                        ? "Free"
+                                        : formatCompactMoney(seat)}
+                                    </span>
+                                  ) : (
+                                    <span className="text-[9px] font-black leading-3">Taken</span>
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        ))}
+                      </div>
+                      <span className="text-center text-xs font-black text-[#64748b]">{row.rowNumber}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
-          <div className="mx-auto h-8 w-[86%] rounded-b-[70%] border border-t-0 border-[#cbd5e1] bg-white" />
+          <div
+            className="mx-auto h-10 w-[78%] border-x-2 border-b-2 border-[#94a3b8] bg-gradient-to-b from-[#f8fafc] to-white shadow-sm"
+            style={{ borderRadius: "18px 18px 999px 999px / 18px 18px 80% 80%" }}
+            aria-hidden="true"
+          />
+          <div className="mx-auto mt-[-2px] h-4 w-[28%] rounded-b-full border-x-2 border-b-2 border-[#94a3b8] bg-white" aria-hidden="true" />
         </div>
       </div>
 

@@ -1,5 +1,13 @@
 "use client";
 
+import {
+  formatAirportLocalDate,
+  formatAirportLocalTime,
+  formatDayOffset,
+  formatDurationFromSchedule,
+  type FlightScheduleEndpoint,
+} from "@/app/lib/flights/flightScheduleTime";
+
 type Segment = {
   airline?: string;
   flightNumber?: string;
@@ -17,6 +25,11 @@ type Segment = {
   aircraft?: string;
   terminalFrom?: string;
   terminalTo?: string;
+  schedule?: {
+    departure?: FlightScheduleEndpoint;
+    arrival?: FlightScheduleEndpoint;
+    dayOffset?: number;
+  };
 };
 
 type Journey = {
@@ -47,6 +60,28 @@ function formatDate(value?: string) {
     month: "short",
     year: "numeric",
   });
+}
+
+function segmentTime(segment: Segment, endpoint: "departure" | "arrival") {
+  const schedule = segment.schedule?.[endpoint];
+  const fallback = endpoint === "departure" ? segment.departureTime : segment.arrivalTime;
+  const offset = endpoint === "arrival" ? formatDayOffset(segment.schedule?.dayOffset) : "";
+  return `${formatAirportLocalTime(schedule, fallback || "--:--")}${offset ? ` ${offset}` : ""}`;
+}
+
+function segmentDate(segment: Segment, endpoint: "departure" | "arrival") {
+  const schedule = segment.schedule?.[endpoint];
+  const fallback = endpoint === "departure" ? segment.departureDate : segment.arrivalDate;
+  return formatAirportLocalDate(schedule, "") || formatDate(fallback);
+}
+
+function segmentDuration(segment: Segment) {
+  return formatDurationFromSchedule({
+    departure: segment.schedule?.departure,
+    arrival: segment.schedule?.arrival,
+    duration: segment.duration,
+    dayOffset: segment.schedule?.dayOffset,
+  }, segment.duration || "");
 }
 
 export default function FlightConfirmationJourneyCard({
@@ -195,9 +230,9 @@ export default function FlightConfirmationJourneyCard({
                             </div>
                           </div>
 
-                          {segment.duration ? (
+                          {segmentDuration(segment) ? (
                             <span style={durationPillStyle}>
-                              {segment.duration}
+                              {segmentDuration(segment)}
                             </span>
                           ) : null}
                         </div>
@@ -245,7 +280,7 @@ export default function FlightConfirmationJourneyCard({
                                   lineHeight: "30px",
                                 }}
                               >
-                                {segment.departureTime || "--:--"}
+                                {segmentTime(segment, "departure")}
                               </div>
 
                               <div
@@ -281,7 +316,7 @@ export default function FlightConfirmationJourneyCard({
                                   lineHeight: "18px",
                                 }}
                               >
-                                {formatDate(segment.departureDate)}
+                                {segmentDate(segment, "departure")}
                               </div>
 
                               <div
@@ -370,7 +405,7 @@ export default function FlightConfirmationJourneyCard({
                                   lineHeight: "30px",
                                 }}
                               >
-                                {segment.arrivalTime || "--:--"}
+                                {segmentTime(segment, "arrival")}
                               </div>
 
                               <div
@@ -406,7 +441,7 @@ export default function FlightConfirmationJourneyCard({
                                   lineHeight: "18px",
                                 }}
                               >
-                                {formatDate(segment.arrivalDate)}
+                                {segmentDate(segment, "arrival")}
                               </div>
 
                               <div
