@@ -69,10 +69,36 @@ function saveFlightPaymentPayloadForNavigation(payload: unknown): { ok: true } |
   }
 
   try {
+    const serialized = JSON.stringify(sanitizeFlightStoragePayload(payload));
     sessionStorage.setItem(
       "tplFlightBookingReviewData",
-      JSON.stringify(sanitizeFlightStoragePayload(payload))
+      serialized
     );
+    const raw = sessionStorage.getItem("tplFlightBookingReviewData");
+    if (!raw) {
+      return {
+        ok: false,
+        message: "Could not prepare the payment page. Please refresh the fare and try again.",
+      };
+    }
+    const parsed = JSON.parse(raw) as {
+      reviewData?: { backendOffer?: { paymentQuote?: unknown } };
+      backendSimulation?: { bookingDraftId?: unknown };
+    };
+    if (parsed.reviewData?.backendOffer) {
+      if (!parsed.backendSimulation?.bookingDraftId) {
+        return {
+          ok: false,
+          message: "Backend booking draft was missing. Please refresh the fare and try again.",
+        };
+      }
+      if (!parsed.reviewData.backendOffer.paymentQuote) {
+        return {
+          ok: false,
+          message: "Backend payment quote was missing. Please refresh the fare and try again.",
+        };
+      }
+    }
     return { ok: true };
   } catch {
     return {
@@ -895,7 +921,6 @@ seatTotal={backendAncillaryTotals.seats}
         return;
       }
 
-      setBackendSimulationState("idle");
       backendSimulationMetadata = {
         simulationId: simulation.data.simulationId,
         bookingDraftId: simulation.data.bookingDraftId,
@@ -918,7 +943,11 @@ seatTotal={backendAncillaryTotals.seats}
           currency: normalizeFlightCurrency(simulation.data.displayPriceSnapshot?.currency || priceReady.backendOffer.currency),
         },
       };
-      saveFlightReviewPayload(nextReviewData);
+      try {
+        saveFlightReviewPayload(nextReviewData);
+      } catch {
+        // The payment payload below is authoritative for navigation; back-navigation cache failures must not silently abort Proceed.
+      }
     }
 
   const payload = {
@@ -986,6 +1015,7 @@ seatTotal={backendAncillaryTotals.seats}
 
   try {
     router.push("/flights/payment");
+    setBackendSimulationState("idle");
   } catch {
     setBackendSimulationState("failed");
     setBackendBlockerMessage("Could not open the payment page. Please retry.");

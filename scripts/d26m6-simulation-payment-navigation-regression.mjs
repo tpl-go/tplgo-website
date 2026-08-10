@@ -27,7 +27,7 @@ assert.match(
 );
 assert.match(
   reviewPage,
-  /try \{\s*router\.push\("\/flights\/payment"\);\s*\} catch \{/s,
+  /try \{[\s\S]*router\.push\("\/flights\/payment"\);[\s\S]*\} catch \{/,
   "Payment route navigation must be attempted after state persistence and guarded against thrown navigation failures."
 );
 assert.match(
