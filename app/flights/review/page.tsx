@@ -63,49 +63,187 @@ function getActiveUser() {
   }
 }
 
-function saveFlightPaymentPayloadForNavigation(payload: unknown): { ok: true } | { ok: false; message: string } {
+const PROCEED_DEBUG_KEY = "tplFlightProceedDebug";
+
+type ProceedDebugTrace = {
+  stage?: string;
+  failedAt?: string;
+  safeReason?: string;
+  canProceed?: boolean;
+  travellerReady?: boolean;
+  contactReady?: boolean;
+  recheckStatus?: string;
+  simulationRequestSent?: boolean;
+  simulationHttpStatus?: number;
+  simulationOk?: boolean;
+  bookingDraftIdPresent?: boolean;
+  paymentQuotePresent?: boolean;
+  safetyAssert?: "pass" | "fail";
+  updatedReviewObjectReady?: boolean;
+  sanitizer?: "pass" | "fail";
+  storageWrite?: "pass" | "fail";
+  storageReadback?: "pass" | "fail";
+  routerPushCalled?: boolean;
+  currentPathname?: string;
+  paymentPageMounted?: boolean;
+  paymentGuard?: "pass" | "fail";
+  safeErrorCode?: string;
+  safeErrorMessage?: string;
+  timestamp?: string;
+};
+
+function readProceedDebugTrace(): ProceedDebugTrace {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = sessionStorage.getItem(PROCEED_DEBUG_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeProceedDebugTrace(patch: ProceedDebugTrace): ProceedDebugTrace {
+  if (typeof window === "undefined") return patch;
+  const next = {
+    ...readProceedDebugTrace(),
+    ...patch,
+    currentPathname: window.location.pathname,
+    timestamp: new Date().toISOString(),
+  };
+  try {
+    sessionStorage.setItem(PROCEED_DEBUG_KEY, JSON.stringify(next));
+  } catch {
+    // Debug trace must never affect booking flow.
+  }
+  return next;
+}
+
+function isProceedDebugEnabled() {
+  if (typeof window === "undefined") return false;
+  return new URLSearchParams(window.location.search).get("debugProceed") === "1";
+}
+
+function saveFlightPaymentPayloadForNavigation(payload: unknown): {
+  ok: true;
+  details: ProceedDebugTrace;
+} | {
+  ok: false;
+  message: string;
+  details: ProceedDebugTrace;
+} {
   if (typeof window === "undefined") {
-    return { ok: false, message: "Payment can only be opened in the browser." };
+    return { ok: false, message: "Payment can only be opened in the browser.", details: { sanitizer: "fail" } };
   }
 
   try {
     const serialized = JSON.stringify(sanitizeFlightStoragePayload(payload));
+    const details: ProceedDebugTrace = { sanitizer: "pass" };
     sessionStorage.setItem(
       "tplFlightBookingReviewData",
       serialized
     );
+    details.storageWrite = "pass";
     const raw = sessionStorage.getItem("tplFlightBookingReviewData");
     if (!raw) {
       return {
         ok: false,
         message: "Could not prepare the payment page. Please refresh the fare and try again.",
+        details: { ...details, storageReadback: "fail" },
       };
     }
     const parsed = JSON.parse(raw) as {
       reviewData?: { backendOffer?: { paymentQuote?: unknown } };
       backendSimulation?: { bookingDraftId?: unknown };
     };
+    details.storageReadback = "pass";
+    details.bookingDraftIdPresent = Boolean(parsed.backendSimulation?.bookingDraftId);
+    details.paymentQuotePresent = Boolean(parsed.reviewData?.backendOffer?.paymentQuote);
     if (parsed.reviewData?.backendOffer) {
       if (!parsed.backendSimulation?.bookingDraftId) {
         return {
           ok: false,
           message: "Backend booking draft was missing. Please refresh the fare and try again.",
+          details,
         };
       }
       if (!parsed.reviewData.backendOffer.paymentQuote) {
         return {
           ok: false,
           message: "Backend payment quote was missing. Please refresh the fare and try again.",
+          details,
         };
       }
     }
-    return { ok: true };
+    return { ok: true, details };
   } catch {
     return {
       ok: false,
       message: "Could not prepare the payment page. Please refresh the fare and try again.",
+      details: { sanitizer: "fail", storageWrite: "fail", storageReadback: "fail" },
     };
   }
+}
+
+function ProceedDebugPanel({
+  trace,
+  open,
+  onToggle,
+}: {
+  trace: ProceedDebugTrace;
+  open: boolean;
+  onToggle: () => void;
+}) {
+  const safeTrace = {
+    stage: trace.stage,
+    failedAt: trace.failedAt,
+    safeReason: trace.safeReason,
+    canProceed: trace.canProceed,
+    travellerReady: trace.travellerReady,
+    contactReady: trace.contactReady,
+    recheckStatus: trace.recheckStatus,
+    simulationRequestSent: trace.simulationRequestSent,
+    simulationHttpStatus: trace.simulationHttpStatus,
+    simulationOk: trace.simulationOk,
+    bookingDraftIdPresent: trace.bookingDraftIdPresent,
+    paymentQuotePresent: trace.paymentQuotePresent,
+    safetyAssert: trace.safetyAssert,
+    updatedReviewObjectReady: trace.updatedReviewObjectReady,
+    sanitizer: trace.sanitizer,
+    storageWrite: trace.storageWrite,
+    storageReadback: trace.storageReadback,
+    routerPushCalled: trace.routerPushCalled,
+    currentPathname: trace.currentPathname,
+    paymentPageMounted: trace.paymentPageMounted,
+    paymentGuard: trace.paymentGuard,
+    safeErrorCode: trace.safeErrorCode,
+    safeErrorMessage: trace.safeErrorMessage,
+    timestamp: trace.timestamp,
+  };
+
+  return (
+    <div className="fixed bottom-4 left-4 z-[80] max-w-[min(420px,calc(100vw-32px))] rounded-lg border border-[#bfdbfe] bg-white text-[#111827] shadow-xl">
+      <button type="button" onClick={onToggle} className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-[12px] font-black">
+        <span>Proceed diagnostics</span>
+        <span>{open ? "Hide" : "Show"}</span>
+      </button>
+      {open ? (
+        <div className="border-t border-[#e5e7eb] p-3">
+          <pre className="max-h-[280px] overflow-auto whitespace-pre-wrap text-[11px] leading-5">
+            {JSON.stringify(safeTrace, null, 2)}
+          </pre>
+          <button
+            type="button"
+            className="mt-2 rounded-md border border-[#d1d5db] px-2 py-1 text-[11px] font-bold"
+            onClick={() => {
+              void navigator.clipboard?.writeText(JSON.stringify(safeTrace, null, 2));
+            }}
+          >
+            Copy safe debug
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 type TravellerValidationPayload = {
@@ -218,6 +356,9 @@ const [wallet, setWallet] = useState({
   const [backendBlockerMessage, setBackendBlockerMessage] = useState("");
   const [travellerFieldErrors, setTravellerFieldErrors] = useState<Record<string, string>>({});
   const [travellerErrorFocusNonce, setTravellerErrorFocusNonce] = useState(0);
+  const [proceedDebugEnabled, setProceedDebugEnabled] = useState(false);
+  const [proceedDebugOpen, setProceedDebugOpen] = useState(true);
+  const [proceedDebugTrace, setProceedDebugTrace] = useState<ProceedDebugTrace>({});
   const [pendingPriceChange, setPendingPriceChange] = useState<{
     total: number;
     previousTotal: number;
@@ -229,6 +370,20 @@ const [wallet, setWallet] = useState({
   const [isExpired, setIsExpired] = useState(false);
   const [showRefreshNotice, setShowRefreshNotice] = useState(false);
 
+  const updateProceedDebug = (patch: ProceedDebugTrace) => {
+    if (!proceedDebugEnabled) return;
+    setProceedDebugTrace(writeProceedDebugTrace(patch));
+  };
+
+  const failProceedDebug = (failedAt: string, safeReason: string, extra: ProceedDebugTrace = {}) => {
+    updateProceedDebug({
+      ...extra,
+      stage: failedAt,
+      failedAt,
+      safeReason,
+    });
+  };
+
   useEffect(() => {
   const data = getFlightReviewPayload();
   setReviewData(data);
@@ -238,6 +393,14 @@ const [wallet, setWallet] = useState({
     setWallet(getWallet(user.mobile));
   }
 }, []);
+
+  useEffect(() => {
+    const enabled = isProceedDebugEnabled();
+    setProceedDebugEnabled(enabled);
+    if (enabled) {
+      setProceedDebugTrace(writeProceedDebugTrace({ stage: "REVIEW_DEBUG_READY" }));
+    }
+  }, []);
 
   useEffect(() => {
     if (!reviewData?.backendOffer || reviewData.backendOffer.priceConfirmationId || backendPriceState !== "idle") return;
@@ -688,6 +851,14 @@ const isInternationalFlight =
           </div>
         ) : null}
 
+        {proceedDebugEnabled ? (
+          <ProceedDebugPanel
+            trace={proceedDebugTrace}
+            open={proceedDebugOpen}
+            onToggle={() => setProceedDebugOpen((value) => !value)}
+          />
+        ) : null}
+
         <div
           className="max-md:flex-col"
           style={{
@@ -823,9 +994,22 @@ seatTotal={backendAncillaryTotals.seats}
   );
 
   function handleProceedClick() {
+    updateProceedDebug({
+      stage: "T01_CLICK",
+      canProceed,
+      travellerReady: Boolean(travellerValidation?.allRequiredTravellersCompleted),
+      contactReady: Boolean(travellerValidation?.contactValid),
+      recheckStatus: backendPriceState,
+    });
     if (!canProceed) {
       const message = blockerMessage || "Please complete the required booking details before continuing.";
       setBackendBlockerMessage(message);
+      failProceedDebug("T02_CAN_PROCEED_PASS", message, {
+        canProceed: false,
+        travellerReady: Boolean(travellerValidation?.allRequiredTravellersCompleted),
+        contactReady: Boolean(travellerValidation?.contactValid),
+        recheckStatus: backendPriceState,
+      });
       if (!isTravellerDone) {
         document.getElementById("traveller-detail")?.scrollIntoView({ block: "start", behavior: "smooth" });
         setTravellerErrorFocusNonce((value) => value + 1);
@@ -833,10 +1017,20 @@ seatTotal={backendAncillaryTotals.seats}
       return;
     }
 
+    updateProceedDebug({
+      stage: "T02_CAN_PROCEED_PASS",
+      canProceed: true,
+      travellerReady: Boolean(travellerValidation?.allRequiredTravellersCompleted),
+      contactReady: Boolean(travellerValidation?.contactValid),
+      recheckStatus: backendPriceState,
+    });
     void proceedToPayment();
   }
   async function proceedToPayment() {
-    if (!reviewData) return;
+    if (!reviewData) {
+      failProceedDebug("T02_CAN_PROCEED_PASS", "Review data was missing.");
+      return;
+    }
 
     let nextReviewData = reviewData;
     let backendSimulationMetadata:
@@ -851,18 +1045,35 @@ seatTotal={backendAncillaryTotals.seats}
         }
       | null = null;
     if (reviewData.backendOffer) {
+      updateProceedDebug({
+        stage: reviewData.backendOffer.priceConfirmationId ? "T06_RECHECK_PASS" : "T05_RECHECK_START",
+        recheckStatus: backendPriceState,
+      });
       const priceReady = reviewData.backendOffer.priceConfirmationId
         ? reviewData
         : await refreshBackendPrice(reviewData);
 
-      if (!priceReady?.backendOffer?.priceConfirmationId) return;
+      if (!priceReady?.backendOffer?.priceConfirmationId) {
+        failProceedDebug("T06_RECHECK_PASS", "Backend price confirmation was missing.", { recheckStatus: "failed" });
+        return;
+      }
+      updateProceedDebug({ stage: "T06_RECHECK_PASS", recheckStatus: "confirmed" });
       nextReviewData = priceReady;
       if (isFlightBackendStateExpired(priceReady.backendOffer.expiresAt)) {
         setBackendPriceState("expired");
         setBackendBlockerMessage("Backend fare expired. Please search again.");
+        failProceedDebug("T06_RECHECK_PASS", "Backend fare expired.", { recheckStatus: "expired" });
         return;
       }
 
+      updateProceedDebug({
+        stage: "T03_TRAVELLER_READY",
+        travellerReady: Boolean(travellerValidation?.allRequiredTravellersCompleted),
+      });
+      updateProceedDebug({
+        stage: "T04_CONTACT_READY",
+        contactReady: Boolean(travellerValidation?.contactValid),
+      });
       const mappedTravellers = validateAndMapFlightTravellers(
         travellerValidation,
         priceReady.passengers
@@ -871,12 +1082,18 @@ seatTotal={backendAncillaryTotals.seats}
       if (!mappedTravellers.ok) {
         setBackendSimulationState("failed");
         setBackendBlockerMessage(mappedTravellers.errors[0] || "Traveller details are invalid.");
+        failProceedDebug("T07_TRAVELLER_MAP_PASS", mappedTravellers.errors[0] || "Traveller details are invalid.");
         return;
       }
 
+      updateProceedDebug({ stage: "T07_TRAVELLER_MAP_PASS" });
       setBackendSimulationState("creating");
       setBackendBlockerMessage("");
       setTravellerFieldErrors({});
+      updateProceedDebug({
+        stage: "T08_SIMULATION_REQUEST_START",
+        simulationRequestSent: true,
+      });
       const simulation = await simulateBackendFlightBooking({
         searchId: priceReady.backendOffer.searchId,
         offerId: priceReady.backendOffer.offerId,
@@ -900,6 +1117,15 @@ seatTotal={backendAncillaryTotals.seats}
         idempotencyKey: buildFlightSmokeIdempotencyKey(`flight-sim:${priceReady.backendOffer.priceConfirmationId}`, priceReady.backendOffer.smokeRunId),
       });
 
+      updateProceedDebug({
+        stage: "T09_SIMULATION_HTTP_RESPONSE",
+        simulationRequestSent: true,
+        simulationHttpStatus: simulation.status,
+        simulationOk: simulation.ok,
+        safeErrorCode: simulation.ok ? undefined : simulation.error.code,
+        safeErrorMessage: simulation.ok ? undefined : normalizeFlightBackendError(simulation.error.code, simulation.error.message),
+      });
+
       if (!simulation.ok) {
         setBackendSimulationState("failed");
         const fieldErrors = mapBackendFieldErrors(simulation.error.fieldErrors);
@@ -910,17 +1136,28 @@ seatTotal={backendAncillaryTotals.seats}
         setBackendBlockerMessage(
           normalizeFlightBackendError(simulation.error.code, simulation.error.message)
         );
+        failProceedDebug("T09_SIMULATION_HTTP_RESPONSE", normalizeFlightBackendError(simulation.error.code, simulation.error.message), {
+          simulationHttpStatus: simulation.status,
+          simulationOk: false,
+          safeErrorCode: simulation.error.code,
+        });
         setShowRefreshNotice(true);
         return;
       }
 
+      updateProceedDebug({ stage: "T10_SIMULATION_JSON_PARSED", simulationHttpStatus: simulation.status, simulationOk: true });
+      updateProceedDebug({ stage: "T11_SIMULATION_OK", simulationOk: true });
       const simulationFlagErrors = assertSafeFlightSimulationFlags(simulation.data);
       if (simulationFlagErrors.length > 0) {
         setBackendSimulationState("failed");
         setBackendBlockerMessage(simulationFlagErrors[0]);
+        failProceedDebug("T12_SAFETY_ASSERT_PASS", simulationFlagErrors[0], { safetyAssert: "fail" });
         return;
       }
 
+      updateProceedDebug({ stage: "T12_SAFETY_ASSERT_PASS", safetyAssert: "pass" });
+      updateProceedDebug({ stage: "T13_BOOKING_DRAFT_PRESENT", bookingDraftIdPresent: Boolean(simulation.data.bookingDraftId) });
+      updateProceedDebug({ stage: "T14_PAYMENT_QUOTE_PRESENT", paymentQuotePresent: Boolean(simulation.data.paymentQuote || priceReady.backendOffer.paymentQuote) });
       backendSimulationMetadata = {
         simulationId: simulation.data.simulationId,
         bookingDraftId: simulation.data.bookingDraftId,
@@ -943,6 +1180,7 @@ seatTotal={backendAncillaryTotals.seats}
           currency: normalizeFlightCurrency(simulation.data.displayPriceSnapshot?.currency || priceReady.backendOffer.currency),
         },
       };
+      updateProceedDebug({ stage: "T15_NEXT_REVIEW_DATA_READY", updatedReviewObjectReady: true });
       try {
         saveFlightReviewPayload(nextReviewData);
       } catch {
@@ -1007,18 +1245,39 @@ seatTotal={backendAncillaryTotals.seats}
   }
 
   const paymentPayloadSaved = saveFlightPaymentPayloadForNavigation(payload);
+  updateProceedDebug({
+    stage: "T16_SANITIZER_PASS",
+    sanitizer: paymentPayloadSaved.details.sanitizer,
+    storageWrite: paymentPayloadSaved.details.storageWrite,
+    storageReadback: paymentPayloadSaved.details.storageReadback,
+    bookingDraftIdPresent: paymentPayloadSaved.details.bookingDraftIdPresent,
+    paymentQuotePresent: paymentPayloadSaved.details.paymentQuotePresent,
+  });
+  if (paymentPayloadSaved.details.storageWrite === "pass") {
+    updateProceedDebug({ stage: "T17_STORAGE_WRITE_PASS", storageWrite: "pass" });
+  }
+  if (paymentPayloadSaved.details.storageReadback === "pass") {
+    updateProceedDebug({ stage: "T18_STORAGE_READBACK_PASS", storageReadback: "pass" });
+  }
   if (!paymentPayloadSaved.ok) {
     setBackendSimulationState("failed");
     setBackendBlockerMessage(paymentPayloadSaved.message);
+    failProceedDebug(
+      paymentPayloadSaved.details.storageReadback === "fail" ? "T18_STORAGE_READBACK_PASS" : "T16_SANITIZER_PASS",
+      paymentPayloadSaved.message,
+      paymentPayloadSaved.details
+    );
     return;
   }
 
   try {
+    updateProceedDebug({ stage: "T19_ROUTER_PUSH_CALLED", routerPushCalled: true });
     router.push("/flights/payment");
     setBackendSimulationState("idle");
   } catch {
     setBackendSimulationState("failed");
     setBackendBlockerMessage("Could not open the payment page. Please retry.");
+    failProceedDebug("T19_ROUTER_PUSH_CALLED", "Could not open the payment page.", { routerPushCalled: true });
   }
   }
 

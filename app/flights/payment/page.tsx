@@ -221,6 +221,38 @@ function getActiveUser() {
   }
 }
 
+const PROCEED_DEBUG_KEY = "tplFlightProceedDebug";
+
+function readProceedDebugTrace(): Record<string, unknown> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = sessionStorage.getItem(PROCEED_DEBUG_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function shouldWriteProceedDebug() {
+  if (typeof window === "undefined") return false;
+  return new URLSearchParams(window.location.search).get("debugProceed") === "1" || Boolean(sessionStorage.getItem(PROCEED_DEBUG_KEY));
+}
+
+function writeProceedDebugTrace(patch: Record<string, unknown>) {
+  if (!shouldWriteProceedDebug()) return;
+  const next = {
+    ...readProceedDebugTrace(),
+    ...patch,
+    currentPathname: window.location.pathname,
+    timestamp: new Date().toISOString(),
+  };
+  try {
+    sessionStorage.setItem(PROCEED_DEBUG_KEY, JSON.stringify(next));
+  } catch {
+    // Debug trace must never affect payment flow.
+  }
+}
+
 export default function FlightPaymentPage() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
@@ -250,15 +282,34 @@ export default function FlightPaymentPage() {
   const [isExpired, setIsExpired] = useState(false);
 
   useEffect(() => {
+    writeProceedDebugTrace({
+      stage: "T20_PAYMENT_PAGE_MOUNT",
+      paymentPageMounted: true,
+    });
     const raw =
       typeof window !== "undefined"
         ? sessionStorage.getItem("tplFlightBookingReviewData")
         : null;
 
-    if (!raw) return;
+    if (!raw) {
+      writeProceedDebugTrace({
+        stage: "T21_PAYMENT_STORAGE_READ_PASS",
+        failedAt: "T21_PAYMENT_STORAGE_READ_PASS",
+        safeReason: "Payment storage payload was missing.",
+        storageReadback: "fail",
+        paymentGuard: "fail",
+      });
+      return;
+    }
 
     try {
       const parsed: StoredPayload = JSON.parse(raw);
+      writeProceedDebugTrace({
+        stage: "T21_PAYMENT_STORAGE_READ_PASS",
+        storageReadback: "pass",
+        bookingDraftIdPresent: Boolean(parsed.backendSimulation?.bookingDraftId),
+        paymentQuotePresent: Boolean(parsed.reviewData?.backendOffer?.paymentQuote),
+      });
       setStoredPayload(parsed);
 
       if (typeof parsed?.timerLeft === "number" && parsed.timerLeft > 0) {
@@ -266,6 +317,13 @@ export default function FlightPaymentPage() {
       }
     } catch (error) {
       console.error("Failed to parse flight payment payload:", error);
+      writeProceedDebugTrace({
+        stage: "T21_PAYMENT_STORAGE_READ_PASS",
+        failedAt: "T21_PAYMENT_STORAGE_READ_PASS",
+        safeReason: "Payment storage payload could not be parsed.",
+        storageReadback: "fail",
+        paymentGuard: "fail",
+      });
     }
   }, []);
 
@@ -343,6 +401,23 @@ export default function FlightPaymentPage() {
   const reviewData = storedPayload?.reviewData;
   const travellerValidation = storedPayload?.travellerValidation;
   const offerData = storedPayload?.offerData || null;
+  useEffect(() => {
+    if (!reviewData) return;
+    writeProceedDebugTrace({
+      stage: "T22_PAYMENT_GUARD_PASS",
+      paymentGuard: "pass",
+      paymentPageMounted: true,
+      bookingDraftIdPresent: Boolean(storedPayload?.backendSimulation?.bookingDraftId),
+      paymentQuotePresent: Boolean(reviewData?.backendOffer?.paymentQuote),
+    });
+    writeProceedDebugTrace({
+      stage: "T23_PAYMENT_BOUNDARY_VISIBLE",
+      paymentGuard: "pass",
+      paymentPageMounted: true,
+      bookingDraftIdPresent: Boolean(storedPayload?.backendSimulation?.bookingDraftId),
+      paymentQuotePresent: Boolean(reviewData?.backendOffer?.paymentQuote),
+    });
+  }, [reviewData, storedPayload?.backendSimulation?.bookingDraftId]);
   const safeSeatMealData = {
     seats: [],
     meals: [],
