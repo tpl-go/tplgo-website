@@ -385,7 +385,7 @@ export default function FlightFareSummaryCard({
           <div className="bg-white px-4 py-4 max-md:px-3 max-md:py-3">
             <button
               type="button"
-              disabled={!canProceed}
+              aria-disabled={!canProceed}
               onClick={onProceed}
               className={`h-[50px] w-full rounded-full text-[16px] font-extrabold transition max-md:h-12 max-md:text-[15px] ${
                 canProceed

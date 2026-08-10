@@ -395,6 +395,10 @@ const finalTotalAmount = ancillaryQuote
     ? "Could not create simulated booking draft. Please retry after refreshing price."
     : isExpired
     ? "Session expired. Please refresh price and continue again."
+    : !isTravellerDone && travellerValidation?.allRequiredTravellersCompleted === false
+    ? "Please complete all required traveller details."
+    : !isTravellerDone && travellerValidation?.contactValid === false
+    ? "Please enter a valid contact mobile number and email."
     : !isTravellerDone
     ? "Please fill Traveller Detail first."
     : "";
@@ -756,11 +760,7 @@ seatTotal={backendAncillaryTotals.seats}
               canProceed={canProceed}
               blockerMessage={blockerMessage}
               buttonLabel={isExpired ? "Session Expired" : "Proceed to Book"}
-              onProceed={() => {
-  if (isExpired) return;
-
-  void proceedToPayment();
-}}
+              onProceed={handleProceedClick}
             />
 
             <FlightOffersSection
@@ -776,6 +776,19 @@ seatTotal={backendAncillaryTotals.seats}
     </main>
   );
 
+  function handleProceedClick() {
+    if (!canProceed) {
+      const message = blockerMessage || "Please complete the required booking details before continuing.";
+      setBackendBlockerMessage(message);
+      if (!isTravellerDone) {
+        document.getElementById("traveller-detail")?.scrollIntoView({ block: "start", behavior: "smooth" });
+        setTravellerErrorFocusNonce((value) => value + 1);
+      }
+      return;
+    }
+
+    void proceedToPayment();
+  }
   async function proceedToPayment() {
     if (!reviewData) return;
 
