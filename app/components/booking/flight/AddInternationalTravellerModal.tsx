@@ -41,6 +41,8 @@ type Props = {
   children: number;
   infants: number;
   initialTravellers?: InternationalTravellerForm[];
+  fieldErrors?: Record<string, string>;
+  errorFocusNonce?: number;
   onSave: (travellers: InternationalTravellerForm[]) => void;
 };
 
@@ -237,6 +239,8 @@ export default function AddInternationalTravellerModal({
   children,
   infants,
   initialTravellers,
+  fieldErrors = {},
+  errorFocusNonce = 0,
   onSave,
 }: Props) {
   const [travellers, setTravellers] = useState<InternationalTravellerForm[]>(
@@ -256,6 +260,18 @@ export default function AddInternationalTravellerModal({
       });
     }
   }, [isOpen, adults, children, infants, initialTravellers]);
+
+  useEffect(() => {
+    if (!isOpen || !errorFocusNonce) return;
+    queueMicrotask(() => {
+      const firstErrorKey = Object.keys(fieldErrors)[0];
+      const target = firstErrorKey
+        ? document.querySelector<HTMLElement>(`[data-flight-field-error-key="${firstErrorKey}"]`)
+        : null;
+      target?.scrollIntoView({ block: "center", behavior: "smooth" });
+      target?.focus();
+    });
+  }, [isOpen, errorFocusNonce, fieldErrors]);
 
   const completedCount = useMemo(() => {
     return travellers.filter(isTravellerComplete).length;
@@ -555,6 +571,8 @@ export default function AddInternationalTravellerModal({
                           }}
                         >
                           <select
+                            data-flight-field-error-key={`travellers.${travellers.indexOf(item)}.dateOfBirth`}
+                            aria-invalid={Boolean(fieldErrors[`travellers.${travellers.indexOf(item)}.dateOfBirth`])}
                             value={item.dateOfBirthDay}
                             onChange={(e) =>
                               updateTraveller(
@@ -615,11 +633,16 @@ export default function AddInternationalTravellerModal({
                             )}
                           </select>
                         </div>
+                        {fieldErrors[`travellers.${travellers.indexOf(item)}.dateOfBirth`] ? (
+                          <p style={errorTextStyle}>{fieldErrors[`travellers.${travellers.indexOf(item)}.dateOfBirth`]}</p>
+                        ) : null}
                       </div>
 
                       <div>
                         <div style={labelStyle}>Passport No</div>
                         <input
+                          data-flight-field-error-key={`travellers.${travellers.indexOf(item)}.passportNumber`}
+                          aria-invalid={Boolean(fieldErrors[`travellers.${travellers.indexOf(item)}.passportNumber`])}
                           value={item.passportNo}
                           onChange={(e) =>
                             updateTraveller(item.id, "passportNo", e.target.value)
@@ -627,11 +650,16 @@ export default function AddInternationalTravellerModal({
                           placeholder="Passport No"
                           style={inputStyle}
                         />
+                        {fieldErrors[`travellers.${travellers.indexOf(item)}.passportNumber`] ? (
+                          <p style={errorTextStyle}>{fieldErrors[`travellers.${travellers.indexOf(item)}.passportNumber`]}</p>
+                        ) : null}
                       </div>
 
                       <div>
                         <div style={labelStyle}>Passport Issuing Country</div>
                         <select
+                          data-flight-field-error-key={`travellers.${travellers.indexOf(item)}.passportIssuingCountry`}
+                          aria-invalid={Boolean(fieldErrors[`travellers.${travellers.indexOf(item)}.passportIssuingCountry`] || fieldErrors[`travellers.${travellers.indexOf(item)}.nationality`])}
                           value={item.passportIssuingCountry}
                           onChange={(e) =>
                             updateTraveller(
@@ -649,6 +677,9 @@ export default function AddInternationalTravellerModal({
                             </option>
                           ))}
                         </select>
+                        {(fieldErrors[`travellers.${travellers.indexOf(item)}.passportIssuingCountry`] || fieldErrors[`travellers.${travellers.indexOf(item)}.nationality`]) ? (
+                          <p style={errorTextStyle}>{fieldErrors[`travellers.${travellers.indexOf(item)}.passportIssuingCountry`] || fieldErrors[`travellers.${travellers.indexOf(item)}.nationality`]}</p>
+                        ) : null}
                       </div>
                     </div>
 
@@ -674,6 +705,8 @@ export default function AddInternationalTravellerModal({
                           }}
                         >
                           <select
+                            data-flight-field-error-key={`travellers.${travellers.indexOf(item)}.passportExpiryDate`}
+                            aria-invalid={Boolean(fieldErrors[`travellers.${travellers.indexOf(item)}.passportExpiryDate`])}
                             value={item.passportExpiryDay}
                             onChange={(e) =>
                               updateTraveller(
@@ -734,6 +767,9 @@ export default function AddInternationalTravellerModal({
                             )}
                           </select>
                         </div>
+                        {fieldErrors[`travellers.${travellers.indexOf(item)}.passportExpiryDate`] ? (
+                          <p style={errorTextStyle}>{fieldErrors[`travellers.${travellers.indexOf(item)}.passportExpiryDate`]}</p>
+                        ) : null}
                       </div>
 
                       <div>
@@ -899,6 +935,13 @@ const inputStyle: React.CSSProperties = {
   color: "#111827",
   outline: "none",
   background: "#ffffff",
+};
+
+const errorTextStyle: React.CSSProperties = {
+  margin: "6px 0 0 0",
+  color: "#b91c1c",
+  fontSize: "12px",
+  fontWeight: 700,
 };
 
 const labelStyle: React.CSSProperties = {

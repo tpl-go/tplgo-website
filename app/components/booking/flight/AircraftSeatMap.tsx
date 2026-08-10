@@ -281,20 +281,22 @@ export default function AircraftSeatMap({
                   <span className="h-px w-14 bg-[#cbd5e1]" />
                 </div>
 
-                <div className="space-y-2.5">
-                  {derived.rows.map((row) => (
+                <div className="space-y-2">
+                  {derived.rows.map((row) => {
+                    const rowLabel = getCustomerRowLabel(row);
+                    return (
                     <div
                       key={`${activeMap.seatMapId}-${row.rowNumber}`}
                       className="grid items-center gap-2"
-                      style={{ gridTemplateColumns: "36px max-content 36px" }}
+                      style={{ gridTemplateColumns: "30px max-content 30px" }}
                     >
-                      <span className="text-center text-xs font-black text-[#64748b]">{row.rowNumber}</span>
-                      <div className="flex items-center gap-2.5">
+                      <span className="text-center text-[11px] font-black text-[#64748b]">{rowLabel}</span>
+                      <div className="flex items-center gap-2">
                         {row.groups.map((group, groupIndex) => (
                           <div key={`${row.rowNumber}-${groupIndex}`} className="flex items-center gap-1.5">
                             {groupIndex > 0 ? (
-                              <div className="flex w-10 items-center justify-center" aria-hidden="true">
-                                <span className="h-px w-full border-t border-dashed border-[#b8c4d4]" />
+                              <div className="flex w-12 items-center justify-center" aria-hidden="true">
+                                <span className="h-full min-h-8 w-px rounded-full bg-[#d7e2ef]" />
                               </div>
                             ) : null}
                             {group.map((seat) => {
@@ -326,7 +328,7 @@ export default function AircraftSeatMap({
                                   title={buildSeatAriaLabel(seat, stateLabel, featureLabels, usedByOtherTraveller)}
                                   onClick={() => selectSeat(seat)}
                                   className={cn(
-                                    "relative flex h-[58px] w-[56px] flex-col items-center justify-center overflow-hidden rounded-[14px] border text-center transition focus:outline-none focus:ring-2 focus:ring-[#1d9bf0] focus:ring-offset-2",
+                                    "relative flex h-[42px] w-[46px] items-center justify-center overflow-hidden rounded-[13px] border text-center transition focus:outline-none focus:ring-2 focus:ring-[#1d9bf0] focus:ring-offset-2",
                                     "before:absolute before:left-2 before:right-2 before:top-1 before:h-1 before:rounded-full before:content-['']",
                                     selected
                                       ? "border-[#1d9bf0] bg-[#e8f6fd] text-[#0f172a] shadow-[0_8px_18px_rgba(29,155,240,0.18)] before:bg-[#1d9bf0]"
@@ -342,15 +344,13 @@ export default function AircraftSeatMap({
                                       : ""
                                   )}
                                 >
-                                  <span className="relative z-10 text-[12px] font-black leading-4">{seat.code || seat.label}</span>
-                                  {seat.available ? (
-                                    <span className="relative z-10 mt-0.5 rounded-full bg-[#f8fafc] px-1.5 text-[9px] font-black leading-4 text-[#475569]">
-                                      {Number(seat.displayPrice.amount || 0) === 0
-                                        ? "Free"
-                                        : formatCompactMoney(seat)}
-                                    </span>
+                                  <span className="relative z-10 text-[12px] font-black leading-4">{getCustomerSeatCode(seat)}</span>
+                                  {!seat.available ? (
+                                    <span className="sr-only">Unavailable</span>
+                                  ) : Number(seat.displayPrice.amount || 0) === 0 ? (
+                                    <span className="absolute bottom-1 h-1.5 w-1.5 rounded-full bg-[#22c55e]" aria-hidden="true" />
                                   ) : (
-                                    <span className="relative z-10 mt-0.5 text-[9px] font-black leading-3">Taken</span>
+                                    <span className="absolute bottom-1 h-1.5 w-1.5 rounded-full bg-[#f97316]" aria-hidden="true" />
                                   )}
                                 </button>
                               );
@@ -358,9 +358,10 @@ export default function AircraftSeatMap({
                           </div>
                         ))}
                       </div>
-                      <span className="text-center text-xs font-black text-[#64748b]">{row.rowNumber}</span>
+                      <span className="text-center text-[11px] font-black text-[#64748b]">{rowLabel}</span>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -450,7 +451,7 @@ function SeatDetailCard({
       <div className="min-w-0">
         <p className="text-[11px] font-black uppercase tracking-[0.16em] text-[#64748b]">Seat detail</p>
         <div className="mt-2 flex flex-wrap items-center gap-2">
-          <span className="rounded-xl bg-[#0f172a] px-3 py-2 text-base font-black text-white">{seat.code || seat.label}</span>
+          <span className="rounded-xl bg-[#0f172a] px-3 py-2 text-base font-black text-white">{getCustomerSeatCode(seat)}</span>
           <span className="rounded-full border border-[#d9e2ec] px-3 py-1 text-xs font-black text-[#334155]">
             {seat.available ? (Number(seat.displayPrice.amount || 0) === 0 ? "Free" : formatFlightMoney(seat.displayPrice.amount, seat.displayPrice.currency)) : "Unavailable"}
           </span>
@@ -602,7 +603,7 @@ function buildSelectedSummary(
       key: `${assignment.travellerRef}-${assignment.segmentRef}-${assignment.id}`,
       traveller: traveller?.label || assignment.travellerRef,
       segment: `Segment ${Math.max(maps.findIndex((item) => item.seatMapId === map.seatMapId), 0) + 1}`,
-      seat: found.seat.code || found.seat.label,
+      seat: getCustomerSeatCode(found.seat),
       type: FEATURE_LABELS[getSeatPosition(found.seat, found.row)],
       price: seatPriceLabel(found.seat),
     };
@@ -621,7 +622,7 @@ function buildSelectedSummary(
       key: `selected-${seatId}`,
       traveller: "Selected",
       segment: `Segment ${Math.max(maps.findIndex((item) => item.seatMapId === foundMap.map.seatMapId), 0) + 1}`,
-      seat: foundMap.found.seat.code || foundMap.found.seat.label,
+      seat: getCustomerSeatCode(foundMap.found.seat),
       type: FEATURE_LABELS[getSeatPosition(foundMap.found.seat, foundMap.found.row)],
       price: seatPriceLabel(foundMap.found.seat),
     });
@@ -641,7 +642,22 @@ function getAssignedSeatCode(
   const map = maps.find((item) => item.segmentRef === segmentRef) || maps[0];
   if (!map) return "";
   const found = findSeatInLayout(deriveSeatMapLayout(map), assignment.id);
-  return found?.seat.code || found?.seat.label || "";
+  return found ? getCustomerSeatCode(found.seat) : "";
+}
+
+function getCustomerSeatCode(seat: AircraftSeatOption) {
+  const raw = String(seat.code || seat.label || "").trim();
+  const match = raw.match(/\b\d{1,3}[A-Z]{1,2}\b/i);
+  if (match?.[0]) return match[0].toUpperCase();
+  if (/^(row_|map_|seat_|segment_|public_|private_)/i.test(raw)) return "";
+  return raw.toUpperCase();
+}
+
+function getCustomerRowLabel(row: DerivedSeatRow) {
+  if (/^\d{1,3}$/.test(row.rowNumber)) return row.rowNumber;
+  const firstSeat = row.seats.map(getCustomerSeatCode).find((value) => /^\d{1,3}[A-Z]{1,2}$/.test(value));
+  const match = firstSeat?.match(/^\d{1,3}/);
+  return match?.[0] || "";
 }
 
 function getSeatLetter(seat: AircraftSeatOption) {
@@ -736,5 +752,5 @@ function buildSeatAriaLabel(
       : formatFlightMoney(seat.displayPrice.amount, seat.displayPrice.currency)
     : "unavailable";
   const features = featureLabels.map((item) => FEATURE_LABELS[item]).filter(Boolean).join(", ");
-  return `${seat.code || seat.label}, ${usedByOtherTraveller ? "already assigned" : FEATURE_LABELS[stateLabel] || stateLabel}, ${price}${features ? `, ${features}` : ""}`;
+  return `${getCustomerSeatCode(seat)}, ${usedByOtherTraveller ? "already assigned" : FEATURE_LABELS[stateLabel] || stateLabel}, ${price}${features ? `, ${features}` : ""}`;
 }

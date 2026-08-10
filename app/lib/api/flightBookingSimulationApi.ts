@@ -25,6 +25,9 @@ export type BackendFlightBookingSimulationRequest = {
     dateOfBirth?: string;
     gender?: string;
     nationality?: string;
+    passportNumber?: string;
+    passportIssuingCountry?: string;
+    passportExpiryDate?: string;
   }>;
   contactDetails: {
     countryCode: string;

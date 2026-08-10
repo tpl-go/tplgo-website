@@ -170,6 +170,8 @@ const [wallet, setWallet] = useState({
   const [ancillaryQuote, setAncillaryQuote] = useState<BackendFlightAncillaryQuote | null>(null);
   const [ancillaryMessage, setAncillaryMessage] = useState("");
   const [backendBlockerMessage, setBackendBlockerMessage] = useState("");
+  const [travellerFieldErrors, setTravellerFieldErrors] = useState<Record<string, string>>({});
+  const [travellerErrorFocusNonce, setTravellerErrorFocusNonce] = useState(0);
   const [pendingPriceChange, setPendingPriceChange] = useState<{
     total: number;
     previousTotal: number;
@@ -671,7 +673,12 @@ const isInternationalFlight =
                 bookingType={reviewData.bookingType}
                 tripMode={reviewData.tripMode}
                 passengers={reviewData.passengers}
-                onValidationChange={setTravellerValidation}
+                fieldErrors={travellerFieldErrors}
+                errorFocusNonce={travellerErrorFocusNonce}
+                onValidationChange={(payload) => {
+                  setTravellerValidation(payload);
+                  if (Object.keys(travellerFieldErrors).length > 0) setTravellerFieldErrors({});
+                }}
               />
 
               <FlightSeatMealSection
@@ -810,6 +817,7 @@ seatTotal={backendAncillaryTotals.seats}
 
       setBackendSimulationState("creating");
       setBackendBlockerMessage("");
+      setTravellerFieldErrors({});
       const simulation = await simulateBackendFlightBooking({
         searchId: priceReady.backendOffer.searchId,
         offerId: priceReady.backendOffer.offerId,
@@ -835,6 +843,11 @@ seatTotal={backendAncillaryTotals.seats}
 
       if (!simulation.ok) {
         setBackendSimulationState("failed");
+        const fieldErrors = mapBackendFieldErrors(simulation.error.fieldErrors);
+        if (Object.keys(fieldErrors).length > 0) {
+          setTravellerFieldErrors(fieldErrors);
+          setTravellerErrorFocusNonce((value) => value + 1);
+        }
         setBackendBlockerMessage(
           normalizeFlightBackendError(simulation.error.code, simulation.error.message)
         );
@@ -1243,4 +1256,17 @@ function summarizeBackendAncillaryQuote(quote: BackendFlightAncillaryQuote | nul
     paidBaggage: Math.round(totals.paidBaggage * 100) / 100,
     meals: Math.round(totals.meals * 100) / 100,
   };
+}
+
+function mapBackendFieldErrors(fieldErrors: unknown[] | undefined) {
+  const mapped: Record<string, string> = {};
+  if (!Array.isArray(fieldErrors)) return mapped;
+  for (const item of fieldErrors) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) continue;
+    const record = item as Record<string, unknown>;
+    const field = typeof record.field === "string" ? record.field : "";
+    const message = typeof record.message === "string" ? record.message : "";
+    if (field.startsWith("travellers.") && message) mapped[field] = message;
+  }
+  return mapped;
 }

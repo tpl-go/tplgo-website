@@ -55,6 +55,8 @@ type Props = {
     children: number;
     infants: number;
   };
+  fieldErrors?: Record<string, string>;
+  errorFocusNonce?: number;
   onValidationChange?: (payload: ValidationPayload) => void;
 };
 
@@ -101,7 +103,22 @@ function splitFullName(fullName?: string) {
 
 function buildIsoDate(year?: string, month?: string, day?: string) {
   const cleanYear = String(year || "").trim();
-  const cleanMonth = String(month || "").trim().padStart(2, "0");
+  const rawMonth = String(month || "").trim();
+  const monthMap: Record<string, string> = {
+    jan: "1",
+    feb: "2",
+    mar: "3",
+    apr: "4",
+    may: "5",
+    jun: "6",
+    jul: "7",
+    aug: "8",
+    sep: "9",
+    oct: "10",
+    nov: "11",
+    dec: "12",
+  };
+  const cleanMonth = (monthMap[rawMonth.toLowerCase()] || rawMonth).padStart(2, "0");
   const cleanDay = String(day || "").trim().padStart(2, "0");
   if (!/^\d{4}$/.test(cleanYear) || !/^\d{2}$/.test(cleanMonth) || !/^\d{2}$/.test(cleanDay)) return "";
   return `${cleanYear}-${cleanMonth}-${cleanDay}`;
@@ -154,6 +171,8 @@ export default function FlightTravellerSection({
   bookingType,
   tripMode,
   passengers,
+  fieldErrors = {},
+  errorFocusNonce = 0,
   onValidationChange,
 }: Props) {
   const [isOpen, setIsOpen] = useState(true);
@@ -326,6 +345,15 @@ const [contactDetails, setContactDetails] = useState<ContactDetails>({
     canProceed,
     onValidationChange,
   ]);
+
+  useEffect(() => {
+    if (!errorFocusNonce || tripMode !== "international") return;
+    const hasTravellerError = Object.keys(fieldErrors).some((key) => key.startsWith("travellers."));
+    if (hasTravellerError) {
+      setIsOpen(true);
+      setShowInternationalModal(true);
+    }
+  }, [errorFocusNonce, fieldErrors, tripMode]);
 
   const openTravellerModal = () => {
     if (tripMode === "international") {
@@ -501,8 +529,9 @@ const [contactDetails, setContactDetails] = useState<ContactDetails>({
 
             <div className="max-md:p-3" style={{ padding: "18px", background: "#ffffff" }}>
               <div style={{ display: "grid", gap: "14px" }}>
-                {travellerCards.map((traveller) => {
+                {travellerCards.map((traveller, index) => {
                   const completed = isTravellerComplete(traveller);
+                  const travellerError = getTravellerFieldError(fieldErrors, index);
 
                   return (
                     <div
@@ -573,6 +602,11 @@ const [contactDetails, setContactDetails] = useState<ContactDetails>({
                               ? `${traveller.firstName} ${traveller.lastName}`.trim()
                               : `Add ${traveller.label}`}
                           </button>
+                          {travellerError ? (
+                            <p style={{ margin: "6px 0 0 0", color: "#b91c1c", fontSize: "12px", fontWeight: 700 }}>
+                              {travellerError}
+                            </p>
+                          ) : null}
                         </div>
                       </div>
 
@@ -850,3 +884,9 @@ const inputStyle: React.CSSProperties = {
   outline: "none",
   background: "#ffffff",
 };
+
+function getTravellerFieldError(fieldErrors: Record<string, string>, index: number) {
+  const prefix = `travellers.${index}.`;
+  const key = Object.keys(fieldErrors).find((item) => item.startsWith(prefix) || item === `travellers.${index}`);
+  return key ? fieldErrors[key] : "";
+}
