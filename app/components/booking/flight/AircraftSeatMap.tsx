@@ -54,6 +54,17 @@ type Props = {
 
 type SeatPosition = "window" | "aisle" | "middle";
 
+type DerivedSeatRow = {
+  rowNumber: string;
+  seats: AircraftSeatOption[];
+  groups: AircraftSeatOption[][];
+};
+
+type DerivedSeatLayout = {
+  allLetters: string[];
+  rows: DerivedSeatRow[];
+};
+
 const FEATURE_LABELS: Record<string, string> = {
   window: "Window",
   aisle: "Aisle",
@@ -81,6 +92,7 @@ export default function AircraftSeatMap({
   const usableMaps = seatMaps.filter((map) => map.rows.some((row) => row.seats.length > 0));
   const [activeTravellerId, setActiveTravellerId] = useState(travellers[0]?.id || "traveller-1");
   const [activeMapId, setActiveMapId] = useState(usableMaps[0]?.seatMapId || "");
+  const [focusedSeatId, setFocusedSeatId] = useState<string | null>(null);
 
   const activeMap = usableMaps.find((map) => map.seatMapId === activeMapId) || usableMaps[0] || null;
   const activeTraveller = travellers.find((item) => item.id === activeTravellerId) || travellers[0] || null;
@@ -101,9 +113,37 @@ export default function AircraftSeatMap({
   }
 
   const legendItems = buildLegendItems(derived);
+  const activeMapIndex = Math.max(usableMaps.findIndex((map) => map.seatMapId === activeMap.seatMapId), 0);
+  const focusedSeat = focusedSeatId ? findSeatInLayout(derived, focusedSeatId) : null;
+  const selectedForTraveller = activeTraveller
+    ? selectedAssignments.find(
+        (item) => item.travellerRef === activeTraveller.id && item.segmentRef === activeMap.segmentRef
+      )
+    : null;
+  const fallbackSelectedSeat = selectedForTraveller ? findSeatInLayout(derived, selectedForTraveller.id) : null;
+  const detailSeat = focusedSeat || fallbackSelectedSeat || findFirstAvailableSeat(derived);
+  const selectedSummary = buildSelectedSummary(usableMaps, travellers, selectedAssignments, selectedSeatIds);
+
+  function handleTravellerChange(travellerId: string) {
+    setActiveTravellerId(travellerId);
+    const travellerSeat = selectedAssignments.find(
+      (item) => item.travellerRef === travellerId && item.segmentRef === activeMap?.segmentRef
+    );
+    setFocusedSeatId(travellerSeat?.id || null);
+  }
+
+  function handleSegmentChange(mapId: string) {
+    const nextMap = usableMaps.find((map) => map.seatMapId === mapId) || usableMaps[0] || null;
+    setActiveMapId(mapId);
+    const travellerSeat = selectedAssignments.find(
+      (item) => item.travellerRef === activeTraveller?.id && item.segmentRef === nextMap?.segmentRef
+    );
+    setFocusedSeatId(travellerSeat?.id || null);
+  }
 
   function selectSeat(seat: AircraftSeatOption) {
-    if (!activeMap || !activeTraveller || !seat.available) return;
+    setFocusedSeatId(seat.id);
+    if (!activeMap || !activeTraveller || !seat.available || mode === "manage") return;
     const segmentRef = seat.segmentRefs?.[0] || activeMap.segmentRef;
     const nextAssignment = {
       id: seat.id,
@@ -130,46 +170,68 @@ export default function AircraftSeatMap({
 
   return (
     <div className="mt-3 space-y-4" data-testid="aircraft-seat-map">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div className="min-w-0">
           <p className="text-[11px] font-black uppercase tracking-[0.14em] text-[#64748b]">
             {mode === "manage" ? "Seat change preview" : "Aircraft seat map"}
           </p>
           <h4 className="mt-1 text-base font-black text-[#111827]">
-            Segment {Math.max(usableMaps.findIndex((map) => map.seatMapId === activeMap.seatMapId), 0) + 1}
+            Segment {activeMapIndex + 1}
             {activeMap.cabin ? ` · ${formatCabin(activeMap.cabin)}` : ""}
           </h4>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex min-w-0 flex-col gap-2 md:items-end">
           {usableMaps.length > 1 ? (
-            <select
-              value={activeMap.seatMapId}
-              onChange={(event) => setActiveMapId(event.target.value)}
-              className="min-h-10 rounded-full border border-[#d9e2ec] bg-white px-3 text-sm font-bold text-[#111827]"
-              aria-label="Select flight segment"
-            >
-              {usableMaps.map((map, index) => (
-                <option key={map.seatMapId} value={map.seatMapId}>
-                  Segment {index + 1}
-                </option>
-              ))}
-            </select>
+            <div className="flex max-w-full gap-2 overflow-x-auto pb-1" role="tablist" aria-label="Seat map flight segments">
+              {usableMaps.map((map, index) => {
+                const selected = map.seatMapId === activeMap.seatMapId;
+                return (
+                  <button
+                    key={map.seatMapId}
+                    type="button"
+                    role="tab"
+                    aria-selected={selected}
+                    onClick={() => handleSegmentChange(map.seatMapId)}
+                    className={cn(
+                      "min-h-10 shrink-0 rounded-full border px-3 text-xs font-black transition focus:outline-none focus:ring-2 focus:ring-[#1d9bf0] focus:ring-offset-2",
+                      selected
+                        ? "border-[#1d9bf0] bg-[#e8f6fd] text-[#0f172a]"
+                        : "border-[#d9e2ec] bg-white text-[#475569] hover:border-[#93c5fd]"
+                    )}
+                  >
+                    Segment {index + 1}
+                  </button>
+                );
+              })}
+            </div>
           ) : null}
 
           {travellers.length > 1 ? (
-            <select
-              value={activeTraveller?.id || ""}
-              onChange={(event) => setActiveTravellerId(event.target.value)}
-              className="min-h-10 rounded-full border border-[#d9e2ec] bg-white px-3 text-sm font-bold text-[#111827]"
-              aria-label="Select traveller"
-            >
-              {travellers.map((traveller, index) => (
-                <option key={traveller.id} value={traveller.id}>
-                  {traveller.label || `Traveller ${index + 1}`}
-                </option>
-              ))}
-            </select>
+            <div className="flex max-w-full gap-2 overflow-x-auto pb-1" role="tablist" aria-label="Seat traveller selection">
+              {travellers.map((traveller, index) => {
+                const selected = traveller.id === activeTraveller?.id;
+                const assigned = getAssignedSeatCode(usableMaps, selectedAssignments, traveller.id, activeMap.segmentRef);
+                return (
+                  <button
+                    key={traveller.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={selected}
+                    onClick={() => handleTravellerChange(traveller.id)}
+                    className={cn(
+                      "min-h-10 shrink-0 rounded-full border px-3 text-left text-xs font-black transition focus:outline-none focus:ring-2 focus:ring-[#1d9bf0] focus:ring-offset-2",
+                      selected
+                        ? "border-[#1d9bf0] bg-[#e8f6fd] text-[#0f172a]"
+                        : "border-[#d9e2ec] bg-white text-[#475569] hover:border-[#93c5fd]"
+                    )}
+                  >
+                    {traveller.label || `Traveller ${index + 1}`}
+                    {assigned ? <span className="ml-2 text-[#1d9bf0]">{assigned}</span> : null}
+                  </button>
+                );
+              })}
+            </div>
           ) : null}
         </div>
       </div>
@@ -186,46 +248,55 @@ export default function AircraftSeatMap({
         </div>
       ) : null}
 
-      <div className="overflow-x-auto rounded-[28px] border border-[#d9e2ec] bg-[#f8fbff] px-3 py-5">
-        <div className="relative mx-auto min-w-max max-w-max px-10 py-2">
+      <div className="overflow-x-auto rounded-[28px] border border-[#d9e2ec] bg-[#eef6ff] px-2 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.82)] md:px-4">
+        <div className="relative mx-auto min-w-max max-w-max px-14 py-3">
           <div
-            className="mx-auto h-14 w-[66%] border-x-2 border-t-2 border-[#94a3b8] bg-gradient-to-b from-white to-[#f8fafc] shadow-sm"
-            style={{ borderRadius: "999px 999px 18px 18px / 100% 100% 18px 18px" }}
+            className="pointer-events-none absolute left-1/2 top-0 h-20 w-[62%] -translate-x-1/2 border-x-2 border-t-2 border-[#7f8fa6] bg-gradient-to-b from-white via-[#f8fbff] to-[#e6eef8] shadow-[0_10px_22px_rgba(15,23,42,0.08)]"
+            style={{ borderRadius: "52% 52% 18px 18px / 100% 100% 18px 18px" }}
             aria-hidden="true"
           >
-            <div className="mx-auto mt-3 h-1.5 w-12 rounded-full bg-[#cbd5e1]" />
+            <div className="mx-auto mt-4 grid w-20 grid-cols-2 gap-2 px-3">
+              <span className="h-5 rounded-full border border-[#b7c4d6] bg-[#dbeafe]" />
+              <span className="h-5 rounded-full border border-[#b7c4d6] bg-[#dbeafe]" />
+            </div>
           </div>
 
-          <div className="relative">
+          <div className="relative pt-[58px]">
             <div
-              className="pointer-events-none absolute left-[-34px] top-[38%] h-24 w-10 rounded-l-[90%] border border-r-0 border-[#cbd5e1] bg-[#eef6ff]"
+              className="pointer-events-none absolute left-[-78px] top-[43%] z-0 h-28 w-28 -translate-y-1/2 border border-[#c1ccda] bg-gradient-to-r from-[#dbeafe] to-[#f8fbff] shadow-sm"
+              style={{ clipPath: "polygon(100% 0, 100% 100%, 0 78%, 0 52%)" }}
               aria-hidden="true"
             />
             <div
-              className="pointer-events-none absolute right-[-34px] top-[38%] h-24 w-10 rounded-r-[90%] border border-l-0 border-[#cbd5e1] bg-[#eef6ff]"
+              className="pointer-events-none absolute right-[-78px] top-[43%] z-0 h-28 w-28 -translate-y-1/2 border border-[#c1ccda] bg-gradient-to-l from-[#dbeafe] to-[#f8fbff] shadow-sm"
+              style={{ clipPath: "polygon(0 0, 0 100%, 100% 78%, 100% 52%)" }}
               aria-hidden="true"
             />
 
-            <div className="rounded-[34px] border-2 border-[#94a3b8] bg-[#f8fafc] p-2 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.82),0_16px_34px_rgba(15,23,42,0.08)]">
-              <div className="rounded-[26px] border border-[#d9e2ec] bg-white px-4 py-4">
+            <div className="relative z-10 rounded-[46px] border-2 border-[#7f8fa6] bg-gradient-to-b from-[#f8fbff] via-white to-[#edf4fb] p-2 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.86),0_22px_44px_rgba(15,23,42,0.12)]">
+              <div className="rounded-[36px] border border-[#c7d3e2] bg-white px-4 py-5 shadow-[inset_0_10px_28px_rgba(148,163,184,0.12)]">
                 <div className="mb-4 flex items-center justify-center gap-3 text-[11px] font-black uppercase tracking-[0.18em] text-[#64748b]">
-                  <span className="h-px w-12 bg-[#cbd5e1]" />
+                  <span className="h-px w-14 bg-[#cbd5e1]" />
                   Cabin
-                  <span className="h-px w-12 bg-[#cbd5e1]" />
+                  <span className="h-px w-14 bg-[#cbd5e1]" />
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                   {derived.rows.map((row) => (
                     <div
                       key={`${activeMap.seatMapId}-${row.rowNumber}`}
                       className="grid items-center gap-2"
-                      style={{ gridTemplateColumns: "34px max-content 34px" }}
+                      style={{ gridTemplateColumns: "36px max-content 36px" }}
                     >
                       <span className="text-center text-xs font-black text-[#64748b]">{row.rowNumber}</span>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2.5">
                         {row.groups.map((group, groupIndex) => (
                           <div key={`${row.rowNumber}-${groupIndex}`} className="flex items-center gap-1.5">
-                            {groupIndex > 0 ? <div className="w-7 border-t border-dashed border-[#cbd5e1]" aria-hidden="true" /> : null}
+                            {groupIndex > 0 ? (
+                              <div className="flex w-10 items-center justify-center" aria-hidden="true">
+                                <span className="h-px w-full border-t border-dashed border-[#b8c4d4]" />
+                              </div>
+                            ) : null}
                             {group.map((seat) => {
                               const selected = selectedIds.has(seat.id);
                               const usedByOtherTraveller = selectedAssignments.some(
@@ -243,6 +314,7 @@ export default function AircraftSeatMap({
                                 : "unavailable";
                               const featureLabels = getSeatFeatureLabels(seat, row, derived);
                               const disabled = !seat.available || usedByOtherTraveller || mode === "manage";
+                              const isFocused = focusedSeatId === seat.id;
 
                               return (
                                 <button
@@ -254,26 +326,31 @@ export default function AircraftSeatMap({
                                   title={buildSeatAriaLabel(seat, stateLabel, featureLabels, usedByOtherTraveller)}
                                   onClick={() => selectSeat(seat)}
                                   className={cn(
-                                    "flex h-[52px] w-[52px] flex-col items-center justify-center rounded-[10px] border text-center transition focus:outline-none focus:ring-2 focus:ring-[#1d9bf0] focus:ring-offset-2",
+                                    "relative flex h-[58px] w-[56px] flex-col items-center justify-center overflow-hidden rounded-[14px] border text-center transition focus:outline-none focus:ring-2 focus:ring-[#1d9bf0] focus:ring-offset-2",
+                                    "before:absolute before:left-2 before:right-2 before:top-1 before:h-1 before:rounded-full before:content-['']",
                                     selected
-                                      ? "border-[#1d9bf0] bg-[#e8f6fd] text-[#0f172a] shadow-sm"
+                                      ? "border-[#1d9bf0] bg-[#e8f6fd] text-[#0f172a] shadow-[0_8px_18px_rgba(29,155,240,0.18)] before:bg-[#1d9bf0]"
                                       : seat.available
-                                      ? "border-[#cbd5e1] bg-white text-[#0f172a] hover:border-[#1d9bf0]"
-                                      : "border-[#e5e7eb] bg-[#f3f4f6] text-[#9ca3af]",
+                                      ? "border-[#b8c4d4] bg-white text-[#0f172a] shadow-sm hover:border-[#1d9bf0] hover:shadow-md before:bg-[#d9e2ec]"
+                                      : "border-[#e5e7eb] bg-[#f1f5f9] text-[#94a3b8] before:bg-[#cbd5e1]",
+                                    isFocused && !selected ? "ring-2 ring-[#93c5fd] ring-offset-1" : "",
                                     usedByOtherTraveller || mode === "manage"
-                                      ? "cursor-not-allowed opacity-60"
+                                      ? "cursor-not-allowed opacity-65"
+                                      : "",
+                                    !seat.available
+                                      ? "after:absolute after:h-px after:w-16 after:rotate-45 after:bg-[#cbd5e1] after:content-['']"
                                       : ""
                                   )}
                                 >
-                                  <span className="text-[12px] font-black leading-4">{seat.code || seat.label}</span>
+                                  <span className="relative z-10 text-[12px] font-black leading-4">{seat.code || seat.label}</span>
                                   {seat.available ? (
-                                    <span className="text-[9px] font-black leading-3 text-[#475569]">
+                                    <span className="relative z-10 mt-0.5 rounded-full bg-[#f8fafc] px-1.5 text-[9px] font-black leading-4 text-[#475569]">
                                       {Number(seat.displayPrice.amount || 0) === 0
                                         ? "Free"
                                         : formatCompactMoney(seat)}
                                     </span>
                                   ) : (
-                                    <span className="text-[9px] font-black leading-3">Taken</span>
+                                    <span className="relative z-10 mt-0.5 text-[9px] font-black leading-3">Taken</span>
                                   )}
                                 </button>
                               );
@@ -288,14 +365,44 @@ export default function AircraftSeatMap({
               </div>
             </div>
           </div>
+
           <div
-            className="mx-auto h-10 w-[78%] border-x-2 border-b-2 border-[#94a3b8] bg-gradient-to-b from-[#f8fafc] to-white shadow-sm"
-            style={{ borderRadius: "18px 18px 999px 999px / 18px 18px 80% 80%" }}
+            className="relative mx-auto h-16 w-[72%] border-x-2 border-b-2 border-[#7f8fa6] bg-gradient-to-b from-[#edf4fb] to-white shadow-sm"
+            style={{ borderRadius: "18px 18px 70% 70% / 18px 18px 100% 100%" }}
             aria-hidden="true"
-          />
-          <div className="mx-auto mt-[-2px] h-4 w-[28%] rounded-b-full border-x-2 border-b-2 border-[#94a3b8] bg-white" aria-hidden="true" />
+          >
+            <div
+              className="absolute left-1/2 top-8 h-12 w-20 -translate-x-1/2 border-x-2 border-b-2 border-[#7f8fa6] bg-white"
+              style={{ borderRadius: "8px 8px 999px 999px / 8px 8px 90% 90%" }}
+            />
+            <div
+              className="absolute left-1/2 top-10 h-9 w-32 -translate-x-1/2 border-b-2 border-[#9aa8bb]"
+              style={{ borderRadius: "0 0 999px 999px" }}
+            />
+          </div>
         </div>
       </div>
+
+      {detailSeat ? (
+        <SeatDetailCard
+          seat={detailSeat.seat}
+          row={detailSeat.row}
+          layout={derived}
+          selected={selectedIds.has(detailSeat.seat.id)}
+          travellerLabel={activeTraveller?.label || "Traveller"}
+          segmentLabel={`Segment ${activeMapIndex + 1}`}
+          mode={mode}
+          usedByOtherTraveller={selectedAssignments.some(
+            (item) =>
+              item.id === detailSeat.seat.id &&
+              item.segmentRef === (detailSeat.seat.segmentRefs?.[0] || activeMap.segmentRef) &&
+              item.travellerRef !== activeTraveller?.id
+          )}
+          onSelect={() => selectSeat(detailSeat.seat)}
+        />
+      ) : null}
+
+      <SelectedSeatSummary rows={selectedSummary} />
 
       <div className="flex flex-wrap gap-2">
         {legendItems.map((item) => (
@@ -312,7 +419,109 @@ export default function AircraftSeatMap({
   );
 }
 
-function deriveSeatMapLayout(map: AircraftSeatMapData) {
+function SeatDetailCard({
+  seat,
+  row,
+  layout,
+  selected,
+  travellerLabel,
+  segmentLabel,
+  mode,
+  usedByOtherTraveller,
+  onSelect,
+}: {
+  seat: AircraftSeatOption;
+  row: DerivedSeatRow;
+  layout: DerivedSeatLayout;
+  selected: boolean;
+  travellerLabel: string;
+  segmentLabel: string;
+  mode: "review" | "manage";
+  usedByOtherTraveller: boolean;
+  onSelect: () => void;
+}) {
+  const featureLabels = getSeatFeatureLabels(seat, row, layout)
+    .map((item) => FEATURE_LABELS[item])
+    .filter(Boolean);
+  const disabled = !seat.available || usedByOtherTraveller || mode === "manage";
+
+  return (
+    <div className="grid gap-3 rounded-2xl border border-[#d9e2ec] bg-white p-4 shadow-sm md:grid-cols-[1fr_auto] md:items-center">
+      <div className="min-w-0">
+        <p className="text-[11px] font-black uppercase tracking-[0.16em] text-[#64748b]">Seat detail</p>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <span className="rounded-xl bg-[#0f172a] px-3 py-2 text-base font-black text-white">{seat.code || seat.label}</span>
+          <span className="rounded-full border border-[#d9e2ec] px-3 py-1 text-xs font-black text-[#334155]">
+            {seat.available ? (Number(seat.displayPrice.amount || 0) === 0 ? "Free" : formatFlightMoney(seat.displayPrice.amount, seat.displayPrice.currency)) : "Unavailable"}
+          </span>
+          {selected ? (
+            <span className="rounded-full bg-[#e8f6fd] px-3 py-1 text-xs font-black text-[#075985]">Selected</span>
+          ) : null}
+          {usedByOtherTraveller ? (
+            <span className="rounded-full bg-[#fff7ed] px-3 py-1 text-xs font-black text-[#9a3412]">Assigned</span>
+          ) : null}
+        </div>
+        <p className="mt-2 text-sm font-semibold text-[#475569]">
+          {travellerLabel} · {segmentLabel}
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {featureLabels.map((label) => (
+            <span key={label} className="rounded-full border border-[#d9e2ec] bg-[#f8fbff] px-3 py-1 text-xs font-bold text-[#334155]">
+              {label}
+            </span>
+          ))}
+        </div>
+      </div>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={onSelect}
+        className={cn(
+          "min-h-11 rounded-full px-5 text-sm font-black transition focus:outline-none focus:ring-2 focus:ring-[#1d9bf0] focus:ring-offset-2",
+          selected
+            ? "border border-[#1d9bf0] bg-[#e8f6fd] text-[#075985]"
+            : disabled
+            ? "cursor-not-allowed border border-[#d9e2ec] bg-[#f1f5f9] text-[#94a3b8]"
+            : "bg-[#ff6b00] text-white shadow-sm hover:bg-[#e85f00]"
+        )}
+      >
+        {mode === "manage" ? "Preview only" : selected ? "Selected" : "Select"}
+      </button>
+    </div>
+  );
+}
+
+function SelectedSeatSummary({ rows }: { rows: Array<{ key: string; traveller: string; segment: string; seat: string; type: string; price: string }> }) {
+  if (rows.length === 0) {
+    return (
+      <div className="rounded-2xl border border-dashed border-[#cbd5e1] bg-white px-4 py-3 text-sm font-semibold text-[#64748b]">
+        No seat selected yet.
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-2xl border border-[#d9e2ec] bg-white p-3 shadow-sm">
+      <p className="px-1 text-[11px] font-black uppercase tracking-[0.16em] text-[#64748b]">Selected seats</p>
+      <div className="mt-2 grid gap-2 md:grid-cols-2">
+        {rows.map((row) => (
+          <div key={row.key} className="grid grid-cols-[1fr_auto] gap-3 rounded-xl bg-[#f8fbff] px-3 py-3">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-black text-[#111827]">{row.traveller}</p>
+              <p className="mt-0.5 text-xs font-semibold text-[#64748b]">{row.segment} · {row.type}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-sm font-black text-[#111827]">{row.seat}</p>
+              <p className="mt-0.5 text-xs font-black text-[#475569]">{row.price}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function deriveSeatMapLayout(map: AircraftSeatMapData): DerivedSeatLayout {
   const allLetters = Array.from(
     new Set(
       map.rows.flatMap((row) =>
@@ -352,6 +561,87 @@ function groupSeatsByAisle(seats: AircraftSeatOption[], allLetters: string[]) {
   }
   const midpoint = Math.ceil(seats.length / 2);
   return [seats.slice(0, midpoint), seats.slice(midpoint)];
+}
+
+function findSeatInLayout(layout: DerivedSeatLayout, seatId: string) {
+  for (const row of layout.rows) {
+    for (const group of row.groups) {
+      const seat = group.find((candidate) => candidate.id === seatId);
+      if (seat) return { seat, row };
+    }
+  }
+  return null;
+}
+
+function findFirstAvailableSeat(layout: DerivedSeatLayout) {
+  for (const row of layout.rows) {
+    for (const group of row.groups) {
+      const seat = group.find((candidate) => candidate.available);
+      if (seat) return { seat, row };
+    }
+  }
+  return null;
+}
+
+function buildSelectedSummary(
+  maps: AircraftSeatMapData[],
+  travellers: TravellerContext[],
+  assignments: AircraftSeatAssignment[],
+  selectedSeatIds: string[]
+) {
+  const rows: Array<{ key: string; traveller: string; segment: string; seat: string; type: string; price: string }> = [];
+  const added = new Set<string>();
+
+  for (const assignment of assignments) {
+    const map = maps.find((item) => item.segmentRef === assignment.segmentRef) || maps[0];
+    const layout = map ? deriveSeatMapLayout(map) : null;
+    const found = layout ? findSeatInLayout(layout, assignment.id) : null;
+    if (!found || !map) continue;
+    const traveller = travellers.find((item) => item.id === assignment.travellerRef);
+    const row = {
+      key: `${assignment.travellerRef}-${assignment.segmentRef}-${assignment.id}`,
+      traveller: traveller?.label || assignment.travellerRef,
+      segment: `Segment ${Math.max(maps.findIndex((item) => item.seatMapId === map.seatMapId), 0) + 1}`,
+      seat: found.seat.code || found.seat.label,
+      type: FEATURE_LABELS[getSeatPosition(found.seat, found.row)],
+      price: seatPriceLabel(found.seat),
+    };
+    rows.push(row);
+    added.add(assignment.id);
+  }
+
+  for (const seatId of selectedSeatIds) {
+    if (added.has(seatId)) continue;
+    const foundMap = maps
+      .map((map) => ({ map, layout: deriveSeatMapLayout(map) }))
+      .map(({ map, layout }) => ({ map, layout, found: findSeatInLayout(layout, seatId) }))
+      .find((item) => item.found);
+    if (!foundMap?.found) continue;
+    rows.push({
+      key: `selected-${seatId}`,
+      traveller: "Selected",
+      segment: `Segment ${Math.max(maps.findIndex((item) => item.seatMapId === foundMap.map.seatMapId), 0) + 1}`,
+      seat: foundMap.found.seat.code || foundMap.found.seat.label,
+      type: FEATURE_LABELS[getSeatPosition(foundMap.found.seat, foundMap.found.row)],
+      price: seatPriceLabel(foundMap.found.seat),
+    });
+  }
+
+  return rows;
+}
+
+function getAssignedSeatCode(
+  maps: AircraftSeatMapData[],
+  assignments: AircraftSeatAssignment[],
+  travellerId: string,
+  segmentRef: string
+) {
+  const assignment = assignments.find((item) => item.travellerRef === travellerId && item.segmentRef === segmentRef);
+  if (!assignment) return "";
+  const map = maps.find((item) => item.segmentRef === segmentRef) || maps[0];
+  if (!map) return "";
+  const found = findSeatInLayout(deriveSeatMapLayout(map), assignment.id);
+  return found?.seat.code || found?.seat.label || "";
 }
 
 function getSeatLetter(seat: AircraftSeatOption) {
@@ -397,7 +687,7 @@ function getSeatPosition(seat: AircraftSeatOption, row: { groups: AircraftSeatOp
   return "middle";
 }
 
-function buildLegendItems(layout: ReturnType<typeof deriveSeatMapLayout>) {
+function buildLegendItems(layout: DerivedSeatLayout) {
   const items = new Set<string>(["available", "selected", "unavailable"]);
   for (const row of layout.rows) {
     for (const group of row.groups) {
@@ -426,6 +716,12 @@ function formatCabin(value: string) {
 
 function formatCompactMoney(seat: AircraftSeatOption) {
   return formatFlightMoney(seat.displayPrice.amount, seat.displayPrice.currency).replace(/\s+/g, "");
+}
+
+function seatPriceLabel(seat: AircraftSeatOption) {
+  return Number(seat.displayPrice.amount || 0) === 0
+    ? "Free"
+    : formatFlightMoney(seat.displayPrice.amount, seat.displayPrice.currency);
 }
 
 function buildSeatAriaLabel(
