@@ -180,6 +180,60 @@ function getBackendDraftCurrency(payload: StoredPayload | null): FlightCurrency 
   );
 }
 
+function sameFlightMoneyAmount(left: unknown, right: unknown, tolerance = 1) {
+  const a = Number(left || 0);
+  const b = Number(right || 0);
+  return Number.isFinite(a) && Number.isFinite(b) && Math.abs(a - b) <= tolerance;
+}
+
+function getDisplayFareLines(input: {
+  reviewData: any;
+  payload: StoredPayload | null;
+  displayTotal: number;
+  displayCurrency: FlightCurrency;
+  ancillaryTotal: number;
+}) {
+  const { reviewData, payload, displayTotal, displayCurrency, ancillaryTotal } = input;
+  const draftPrice = payload?.backendDraft?.priceSnapshot;
+  const reviewPricing = reviewData?.pricing || {};
+  const reviewPricingCurrency = normalizeFlightCurrency(reviewPricing.currency || reviewData?.backendOffer?.currency);
+  const draftPriceCurrency = normalizeFlightCurrency(draftPrice?.currency);
+
+  if (
+    draftPrice &&
+    draftPriceCurrency === displayCurrency &&
+    sameFlightMoneyAmount(draftPrice.total, displayTotal)
+  ) {
+    return {
+      baseFare: Number(draftPrice.baseFare || 0),
+      tax: Number(draftPrice.taxes || 0),
+      surcharge: Number(draftPrice.fees || 0),
+    };
+  }
+
+  const reviewBase = Number(reviewPricing.baseFareTotal || 0);
+  const reviewTax = Number(reviewPricing.tax || 0);
+  const reviewSurcharge = Number(reviewPricing.surcharge || 0);
+  const reviewLineTotal = reviewBase + reviewTax + reviewSurcharge + ancillaryTotal;
+  if (
+    reviewPricingCurrency === displayCurrency &&
+    reviewBase > 0 &&
+    sameFlightMoneyAmount(reviewLineTotal, displayTotal)
+  ) {
+    return {
+      baseFare: reviewBase,
+      tax: reviewTax,
+      surcharge: reviewSurcharge,
+    };
+  }
+
+  return {
+    baseFare: Math.max(displayTotal - ancillaryTotal, 0),
+    tax: 0,
+    surcharge: 0,
+  };
+}
+
 function getBackendDisplayPrice(
   response: BackendFlightPriceConfirmResponse,
   sourceReviewData: any
@@ -614,18 +668,25 @@ export default function FlightPaymentPage() {
         })
       : null;
     if (backendAuthority) {
-      const supplierBase = Number(reviewData?.backendOffer?.supplierPrice?.baseFare || 0);
-      const supplierTaxes = Number(reviewData?.backendOffer?.supplierPrice?.taxes || 0);
-      const supplierFees = Number(reviewData?.backendOffer?.supplierPrice?.fees || 0);
       const displayTotal = Number(backendAuthority.amount || 0);
+      const seatTotal = safeSeatMealData.seatTotal || 0;
+      const mealTotal = safeSeatMealData.mealTotal || 0;
+      const baggageTotal = backendBaggage;
+      const displayFareLines = getDisplayFareLines({
+        reviewData,
+        payload: storedPayload,
+        displayTotal,
+        displayCurrency: backendAuthority.currency,
+        ancillaryTotal: seatTotal + mealTotal + baggageTotal,
+      });
       return {
         currency: backendAuthority.currency,
-        baseFare: supplierBase > 0 ? supplierBase : displayTotal,
-        tax: supplierTaxes,
-        surcharge: supplierFees,
-        seatTotal: safeSeatMealData.seatTotal || 0,
-        mealTotal: safeSeatMealData.mealTotal || 0,
-        baggageTotal: backendBaggage,
+        baseFare: displayFareLines.baseFare,
+        tax: displayFareLines.tax,
+        surcharge: displayFareLines.surcharge,
+        seatTotal,
+        mealTotal,
+        baggageTotal,
         cabTotal: 0,
         insuranceTotal: 0,
         addonsTotal: 0,
@@ -639,7 +700,7 @@ export default function FlightPaymentPage() {
           finalPayable: displayTotal,
         },
         totalBeforeWallet: displayTotal,
-        baseAfterOffer: supplierBase > 0 ? supplierBase : displayTotal,
+        baseAfterOffer: displayFareLines.baseFare,
         totalAmount: displayTotal,
       };
     }
