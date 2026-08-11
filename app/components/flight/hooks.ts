@@ -167,10 +167,38 @@ function getAirportFromParams(code: string | null, city: string | null) {
   };
 }
 
+const SEARCH_QUERY_DATE_TIME_ZONE = "Asia/Kolkata";
+
+function readDatePart(parts: Intl.DateTimeFormatPart[], type: Intl.DateTimeFormatPartTypes) {
+  return Number(parts.find((part) => part.type === type)?.value || 0);
+}
+
 function parseDate(dateStr: string | null) {
   if (!dateStr) return null;
+
+  const directDate = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (directDate) {
+    const [, year, month, day] = directDate;
+    return new Date(Number(year), Number(month) - 1, Number(day));
+  }
+
   const parsed = new Date(dateStr);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
+  if (Number.isNaN(parsed.getTime())) return null;
+
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: SEARCH_QUERY_DATE_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(parsed);
+
+  const year = readDatePart(parts, "year");
+  const month = readDatePart(parts, "month");
+  const day = readDatePart(parts, "day");
+
+  if (!year || !month || !day) return parsed;
+
+  return new Date(year, month - 1, day);
 }
 
 function buildMultiCitySegmentsFromParams(
