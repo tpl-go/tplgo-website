@@ -1,11 +1,18 @@
-﻿const fs = require('node:fs');
+const fs = require('node:fs');
 const path = require('node:path');
 const assert = require('node:assert/strict');
 
 const root = process.cwd();
 const detailPath = path.join(root, 'app/account/bookings/flight/[bookingId]/page.tsx');
 const detail = fs.readFileSync(detailPath, 'utf8');
+const resolverPath = path.join(root, 'app/lib/booking/resolvers/flightResolver.ts');
+const resolver = fs.readFileSync(resolverPath, 'utf8');
 
+assert.match(
+  resolver,
+  /if \(!fareLineTotal && priceBreakup\.totalAmount > 0\) \{\s*priceBreakup\.baseFare = priceBreakup\.totalAmount;/,
+  'Booking resolver must not show Gross Amount ₹0 when a backend-paid flight snapshot has only total amount'
+);
 assert.match(
   detail,
   /resolveFlightBookingSource/,

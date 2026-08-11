@@ -289,6 +289,18 @@ export function resolveFlightBookingSource(
   if (!priceBreakup.totalAmount && asNumber(priceSnapshot.total)) {
     priceBreakup.totalAmount = asNumber(priceSnapshot.total);
   }
+  const fareLineTotal =
+    priceBreakup.baseFare +
+    priceBreakup.tax +
+    priceBreakup.surcharge +
+    priceBreakup.seatTotal +
+    priceBreakup.mealTotal +
+    priceBreakup.cabTotal +
+    priceBreakup.insuranceTotal +
+    priceBreakup.addonsTotal;
+  if (!fareLineTotal && priceBreakup.totalAmount > 0) {
+    priceBreakup.baseFare = priceBreakup.totalAmount;
+  }
 
   return {
     service: "flight",
