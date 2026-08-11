@@ -51,8 +51,13 @@ assert.match(
 );
 assert.match(
   reviewPage,
-  /router\.push\("\/flights\/payment"\);/,
+  /router\.push\(PAYMENT_ROUTE\);/,
   "Review must navigate to the Payment route after persistence succeeds."
+);
+assert.match(
+  reviewPage,
+  /window\.location\.assign\(PAYMENT_ROUTE\)/,
+  "Review must recover visibly when the client router does not commit the Payment route."
 );
 assert.match(
   reviewPage,

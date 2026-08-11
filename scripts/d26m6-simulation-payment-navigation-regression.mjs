@@ -27,13 +27,18 @@ assert.match(
 );
 assert.match(
   reviewPage,
-  /try \{[\s\S]*router\.push\("\/flights\/payment"\);[\s\S]*\} catch \{/,
+  /try \{[\s\S]*router\.push\(PAYMENT_ROUTE\);[\s\S]*\} catch \{/,
   "Payment route navigation must be attempted after state persistence and guarded against thrown navigation failures."
 );
 assert.match(
   reviewPage,
-  /setBackendBlockerMessage\("Could not open the payment page\. Please retry\."\)/,
+  /setBackendBlockerMessage\("Could not open payment page\. Please retry\."\)/,
   "Router failures must be surfaced to the operator."
+);
+assert.match(
+  reviewPage,
+  /window\.location\.assign\(PAYMENT_ROUTE\)/,
+  "A non-committed client navigation must fall back to document navigation after state persistence."
 );
 
 assert.match(

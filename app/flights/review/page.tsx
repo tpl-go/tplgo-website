@@ -92,6 +92,9 @@ type ProceedDebugTrace = {
   timestamp?: string;
 };
 
+const PAYMENT_ROUTE = "/flights/payment";
+const PAYMENT_NAVIGATION_COMMIT_TIMEOUT_MS = 1200;
+
 function readProceedDebugTrace(): ProceedDebugTrace {
   if (typeof window === "undefined") return {};
   try {
@@ -382,6 +385,68 @@ const [wallet, setWallet] = useState({
       failedAt,
       safeReason,
     });
+  };
+
+  const navigateToPaymentRoute = () => {
+    const beforePathname = typeof window !== "undefined" ? window.location.pathname : "";
+    updateProceedDebug({
+      stage: "N01_BEFORE_PUSH",
+      currentPathname: beforePathname,
+      routerPushCalled: false,
+    });
+
+    try {
+      updateProceedDebug({ stage: "T19_ROUTER_PUSH_CALLED", routerPushCalled: true });
+      router.push(PAYMENT_ROUTE);
+      updateProceedDebug({ stage: "N02_PUSH_RETURNED", routerPushCalled: true });
+
+      if (typeof window === "undefined") {
+        setBackendSimulationState("idle");
+        return;
+      }
+
+      window.setTimeout(() => {
+        const currentPathname = window.location.pathname;
+        if (currentPathname !== beforePathname) {
+          updateProceedDebug({
+            stage: "N03_ROUTE_CHANGE_DETECTED",
+            currentPathname,
+            routerPushCalled: true,
+          });
+        }
+        if (currentPathname === PAYMENT_ROUTE) {
+          updateProceedDebug({
+            stage: "N04_PATHNAME_CHANGED",
+            currentPathname,
+            routerPushCalled: true,
+          });
+          return;
+        }
+
+        updateProceedDebug({
+          stage: "N02_NAVIGATION_NOT_COMMITTED",
+          failedAt: "N02_NAVIGATION_NOT_COMMITTED",
+          safeReason: "Client router navigation did not commit; using hard navigation fallback.",
+          currentPathname,
+          routerPushCalled: true,
+        });
+
+        try {
+          window.location.assign(PAYMENT_ROUTE);
+        } catch {
+          setBackendSimulationState("failed");
+          setBackendBlockerMessage("Could not open payment page. Please retry.");
+          failProceedDebug("N02_NAVIGATION_NOT_COMMITTED", "Could not open payment page.", {
+            currentPathname,
+            routerPushCalled: true,
+          });
+        }
+      }, PAYMENT_NAVIGATION_COMMIT_TIMEOUT_MS);
+    } catch {
+      setBackendSimulationState("failed");
+      setBackendBlockerMessage("Could not open payment page. Please retry.");
+      failProceedDebug("N02_PUSH_RETURNED", "Could not open payment page.", { routerPushCalled: true });
+    }
   };
 
   useEffect(() => {
@@ -1270,15 +1335,7 @@ seatTotal={backendAncillaryTotals.seats}
     return;
   }
 
-  try {
-    updateProceedDebug({ stage: "T19_ROUTER_PUSH_CALLED", routerPushCalled: true });
-    router.push("/flights/payment");
-    setBackendSimulationState("idle");
-  } catch {
-    setBackendSimulationState("failed");
-    setBackendBlockerMessage("Could not open the payment page. Please retry.");
-    failProceedDebug("T19_ROUTER_PUSH_CALLED", "Could not open the payment page.", { routerPushCalled: true });
-  }
+  navigateToPaymentRoute();
   }
 
   async function loadBackendAncillaries(source: FlightReviewPayload) {
