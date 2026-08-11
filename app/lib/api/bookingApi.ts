@@ -76,16 +76,16 @@ export async function getBackendFirstBookings(
     ? getAllBookings().filter((booking) => booking.mobile === mobile)
     : getAllBookings();
 
-  if (!getStoredAuthToken()) {
+  const authToken = getStoredAuthToken();
+
+  if (!authToken) {
     return {
       bookings: localBookings,
       source: "local_fallback",
     };
   }
 
-  const path = mobile?.trim()
-    ? `/api/v1/bookings?mobile=${encodeURIComponent(mobile.trim())}`
-    : "/api/v1/bookings";
+  const path = "/api/v1/bookings";
   const result = await tplApiRequest<unknown>(path);
 
   if (!result.ok) {
