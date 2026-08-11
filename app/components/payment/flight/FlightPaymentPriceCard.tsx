@@ -53,7 +53,7 @@ function formatPrice(value: number, currency: FlightCurrency = "INR") {
 export default function FlightPaymentPriceCard({
   priceBreakup,
   earnedOnThisBooking = 0,
-  selectedPaymentMethod = "",
+  selectedPaymentMethod = "razorpay-test",
   paymentActionState = "idle",
   isExpired = false,
   onPayNow,
@@ -262,12 +262,10 @@ export default function FlightPaymentPriceCard({
               }}
               disabled={
                 isExpired ||
-                !selectedPaymentMethod ||
                 paymentActionState === "processing"
               }
               className={`h-[50px] w-full rounded-full text-[16px] font-extrabold transition ${
                 isExpired ||
-                !selectedPaymentMethod ||
                 paymentActionState === "processing"
                   ? "cursor-not-allowed bg-[#cfd8e3] text-white"
                   : "bg-[#ef4444] text-white shadow-[0_10px_24px_rgba(239,68,68,0.25)] hover:opacity-95"
@@ -281,18 +279,12 @@ export default function FlightPaymentPriceCard({
                 ? "Payment Success ✅"
                 : paymentActionState === "failure"
                 ? "Retry Payment"
-                : selectedPaymentMethod === "qr"
-                ? "Confirm Payment"
-                : "Proceed to Payment"}
+                : "Proceed to Book"}
             </button>
 
             {isExpired ? (
               <div className="mt-3 text-[12px] font-bold leading-[18px] text-[#dc2626]">
                 Your session has expired. Please restart booking.
-              </div>
-            ) : !selectedPaymentMethod ? (
-              <div className="mt-3 text-[12px] font-bold leading-[18px] text-[#b45309]">
-                Please select a payment method first.
               </div>
             ) : paymentActionState === "failure" ? (
               <div className="mt-3 text-[12px] font-bold leading-[18px] text-[#dc2626]">
@@ -300,7 +292,7 @@ export default function FlightPaymentPriceCard({
               </div>
             ) : (
               <div className="mt-3 text-center text-[12px] font-medium text-[#6b7280]">
-                Secure payment powered by TPL
+                Razorpay TEST Checkout will open for payment method selection.
               </div>
             )}
           </div>

@@ -59,6 +59,7 @@ type Props = {
   allianceOptions?: SimpleOption[];
   layoverAirportOptions?: SimpleOption[];
   airlineOptions?: SimpleOption[];
+  aircraftOptions?: SimpleOption[];
 };
 
 export const DEFAULT_DOMESTIC_FILTERS: FlightsFiltersState = {
@@ -115,6 +116,7 @@ export default function FlightsFiltersSidebar({
   allianceOptions = [],
   layoverAirportOptions = [],
   airlineOptions = [],
+  aircraftOptions = [],
 }: Props) {
   const safeFilters: FlightsFiltersState = filters ?? {
     ...(isInternational
@@ -154,6 +156,7 @@ export default function FlightsFiltersSidebar({
             maxLayoverDuration={maxLayoverDuration}
             allianceOptions={allianceOptions}
             layoverAirportOptions={layoverAirportOptions}
+            aircraftOptions={aircraftOptions}
           />
         </div>
       );
@@ -169,9 +172,11 @@ export default function FlightsFiltersSidebar({
           toCity={toCity}
           minPrice={minPrice}
           maxPrice={maxPrice}
-          priceCurrency={priceCurrency}
-          departureAirportOptions={departureAirportOptions}
-        />
+            priceCurrency={priceCurrency}
+            departureAirportOptions={departureAirportOptions}
+            airlineOptions={airlineOptions}
+            aircraftOptions={aircraftOptions}
+          />
       </div>
     );
   }

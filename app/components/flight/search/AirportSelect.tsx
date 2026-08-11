@@ -24,8 +24,8 @@ export default function AirportSelect({
   const [openTo, setOpenTo] = useState(false);
   const [fromQuery, setFromQuery] = useState("");
   const [toQuery, setToQuery] = useState("");
-  const [fromOptions, setFromOptions] = useState<Airport[]>(AIRPORTS);
-  const [toOptions, setToOptions] = useState<Airport[]>(AIRPORTS);
+  const [fromOptions, setFromOptions] = useState<Airport[]>([]);
+  const [toOptions, setToOptions] = useState<Airport[]>([]);
   const [fromPosition, setFromPosition] = useState<"top" | "bottom">("bottom");
   const [toPosition, setToPosition] = useState<"top" | "bottom">("bottom");
 
@@ -82,7 +82,7 @@ export default function AirportSelect({
     const timeout = window.setTimeout(() => {
       searchBackendAirports(fromQuery, 12).then((results) => {
         if (!active) return;
-        setFromOptions(results.length ? results : filterLocalAirports(fromQuery));
+        setFromOptions(results);
       });
     }, 180);
 
@@ -98,7 +98,7 @@ export default function AirportSelect({
     const timeout = window.setTimeout(() => {
       searchBackendAirports(toQuery, 12).then((results) => {
         if (!active) return;
-        setToOptions(results.length ? results : filterLocalAirports(toQuery));
+        setToOptions(results);
       });
     }, 180);
 
@@ -241,7 +241,7 @@ export default function AirportSelect({
               placeholder="Search city or airport"
               autoFocus
             />
-            {fromOptions.map((a) => (
+            {fromOptions.length > 0 ? fromOptions.map((a) => (
               <div
                 key={a.code}
                 onClick={() => handleFromSelect(a)}
@@ -252,7 +252,11 @@ export default function AirportSelect({
                   {a.name}{a.country ? `, ${a.country}` : ""}
                 </span>
               </div>
-            ))}
+            )) : (
+              <div className="px-4 py-3 text-sm font-semibold text-gray-500">
+                No backend airport matches
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -356,7 +360,7 @@ export default function AirportSelect({
               placeholder="Search city or airport"
               autoFocus
             />
-            {toOptions.map((a) => (
+            {toOptions.length > 0 ? toOptions.map((a) => (
               <div
                 key={a.code}
                 onClick={() => handleToSelect(a)}
@@ -367,25 +371,14 @@ export default function AirportSelect({
                   {a.name}{a.country ? `, ${a.country}` : ""}
                 </span>
               </div>
-            ))}
+            )) : (
+              <div className="px-4 py-3 text-sm font-semibold text-gray-500">
+                No backend airport matches
+              </div>
+            )}
           </div>
         )}
       </div>
     </div>
   );
-}
-
-function filterLocalAirports(query: string): Airport[] {
-  const normalized = query.trim().toLowerCase();
-  if (normalized.length < 2) return AIRPORTS;
-  return AIRPORTS.filter((airport) => {
-    const haystack = [
-      airport.code,
-      airport.city,
-      airport.name,
-      airport.country,
-      ...(airport.aliases || []),
-    ].join(" ").toLowerCase();
-    return haystack.includes(normalized);
-  });
 }

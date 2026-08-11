@@ -22,6 +22,12 @@ type AirportOption = {
   price?: string;
 };
 
+type SimpleOption = {
+  id: string;
+  label: string;
+  price?: string;
+};
+
 type Props = {
   filters: FiltersState;
   updateFilter: (key: keyof FiltersState, value: any) => void;
@@ -32,25 +38,21 @@ type Props = {
   maxPrice: number;
   priceCurrency?: FlightCurrency;
   departureAirportOptions: AirportOption[];
+  airlineOptions: SimpleOption[];
+  aircraftOptions: SimpleOption[];
 };
 
 const popularFilters = [
-  { id: "nonstop", label: "Non Stop", price: "₹ 10,310" },
-  { id: "nearby", label: "Hide Nearby Airports", price: "₹ 8,743" },
-  { id: "refundable", label: "Refundable Fares", price: "₹ 8,743" },
-  { id: "indigo", label: "IndiGo", price: "₹ 10,075", color: "#1d4ed8" },
-  { id: "airindia", label: "Air India", price: "₹ 9,923", color: "#7f1d1d" },
-  { id: "akasa", label: "Akasa Air", price: "₹ 10,310", color: "#f97316" },
-  { id: "spicejet", label: "SpiceJet", price: "₹ 8,743", color: "#dc2626" },
-  { id: "morning", label: "Morning Departures", price: "₹ 9,447" },
-  { id: "afternoon", label: "Afternoon Departures", price: "₹ 10,639" },
-  { id: "early", label: "Early Morning Departures", price: "₹ 8,724" },
+  { id: "nonstop", label: "Non Stop" },
+  { id: "morning", label: "Morning Departures" },
+  { id: "afternoon", label: "Afternoon Departures" },
+  { id: "early", label: "Early Morning Departures" },
 ];
 
 const stopOptions = [
-  { id: "nonstop", label: "Non Stop", price: "₹ 10,310" },
-  { id: "1stop", label: "1 Stop", price: "₹ 8,743" },
-  { id: "2stop", label: "2+ Stop", price: "₹ 8,743" },
+  { id: "nonstop", label: "Non Stop" },
+  { id: "1stop", label: "1 Stop" },
+  { id: "2stop", label: "2+ Stop" },
 ];
 
 const timeOptions = [
@@ -58,23 +60,6 @@ const timeOptions = [
   { id: "6to12", label: "6 AM to 12 PM", icon: "☼" },
   { id: "12to18", label: "12 PM to 6 PM", icon: "◡" },
   { id: "after18", label: "After 6 PM", icon: "☾" },
-];
-
-const airlineOptions = [
-  { id: "airindia", label: "Air India", price: "₹ 9,923", color: "#7f1d1d" },
-  {
-    id: "aiexpress",
-    label: "Air India Express",
-    price: "₹ 8,858",
-    color: "#b91c1c",
-  },
-  { id: "akasa", label: "Akasa Air", price: "₹ 10,310", color: "#f97316" },
-  { id: "indigo", label: "IndiGo", price: "₹ 10,075", color: "#1d4ed8" },
-  { id: "spicejet", label: "SpiceJet", price: "₹ 8,743", color: "#dc2626" },
-];
-
-const aircraftOptions = [
-  { id: "smallmid", label: "Small / Mid-size aircraft", price: "₹ 8,743" },
 ];
 
 function ensureArray(value: any) {
@@ -125,6 +110,8 @@ export default function OneWayDomesticFilters({
   maxPrice,
   priceCurrency = "INR",
   departureAirportOptions,
+  airlineOptions,
+  aircraftOptions,
 }: Props) {
   const dynamicDefaultPriceRange: [number, number] = [minPrice, maxPrice];
 
@@ -239,8 +226,8 @@ export default function OneWayDomesticFilters({
     ...selectedAirlines.map((item) => ({
       key: "airlines" as const,
       value: item,
-      label:
-        airlineOptions.find((airline) => airline.id === item)?.label || item,
+        label:
+          airlineOptions.find((airline) => airline.id === item)?.label || item,
     })),
 
     ...selectedAircraft.map((item) => ({
@@ -343,17 +330,10 @@ export default function OneWayDomesticFilters({
                   <span className={checkboxClass(selected)}>✓</span>
 
                   <div className="flex items-center gap-2 text-[15px] text-[#111827]">
-                    {item.color ? (
-                      <span
-                        className="h-3 w-3 rounded-sm"
-                        style={{ backgroundColor: item.color }}
-                      />
-                    ) : null}
                     <span>{item.label}</span>
                   </div>
                 </div>
 
-                <span className="text-[15px] text-[#111827]">{item.price}</span>
               </label>
             );
           })}
@@ -460,7 +440,6 @@ export default function OneWayDomesticFilters({
                   <span className="text-[15px] text-[#111827]">{stop.label}</span>
                 </div>
 
-                <span className="text-[15px] text-[#111827]">{stop.price}</span>
               </label>
             );
           })}
@@ -527,7 +506,7 @@ export default function OneWayDomesticFilters({
         {sectionTitle("Airlines")}
 
         <div className="space-y-4">
-          {airlineOptions.map((airline) => {
+          {airlineOptions.length > 0 ? airlineOptions.map((airline) => {
             const selected = selectedAirlines.includes(airline.id);
 
             return (
@@ -548,10 +527,6 @@ export default function OneWayDomesticFilters({
                   <span className={checkboxClass(selected)}>✓</span>
 
                   <div className="flex items-center gap-3 text-[15px] text-[#111827]">
-                    <span
-                      className="h-4 w-4 rounded-sm"
-                      style={{ backgroundColor: airline.color }}
-                    />
                     <span>{airline.label}</span>
                   </div>
                 </div>
@@ -559,7 +534,9 @@ export default function OneWayDomesticFilters({
                 <span className="text-[15px] text-[#111827]">{airline.price}</span>
               </label>
             );
-          })}
+          }) : (
+            <div className="text-[14px] text-[#6b7280]">No airline filter data</div>
+          )}
         </div>
       </div>
 
@@ -567,7 +544,7 @@ export default function OneWayDomesticFilters({
         {sectionTitle("Aircraft Size")}
 
         <div className="space-y-4">
-          {aircraftOptions.map((aircraft) => {
+          {aircraftOptions.length > 0 ? aircraftOptions.map((aircraft) => {
             const selected = selectedAircraft.includes(aircraft.id);
 
             return (
@@ -596,12 +573,16 @@ export default function OneWayDomesticFilters({
                   </span>
                 </div>
 
-                <span className="text-[15px] text-[#111827]">
-                  {aircraft.price}
-                </span>
+                {aircraft.price ? (
+                  <span className="text-[15px] text-[#111827]">
+                    {aircraft.price}
+                  </span>
+                ) : null}
               </label>
             );
-          })}
+          }) : (
+            <div className="text-[14px] text-[#6b7280]">No aircraft-size data</div>
+          )}
         </div>
       </div>
     </div>

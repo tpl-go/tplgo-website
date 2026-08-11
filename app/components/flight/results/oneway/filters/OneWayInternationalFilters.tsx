@@ -27,6 +27,7 @@ type Props = {
   maxLayoverDuration: number;
   allianceOptions: SimpleOption[];
   layoverAirportOptions: SimpleOption[];
+  aircraftOptions: SimpleOption[];
 };
 
 const popularFilters = [
@@ -49,11 +50,6 @@ const timeOptions = [
   { id: "6to12", label: "6 AM to 12 PM", icon: "☼" },
   { id: "12to18", label: "12 PM to 6 PM", icon: "◡" },
   { id: "after18", label: "After 6 PM", icon: "☾" },
-];
-
-const aircraftOptions = [
-  { id: "smallmid", label: "Small / Mid-size aircraft" },
-  { id: "widebody", label: "Wide-body aircraft" },
 ];
 
 function ensureArray(value: any) {
@@ -116,6 +112,7 @@ export default function OneWayInternationalFilters({
   maxLayoverDuration,
   allianceOptions,
   layoverAirportOptions,
+  aircraftOptions,
 }: Props) {
   const defaultPriceRange: [number, number] = [minPrice, maxPrice];
   const defaultDurationRange: [number, number] = [minDuration, maxDuration];
@@ -653,7 +650,7 @@ export default function OneWayInternationalFilters({
       <div className="space-y-4">
         {sectionTitle("Aircraft Size")}
         <div className="space-y-4">
-          {aircraftOptions.map((aircraft) => {
+          {aircraftOptions.length > 0 ? aircraftOptions.map((aircraft) => {
             const selected = selectedAircraft.includes(aircraft.id);
 
             return (
@@ -677,7 +674,9 @@ export default function OneWayInternationalFilters({
                 </div>
               </label>
             );
-          })}
+          }) : (
+            <div className="text-[14px] text-[#6b7280]">No aircraft-size data</div>
+          )}
         </div>
       </div>
     </div>

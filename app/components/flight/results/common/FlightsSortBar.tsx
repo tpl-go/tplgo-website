@@ -23,9 +23,9 @@ const otherOptions = [
 export default function FlightsSortBar({
   sortType,
   onSortChange,
-  cheapestLabel = "₹ 9,753 | 02h 55m",
-  nonstopLabel = "₹ 9,753 | 02h 55m",
-  preferLabel = "₹ 9,753 | 02h 45m",
+  cheapestLabel = "Current results",
+  nonstopLabel = "Current results",
+  preferLabel = "Current results",
 }: Props) {
   const activeSort = sortType as SortType;
 
@@ -229,9 +229,6 @@ export default function FlightsSortBar({
           </div>
         </div>
 
-        <div className="mt-2 rounded-full bg-[#fff7ed] px-3 py-1.5 text-[11px] font-bold text-[#9a3412]">
-          Cheaper non-stop fares available nearby
-        </div>
       </div>
 
       <div className="hidden grid-cols-[minmax(140px,1fr)_minmax(140px,1fr)_minmax(140px,1fr)_100px] gap-2 overflow-x-auto overflow-y-visible pb-1 sm:grid sm:grid-cols-[1fr_1fr_1fr_140px] sm:gap-3 sm:overflow-visible sm:pb-0 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -341,9 +338,6 @@ export default function FlightsSortBar({
           {getHeading()}
         </div>
 
-        <div className="w-fit rounded-full bg-[#fde2d7] px-3 py-1.5 text-[11px] font-medium text-[#7c2d12] sm:px-4 sm:py-2 sm:text-[12px]">
-          Cheaper Non-stop Flights available on 24 Mar & 27 Mar
-        </div>
       </div>
     </>
   );

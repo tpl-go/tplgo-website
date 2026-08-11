@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import LoginModal from "@/app/components/common/LoginModal";
 import { AUTH_UPDATED_EVENT } from "@/app/lib/booking/guestAuth";
-import { applyPaymentMethod } from "@/app/data/booking/applyPaymentMethod";
 import { startPaymentProcess } from "@/app/data/booking/startPaymentProcess";
 import {
   handlePaymentSuccess,
@@ -58,7 +57,6 @@ import {
 } from "@/app/lib/flights/flightCurrency";
 
 import FlightPaymentTopSummary from "@/app/components/payment/flight/FlightPaymentTopSummary";
-import FlightPaymentOptionSection from "@/app/components/payment/flight/FlightPaymentOptionSection";
 import FlightPaymentPriceCard from "@/app/components/payment/flight/FlightPaymentPriceCard";
 
 type FlightBackendCheckoutRefsWithBookingPersistence = FlightBackendCheckoutRefs & {
@@ -163,7 +161,7 @@ function getFlightTestPaymentMethod(selectedPaymentMethod: string) {
     return "razorpay";
   }
 
-  return selectedPaymentMethod || "mock";
+  return selectedPaymentMethod || "razorpay-test";
 }
 
 function isBackendOfferTestPaymentExpected(payload: StoredPayload | null) {
@@ -395,7 +393,7 @@ function writeProceedDebugTrace(patch: Record<string, unknown>) {
 
 export default function FlightPaymentPage() {
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
+  const selectedPaymentMethod = "razorpay-test";
   const [paymentActionState, setPaymentActionState] = useState<
     "idle" | "processing" | "success" | "failure"
   >("idle");
@@ -912,7 +910,6 @@ const finalTotalAmount =
 
   const handleMockPayment = async (shouldSucceed = true) => {
     if (
-      !selectedPaymentMethod ||
       isExpired ||
       paymentActionState === "processing" ||
       backendPaymentStep === "creating_order" ||
@@ -1605,13 +1602,14 @@ leadTraveller: {
               </div>
             </div>
 
-            <FlightPaymentOptionSection
-              payableAmount={priceBreakup.totalAmount}
-              onPaymentMethodChange={(method) => {
-                setSelectedPaymentMethod(method);
-                applyPaymentMethod(method);
-              }}
-            />
+            <section className="rounded-[16px] border border-[#d9e2ec] bg-white p-5 shadow-[0_2px_8px_rgba(15,23,42,0.04)]">
+              <div className="text-[18px] font-extrabold text-[#111827]">
+                Razorpay TEST Checkout
+              </div>
+              <div className="mt-2 text-[13px] font-semibold leading-5 text-[#64748b]">
+                Payment method selection opens inside Razorpay TEST Checkout after final review.
+              </div>
+            </section>
           </div>
 
           <div className="min-w-0 self-stretch xl:w-[28%]">

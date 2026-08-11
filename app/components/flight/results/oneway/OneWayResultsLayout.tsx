@@ -12,13 +12,11 @@ import OneWayFlightResultCard from "./OneWayFlightResultCard";
 import { FlightState } from "../../hooks";
 import {
   type DummyFlight,
-  generateDummyFlights,
   formatMinutesToTime,
   formatDuration,
 } from "../../data/flightDummyData";
 import {
   isBackendFlightSearchEnabled,
-  isBackendFlightSearchFallbackEnabled,
   searchBackendFlights,
   type BackendFlightSearchRequest,
 } from "@/app/lib/api/flightSearchApi";
@@ -158,10 +156,6 @@ export default function OneWayResultsLayout({
     retryNonce: number;
   }>({ status: "initial", message: "", retryNonce: 0 });
 
-  const localFlights = useMemo(() => {
-    return generateDummyFlights(fromCity, toCity);
-  }, [fromCity, toCity]);
-
   useEffect(() => {
     setRequestedDisplayCurrency(readFlightDisplayCurrencyPreference());
     const syncCurrency = () => setRequestedDisplayCurrency(readFlightDisplayCurrencyPreference());
@@ -217,7 +211,7 @@ export default function OneWayResultsLayout({
           return;
         }
 
-        setBackendFlights(isBackendFlightSearchFallbackEnabled() ? null : []);
+        setBackendFlights([]);
         setBackendSearchState((current) => ({
           ...current,
           status: "error",
@@ -227,7 +221,7 @@ export default function OneWayResultsLayout({
       })
       .catch(() => {
         if (!active) return;
-        setBackendFlights(isBackendFlightSearchFallbackEnabled() ? null : []);
+        setBackendFlights([]);
         setBackendSearchState((current) => ({
           ...current,
           status: "error",
@@ -240,7 +234,7 @@ export default function OneWayResultsLayout({
     };
   }, [backendSearchRequest, backendSearchState.retryNonce]);
 
-  const baseFlights = backendFlights ?? localFlights;
+  const baseFlights = backendFlights ?? [];
   const backendSearchActive = isBackendFlightSearchEnabled() && Boolean(backendSearchRequest);
   const displayCurrency = useMemo(
     () => getEffectiveFlightCurrency(baseFlights.find((flight: any) => flight?.backendOffer) || baseFlights[0]),
@@ -275,6 +269,8 @@ export default function OneWayResultsLayout({
   const {
     allianceOptions,
     layoverAirportOptions,
+    airlineOptions,
+    aircraftOptions,
     minLayoverDuration,
     maxLayoverDuration,
     departureAirportOptions,
@@ -282,9 +278,27 @@ export default function OneWayResultsLayout({
     const allianceMap = new Map<string, SimpleOption>();
     const layoverAirportMap = new Map<string, SimpleOption>();
     const departureAirportMap = new Map<string, SimpleOption>();
+    const airlineMap = new Map<string, SimpleOption>();
+    const aircraftMap = new Map<string, SimpleOption>();
     const layoverDurations: number[] = [];
 
     baseFlights.forEach((flight: any) => {
+      const airlineLabel = flight.airline || flight.airlineName;
+      if (airlineLabel) {
+        const id = normalizeAirlineId(airlineLabel);
+        if (!airlineMap.has(id)) {
+          airlineMap.set(id, { id, label: airlineLabel });
+        }
+      }
+
+      const aircraftLabel = flight.aircraftSize || flight.aircraftCategory;
+      if (aircraftLabel) {
+        const id = normalizeId(aircraftLabel);
+        if (!aircraftMap.has(id)) {
+          aircraftMap.set(id, { id, label: aircraftLabel });
+        }
+      }
+
       const allianceLabel = flight.alliance || flight.airlineAlliance;
       if (allianceLabel) {
         const id = normalizeId(allianceLabel);
@@ -329,6 +343,8 @@ export default function OneWayResultsLayout({
     return {
       allianceOptions: Array.from(allianceMap.values()),
       layoverAirportOptions: Array.from(layoverAirportMap.values()),
+      airlineOptions: Array.from(airlineMap.values()),
+      aircraftOptions: Array.from(aircraftMap.values()),
       minLayoverDuration: layoverDurations.length
         ? Math.min(...layoverDurations)
         : 0,
@@ -705,8 +721,11 @@ export default function OneWayResultsLayout({
         const aircraftLabel = String(
           f.aircraftSize || f.aircraftCategory || ""
         ).toLowerCase();
+        const aircraftId = normalizeId(aircraftLabel);
 
         return filters.aircraftSize.some((selected) => {
+          if (selected === aircraftId) return true;
+
           if (selected === "smallmid") {
             return (
               aircraftLabel.includes("small") ||
@@ -788,6 +807,8 @@ export default function OneWayResultsLayout({
       maxPrice={maxPrice}
       priceCurrency={displayCurrency}
       departureAirportOptions={departureAirportOptions}
+      airlineOptions={airlineOptions}
+      aircraftOptions={aircraftOptions}
       minDuration={minDuration}
       maxDuration={maxDuration}
       minLayoverDuration={minLayoverDuration}

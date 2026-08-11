@@ -8,7 +8,6 @@ import {
   isSameDay,
   startOfDay,
 } from "date-fns";
-import { generateDummyFlights } from "../../data/flightDummyData";
 
 type FlightsDateFareStripProps = {
   selectedDate?: Date;
@@ -19,46 +18,15 @@ type FlightsDateFareStripProps = {
 
 type FareItem = {
   date: Date;
-  price: number;
+  price: number | null;
 };
 
 const VISIBLE_DAYS = 8;
 const MAX_DAYS = 365;
 
-function getRouteSeed(fromCity: string, toCity: string) {
-  const combined = `${fromCity}-${toCity}`;
-  return combined
-    .split("")
-    .reduce((sum, char) => sum + char.charCodeAt(0), 0);
-}
-
-function getDynamicFareForDate(
-  date: Date,
-  fromCity: string,
-  toCity: string
-): number {
-  const today = startOfDay(new Date());
-  const routeSeed = getRouteSeed(fromCity, toCity);
-  const dayIndex = differenceInCalendarDays(startOfDay(date), today);
-
-  const flights = generateDummyFlights(fromCity, toCity);
-  const cheapestBaseFare = Math.min(
-    ...flights.map((flight) => flight.basePrice)
-  );
-
-  const variations = [0, 180, 420, 0, 260, 0, 510, 120, 0, 350, 0, 90];
-  const seasonalOffset =
-    variations[Math.abs(dayIndex + routeSeed) % variations.length];
-  const routeOffset = routeSeed % 700;
-
-  return cheapestBaseFare + seasonalOffset + routeOffset;
-}
-
 export default function FlightsDateFareStrip({
   selectedDate,
   onDateSelect,
-  fromCity,
-  toCity,
 }: FlightsDateFareStripProps) {
   const today = useMemo(() => startOfDay(new Date()), []);
 
@@ -108,9 +76,9 @@ export default function FlightsDateFareStrip({
   const fareData: FareItem[] = useMemo(() => {
     return visibleDates.map((date) => ({
       date,
-      price: getDynamicFareForDate(date, fromCity, toCity),
+      price: null,
     }));
-  }, [visibleDates, fromCity, toCity]);
+  }, [visibleDates]);
 
   const canGoLeft = differenceInCalendarDays(windowStartDate, today) > 0;
   const canGoRight =
@@ -142,7 +110,7 @@ export default function FlightsDateFareStrip({
                 Date fares
               </div>
               <div className="text-[10px] font-semibold text-[#64748b]">
-                Swipe to compare nearby days
+                Nearby fares shown only when provider data is available
               </div>
             </div>
 
@@ -200,8 +168,8 @@ export default function FlightsDateFareStrip({
                   <div className="mt-0.5 text-[12px] font-black text-[#111827]">
                     {format(item.date, "MMM d")}
                   </div>
-                  <div className="mt-1 text-[12px] font-black text-[#16a34a]">
-                    ₹{item.price.toLocaleString("en-IN")}
+                  <div className="mt-1 text-[11px] font-black text-[#64748b]">
+                    Fare unavailable
                   </div>
                 </button>
               );
@@ -250,12 +218,8 @@ export default function FlightsDateFareStrip({
                   {format(item.date, "EEE, MMM d")}
                 </div>
 
-                <div className="mt-1 text-[20px] font-bold leading-none text-[#16a34a] sm:text-[28px]">
-                  ₹
-                </div>
-
-                <div className="mt-1 text-[14px] font-bold leading-none text-[#16a34a] sm:text-[18px]">
-                  {item.price.toLocaleString("en-IN")}
+                <div className="mt-2 text-[12px] font-bold leading-tight text-[#64748b] sm:text-[13px]">
+                  Fare unavailable
                 </div>
               </button>
             );
