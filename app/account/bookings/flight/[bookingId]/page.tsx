@@ -12,6 +12,7 @@ import {
   type BookingItem,
 } from "@/app/lib/booking/bookingStorage";
 import { getBackendFirstBookingPayload } from "@/app/lib/api/bookingApi";
+import { resolveFlightBookingSource } from "@/app/lib/booking/resolvers/flightResolver";
 
 type ConfirmationPayload = any;
 
@@ -80,18 +81,21 @@ export default function FlightBookingDetailPage() {
     };
   }, [bookingId]);
 
-  const reviewData = payload?.reviewData;
-  const travellerValidation = useMemo(
-    () => normalizeTravellerValidation(payload),
-    [payload, refreshKey]
-  );
+  const resolvedSource = useMemo(() => {
+    if (!booking || !payload) return null;
+    return resolveFlightBookingSource(booking, payload);
+  }, [booking, payload, refreshKey]);
 
-  const seatMealData = payload?.seatMealData || {};
-  const cabData = payload?.cabData || {};
-  const insuranceData = payload?.insuranceData || {};
-  const addonsData = payload?.addonsData || {};
-  const offerData = payload?.offerData || null;
-  const paymentData = payload?.paymentData || {};
+  const reviewData = resolvedSource?.reviewData || payload?.reviewData;
+  const travellerValidation =
+    resolvedSource?.travellerValidation || normalizeTravellerValidation(payload);
+
+  const seatMealData = resolvedSource?.seatMealData || payload?.seatMealData || {};
+  const cabData = resolvedSource?.cabData || payload?.cabData || {};
+  const insuranceData = resolvedSource?.insuranceData || payload?.insuranceData || {};
+  const addonsData = resolvedSource?.addonsData || payload?.addonsData || {};
+  const offerData = resolvedSource?.offerData || payload?.offerData || null;
+  const paymentData = resolvedSource?.paymentData || payload?.paymentData || {};
   const managePayment = payload?.managePayment || {};
   const backendTestConfirmation = payload?.backendTestPaymentConfirmation || null;
   const isBackendTestBooking = Boolean(
@@ -108,6 +112,8 @@ export default function FlightBookingDetailPage() {
     "paid";
 
   const priceBreakup = useMemo(() => {
+    if (resolvedSource?.priceBreakup) return resolvedSource.priceBreakup;
+
     const pricing = reviewData?.pricing || {};
 
     const recalculatedTotal = Math.max(
@@ -160,16 +166,22 @@ export default function FlightBookingDetailPage() {
     offerData,
     paymentData,
     managePayment,
+    resolvedSource,
   ]);
 
-  const firstJourney = reviewData?.journeys?.[0];
-  const firstSegment = firstJourney?.segments?.[0];
-  const lastJourney = reviewData?.journeys?.[reviewData?.journeys?.length - 1];
+  const firstJourney = resolvedSource?.firstJourney || reviewData?.journeys?.[0];
+  const firstSegment = resolvedSource?.firstSegment || firstJourney?.segments?.[0];
+  const lastJourney =
+    resolvedSource?.lastJourney ||
+    reviewData?.journeys?.[reviewData?.journeys?.length - 1];
   const lastSegment =
-    lastJourney?.segments?.[lastJourney?.segments?.length - 1] || firstSegment;
+    resolvedSource?.lastSegment ||
+    lastJourney?.segments?.[lastJourney?.segments?.length - 1] ||
+    firstSegment;
 
   const routeTitle =
-    reviewData?.bookingType === "roundTrip"
+    resolvedSource?.routeTitle ||
+    (reviewData?.bookingType === "roundTrip"
       ? `${firstSegment?.fromCode || firstSegment?.from || "ORG"} → ${
           firstSegment?.toCode || firstSegment?.to || "DST"
         } → ${lastSegment?.toCode || lastSegment?.to || "ORG"}`
@@ -177,14 +189,16 @@ export default function FlightBookingDetailPage() {
       ? "Multi City Flight Booking"
       : `${firstSegment?.fromCode || firstSegment?.from || "ORG"} → ${
           firstSegment?.toCode || firstSegment?.to || "DST"
-        }`;
+        }`);
 
   const airlineSummary =
-    firstSegment?.airline && firstSegment?.flightNumber
+    resolvedSource?.airlineSummary ||
+    (firstSegment?.airline && firstSegment?.flightNumber
       ? `${firstSegment.airline} • ${firstSegment.flightNumber}`
-      : "Flight Ticket";
+      : "Flight Ticket");
 
-  const journeyDateLabel = firstSegment?.departureDate || null;
+  const journeyDateLabel =
+    resolvedSource?.journeyDateLabel || firstSegment?.departureDate || null;
 
   if (!booking || !payload) {
     return (
@@ -273,7 +287,7 @@ export default function FlightBookingDetailPage() {
           </div>
 
           <FlightConfirmationJourneyCard
-            journeys={reviewData?.journeys || []}
+            journeys={resolvedSource?.journeys || reviewData?.journeys || []}
             cabinClass={reviewData?.cabinClass}
           />
 
