@@ -503,12 +503,14 @@ export default function FlightResultCard(props: Props) {
 
   const selectedCurrency = selectedFare.currency || displayCurrency;
 
+  const providerBackedPricing = Boolean(backendOffer);
+
   const selectedOfferDiscount = useMemo(
     () =>
-      selectedCurrency === "INR"
+      selectedCurrency === "INR" && !providerBackedPricing
         ? calculateOfferDiscount(selectedBaseFare, activeOffer)
         : 0,
-    [selectedBaseFare, activeOffer, selectedCurrency]
+    [selectedBaseFare, activeOffer, selectedCurrency, providerBackedPricing]
   );
 
   const selectedBaseAfterOffer = Math.max(
@@ -585,7 +587,7 @@ export default function FlightResultCard(props: Props) {
       Number(selectedFare.priceAmount || 0) || parseFareNumber(selectedFare.price);
     const baseFareTotal = rawFare * adults;
 
-    const appliedOffer = calculateOfferDiscount(baseFareTotal, activeOffer);
+    const appliedOffer = backendOffer ? 0 : calculateOfferDiscount(baseFareTotal, activeOffer);
     const baseAfterOffer = Math.max(baseFareTotal - appliedOffer, 0);
 
     const tax = Math.round(baseFareTotal * 0.18);

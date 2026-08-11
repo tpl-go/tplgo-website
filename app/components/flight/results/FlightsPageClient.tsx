@@ -134,6 +134,20 @@ export default function FlightsPageClient({
               destination={toCity}
               bookingValue={estimatedBookingValue}
               isInternational={isInternational}
+              offers={[
+                {
+                  id: "flight-provider-authority",
+                  variant: "generic",
+                  title: "Provider fare is confirmed at Review",
+                  description: "Flight offers are informational until backend fare recheck applies them.",
+                },
+                {
+                  id: "flight-razorpay-test-boundary",
+                  variant: "bank",
+                  title: "Razorpay TEST at payment",
+                  description: "Payment method selection happens only inside Razorpay TEST Checkout.",
+                },
+              ]}
             />
           </div>
         </div>

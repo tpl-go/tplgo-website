@@ -10,6 +10,17 @@ import {
   activateSmartOffer,
 } from "@/app/lib/smartOffers";
 
+type ResultOfferCard = {
+  id?: string;
+  rawOffer?: any;
+  code?: string;
+  title: string;
+  subtitle?: string;
+  description?: string;
+  discountAmount?: number;
+  variant?: "generic" | "bank" | "wallet" | "date" | "applied";
+};
+
 type Props = {
   service:
     | "hotel"
@@ -26,6 +37,7 @@ type Props = {
   destination?: string;
   bookingValue?: number;
   isInternational?: boolean;
+  offers?: ResultOfferCard[];
 };
 
 function getServiceLabel(service: Props["service"]) {
@@ -86,8 +98,23 @@ export default function SmartResultsOfferStrip({
   destination = "",
   bookingValue = 12000,
   isInternational = false,
+  offers: overrideOffers,
 }: Props) {
   const offers = useMemo(() => {
+    if (overrideOffers) {
+      return overrideOffers
+        .map((offer) => ({
+          rawOffer: offer.rawOffer,
+          code: offer.code || "",
+          title: offer.title,
+          subtitle: offer.subtitle || offer.description || "",
+          discountAmount: Number(offer.discountAmount || 0),
+          variant: offer.variant,
+        }))
+        .filter((offer) => offer.title)
+        .slice(0, 2);
+    }
+
     const target = destination.toLowerCase();
     const activeOffer = getSmartActiveOfferItem();
 
@@ -144,7 +171,7 @@ export default function SmartResultsOfferStrip({
         return 0;
       })
       .slice(0, 2);
-  }, [service, destination, bookingValue, isInternational]);
+  }, [service, destination, bookingValue, isInternational, overrideOffers]);
 
   const bestOffer = offers[0] || null;
   const otherOffer = offers[1] || null;
@@ -197,20 +224,26 @@ export default function SmartResultsOfferStrip({
                 <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-white" />
 
                 <span className="text-[9px] font-black uppercase tracking-[0.12em] text-white sm:text-[10px] sm:tracking-[0.14em]">
-                  OFFER APPLIED
+                  {bestOffer.rawOffer ? "OFFER APPLIED" : "INFO ONLY"}
                 </span>
               </div>
             </div>
 
             <div className="mt-2 text-[18px] font-black leading-tight text-white sm:text-[20px]">
-              {serviceLabel} Smart Offer Active
+              {bestOffer.rawOffer ? `${serviceLabel} Smart Offer Active` : bestOffer.title}
             </div>
 
             <div className="mt-1 text-[12px] font-semibold leading-[17px] text-white/80 sm:text-[13px] sm:leading-[18px]">
-              Best saving unlocked for{" "}
-              <span className="font-black text-white">
-                {destination || "your search"}
-              </span>
+              {bestOffer.rawOffer ? (
+                <>
+                  Best saving unlocked for{" "}
+                  <span className="font-black text-white">
+                    {destination || "your search"}
+                  </span>
+                </>
+              ) : (
+                bestOffer.subtitle || "Backend fare remains checkout authority."
+              )}
             </div>
           </div>
         </div>
@@ -231,10 +264,9 @@ export default function SmartResultsOfferStrip({
                 </span>
 
                 <span className="rounded-full bg-[linear-gradient(135deg,#f97316,#ea580c)] px-2.5 py-1 text-[10px] font-black text-white shadow-[0_4px_12px_rgba(249,115,22,0.35)]">
-                  {bestOffer.rawOffer?.displayMode === "upTo"
-                    ? "Save up to ₹"
-                    : "Save ₹"}
-                  {bestOffer.discountAmount.toLocaleString("en-IN")}
+                  {bestOffer.rawOffer
+                    ? `${bestOffer.rawOffer?.displayMode === "upTo" ? "Save up to" : "Save"} ₹${bestOffer.discountAmount.toLocaleString("en-IN")}`
+                    : "Backend authority"}
                 </span>
               </div>
 
@@ -243,7 +275,7 @@ export default function SmartResultsOfferStrip({
               </div>
 
               <div className="mt-1 text-[11px] font-semibold leading-[15px] text-white/75 sm:text-[12px] sm:leading-[16px]">
-                Smart pricing optimization successfully applied.
+                {bestOffer.rawOffer ? "Smart pricing optimization successfully applied." : bestOffer.subtitle || "Provider fare remains payment authority."}
               </div>
             </div>
           </div>
@@ -259,7 +291,7 @@ export default function SmartResultsOfferStrip({
 
               <div className="min-w-0">
                 <div className="text-[10px] font-black uppercase tracking-wide text-white/70">
-                  More Saving
+                  {otherOffer.rawOffer ? "More Saving" : "Payment Boundary"}
                 </div>
 
                 <div className="mt-0.5 truncate text-[13px] font-black text-white">
@@ -267,10 +299,9 @@ export default function SmartResultsOfferStrip({
                 </div>
 
                 <div className="mt-1 inline-flex rounded-full bg-[linear-gradient(135deg,#f97316,#ea580c)] px-2 py-1 text-[10px] font-black text-white shadow-[0_4px_10px_rgba(249,115,22,0.35)]">
-                  {otherOffer.rawOffer?.displayMode === "upTo"
-                    ? "Extra up to ₹"
-                    : "Extra ₹"}
-                  {otherOffer.discountAmount.toLocaleString("en-IN")} Saving
+                  {otherOffer.rawOffer
+                    ? `${otherOffer.rawOffer?.displayMode === "upTo" ? "Extra up to" : "Extra"} ₹${otherOffer.discountAmount.toLocaleString("en-IN")} Saving`
+                    : otherOffer.subtitle || "Razorpay TEST owns method selection"}
                 </div>
               </div>
             </div>
@@ -300,7 +331,7 @@ export default function SmartResultsOfferStrip({
 
             <div className="min-w-0">
               <div className="text-[10px] font-black uppercase tracking-wide text-white/70">
-                More Saving
+                {otherOffer.rawOffer ? "More Saving" : "Payment Boundary"}
               </div>
 
               <div className="mt-0.5 truncate text-[13px] font-black text-white">
@@ -308,10 +339,9 @@ export default function SmartResultsOfferStrip({
               </div>
 
               <div className="mt-1 inline-flex rounded-full bg-[linear-gradient(135deg,#f97316,#ea580c)] px-2 py-1 text-[10px] font-black text-white shadow-[0_4px_10px_rgba(249,115,22,0.35)]">
-                {otherOffer.rawOffer?.displayMode === "upTo"
-                  ? "Extra up to ₹"
-                  : "Extra ₹"}
-                {otherOffer.discountAmount.toLocaleString("en-IN")} Saving
+                {otherOffer.rawOffer
+                  ? `${otherOffer.rawOffer?.displayMode === "upTo" ? "Extra up to" : "Extra"} ₹${otherOffer.discountAmount.toLocaleString("en-IN")} Saving`
+                  : otherOffer.subtitle || "Razorpay TEST owns method selection"}
               </div>
             </div>
           </div>
