@@ -1,13 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
 import { Sparkles, BadgeCheck, Tag } from "lucide-react";
 
-import {
-  calculateSmartOfferDiscount,
-  getSmartActiveOfferItem,
-  SmartOfferItem,
-} from "@/app/lib/smartOffers";
 import {
   formatFlightMoney,
   normalizeFlightCurrency,
@@ -102,63 +96,12 @@ export default function FlightFareSummaryCard({
   onProceed,
 }: Props) {
   const currency = normalizeFlightCurrency(inputCurrency);
-  const [smartOffer, setSmartOffer] =
-    useState<SmartOfferItem | null>(null);
-
-  useEffect(() => {
-    const load = () => {
-      setSmartOffer(getSmartActiveOfferItem());
-    };
-
-    load();
-
-    window.addEventListener("TPL_SMART_OFFER_UPDATED", load);
-    window.addEventListener("storage", load);
-
-    return () => {
-      window.removeEventListener("TPL_SMART_OFFER_UPDATED", load);
-      window.removeEventListener("storage", load);
-    };
-  }, []);
 
   const promoUsed = walletBreakdown?.promoUsed || 0;
   const earnedUsed = walletBreakdown?.earnedUsed || 0;
   const refundUsed = walletBreakdown?.refundUsed || 0;
 
-  const grossBookingValue =
-    baseFare +
-    tax +
-    surcharge +
-    seatTotal +
-    mealTotal +
-    baggageTotal +
-    cabTotal +
-    insuranceTotal +
-    addonsTotal;
-
-  const smartOfferAmount = useMemo(() => {
-    if (!smartOffer) return 0;
-
-    if (
-      smartOffer.service !== "flight" &&
-      smartOffer.service !== "all"
-    ) {
-      return 0;
-    }
-
-    return calculateSmartOfferDiscount(
-      smartOffer,
-      grossBookingValue
-    );
-  }, [smartOffer, grossBookingValue]);
-
-  const shouldUseSmartOffer =
-    smartOfferAmount > 0 &&
-    Number(appliedOffer || 0) <= 0;
-
-  const finalAppliedOffer = shouldUseSmartOffer
-    ? smartOfferAmount
-    : appliedOffer;
+  const finalAppliedOffer = Number(appliedOffer || 0);
 
   const taxesAndFees = tax + surcharge;
 
@@ -270,11 +213,7 @@ export default function FlightFareSummaryCard({
             )}
 
             <FareRow
-              label={
-                shouldUseSmartOffer && smartOffer?.couponCode
-                  ? `Smart Offer (${smartOffer.couponCode})`
-                  : "Applied Offer"
-              }
+              label="Applied Offer"
               value={-finalAppliedOffer}
               currency={currency}
               positiveOrange
