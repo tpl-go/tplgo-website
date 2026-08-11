@@ -24,7 +24,6 @@ import {
   TravellerSeatSelection,
   TravellerMealSelection,
 } from "@/app/lib/flights/ancillaries/ancillaryTypes";
-import { FLIGHT_ANCILLARY_CATALOG } from "@/app/lib/flights/ancillaries/ancillaryCatalog";
 
 import {
   cancelBooking,
@@ -39,8 +38,6 @@ import { getBackendFirstBookingPayload } from "@/app/lib/api/bookingApi";
 import { resolveFlightBookingSource } from "@/app/lib/booking/resolvers/flightResolver";
 import {
   saveFlightSeatChanges,
-  saveFlightMealChanges,
-  saveFlightBaggageChanges,
 } from "@/app/lib/booking/flightManageUpdate";
 import {
   executeBackendFlightCancellation,
@@ -119,16 +116,6 @@ function normalizeTravellerType(value?: string): "adult" | "child" | "infant" {
   if (value === "child") return "child";
   if (value === "infant") return "infant";
   return "adult";
-}
-
-function mapMealNameToCatalogId(mealName?: string | null) {
-  if (!mealName) return null;
-
-  const matched = FLIGHT_ANCILLARY_CATALOG.meals.find(
-    (item) => item.name.trim().toLowerCase() === mealName.trim().toLowerCase()
-  );
-
-  return matched?.id ?? null;
 }
 
 function findSeatByTravellerOrIndex(
@@ -301,13 +288,14 @@ function buildManageStateFromResolvedFlightSource(
       traveller.id,
       index
     );
-
-    const mappedMealId = mapMealNameToCatalogId(meal?.mealName ?? null);
+    const providerMealId = (meal as { mealId?: string } | null)?.mealId;
 
     return {
       travellerId: traveller.id,
-      oldMealId: mappedMealId,
-      newMealId: mappedMealId,
+      oldMealId: providerMealId ?? meal?.mealName ?? null,
+      newMealId: providerMealId ?? meal?.mealName ?? null,
+      oldMealName: meal?.mealName ?? null,
+      newMealName: meal?.mealName ?? null,
       oldPrice: meal?.price ?? 0,
       newPrice: meal?.price ?? 0,
       skipped: false,
@@ -741,21 +729,9 @@ function FlightManagePageContent() {
         });
       }
 
-      if (section === "meals") {
-        saveFlightMealChanges({
-          bookingId: bookingItem.id,
-          payloadStorageKey: bookingItem.payloadStorageKey,
-          meals: mealSelections,
-          mealCatalog: FLIGHT_ANCILLARY_CATALOG.meals,
-        });
-      }
-
-      if (section === "baggage") {
-        saveFlightBaggageChanges({
-          bookingId: bookingItem.id,
-          payloadStorageKey: bookingItem.payloadStorageKey,
-          baggage: baggageSelections,
-        });
+      if (section === "meals" || section === "baggage") {
+        alert("This change is unavailable until a backend provider quote exists for this booking.");
+        return;
       }
 
       if (backendResult.ok && backendResult.payload) {
@@ -1105,12 +1081,6 @@ function FlightManagePageContent() {
             value={mealSelections}
             onChange={setMealSelections}
           />
-          <ManageActionPanel
-            quote={mealQuote}
-            onContinue={() =>
-              handleMoneyContinue("meals", mealQuote.settlementMode)
-            }
-          />
         </div>
       )}
 
@@ -1120,12 +1090,6 @@ function FlightManagePageContent() {
             travellers={travellers}
             value={baggageSelections}
             onChange={setBaggageSelections}
-          />
-          <ManageActionPanel
-            quote={baggageQuote}
-            onContinue={() =>
-              handleMoneyContinue("baggage", baggageQuote.settlementMode)
-            }
           />
         </div>
       )}

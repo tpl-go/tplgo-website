@@ -29,6 +29,8 @@ export type TravellerMealSelection = {
   travellerId: string;
   oldMealId?: string | null;
   newMealId?: string | null;
+  oldMealName?: string | null;
+  newMealName?: string | null;
   oldPrice: number;
   newPrice: number;
   skipped?: boolean;
