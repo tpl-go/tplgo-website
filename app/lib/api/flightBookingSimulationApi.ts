@@ -79,6 +79,7 @@ export type BackendFlightBookingSimulationResponse = {
   supplierPriceSnapshot?: FlightPriceSnapshot;
   displayPriceSnapshot?: FlightDisplayPriceSnapshot;
   paymentQuote?: FlightPaymentQuoteSnapshot;
+  ancillarySnapshot?: Record<string, unknown> | null;
   warnings: string[];
   nextAction: "test_payment_pending" | "refresh_price" | "search_again";
 };
@@ -91,4 +92,13 @@ export function simulateBackendFlightBooking(
     body: input,
     fallbackOnError: false,
   });
+}
+
+export function fetchBackendFlightBookingDraft(
+  bookingDraftId: string
+): Promise<TplApiResult<BackendFlightBookingSimulationResponse>> {
+  return tplApiRequest<BackendFlightBookingSimulationResponse>(
+    `/api/v1/flights/bookings/${encodeURIComponent(bookingDraftId)}`,
+    { method: "GET", fallbackOnError: false }
+  );
 }

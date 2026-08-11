@@ -19,6 +19,7 @@ type PriceBreakup = {
   surcharge: number;
   seatTotal: number;
   mealTotal: number;
+  baggageTotal?: number;
   cabTotal: number;
   insuranceTotal: number;
   addonsTotal: number;
@@ -162,6 +163,10 @@ export default function FlightPaymentPriceCard({
 
             {priceBreakup.mealTotal > 0 ? (
               <FareRow label="Meal Selection" value={priceBreakup.mealTotal} currency={currency} />
+            ) : null}
+
+            {(priceBreakup.baggageTotal || 0) > 0 ? (
+              <FareRow label="Extra Baggage" value={priceBreakup.baggageTotal || 0} currency={currency} />
             ) : null}
 
             {priceBreakup.cabTotal > 0 ? (

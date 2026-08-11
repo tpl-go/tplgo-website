@@ -1178,8 +1178,23 @@ seatTotal={backendAncillaryTotals.seats}
             paymentQuoteId: priceReady.backendOffer.paymentQuote.quoteId,
           } : {}),
         },
+        ...(ancillaryQuote ? {
+          ancillaries: {
+            quoteId: ancillaryQuote.quoteId,
+            ancillarySetId: ancillaryQuote.ancillarySetId,
+            selectedAncillaryIds,
+            selectedAncillarySelections: selectedSeatAssignments,
+            selectedAncillaries: ancillaryQuote.selectedAncillaries,
+            displayTotal: ancillaryQuote.displayTotal,
+            payableQuote: ancillaryQuote.payableQuote,
+            expiresAt: ancillaryQuote.expiresAt,
+          },
+        } : {}),
         acceptedPriceChange: priceReady.backendOffer.priceStatus === "price_changed",
-        idempotencyKey: buildFlightSmokeIdempotencyKey(`flight-sim:${priceReady.backendOffer.priceConfirmationId}`, priceReady.backendOffer.smokeRunId),
+        idempotencyKey: buildFlightSmokeIdempotencyKey(
+          `flight-sim:${priceReady.backendOffer.priceConfirmationId}:${ancillaryQuote?.quoteId || "no-ancillaries"}`,
+          priceReady.backendOffer.smokeRunId
+        ),
       });
 
       updateProceedDebug({

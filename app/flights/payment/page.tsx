@@ -26,7 +26,11 @@ import {
   confirmBackendFlightPrice,
   type BackendFlightPriceConfirmResponse,
 } from "@/app/lib/api/flightPriceApi";
-import { simulateBackendFlightBooking } from "@/app/lib/api/flightBookingSimulationApi";
+import {
+  fetchBackendFlightBookingDraft,
+  simulateBackendFlightBooking,
+  type BackendFlightBookingSimulationResponse,
+} from "@/app/lib/api/flightBookingSimulationApi";
 import {
   confirmFlightTestPayment,
   createFlightTestPaymentOrder,
@@ -123,6 +127,8 @@ type StoredPayload = {
     currency?: FlightCurrency;
     backendRequestId?: string;
   };
+  backendDraft?: BackendFlightBookingSimulationResponse;
+  backendAncillaryQuote?: Record<string, unknown> | null;
 };
 
 function sanitizeRazorpayContact(value: unknown): string {
@@ -207,6 +213,140 @@ function safeStoreFlightPaymentPayload(key: string, value: unknown) {
 
 function hasBackendFlightDraft(payload: StoredPayload | null): boolean {
   return Boolean(payload?.backendSimulation?.bookingDraftId);
+}
+
+function mergeBackendDraftIntoPayload(
+  payload: StoredPayload,
+  draft: BackendFlightBookingSimulationResponse
+): StoredPayload {
+  const nextReviewData = {
+    ...(payload.reviewData || {}),
+    backendOffer: {
+      ...(payload.reviewData?.backendOffer || {}),
+      searchId: draft.searchId,
+      offerId: draft.offerId,
+      ...(draft.fareId ? { fareId: draft.fareId } : {}),
+      priceConfirmationId: draft.priceConfirmationId,
+      providerId: draft.providerId,
+      expiresAt: draft.expiresAt,
+      supplierPrice: draft.supplierPriceSnapshot || payload.reviewData?.backendOffer?.supplierPrice,
+      displayPrice: draft.displayPriceSnapshot || payload.reviewData?.backendOffer?.displayPrice,
+      paymentQuote: draft.paymentQuote || payload.reviewData?.backendOffer?.paymentQuote,
+      priceTotal: Number(draft.displayPriceSnapshot?.amount || payload.reviewData?.backendOffer?.priceTotal || 0),
+      currency: normalizeFlightCurrency(draft.displayPriceSnapshot?.currency || payload.reviewData?.backendOffer?.currency),
+    },
+  };
+  const nextPayload: StoredPayload = {
+    ...payload,
+    reviewData: nextReviewData,
+    backendDraft: draft,
+    backendAncillaryQuote: draft.ancillarySnapshot || payload.backendAncillaryQuote || null,
+    backendSimulation: {
+      ...(payload.backendSimulation || {
+        simulationId: draft.simulationId,
+        bookingDraftId: draft.bookingDraftId,
+        bookingRef: draft.bookingRef,
+        priceConfirmationId: draft.priceConfirmationId,
+        expiresAt: draft.expiresAt,
+      }),
+      simulationId: payload.backendSimulation?.simulationId || draft.simulationId,
+      bookingDraftId: draft.bookingDraftId,
+      bookingRef: draft.bookingRef,
+      priceConfirmationId: draft.priceConfirmationId,
+      expiresAt: draft.expiresAt,
+      currency: normalizeFlightCurrency(draft.displayPriceSnapshot?.currency || draft.priceSnapshot.currency),
+    },
+  };
+  return nextPayload;
+}
+
+function readRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function readMoneyAmount(value: unknown): number {
+  const record = readRecord(value);
+  const amount = Number(record?.amount || 0);
+  return Number.isFinite(amount) ? amount : 0;
+}
+
+function ancillarySnapshotFromPayload(payload: StoredPayload | null): Record<string, unknown> | null {
+  return readRecord(payload?.backendDraft?.ancillarySnapshot) || readRecord(payload?.backendAncillaryQuote);
+}
+
+function selectedAncillaryOptions(payload: StoredPayload | null): Array<Record<string, unknown>> {
+  const snapshot = ancillarySnapshotFromPayload(payload);
+  const selected = snapshot?.selectedAncillaries;
+  return Array.isArray(selected)
+    ? selected.filter((item): item is Record<string, unknown> => Boolean(readRecord(item)))
+    : [];
+}
+
+function backendAncillarySelections(payload: StoredPayload | null): Array<Record<string, unknown>> {
+  const snapshot = ancillarySnapshotFromPayload(payload);
+  const selected = snapshot?.selectedAncillarySelections;
+  return Array.isArray(selected)
+    ? selected.filter((item): item is Record<string, unknown> => Boolean(readRecord(item)))
+    : [];
+}
+
+function buildSeatMealDataFromBackend(payload: StoredPayload | null): NonNullable<StoredPayload["seatMealData"]> {
+  const options = selectedAncillaryOptions(payload);
+  const selections = backendAncillarySelections(payload);
+  const seats = options
+    .filter((item) => item.category === "seat")
+    .map((item, index) => {
+      const selection = selections.find((candidate) => candidate.id === item.id);
+      return {
+        travellerId: String(selection?.travellerRef || `traveller_${index + 1}`),
+        seatNumber: String(item.code || item.label || item.id || "Seat"),
+        price: readMoneyAmount(item.displayPrice),
+      };
+    });
+  const meals = options
+    .filter((item) => item.category === "meal")
+    .map((item, index) => {
+      const selection = selections.find((candidate) => candidate.id === item.id);
+      return {
+        travellerId: String(selection?.travellerRef || `traveller_${index + 1}`),
+        mealName: String(item.label || item.code || item.id || "Meal"),
+        price: readMoneyAmount(item.displayPrice),
+      };
+    });
+  return {
+    seats,
+    meals,
+    seatTotal: seats.reduce((sum, item) => sum + item.price, 0),
+    mealTotal: meals.reduce((sum, item) => sum + item.price, 0),
+    seatStatus: seats.length ? "selected" : "skipped",
+    mealStatus: meals.length ? "selected" : "skipped",
+  };
+}
+
+function backendBaggageTotal(payload: StoredPayload | null): number {
+  return selectedAncillaryOptions(payload)
+    .filter((item) => item.category === "paid_baggage")
+    .reduce((sum, item) => sum + readMoneyAmount(item.displayPrice), 0);
+}
+
+function buildAddonsDataFromBackend(payload: StoredPayload | null): NonNullable<StoredPayload["addonsData"]> {
+  const baggage = selectedAncillaryOptions(payload).filter((item) => item.category === "paid_baggage");
+  if (!baggage.length) {
+    return {
+      addonsStatus: "skipped",
+      addonsLabel: "Add-ons not available",
+      addonsPrice: 0,
+      selectedItems: [],
+    };
+  }
+  return {
+    addonsStatus: "selected",
+    addonsLabel: baggage.map((item) => String(item.label || item.code || item.id || "Extra baggage")).join(", "),
+    addonsPrice: backendBaggageTotal(payload),
+    selectedItems: baggage.map((item) => String(item.label || item.code || item.id || "Extra baggage")),
+  };
 }
 
 function getActiveUser() {
@@ -328,6 +468,30 @@ export default function FlightPaymentPage() {
   }, []);
 
   useEffect(() => {
+    const bookingDraftId = storedPayload?.backendSimulation?.bookingDraftId;
+    if (!bookingDraftId || storedPayload.backendDraft?.bookingDraftId === bookingDraftId) return;
+
+    let cancelled = false;
+    void fetchBackendFlightBookingDraft(bookingDraftId).then((result) => {
+      if (cancelled || !result.ok) return;
+      setStoredPayload((current) => {
+        if (!current) return current;
+        const nextPayload = mergeBackendDraftIntoPayload(current, result.data);
+        try {
+          safeStoreFlightPaymentPayload("tplFlightBookingReviewData", nextPayload);
+        } catch {
+          // Payment can still render from state; storage refresh is best-effort.
+        }
+        return nextPayload;
+      });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [storedPayload?.backendSimulation?.bookingDraftId, storedPayload?.backendDraft?.bookingDraftId]);
+
+  useEffect(() => {
     const syncUserWallet = () => {
       const user = getActiveUser();
       setActiveUser(user);
@@ -418,14 +582,10 @@ export default function FlightPaymentPage() {
       paymentQuotePresent: Boolean(reviewData?.backendOffer?.paymentQuote),
     });
   }, [reviewData, storedPayload?.backendSimulation?.bookingDraftId]);
-  const safeSeatMealData = {
-    seats: [],
-    meals: [],
-    seatTotal: 0,
-    mealTotal: 0,
-    seatStatus: "skipped" as const,
-    mealStatus: "skipped" as const,
-  };
+  const safeSeatMealData = useMemo(
+    () => buildSeatMealDataFromBackend(storedPayload),
+    [storedPayload?.backendDraft?.ancillarySnapshot, storedPayload?.backendAncillaryQuote]
+  );
   const safeCabData = {
     cabType: "none" as const,
     cabStatus: "skipped" as const,
@@ -437,17 +597,16 @@ export default function FlightPaymentPage() {
     insuranceLabel: "Travel insurance not available",
     insurancePrice: 0,
   };
-  const safeAddonsData = {
-    addonsStatus: "skipped" as const,
-    addonsLabel: "Add-ons not available",
-    addonsPrice: 0,
-    selectedItems: [],
-  };
+  const safeAddonsData = useMemo(
+    () => buildAddonsDataFromBackend(storedPayload),
+    [storedPayload?.backendDraft?.ancillarySnapshot, storedPayload?.backendAncillaryQuote]
+  );
 
   const totalTravellers =
     (reviewData?.passengers?.adults || 0) +
       (reviewData?.passengers?.children || 0) +
       (reviewData?.passengers?.infants || 0) || 1;
+  const backendBaggage = backendBaggageTotal(storedPayload);
 
   const priceBreakup = useMemo(() => {
     const backendAuthority = reviewData?.backendOffer
@@ -466,8 +625,9 @@ export default function FlightPaymentPage() {
         baseFare: supplierBase > 0 ? supplierBase : displayTotal,
         tax: supplierTaxes,
         surcharge: supplierFees,
-        seatTotal: 0,
-        mealTotal: 0,
+        seatTotal: safeSeatMealData.seatTotal || 0,
+        mealTotal: safeSeatMealData.mealTotal || 0,
+        baggageTotal: backendBaggage,
         cabTotal: 0,
         insuranceTotal: 0,
         addonsTotal: 0,
@@ -492,8 +652,9 @@ export default function FlightPaymentPage() {
     totalTravellers;
     const tax = reviewData?.pricing?.tax || 0;
     const surcharge = reviewData?.pricing?.surcharge || 0;
-    const seatTotal = 0;
-    const mealTotal = 0;
+    const seatTotal = safeSeatMealData.seatTotal || 0;
+    const mealTotal = safeSeatMealData.mealTotal || 0;
+    const baggageTotal = backendBaggage;
     const cabTotal = 0;
     const addonsTotal = 0;
     const appliedOffer = offerData?.discountAmount || 0;
@@ -509,7 +670,7 @@ export default function FlightPaymentPage() {
   cabCharges: cabTotal,
   insuranceCharges: 0,
 
-  addOns: addonsTotal,
+  addOns: addonsTotal + baggageTotal,
 
   offerDiscount:
   appliedOffer + discount,
@@ -551,6 +712,7 @@ const finalTotalAmount =
   surcharge,
   seatTotal,
   mealTotal,
+  baggageTotal,
   cabTotal,
   insuranceTotal: 0,
   addonsTotal,
@@ -565,6 +727,11 @@ const finalTotalAmount =
   }, [
     reviewData,
     storedPayload?.backendSimulation,
+    storedPayload?.backendDraft?.ancillarySnapshot,
+    storedPayload?.backendAncillaryQuote,
+    safeSeatMealData.seatTotal,
+    safeSeatMealData.mealTotal,
+    backendBaggage,
     totalTravellers,
     offerData,
     activeUser,
