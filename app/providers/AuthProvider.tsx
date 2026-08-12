@@ -23,7 +23,7 @@ type AuthContextType = AuthState & {
   openLoginModal: (options?: OpenLoginModalOptions) => void;
   closeLoginModal: () => void;
   setActiveAccountType: (type: AccountType) => void;
-  sendOtp: (mobile: string, accountType: AccountType) => Promise<void>;
+  sendOtp: (mobile: string, accountType: AccountType) => Promise<SendOtpResult>;
   verifyOtp: (
     mobile: string,
     otp: string,
@@ -59,11 +59,18 @@ type BackendAuthResponse = {
     token?: string | undefined;
     sessionToken?: string | undefined;
     developmentOtp?: string | undefined;
+    resendAvailableAt?: string | undefined;
+    expiresAt?: string | undefined;
   } | undefined;
   error?: {
     message?: string | undefined;
   } | undefined;
   message?: string | undefined;
+};
+
+export type SendOtpResult = {
+  resendAvailableAt?: string | undefined;
+  expiresAt?: string | undefined;
 };
 
 type AuthProviderProps = {
@@ -179,10 +186,10 @@ export default function AuthProvider({ children }: AuthProviderProps) {
   const sendOtp = useCallback(
     async (mobile: string, accountType: AccountType) => {
       try {
-        await sendBackendOtp(mobile, accountType);
+        return await sendBackendOtp(mobile, accountType);
       } catch (error) {
         if (!canUseLocalAuthFallback(error)) throw error;
-        await sendLocalOtp(mobile, accountType);
+        return await sendLocalOtp(mobile, accountType);
       }
     },
     []
@@ -276,7 +283,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
   );
 }
 
-async function sendBackendOtp(mobile: string, accountType: AccountType): Promise<void> {
+async function sendBackendOtp(mobile: string, accountType: AccountType): Promise<SendOtpResult> {
   if (!API_BASE_URL) throw authNetworkFallbackError("TPL API base URL is not configured.");
   const response = await fetch(`${API_BASE_URL}/api/v1/auth/send-otp`, {
     method: "POST",
@@ -287,6 +294,10 @@ async function sendBackendOtp(mobile: string, accountType: AccountType): Promise
   if (!response.ok || payload?.ok !== true) {
     throw authApiError(payload, "OTP send failed");
   }
+  return {
+    resendAvailableAt: payload?.data?.resendAvailableAt,
+    expiresAt: payload?.data?.expiresAt,
+  };
 }
 
 async function verifyBackendOtp(
@@ -342,7 +353,7 @@ async function logoutBackendSession(token: string): Promise<void> {
   }
 }
 
-async function sendLocalOtp(mobile: string, accountType: AccountType): Promise<void> {
+async function sendLocalOtp(mobile: string, accountType: AccountType): Promise<SendOtpResult> {
   const res = await fetch("/api/auth/send-otp", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -352,6 +363,10 @@ async function sendLocalOtp(mobile: string, accountType: AccountType): Promise<v
   if (!res.ok) {
     throw new Error(data?.message || "OTP send failed");
   }
+  return {
+    resendAvailableAt: data?.resendAvailableAt,
+    expiresAt: data?.expiresAt,
+  };
 }
 
 async function verifyLocalOtp(mobile: string, otp: string, accountType: AccountType): Promise<AuthUser> {

@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json(
+      { message: "Local OTP test route is disabled." },
+      { status: 404 }
+    );
+  }
+
   try {
     const body = await req.json();
     const mobile = String(body?.mobile || "").replace(/\D/g, "");

@@ -29,12 +29,18 @@ export default function LoginModal({
   const [infoText, setInfoText] = useState("");
   const [successText, setSuccessText] = useState("");
   const [isMobile, setIsMobile] = useState(false);
+  const [resendAvailableAt, setResendAvailableAt] = useState<number | null>(null);
+  const [nowMs, setNowMs] = useState(() => Date.now());
 
   const cleanedMobile = useMemo(() => mobile.replace(/\D/g, ""), [mobile]);
   const cleanedOtp = useMemo(() => otp.replace(/\D/g, ""), [otp]);
 
   const isValidMobile = cleanedMobile.length === 10;
   const isValidOtp = cleanedOtp.length === 6;
+  const resendSecondsRemaining = resendAvailableAt
+    ? Math.max(0, Math.ceil((resendAvailableAt - nowMs) / 1000))
+    : 0;
+  const canResendOtp = step === "otp" && isValidMobile && !isSubmitting && resendSecondsRemaining === 0;
 
   useEffect(() => {
     const checkMobile = () => {
@@ -49,6 +55,12 @@ export default function LoginModal({
     };
   }, []);
 
+  useEffect(() => {
+    if (!resendAvailableAt) return;
+    const timer = window.setInterval(() => setNowMs(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [resendAvailableAt]);
+
   const resetState = () => {
     setStep("mobile");
     setMobile("");
@@ -57,6 +69,7 @@ export default function LoginModal({
     setInfoText("");
     setSuccessText("");
     setIsSubmitting(false);
+    setResendAvailableAt(null);
   };
 
   const handleClose = () => {
@@ -73,13 +86,38 @@ export default function LoginModal({
       setInfoText("");
       setSuccessText("");
 
-      await sendOtp(cleanedMobile, activeAccountType);
+      const result = await sendOtp(cleanedMobile, activeAccountType);
 
       setStep("otp");
+      setResendAvailableAt(parseTimestamp(result?.resendAvailableAt));
+      setNowMs(Date.now());
       setInfoText("OTP sent. Please enter the 6-digit code.");
     } catch (error) {
       setErrorText(
         error instanceof Error ? error.message : "Failed to send OTP."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (!canResendOtp) return;
+
+    try {
+      setIsSubmitting(true);
+      setErrorText("");
+      setInfoText("");
+      setSuccessText("");
+
+      const result = await sendOtp(cleanedMobile, activeAccountType);
+      setOtp("");
+      setResendAvailableAt(parseTimestamp(result?.resendAvailableAt));
+      setNowMs(Date.now());
+      setInfoText("OTP resent. Please enter the 6-digit code.");
+    } catch (error) {
+      setErrorText(
+        error instanceof Error ? error.message : "Failed to resend OTP."
       );
     } finally {
       setIsSubmitting(false);
@@ -538,6 +576,26 @@ export default function LoginModal({
               >
                 CHANGE MOBILE
               </button>
+
+              <button
+                onClick={handleResendOtp}
+                type="button"
+                disabled={!canResendOtp}
+                style={{
+                  marginTop: "10px",
+                  height: "42px",
+                  border: "none",
+                  borderRadius: "8px",
+                  background: canResendOtp ? "#eff6ff" : "#f1f5f9",
+                  color: canResendOtp ? "#0b5fff" : "#64748b",
+                  fontWeight: 700,
+                  cursor: canResendOtp ? "pointer" : "not-allowed",
+                }}
+              >
+                {resendSecondsRemaining > 0
+                  ? `RESEND OTP IN ${resendSecondsRemaining}s`
+                  : "RESEND OTP"}
+              </button>
             </>
           )}
 
@@ -605,4 +663,10 @@ export default function LoginModal({
       </div>
     </div>
   );
+}
+
+function parseTimestamp(value: string | undefined): number | null {
+  if (!value) return null;
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : null;
 }
