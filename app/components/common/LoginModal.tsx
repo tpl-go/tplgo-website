@@ -9,7 +9,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { Building2, Mail, Phone, UserRound } from "lucide-react";
+import { Building2, Mail, Phone } from "lucide-react";
 import { useAuth } from "@/app/hooks/useAuth";
 
 type LoginModalProps = {
@@ -152,8 +152,6 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const isPartnerDesk = activeAccountType === "partner";
   const isUserEmail = !isPartnerDesk && userMethod === "email";
   const isUserMobile = !isPartnerDesk && userMethod === "mobile";
-  const isPartnerSignin = isPartnerDesk && partnerMode === "signin";
-  const isPartnerRegister = isPartnerDesk && partnerMode === "register";
   const isValidMobile = isNationalMobileValid(cleanedMobile, selectedCountry);
   const isCertifiedUserMobileOtp = selectedCountry.certifiedOtp && selectedCountry.code === "IN";
   const isValidOtp = cleanedOtp.length === 6;
@@ -678,52 +676,88 @@ function UserLoginPanel(props: {
   isValidEmail: boolean;
   onEmailContinue: () => void;
 }) {
-  if (props.step === "otp") {
+  const {
+    method,
+    setMethod,
+    step,
+    mobileInputId,
+    mobileInputRef,
+    countryCode,
+    setCountryCode,
+    mobile,
+    setMobile,
+    mobileHasInvalidValue,
+    isCertifiedUserMobileOtp,
+    canSendOtp,
+    isSubmitting,
+    onSendOtp,
+    otpInputId,
+    otpInputRef,
+    otp,
+    setOtp,
+    isValidOtp,
+    canVerifyOtp,
+    onVerifyOtp,
+    onBackToMobile,
+    canResendOtp,
+    resendSecondsRemaining,
+    onResendOtp,
+    maskedMobile,
+    emailInputId,
+    emailInputRef,
+    email,
+    setEmail,
+    emailHasInvalidValue,
+    isValidEmail,
+    onEmailContinue,
+  } = props;
+
+  if (step === "otp") {
     return (
       <div style={stackStyle}>
-        <label htmlFor={props.otpInputId} style={labelStyle}>
+        <label htmlFor={otpInputId} style={labelStyle}>
           Enter OTP
         </label>
         <input
-          ref={props.otpInputRef}
-          id={props.otpInputId}
-          value={props.otp}
-          onChange={(event) => props.setOtp(sanitizeDigits(event.target.value).slice(0, 6))}
+          ref={otpInputRef}
+          id={otpInputId}
+          value={otp}
+          onChange={(event) => setOtp(sanitizeDigits(event.target.value).slice(0, 6))}
           onPaste={(event) => {
             event.preventDefault();
-            props.setOtp(sanitizeDigits(event.clipboardData.getData("text")).slice(0, 6));
+            setOtp(sanitizeDigits(event.clipboardData.getData("text")).slice(0, 6));
           }}
           onKeyDown={(event) => {
-            if (event.key === "Enter") props.onVerifyOtp();
+            if (event.key === "Enter") onVerifyOtp();
           }}
           type="text"
           inputMode="numeric"
           autoComplete="one-time-code"
           placeholder="Enter 6-digit OTP"
-          aria-invalid={Boolean(props.otp && !props.isValidOtp)}
-          disabled={props.isSubmitting}
+          aria-invalid={Boolean(otp && !isValidOtp)}
+          disabled={isSubmitting}
           style={standaloneInputStyle}
         />
-        <p style={helperTextStyle}>OTP sent to +{getCountry("IN").dialCode} {props.maskedMobile}</p>
-        <button type="button" onClick={props.onVerifyOtp} disabled={!props.canVerifyOtp} style={primaryButtonStyle(!props.canVerifyOtp)}>
-          {props.isSubmitting ? "VERIFYING..." : "VERIFY OTP"}
+        <p style={helperTextStyle}>OTP sent to +{getCountry("IN").dialCode} {maskedMobile}</p>
+        <button type="button" onClick={onVerifyOtp} disabled={!canVerifyOtp} style={primaryButtonStyle(!canVerifyOtp)}>
+          {isSubmitting ? "VERIFYING..." : "VERIFY OTP"}
         </button>
-        <button type="button" onClick={props.onBackToMobile} style={secondaryButtonStyle}>
+        <button type="button" onClick={onBackToMobile} style={secondaryButtonStyle}>
           CHANGE MOBILE
         </button>
         <button
           type="button"
-          onClick={props.onResendOtp}
-          disabled={!props.canResendOtp}
+          onClick={onResendOtp}
+          disabled={!canResendOtp}
           style={{
             ...secondaryButtonStyle,
             border: "none",
-            background: props.canResendOtp ? "#eff6ff" : "#f1f5f9",
-            color: props.canResendOtp ? "#0b5fff" : "#64748b",
-            cursor: props.canResendOtp ? "pointer" : "not-allowed",
+            background: canResendOtp ? "#eff6ff" : "#f1f5f9",
+            color: canResendOtp ? "#0b5fff" : "#64748b",
+            cursor: canResendOtp ? "pointer" : "not-allowed",
           }}
         >
-          {props.resendSecondsRemaining > 0 ? `RESEND OTP IN ${props.resendSecondsRemaining}s` : "RESEND OTP"}
+          {resendSecondsRemaining > 0 ? `RESEND OTP IN ${resendSecondsRemaining}s` : "RESEND OTP"}
         </button>
       </div>
     );
@@ -731,55 +765,55 @@ function UserLoginPanel(props: {
 
   return (
     <div style={stackStyle}>
-      <MethodSelector active={props.method} onChange={props.setMethod} />
-      {props.method === "mobile" ? (
+      <MethodSelector active={method} onChange={setMethod} />
+      {method === "mobile" ? (
         <>
           <MobileIdentityInput
-            id={props.mobileInputId}
-            inputRef={props.mobileInputRef}
-            countryCode={props.countryCode}
-            onCountryChange={props.setCountryCode}
-            value={props.mobile}
-            onChange={props.setMobile}
+            id={mobileInputId}
+            inputRef={mobileInputRef}
+            countryCode={countryCode}
+            onCountryChange={setCountryCode}
+            value={mobile}
+            onChange={setMobile}
             label="Mobile Number"
-            invalid={props.mobileHasInvalidValue}
-            onEnter={props.onSendOtp}
+            invalid={mobileHasInvalidValue}
+            onEnter={onSendOtp}
           />
-          {props.mobileHasInvalidValue ? <p style={warningTextStyle}>Enter a valid mobile number for the selected country.</p> : null}
-          {!props.isCertifiedUserMobileOtp ? (
+          {mobileHasInvalidValue ? <p style={warningTextStyle}>Enter a valid mobile number for the selected country.</p> : null}
+          {!isCertifiedUserMobileOtp ? (
             <p style={helperTextStyle}>Global mobile UI is supported. WhatsApp OTP delivery outside India is pending provider certification.</p>
           ) : null}
-          <button type="button" onClick={props.onSendOtp} disabled={!props.canSendOtp} style={primaryButtonStyle(!props.canSendOtp)}>
-            {props.isSubmitting ? "SENDING OTP..." : "CONTINUE"}
+          <button type="button" onClick={onSendOtp} disabled={!canSendOtp} style={primaryButtonStyle(!canSendOtp)}>
+            {isSubmitting ? "SENDING OTP..." : "CONTINUE"}
           </button>
         </>
       ) : (
         <>
-          <label htmlFor={props.emailInputId} style={labelStyle}>
+          <label htmlFor={emailInputId} style={labelStyle}>
             Email Address
           </label>
           <input
-            ref={props.emailInputRef}
-            id={props.emailInputId}
-            value={props.email}
-            onChange={(event) => props.setEmail(event.target.value)}
-            onBlur={() => props.setEmail(normalizeEmail(props.email))}
+            ref={emailInputRef}
+            id={emailInputId}
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            onBlur={() => setEmail(normalizeEmail(email))}
             onKeyDown={(event) => {
-              if (event.key === "Enter") props.onEmailContinue();
+              if (event.key === "Enter") onEmailContinue();
             }}
             type="email"
             inputMode="email"
             autoComplete="email"
             placeholder="you@example.com"
-            aria-invalid={props.emailHasInvalidValue}
+            aria-invalid={emailHasInvalidValue}
             style={standaloneInputStyle}
           />
-          {props.emailHasInvalidValue ? <p style={warningTextStyle}>Enter a valid email address.</p> : null}
+          {emailHasInvalidValue ? <p style={warningTextStyle}>Enter a valid email address.</p> : null}
           <button
             type="button"
-            onClick={props.onEmailContinue}
-            disabled={!props.isValidEmail}
-            style={primaryButtonStyle(!props.isValidEmail)}
+            onClick={onEmailContinue}
+            disabled={!isValidEmail}
+            style={primaryButtonStyle(!isValidEmail)}
           >
             CONTINUE WITH EMAIL
           </button>
@@ -1156,18 +1190,19 @@ function MobileIdentityInput(props: {
   invalid: boolean;
   onEnter?: () => void;
 }) {
-  const country = getCountry(props.countryCode);
+  const { id, inputRef, countryCode, onCountryChange, value, onChange, label, invalid, onEnter } = props;
+  const country = getCountry(countryCode);
   const maxLength = country.maxLength || 15;
 
   return (
     <div style={stackStyle}>
-      <label htmlFor={props.id} style={labelStyle}>
-        {props.label}
+      <label htmlFor={id} style={labelStyle}>
+        {label}
       </label>
       <div
         style={{
           minHeight: "48px",
-          border: props.invalid ? "1px solid #f97316" : "1px solid #cbd5e1",
+          border: invalid ? "1px solid #f97316" : "1px solid #cbd5e1",
           borderRadius: "8px",
           display: "grid",
           gridTemplateColumns: "minmax(132px, 0.9fr) minmax(0, 1.1fr)",
@@ -1176,9 +1211,9 @@ function MobileIdentityInput(props: {
         }}
       >
         <select
-          aria-label={`${props.label} country and dial code`}
-          value={props.countryCode}
-          onChange={(event) => props.onCountryChange(event.target.value)}
+          aria-label={`${label} country and dial code`}
+          value={countryCode}
+          onChange={(event) => onCountryChange(event.target.value)}
           style={{
             border: "none",
             borderRight: "1px solid #e2e8f0",
@@ -1199,22 +1234,22 @@ function MobileIdentityInput(props: {
           ))}
         </select>
         <input
-          ref={props.inputRef}
-          id={props.id}
-          value={props.value}
-          onChange={(event) => props.onChange(sanitizeDigits(event.target.value).slice(0, maxLength))}
+          ref={inputRef}
+          id={id}
+          value={value}
+          onChange={(event) => onChange(sanitizeDigits(event.target.value).slice(0, maxLength))}
           onPaste={(event) => {
             event.preventDefault();
-            props.onChange(sanitizeDigits(event.clipboardData.getData("text")).slice(-maxLength));
+            onChange(sanitizeDigits(event.clipboardData.getData("text")).slice(-maxLength));
           }}
           onKeyDown={(event) => {
-            if (event.key === "Enter") props.onEnter?.();
+            if (event.key === "Enter") onEnter?.();
           }}
           type="tel"
           inputMode="numeric"
           autoComplete="tel"
           placeholder="Mobile number"
-          aria-invalid={props.invalid}
+          aria-invalid={invalid}
           style={compactInputStyle}
         />
       </div>
