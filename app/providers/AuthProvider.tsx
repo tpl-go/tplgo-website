@@ -18,13 +18,12 @@ import {
 } from "@/app/lib/auth/auth.types";
 import { registerCurrentDeviceSession } from "@/app/lib/account/deviceSessions";
 import { AUTH_UPDATED_EVENT } from "@/app/lib/booking/guestAuth";
-import { getStoredAuthToken } from "@/app/lib/api/tplApiClient";
 
 type AuthContextType = AuthState & {
   openLoginModal: (options?: OpenLoginModalOptions) => void;
   closeLoginModal: () => void;
   setActiveAccountType: (type: AccountType) => void;
-  sendOtp: (mobile: string, accountType: AccountType) => Promise<void>;
+  sendOtp: (mobile: string, accountType: AccountType) => Promise<SendOtpResult>;
   verifyOtp: (
     mobile: string,
     otp: string,
@@ -60,11 +59,18 @@ type BackendAuthResponse = {
     token?: string | undefined;
     sessionToken?: string | undefined;
     developmentOtp?: string | undefined;
+    resendAvailableAt?: string | undefined;
+    expiresAt?: string | undefined;
   } | undefined;
   error?: {
     message?: string | undefined;
   } | undefined;
   message?: string | undefined;
+};
+
+export type SendOtpResult = {
+  resendAvailableAt?: string | undefined;
+  expiresAt?: string | undefined;
 };
 
 type AuthProviderProps = {
@@ -180,10 +186,10 @@ export default function AuthProvider({ children }: AuthProviderProps) {
   const sendOtp = useCallback(
     async (mobile: string, accountType: AccountType) => {
       try {
-        await sendBackendOtp(mobile, accountType);
+        return await sendBackendOtp(mobile, accountType);
       } catch (error) {
         if (!canUseLocalAuthFallback(error)) throw error;
-        await sendLocalOtp(mobile, accountType);
+        return await sendLocalOtp(mobile, accountType);
       }
     },
     []
@@ -209,12 +215,17 @@ export default function AuthProvider({ children }: AuthProviderProps) {
       registerCurrentDeviceSession();
 
       setIsLoginModalOpen(false);
+      const safeRedirect = normalizeRedirectAfterLogin(redirectAfterLogin);
+      if (safeRedirect) {
+        setRedirectAfterLogin(null);
+        window.location.assign(safeRedirect);
+      }
     },
-    [persistSession]
+    [persistSession, redirectAfterLogin]
   );
 
   const logout = useCallback(() => {
-    const token = getStoredAuthToken();
+    const token = readStoredAuthToken();
     if (token) void logoutBackendSession(token);
 
     setUser(null);
@@ -277,7 +288,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
   );
 }
 
-async function sendBackendOtp(mobile: string, accountType: AccountType): Promise<void> {
+async function sendBackendOtp(mobile: string, accountType: AccountType): Promise<SendOtpResult> {
   if (!API_BASE_URL) throw authNetworkFallbackError("TPL API base URL is not configured.");
   const response = await fetch(`${API_BASE_URL}/api/v1/auth/send-otp`, {
     method: "POST",
@@ -288,6 +299,10 @@ async function sendBackendOtp(mobile: string, accountType: AccountType): Promise
   if (!response.ok || payload?.ok !== true) {
     throw authApiError(payload, "OTP send failed");
   }
+  return {
+    resendAvailableAt: payload?.data?.resendAvailableAt,
+    expiresAt: payload?.data?.expiresAt,
+  };
 }
 
 async function verifyBackendOtp(
@@ -343,7 +358,7 @@ async function logoutBackendSession(token: string): Promise<void> {
   }
 }
 
-async function sendLocalOtp(mobile: string, accountType: AccountType): Promise<void> {
+async function sendLocalOtp(mobile: string, accountType: AccountType): Promise<SendOtpResult> {
   const res = await fetch("/api/auth/send-otp", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -353,6 +368,10 @@ async function sendLocalOtp(mobile: string, accountType: AccountType): Promise<v
   if (!res.ok) {
     throw new Error(data?.message || "OTP send failed");
   }
+  return {
+    resendAvailableAt: data?.resendAvailableAt,
+    expiresAt: data?.expiresAt,
+  };
 }
 
 async function verifyLocalOtp(mobile: string, otp: string, accountType: AccountType): Promise<AuthUser> {
@@ -429,4 +448,21 @@ function canUseLocalAuthFallback(error: unknown): boolean {
   if (process.env.NODE_ENV !== "development") return false;
   return error instanceof TypeError ||
     (error instanceof Error && error.name === "AuthNetworkFallbackError");
+}
+
+function readStoredAuthToken(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(AUTH_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) as StoredAuthSession : null;
+    return parsed?.token || parsed?.sessionToken || parsed?.session?.token || null;
+  } catch {
+    return null;
+  }
+}
+
+function normalizeRedirectAfterLogin(value: string | null): string | null {
+  if (!value) return null;
+  if (!value.startsWith("/") || value.startsWith("//")) return null;
+  return value;
 }
