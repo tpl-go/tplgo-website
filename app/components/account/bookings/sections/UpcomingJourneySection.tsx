@@ -9,7 +9,10 @@ import {
 } from "@/app/lib/booking/bookingStorage";
 
 import { shareBooking } from "@/app/lib/booking/bookingActionHelpers";
-import { printBookingDocument } from "@/app/lib/booking/print/bookingPrintDispatcher";
+import {
+  getBookingDocumentAvailability,
+  printBookingDocument,
+} from "@/app/lib/booking/print/bookingPrintDispatcher";
 import { getBookingServiceConfig } from "@/app/lib/booking/bookingServiceConfig";
 import {
   formatFlightMoney,
@@ -208,6 +211,7 @@ export default function UpcomingJourneySection({
             const isBackendTestHotel = isBackendTestHotelBooking(booking);
             const isBackendTestBooking =
               isBackendTestFlight || isBackendTestHotel;
+            const documentAvailability = getBookingDocumentAvailability(booking);
             const flightPaymentStatus =
               booking.type === "flight" ? getFlightPaymentStatus(booking) : "";
 
@@ -349,13 +353,19 @@ export default function UpcomingJourneySection({
                   <div className="grid grid-cols-2 gap-2 md:flex md:items-center md:overflow-x-auto md:pb-1">
                     <ActionButton
                       label={
-                        isBackendTestBooking
+                        booking.type === "flight"
+                          ? documentAvailability.label
+                          : isBackendTestBooking
                           ? "Test Summary Only"
                           : config.downloadLabel
                       }
                       onClick={() => handleDownloadTicket(booking)}
                       variant="primary"
-                      disabled={isBackendTestBooking}
+                      disabled={
+                        isBackendTestBooking ||
+                        (booking.type === "flight" && !documentAvailability.available)
+                      }
+                      title={documentAvailability.reason}
                     />
 
                     <ActionButton
@@ -446,11 +456,13 @@ function ActionButton({
   onClick,
   variant = "default",
   disabled = false,
+  title,
 }: {
   label: string;
   onClick: () => void;
   variant?: "default" | "primary" | "danger" | "success" | "orange";
   disabled?: boolean;
+  title?: string;
 }) {
   const className =
     variant === "primary"
@@ -468,6 +480,7 @@ function ActionButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
+      title={title}
       className={`${className} disabled:cursor-not-allowed disabled:opacity-60`}
     >
       {label}

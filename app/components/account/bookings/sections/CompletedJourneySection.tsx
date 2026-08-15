@@ -3,7 +3,10 @@
 import type { BookingItem } from "@/app/lib/booking/bookingStorage";
 
 // ✅ SAME AS UPCOMING
-import { printBookingDocument } from "@/app/lib/booking/print/bookingPrintDispatcher";
+import {
+  getBookingDocumentAvailability,
+  printBookingDocument,
+} from "@/app/lib/booking/print/bookingPrintDispatcher";
 
 type CompletedJourneySectionProps = {
   bookings: BookingItem[];
@@ -27,11 +30,14 @@ export default function CompletedJourneySection({
             No completed bookings found.
           </div>
         ) : (
-          bookings.map((booking) => (
-            <div
-              key={booking.id}
-              className="rounded-[18px] border border-gray-200 bg-white p-4 shadow-sm md:rounded-2xl md:p-5"
-            >
+          bookings.map((booking) => {
+            const documentAvailability = getBookingDocumentAvailability(booking);
+
+            return (
+              <div
+                key={booking.id}
+                className="rounded-[18px] border border-gray-200 bg-white p-4 shadow-sm md:rounded-2xl md:p-5"
+              >
               <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
@@ -59,23 +65,30 @@ export default function CompletedJourneySection({
 
                 <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 lg:w-[250px] lg:shrink-0">
                   <p className="text-[12px] font-medium text-slate-500">
-                    Voucher Status
+                    {booking.type === "flight" ? "Ticket Status" : "Voucher Status"}
                   </p>
                   <p className="mt-1 text-[16px] font-semibold text-slate-900">
-                    Voucher Available
+                    {documentAvailability.available
+                      ? booking.type === "flight"
+                        ? "Ticket Available"
+                        : "Voucher Available"
+                      : documentAvailability.label}
                   </p>
 
                   <button
                     type="button"
                     onClick={() => printBookingDocument(booking)} // ✅ FIX
-                    className="mt-4 min-h-10 w-full rounded-xl bg-[#0b5fff] px-4 py-2 text-[12px] font-semibold text-white transition hover:bg-[#094ee0] sm:w-auto"
+                    disabled={!documentAvailability.available}
+                    title={documentAvailability.reason}
+                    className="mt-4 min-h-10 w-full rounded-xl bg-[#0b5fff] px-4 py-2 text-[12px] font-semibold text-white transition hover:bg-[#094ee0] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
                   >
-                    Download Voucher
+                    {booking.type === "flight" ? documentAvailability.label : "Download Voucher"}
                   </button>
                 </div>
               </div>
             </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>
