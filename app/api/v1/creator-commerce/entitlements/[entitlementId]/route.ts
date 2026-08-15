@@ -1,0 +1,4 @@
+import { commerceError,commerceOk,commerceUser } from "@/app/lib/creators/creatorCommerceApi";
+import { creatorCommerceFlags } from "@/app/lib/creators/creatorCommerceFlags";
+import { creatorTestingCommerceRepository } from "@/app/lib/creators/creatorTestingCommerceRepository";
+export async function GET(request:Request,{params}:{params:Promise<{entitlementId:string}>}){if(!creatorCommerceFlags.testEntitlementsEnabled())return commerceError("COMMERCE_DISABLED","Testing entitlements are disabled.",503);const user=commerceUser(request);if(!user)return commerceError("AUTH_REQUIRED","Shared TPL login is required.",401);const record=creatorTestingCommerceRepository.entitlement((await params).entitlementId,user);return record?commerceOk(record.entitlement):commerceError("ENTITLEMENT_NOT_FOUND","Testing entitlement was not found.",404);}

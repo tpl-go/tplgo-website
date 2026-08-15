@@ -39,9 +39,9 @@ export async function startInsuranceBackendCheckout<TPayload extends Record<stri
     return { payload: rawPayload, refs: {}, attempted: false, ok: false };
   }
 
+  const hash = hashPayload(stripVolatileBackendFields(rawPayload));
   const guarded = await prepareBackendCheckoutWalletPayload("insurance", rawPayload);
   const guardedPayload = guarded.payload as TPayload;
-  const hash = hashPayload(guardedPayload);
   const idempotencyKey = readOrCreateSessionKey(
     `${INSURANCE_START_KEY_PREFIX}${hash}`,
     `insurance:start:${hash}`
@@ -116,7 +116,7 @@ export async function confirmInsuranceBackendCheckout<TPayload extends Record<st
     {
       gatewayPaymentId: readOwnString(confirmationPayload, "paymentId") || paymentAttemptId,
       metadata: {
-        source: "insurance_frontend_phase_16",
+        source: "insurance_frontend_phase_3_6",
         paymentMethod: readOwnString(confirmationPayload, "paymentMethod"),
         paymentId: readOwnString(confirmationPayload, "paymentId"),
       },
@@ -209,6 +209,31 @@ function hashPayload(value: unknown): string {
   }
 
   return (hash >>> 0).toString(36);
+}
+
+function stripVolatileBackendFields(value: unknown): unknown {
+  if (value === null || typeof value !== "object") return value;
+
+  if (Array.isArray(value)) {
+    return value.map(stripVolatileBackendFields);
+  }
+
+  const record = value as Record<string, unknown>;
+  const volatileKeys = new Set([
+    "timerLeft",
+    "walletSyncedAt",
+    "backendRequestId",
+    "backendCheckoutStatus",
+    "backendCheckoutId",
+    "backendBookingId",
+    "backendPaymentId",
+  ]);
+
+  return Object.fromEntries(
+    Object.entries(record)
+      .filter(([key]) => !volatileKeys.has(key))
+      .map(([key, current]) => [key, stripVolatileBackendFields(current)])
+  );
 }
 
 function stableStringify(value: unknown): string {

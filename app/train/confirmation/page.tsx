@@ -24,6 +24,7 @@ import {
   saveWallet,
   addWalletLedgerItem,
 } from "@/app/lib/wallet/walletStorage";
+import { confirmTrainBackendCheckout } from "@/app/lib/api/trainCheckoutIntegration";
 
 type ConfirmationPayload = any;
 
@@ -270,6 +271,9 @@ export default function TrainConfirmationPage() {
   const [earnedCreditAmount, setEarnedCreditAmount] = useState(0);
 
   useEffect(() => {
+    let cancelled = false;
+
+    const loadConfirmation = async () => {
     const raw =
       typeof window !== "undefined"
         ? sessionStorage.getItem("trainConfirmationData") ||
@@ -280,7 +284,41 @@ export default function TrainConfirmationPage() {
     if (!raw) return;
 
     try {
-      const parsed = JSON.parse(raw);
+      let parsed = JSON.parse(raw);
+
+      if (parsed?.backendCheckoutId) {
+        const backendConfirm = await confirmTrainBackendCheckout({
+          ...parsed,
+          bookingId: parsed?.bookingId || "",
+          paymentId:
+            parsed?.backendPaymentId ||
+            parsed?.paymentData?.paymentId ||
+            parsed?.paymentId ||
+            "",
+          transactionId:
+            parsed?.transactionId ||
+            parsed?.paymentData?.transactionId ||
+            parsed?.paymentData?.paymentId ||
+            parsed?.paymentId ||
+            "",
+          paymentMethod:
+            parsed?.paymentMethod ||
+            parsed?.paymentData?.method ||
+            "Online Payment",
+          authState: parsed?.authState || parsed?.irctcAuthState || "",
+        });
+
+        if (backendConfirm.attempted && backendConfirm.refs) {
+          parsed = {
+            ...parsed,
+            ...backendConfirm.payload,
+            ...backendConfirm.refs,
+          };
+          persistTrainConfirmationSession(parsed);
+        }
+      }
+
+      if (cancelled) return;
       const fareSnapshot = resolveTrainFareSnapshot(parsed);
 
       const travellers = Array.isArray(parsed?.travellers)
@@ -542,6 +580,14 @@ export default function TrainConfirmationPage() {
     } catch (e) {
       console.error("Train confirmation parse error:", e);
     }
+
+    };
+
+    loadConfirmation();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const bookingId = useMemo(() => {

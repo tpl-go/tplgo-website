@@ -7,6 +7,7 @@ import {
   getAllBookings,
   type BookingItem,
 } from "@/app/lib/booking/bookingStorage";
+import { getBackendFirstBookingPayload } from "@/app/lib/api/bookingApi";
 
 import InsuranceConfirmationHero from "@/app/components/confirmation/insurance/InsuranceConfirmationHero";
 import InsuranceConfirmationPolicyCard from "@/app/components/confirmation/insurance/InsuranceConfirmationPolicyCard";
@@ -228,22 +229,44 @@ export default function InsuranceBookingDetailPage() {
   const [payload, setPayload] = useState<Payload | null>(null);
 
   useEffect(() => {
-    const all = getAllBookings();
+    let cancelled = false;
 
-    const found =
-      all.find((item) => item.id === bookingId && item.type === "insurance") ||
-      all.find(
-        (item) =>
-          item.type === "insurance" &&
-          (item.id.endsWith(bookingId.slice(-4)) ||
-            bookingId.endsWith(item.id.slice(-4)))
-      ) ||
-      null;
+    const load = async () => {
+      const backendResult = await getBackendFirstBookingPayload<Payload>(
+        bookingId,
+        "insurance"
+      );
+      if (cancelled) return;
 
-    setBooking(found);
+      if (backendResult.booking && backendResult.payload) {
+        setBooking(backendResult.booking);
+        setPayload(backendResult.payload);
+        return;
+      }
 
-    const parsed = getPayloadFromBooking(found);
-    setPayload(parsed);
+      const all = getAllBookings();
+
+      const found =
+        all.find((item) => item.id === bookingId && item.type === "insurance") ||
+        all.find(
+          (item) =>
+            item.type === "insurance" &&
+            (item.id.endsWith(bookingId.slice(-4)) ||
+              bookingId.endsWith(item.id.slice(-4)))
+        ) ||
+        null;
+
+      setBooking(found);
+
+      const parsed = getPayloadFromBooking(found);
+      setPayload(parsed);
+    };
+
+    void load();
+
+    return () => {
+      cancelled = true;
+    };
   }, [bookingId]);
 
   const data = payload;

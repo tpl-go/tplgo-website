@@ -22,7 +22,6 @@ import {
   type Wallet,
 } from "@/app/lib/wallet/walletStorage";
 import {
-  confirmHomestayBackendCheckout,
   startHomestayBackendCheckout,
   type HomestayBackendCheckoutRefs,
 } from "@/app/lib/api/homestayCheckoutIntegration";
@@ -411,13 +410,16 @@ export default function HomestayPaymentPage() {
     earnedOnThisBooking,
   };
 
-  const buildConfirmationPayload = () => {
+  const buildConfirmationPayload = (
+    sourcePayload: StoredHomestayPaymentPayload & Record<string, unknown> =
+      storedPayload as StoredHomestayPaymentPayload & Record<string, unknown>
+  ) => {
     const guests =
-      storedPayload.guestValidation?.travellers ||
-      storedPayload.guestValidation?.guests ||
+      sourcePayload.guestValidation?.travellers ||
+      sourcePayload.guestValidation?.guests ||
       [];
 
-    const contactDetails = storedPayload.guestValidation?.contactDetails;
+    const contactDetails = sourcePayload.guestValidation?.contactDetails;
     const leadGuest = guests?.[0] || {};
 
     const bookingId = `HMS-${Date.now()}`;
@@ -494,10 +496,10 @@ export default function HomestayPaymentPage() {
           promoUsed: savedPromoUsed,
           earnedUsed: savedEarnedUsed,
           refundUsed: savedRefundUsed,
-          promoAvailable: storedPayload.walletBreakdown?.promoAvailable,
-          earnedAvailable: storedPayload.walletBreakdown?.earnedAvailable,
+          promoAvailable: sourcePayload.walletBreakdown?.promoAvailable,
+          earnedAvailable: sourcePayload.walletBreakdown?.earnedAvailable,
           refundWalletAvailable:
-            storedPayload.walletBreakdown?.refundWalletAvailable,
+            sourcePayload.walletBreakdown?.refundWalletAvailable,
           totalWalletUsed: walletUsed,
           earnedOnThisBooking,
         },
@@ -526,28 +528,38 @@ export default function HomestayPaymentPage() {
       homestay,
       selectedVariant,
       searchMeta,
-      specialRequest: storedPayload.specialRequest || "",
+      specialRequest: sourcePayload.specialRequest || "",
       appliedOffer: benefitPricing.offerDiscount || 0,
       tplCredit,
       oldTplCredit,
-      appliedOfferCode: storedPayload.appliedOfferCode || "",
-      appliedOfferTitle: storedPayload.appliedOfferTitle || "",
+      appliedOfferCode: sourcePayload.appliedOfferCode || "",
+      appliedOfferTitle: sourcePayload.appliedOfferTitle || "",
 
       cabData: {
-        selected: !!storedPayload.cabSelected,
+        selected: !!sourcePayload.cabSelected,
         amount: cabTotal,
-        label: storedPayload.cabLabel || "",
+        label: sourcePayload.cabLabel || "",
       },
       addonsData: {
-        selected: !!storedPayload.addonsSelected,
+        selected: !!sourcePayload.addonsSelected,
         amount: addOnsTotal,
-        label: storedPayload.addonsLabel || "",
+        label: sourcePayload.addonsLabel || "",
       },
       tripSecureData: {
         selected: tripSecureSelected,
         amount: tripSecureSelected ? tripSecureAmount : 0,
-        label: storedPayload.tripSecureLabel || "",
+        label: sourcePayload.tripSecureLabel || "",
       },
+      walletSource: sourcePayload.walletSource,
+      walletSyncStatus: sourcePayload.walletSyncStatus,
+      backendWalletSnapshot: sourcePayload.backendWalletSnapshot,
+      metadata: sourcePayload.metadata,
+      backendCheckoutId: sourcePayload.backendCheckoutId,
+      backendBookingId: sourcePayload.backendBookingId,
+      backendPaymentId: sourcePayload.backendPaymentId,
+      backendRequestId: sourcePayload.backendRequestId,
+      backendServiceType: sourcePayload.backendServiceType,
+      backendCheckoutStatus: sourcePayload.backendCheckoutStatus,
     };
   };
 
@@ -586,13 +598,19 @@ export default function HomestayPaymentPage() {
       const backendStart = await startHomestayBackendCheckout(
         backendRawPayload as Record<string, unknown>
       );
-      let backendRefs: HomestayBackendCheckoutRefs = backendStart.refs;
+      const backendRefs: HomestayBackendCheckoutRefs = backendStart.refs;
+      let checkoutPayload = backendRawPayload as StoredHomestayPaymentPayload &
+        Record<string, unknown>;
 
       if (backendStart.attempted) {
         const updatedBookingPayload = {
           ...backendRawPayload,
+          ...(backendStart.payload as Record<string, unknown>),
           ...backendStart.refs,
         };
+
+        checkoutPayload = updatedBookingPayload as StoredHomestayPaymentPayload &
+          Record<string, unknown>;
 
         sessionStorage.setItem(
           "tplHomestayBookingData",
@@ -669,24 +687,10 @@ export default function HomestayPaymentPage() {
       handlePaymentSuccess();
       confirmBooking();
 
-      let confirmationPayload = buildConfirmationPayload();
-
-      if (backendRefs.backendCheckoutId) {
-        const backendConfirm = await confirmHomestayBackendCheckout({
-          ...confirmationPayload,
-          ...backendRefs,
-        });
-
-        backendRefs = {
-          ...backendRefs,
-          ...backendConfirm.refs,
-        };
-
-        confirmationPayload = {
-          ...confirmationPayload,
-          ...backendRefs,
-        };
-      }
+      const confirmationPayload = {
+        ...buildConfirmationPayload(checkoutPayload),
+        ...backendRefs,
+      };
 
       try {
         sessionStorage.setItem(

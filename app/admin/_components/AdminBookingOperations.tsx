@@ -14,6 +14,8 @@ import {
   CircleDot,
   Clock3,
   CreditCard,
+  Download,
+  Eye,
   FileText,
   Filter,
   History,
@@ -29,14 +31,24 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import {
+  addAdminBookingNote,
+  assignAdminBooking,
   buildAdminQuery,
   getAdminBookingDetail,
+  getAdminBookingTimeline,
   listAdminBookings,
+  listAdminBookingNotes,
+  updateAdminBookingPriority,
   type AdminApiResult,
+  type AdminBookingAssignment,
   type AdminBookingDetail,
+  type AdminBookingExportResult,
+  type AdminBookingNote,
   type AdminBookingOperationsQuery,
   type AdminBookingOperationalSummary,
   type AdminBookingPaymentSummary,
+  type AdminBookingPriority,
+  type AdminBookingPriorityValue,
   type AdminBookingRefundSummary,
   type AdminBookingRow,
   type AdminBookingTimelineEvent,
@@ -56,6 +68,9 @@ const serviceTabs = [
   { key: "visa", label: "Visa" },
   { key: "insurance", label: "Insurance" },
   { key: "smart-planner", label: "Smart Planner" },
+  { key: "creators", label: "Creators" },
+  { key: "marketplace", label: "TPL Marketplace" },
+  { key: "local-life", label: "Local Life" },
 ];
 
 const serviceLabels: Record<string, string> = Object.fromEntries(serviceTabs.map((service) => [service.key, service.label]));
@@ -79,9 +94,17 @@ type RequestState<T> = {
   result: AdminApiResult<T> | null;
 };
 
+type BookingActionState = {
+  bookingId: string;
+  result: AdminApiResult<AdminBookingNote | AdminBookingAssignment | AdminBookingPriority | AdminBookingExportResult> | null;
+};
+
 export function AdminBookingOperationsCenter() {
   const [query, setQuery] = useState<AdminBookingOperationsQuery>({ limit: 100, offset: 0 });
   const [activeService, setActiveService] = useState("all");
+  const [actionState, setActionState] = useState<BookingActionState | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(true);
 
   const backendQuery = useMemo(() => toBackendBookingQuery(query, activeService), [query, activeService]);
   const backendPath = `/api/v1/admin/bookings${buildAdminQuery(backendQuery)}`;
@@ -107,33 +130,56 @@ export function AdminBookingOperationsCenter() {
   const serviceSummary = useMemo(() => buildServiceSummary(rawRows), [rawRows]);
   const pendingPayments = rows.filter(isPaymentIssue).slice(0, 5);
   const refundQueue = rows.filter(isRefundCandidate).slice(0, 5);
-  const departures = rows.slice(0, 5);
+  const departures = rows.filter(isTodayOrUpcoming).slice(0, 5);
+  const supplierQueue = rows.filter(isSupplierPending).slice(0, 5);
+  const slaQueue = rows.filter((row) => getSlaStatus(row) === "breach").slice(0, 5);
+  const manualReviewQueue = rows.filter(requiresManualReview).slice(0, 5);
+  const creatorQueue = rows.filter((row) => getEcosystemType(row) === "creators").slice(0, 5);
+  const marketplaceQueue = rows.filter((row) => getEcosystemType(row) === "tpl-marketplace").slice(0, 5);
+  const localLifeQueue = rows.filter((row) => getEcosystemType(row) === "local-life").slice(0, 5);
+
+  function handleExport() {
+    setExporting(true);
+    const result = buildLocalBookingExport(rows);
+    setExporting(false);
+    setActionState({ bookingId: "filtered-bookings", result });
+    if (result.ok) downloadCsv(result.data.filename, result.data.csv);
+  }
 
   return (
     <div className="space-y-6">
       <StatusNotice loading={loadState.loading} result={loadState.result} />
 
-      <section className="rounded border border-slate-200 bg-white p-5">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase text-slate-400">Booking operations</p>
-            <h2 className="mt-1 text-lg font-semibold text-slate-950">Booking Operations Center</h2>
-            <p className="mt-1 text-sm text-slate-500">Search, triage, and inspect backend booking records across OTA services.</p>
-          </div>
-          <div className="rounded bg-slate-100 px-3 py-2 text-xs font-medium text-slate-600">
-            Read-only operations foundation
+      <section className="overflow-hidden rounded border border-slate-200 bg-white">
+        <div className="bg-slate-950 px-5 py-5 text-white">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase text-slate-300">Admin command center</p>
+              <h2 className="mt-1 text-2xl font-semibold">Booking Operations Center</h2>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">
+                Triage OTA and TPL ecosystem bookings from the existing admin booking read API. Advanced filters are applied locally when the backend does not expose a matching filter.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <span className="rounded bg-emerald-400/15 px-3 py-2 text-xs font-semibold text-emerald-100">Read API connected</span>
+              <span className="rounded bg-amber-400/15 px-3 py-2 text-xs font-semibold text-amber-100">Supplier APIs disabled</span>
+              <span className="rounded bg-sky-400/15 px-3 py-2 text-xs font-semibold text-sky-100">CSV from visible rows</span>
+            </div>
           </div>
         </div>
 
-        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <FilterInput label="Booking ID / search" value={query.search ?? ""} onChange={(search) => setQuery((current) => ({ ...current, search }))} />
-          <FilterInput label="Customer mobile / email" value={query.customer ?? ""} onChange={(customer) => setQuery((current) => ({ ...current, customer }))} />
-          <FilterInput label="Booking status" value={query.status ?? ""} onChange={(status) => setQuery((current) => ({ ...current, status }))} />
-          <FilterInput label="Date from" type="date" value={query.dateFrom ?? ""} onChange={(dateFrom) => setQuery((current) => ({ ...current, dateFrom }))} />
-          <FilterInput label="Date to" type="date" value={query.dateTo ?? ""} onChange={(dateTo) => setQuery((current) => ({ ...current, dateTo }))} />
-          <FilterInput label="Payment state" value={query.paymentState ?? ""} onChange={(paymentState) => setQuery((current) => ({ ...current, paymentState }))} />
-          <FilterInput label="Refund state" value={query.refundState ?? ""} onChange={(refundState) => setQuery((current) => ({ ...current, refundState }))} />
-          <div className="flex items-end gap-2">
+        <div className="border-b border-slate-200 px-5 py-4">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+            <FilterInput label="Global search: booking ID / customer / mobile / email" value={query.search ?? ""} onChange={(search) => setQuery((current) => ({ ...current, search }))} />
+            <div className="flex flex-wrap items-end gap-2">
+              <button
+                type="button"
+                onClick={() => setFiltersOpen((current) => !current)}
+                className="flex h-9 items-center gap-2 rounded border border-slate-200 px-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                <Filter className="h-4 w-4" />
+                {filtersOpen ? "Hide filters" : "Show filters"}
+              </button>
             <button
               type="button"
               onClick={() => setQuery({ limit: 100, offset: 0 })}
@@ -142,20 +188,63 @@ export function AdminBookingOperationsCenter() {
               <RefreshCcw className="h-4 w-4" />
               Reset
             </button>
-            <div className="flex h-9 items-center gap-2 rounded bg-slate-950 px-3 text-sm font-medium text-white">
-              <Filter className="h-4 w-4" />
-              Live filters
+            <button
+              type="button"
+              onClick={handleExport}
+              disabled={exporting || rows.length === 0}
+              className="flex h-9 items-center gap-2 rounded border border-slate-200 px-3 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-400"
+              title={rows.length === 0 ? "No filtered bookings to export" : "Export current filtered bookings as safe CSV"}
+            >
+              <Download className="h-4 w-4" />
+              {exporting ? "Exporting" : "Export"}
+            </button>
             </div>
           </div>
         </div>
+
+        {filtersOpen ? (
+          <div className="grid gap-3 border-b border-slate-200 bg-slate-50 px-5 py-5 md:grid-cols-2 xl:grid-cols-4">
+            <FilterInput label="Customer mobile / email" value={query.customer ?? ""} onChange={(customer) => setQuery((current) => ({ ...current, customer }))} />
+            <FilterSelect label="Service type" value={activeService} onChange={setActiveService} options={serviceTabs} />
+            <FilterSelect label="Ecosystem type" value={query.ecosystemType ?? ""} onChange={(ecosystemType) => setQuery((current) => ({ ...current, ecosystemType }))} options={[{ key: "", label: "Any" }, { key: "ota", label: "OTA" }, { key: "creators", label: "Creators" }, { key: "tpl-marketplace", label: "TPL Marketplace" }, { key: "local-life", label: "Local Life" }]} />
+            <FilterInput label="Booking / order status" value={query.status ?? ""} onChange={(status) => setQuery((current) => ({ ...current, status }))} />
+            <FilterInput label="Payment status" value={query.paymentState ?? ""} onChange={(paymentState) => setQuery((current) => ({ ...current, paymentState }))} />
+            <FilterInput label="Refund status" value={query.refundState ?? ""} onChange={(refundState) => setQuery((current) => ({ ...current, refundState }))} />
+            <FilterInput label="Travel / experience from" type="date" value={query.dateFrom ?? ""} onChange={(dateFrom) => setQuery((current) => ({ ...current, dateFrom }))} />
+            <FilterInput label="Travel / experience to" type="date" value={query.dateTo ?? ""} onChange={(dateTo) => setQuery((current) => ({ ...current, dateTo }))} />
+            <FilterInput label="Created from" type="date" value={query.createdFrom ?? ""} onChange={(createdFrom) => setQuery((current) => ({ ...current, createdFrom }))} />
+            <FilterInput label="Created to" type="date" value={query.createdTo ?? ""} onChange={(createdTo) => setQuery((current) => ({ ...current, createdTo }))} />
+            <FilterInput label="Minimum amount" type="number" value={query.amountMin ?? ""} onChange={(amountMin) => setQuery((current) => ({ ...current, amountMin }))} />
+            <FilterInput label="Maximum amount" type="number" value={query.amountMax ?? ""} onChange={(amountMax) => setQuery((current) => ({ ...current, amountMax }))} />
+            <FilterSelect label="Priority" value={query.priority ?? ""} onChange={(priority) => setQuery((current) => ({ ...current, priority }))} options={[{ key: "", label: "Any" }, { key: "normal", label: "Normal" }, { key: "high", label: "High" }, { key: "urgent", label: "Urgent" }]} />
+            <FilterInput label="Assigned agent" value={query.assignedAgent ?? ""} onChange={(assignedAgent) => setQuery((current) => ({ ...current, assignedAgent }))} />
+            <FilterInput label="Source channel" value={query.sourceChannel ?? ""} onChange={(sourceChannel) => setQuery((current) => ({ ...current, sourceChannel }))} />
+            <div className="grid grid-cols-2 gap-2">
+              <ToggleFilter label="SLA risk" active={query.slaRisk === "true"} onClick={() => setQuery((current) => ({ ...current, slaRisk: current.slaRisk === "true" ? "" : "true" }))} />
+              <ToggleFilter label="Supplier pending" active={query.supplierPending === "true"} onClick={() => setQuery((current) => ({ ...current, supplierPending: current.supplierPending === "true" ? "" : "true" }))} />
+              <ToggleFilter label="Payment failed" active={query.paymentFailed === "true"} onClick={() => setQuery((current) => ({ ...current, paymentFailed: current.paymentFailed === "true" ? "" : "true" }))} />
+              <ToggleFilter label="Refund pending" active={query.refundPending === "true"} onClick={() => setQuery((current) => ({ ...current, refundPending: current.refundPending === "true" ? "" : "true" }))} />
+              <ToggleFilter label="Wallet used" active={query.walletUsed === "true"} onClick={() => setQuery((current) => ({ ...current, walletUsed: current.walletUsed === "true" ? "" : "true" }))} />
+              <ToggleFilter label="Offer applied" active={query.offerApplied === "true"} onClick={() => setQuery((current) => ({ ...current, offerApplied: current.offerApplied === "true" ? "" : "true" }))} />
+            </div>
+          </div>
+        ) : null}
+        <ActionNotice state={actionState} />
       </section>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        <MetricCard icon={BookOpen} label="Total bookings" value={overview.total} detail="Current result set" />
+        <MetricCard icon={BookOpen} label="Total bookings / orders" value={overview.total} detail="Current filtered result set" />
+        <MetricCard icon={CalendarDays} label="Today" value={overview.today} detail="Created or travel date today" />
         <MetricCard icon={CalendarDays} label="Upcoming" value={overview.upcoming} detail="Upcoming/open status" />
+        <MetricCard icon={Clock3} label="In progress" value={overview.inProgress} detail="Pending or processing state" />
         <MetricCard icon={Ban} label="Cancelled" value={overview.cancelled} detail="Cancelled records" />
+        <MetricCard icon={CreditCard} label="Payment pending" value={overview.paymentPending} detail="Awaiting payment completion" />
+        <MetricCard icon={ShieldAlert} label="Payment failed" value={overview.paymentFailed} detail="Failed payment watch" />
         <MetricCard icon={RefreshCcw} label="Refund pending" value={overview.refundPending} detail="Needs refund API link" />
-        <MetricCard icon={ShieldAlert} label="Payment pending/failed" value={overview.paymentIssues} detail="Payment status watch" />
+        <MetricCard icon={Network} label="Supplier pending" value={overview.supplierPending} detail="Provider action not enabled" />
+        <MetricCard icon={Clock3} label="SLA risk" value={overview.slaRisk} detail="Warning or breach marker" />
+        <MetricCard icon={ShieldAlert} label="Manual review" value={overview.manualReview} detail="Status needs attention" />
+        <MetricCard icon={TicketCheck} label="Ecosystem bookings" value={overview.ecosystemBookings} detail="Creators, Marketplace, Local Life" />
       </section>
 
       <section className="rounded border border-slate-200 bg-white p-4">
@@ -192,6 +281,12 @@ export function AdminBookingOperationsCenter() {
         <QueuePanel title="Today's departures / check-ins" icon={Plane} rows={departures} emptyLabel="No booking records returned for this queue." />
         <QueuePanel title="Pending payment / failure queue" icon={CreditCard} rows={pendingPayments} emptyLabel="No payment pending or failed bookings in this result set." />
         <QueuePanel title="Refund / cancellation queue" icon={RefreshCcw} rows={refundQueue} emptyLabel="No cancellation or refund candidates in this result set." />
+        <QueuePanel title="Supplier pending queue" icon={Network} rows={supplierQueue} emptyLabel="No supplier pending records in this result set." />
+        <QueuePanel title="SLA breach / watchlist" icon={Clock3} rows={slaQueue} emptyLabel="No SLA breach records in this result set." />
+        <QueuePanel title="Manual review queue" icon={ShieldAlert} rows={manualReviewQueue} emptyLabel="No manual review records in this result set." />
+        <QueuePanel title="Creator booking queue" icon={UserRound} rows={creatorQueue} emptyLabel="No creator ecosystem bookings in this result set." />
+        <QueuePanel title="Marketplace order queue" icon={TicketCheck} rows={marketplaceQueue} emptyLabel="No TPL Marketplace orders in this result set." />
+        <QueuePanel title="Local Life experience queue" icon={CalendarDays} rows={localLifeQueue} emptyLabel="No Local Life experience records in this result set." />
       </section>
 
       <section className="grid gap-4 xl:grid-cols-[1fr_0.42fr]">
@@ -209,7 +304,7 @@ export function AdminBookingOperationsCenter() {
             <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
               <thead className="bg-slate-50">
                 <tr>
-                  {["booking", "service", "customer", "travel date", "amount", "payment", "booking status", "SLA", "action"].map((column) => (
+                  {["booking / order", "service / ecosystem", "customer", "date", "amount", "payment", "booking / order status", "refund", "priority / SLA", "assigned agent", "source", "last update", "actions"].map((column) => (
                     <th key={column} className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase text-slate-500">
                       {column}
                     </th>
@@ -219,8 +314,8 @@ export function AdminBookingOperationsCenter() {
               <tbody className="divide-y divide-slate-100">
                 {rows.length === 0 ? (
                   <tr>
-                    <td className="px-4 py-10 text-center text-sm text-slate-500" colSpan={9}>
-                      {loadState.loading ? "Loading bookings" : "No bookings match the selected filters."}
+                    <td className="px-4 py-10" colSpan={13}>
+                      <EmptyBookingState loading={loadState.loading} backendEmpty={rawRows.length === 0} filteredEmpty={rawRows.length > 0 && rows.length === 0} onClear={() => setQuery({ limit: 100, offset: 0 })} />
                     </td>
                   </tr>
                 ) : (
@@ -232,7 +327,10 @@ export function AdminBookingOperationsCenter() {
                         </Link>
                         <p className="mt-1 text-xs text-slate-500">{formatCell(booking.id)}</p>
                       </td>
-                      <td className="px-4 py-3 text-slate-700">{getBookingServiceLabel(booking)}</td>
+                      <td className="px-4 py-3 text-slate-700">
+                        <p className="font-medium text-slate-900">{getBookingServiceLabel(booking)}</p>
+                        <p className="mt-1 text-xs text-slate-500">{titleCase(getEcosystemType(booking))}</p>
+                      </td>
                       <td className="min-w-40 px-4 py-3 text-slate-700">
                         <p>{formatCell(getBookingCustomer(booking))}</p>
                         <p className="mt-1 text-xs text-slate-500">{formatCell(getBookingEmail(booking))}</p>
@@ -241,12 +339,13 @@ export function AdminBookingOperationsCenter() {
                       <td className="px-4 py-3 text-slate-700">{formatMoney(getBookingAmount(booking), getBookingCurrency(booking))}</td>
                       <td className="px-4 py-3"><StatusPill value={booking.paymentStatus ?? getNestedString(booking, "paymentStatus")} /></td>
                       <td className="px-4 py-3"><StatusPill value={booking.bookingStatus ?? booking.status} /></td>
+                      <td className="px-4 py-3"><StatusPill value={inferRefundState(booking)} /></td>
                       <td className="px-4 py-3"><SlaMarker booking={booking} /></td>
-                      <td className="px-4 py-3">
-                        <Link className="inline-flex h-8 items-center gap-2 rounded bg-slate-950 px-3 text-xs font-medium text-white" href={`/admin/bookings/${encodeURIComponent(getBookingIdentifier(booking))}`}>
-                          Quick view
-                          <ArrowRight className="h-3.5 w-3.5" />
-                        </Link>
+                      <td className="min-w-36 px-4 py-3 text-slate-700">{formatCell(getAssignedAgent(booking))}</td>
+                      <td className="px-4 py-3 text-slate-700">{formatCell(getSourceChannel(booking))}</td>
+                      <td className="px-4 py-3 text-slate-700">{formatCell(getLastUpdate(booking))}</td>
+                      <td className="min-w-80 px-4 py-3">
+                        <BookingRowActions booking={booking} onAction={setActionState} />
                       </td>
                     </tr>
                   ))
@@ -257,8 +356,8 @@ export function AdminBookingOperationsCenter() {
         </div>
 
         <div className="space-y-4">
-          <PlaceholderPanel icon={ShieldAlert} title="Exception / SLA watchlist" detail="Needs supplier SLA, failure reason, and escalation read model APIs before live alerting can be enabled." />
-          <PlaceholderPanel icon={MessageSquareText} title="Internal ops notes" detail="Needs audited internal notes API. Notes are intentionally disabled in this read-only phase." />
+          <PlaceholderPanel icon={ShieldAlert} title="Supplier exception actions" detail="Live supplier retry, cancellation, amend, reissue, resend voucher, and manual supplier status updates remain disabled because provider integrations are dry-run." />
+          <PlaceholderPanel icon={MessageSquareText} title="Admin-only notes" detail="Internal notes are now available from booking rows and the booking workspace. They are audit-backed and admin-only." />
         </div>
       </section>
     </div>
@@ -268,6 +367,9 @@ export function AdminBookingOperationsCenter() {
 export function AdminBookingOperationsWorkspace({ bookingId }: { bookingId: string }) {
   const path = `/api/v1/admin/bookings/${bookingId}`;
   const [requestState, setRequestState] = useState<RequestState<AdminBookingDetail>>({ path, result: null });
+  const [timelineState, setTimelineState] = useState<LoadState<AdminBookingTimelineEvent[]>>({ loading: true, result: null });
+  const [notesState, setNotesState] = useState<LoadState<AdminBookingNote[]>>({ loading: true, result: null });
+  const [actionState, setActionState] = useState<BookingActionState | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -279,6 +381,19 @@ export function AdminBookingOperationsWorkspace({ bookingId }: { bookingId: stri
     };
   }, [bookingId, path]);
 
+  useEffect(() => {
+    let active = true;
+    getAdminBookingTimeline(bookingId).then((result) => {
+      if (active) setTimelineState({ loading: false, result });
+    });
+    listAdminBookingNotes(bookingId).then((result) => {
+      if (active) setNotesState({ loading: false, result });
+    });
+    return () => {
+      active = false;
+    };
+  }, [bookingId]);
+
   const loadState: LoadState<AdminBookingDetail> = {
     loading: requestState.path !== path || requestState.result === null,
     result: requestState.path === path ? requestState.result : null,
@@ -286,10 +401,17 @@ export function AdminBookingOperationsWorkspace({ bookingId }: { bookingId: stri
   const booking = loadState.result?.ok ? loadState.result.data.booking : null;
   const detail = loadState.result?.ok ? loadState.result.data.detail : null;
   const normalized = detail?.normalizedSummary ?? {};
-  const timeline = booking ? buildTimelineEvents(booking, normalized) : [];
+  const localTimeline = booking ? buildTimelineEvents(booking, normalized) : [];
+  const timeline = timelineState.result?.ok ? timelineState.result.data : localTimeline;
+  const notes = notesState.result?.ok ? notesState.result.data : [];
   const paymentSummary = booking ? buildPaymentSummary(booking, normalized) : null;
   const refundSummary = booking ? buildRefundSummary(booking, normalized) : null;
   const operationalSummary = booking ? buildOperationalSummary(booking, timeline, paymentSummary, refundSummary) : null;
+
+  function refreshOperations() {
+    getAdminBookingTimeline(bookingId).then((result) => setTimelineState({ loading: false, result }));
+    listAdminBookingNotes(bookingId).then((result) => setNotesState({ loading: false, result }));
+  }
 
   return (
     <div className="space-y-6">
@@ -307,8 +429,11 @@ export function AdminBookingOperationsWorkspace({ bookingId }: { bookingId: stri
               <div className="flex flex-wrap gap-2">
                 <StatusPill value={booking.bookingStatus ?? booking.status} />
                 <StatusPill value={booking.paymentStatus} />
+                <StatusPill value={`priority: ${getPriority(booking)}`} />
+                <StatusPill value={`SLA: ${getSlaStatus(booking)}`} />
               </div>
             </div>
+            <ActionNotice state={actionState} />
           </section>
 
           <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -429,7 +554,10 @@ export function AdminBookingOperationsWorkspace({ bookingId }: { bookingId: stri
               </AccordionPanel>
 
               <AccordionPanel title="Internal Notes" icon={MessageSquareText}>
-                <PlaceholderPanel icon={MessageSquareText} title="Read-only notes foundation" detail="Audited internal notes API is pending. This phase does not create local or fake note storage." />
+                <BookingNotesPanel bookingId={bookingId} notes={notes} loading={notesState.loading} onAction={(state) => {
+                  setActionState(state);
+                  refreshOperations();
+                }} />
               </AccordionPanel>
 
               <AccordionPanel title="Raw Payload" icon={FileText}>
@@ -453,6 +581,10 @@ export function AdminBookingOperationsWorkspace({ bookingId }: { bookingId: stri
 
             <div className="space-y-4">
               <AccordionPanel title="Operations" icon={TicketCheck} defaultOpen>
+                <BookingWorkspaceActions bookingId={bookingId} onAction={(state) => {
+                  setActionState(state);
+                  refreshOperations();
+                }} />
                 <div className="space-y-2">
                   {disabledActions.map((action) => (
                     <button
@@ -508,6 +640,167 @@ function FilterInput({ label, value, onChange, type = "text" }: { label: string;
         />
       </div>
     </label>
+  );
+}
+
+function FilterSelect({ label, value, onChange, options }: { label: string; value: string; onChange: (value: string) => void; options: Array<{ key: string; label: string }> }) {
+  return (
+    <label className="block">
+      <span className="text-xs font-medium text-slate-500">{label}</span>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="mt-1 h-9 w-full rounded border border-slate-200 bg-white px-3 text-sm outline-none focus:border-slate-400"
+      >
+        {options.map((option) => (
+          <option key={option.key || "any"} value={option.key}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function ToggleFilter({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={[
+        "flex h-9 items-center justify-between rounded border px-3 text-sm font-medium",
+        active ? "border-slate-950 bg-slate-950 text-white" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50",
+      ].join(" ")}
+    >
+      {label}
+      <CheckCircle2 className="h-4 w-4" />
+    </button>
+  );
+}
+
+function EmptyBookingState({ loading, backendEmpty, filteredEmpty, onClear }: { loading: boolean; backendEmpty: boolean; filteredEmpty: boolean; onClear: () => void }) {
+  if (loading) {
+    return <div className="text-center text-sm text-slate-500">Loading bookings from the admin backend.</div>;
+  }
+  return (
+    <div className="mx-auto max-w-xl rounded border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
+      <div className="mx-auto flex h-10 w-10 items-center justify-center rounded bg-white text-slate-500">
+        <BookOpen className="h-5 w-5" />
+      </div>
+      <h3 className="mt-3 text-sm font-semibold text-slate-950">No bookings visible</h3>
+      <p className="mt-2 text-sm leading-6 text-slate-500">
+        {backendEmpty
+          ? "The backend returned an empty booking list for the current request."
+          : filteredEmpty
+            ? "The backend returned booking records, but none match the active frontend filters."
+            : "No booking records are available for this view."}
+      </p>
+      <div className="mt-4 grid gap-2 text-left text-xs text-slate-500 sm:grid-cols-2">
+        <span className="rounded bg-white px-3 py-2">Create or seed a test booking.</span>
+        <span className="rounded bg-white px-3 py-2">Check backend health and auth session.</span>
+        <span className="rounded bg-white px-3 py-2">Review active service/status filters.</span>
+        <button type="button" onClick={onClear} className="rounded bg-slate-950 px-3 py-2 text-left font-medium text-white">
+          Clear filters
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ActionNotice({ state }: { state: BookingActionState | null }) {
+  if (!state?.result) return null;
+  if (state.result.ok) {
+    return (
+      <div className="mt-4 rounded border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+        Action completed for {state.bookingId}.
+      </div>
+    );
+  }
+  return (
+    <div className="mt-4 rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+      {state.result.error.message}
+    </div>
+  );
+}
+
+function BookingRowActions({ booking, onAction }: { booking: AdminBookingRow; onAction: (state: BookingActionState) => void }) {
+  const bookingId = getBookingIdentifier(booking);
+  const [note, setNote] = useState("");
+  const [agent, setAgent] = useState(getAssignedAgent(booking) === "Unassigned" ? "" : String(getAssignedAgent(booking)));
+  const [priority, setPriority] = useState<AdminBookingPriorityValue>(getPriority(booking));
+
+  async function submitNote() {
+    if (!note.trim()) return;
+    const result = await addAdminBookingNote(bookingId, { note: note.trim(), category: "table_action" });
+    onAction({ bookingId, result });
+    if (result.ok) setNote("");
+  }
+
+  async function submitAssignment() {
+    if (!agent.trim()) return;
+    const result = await assignAdminBooking(bookingId, agent.trim());
+    onAction({ bookingId, result });
+  }
+
+  async function submitPriority() {
+    const result = await updateAdminBookingPriority(bookingId, { priority });
+    onAction({ bookingId, result });
+  }
+
+  async function exportRow() {
+    const result = buildLocalBookingExport([booking], bookingId);
+    onAction({ bookingId, result });
+    if (result.ok) downloadCsv(result.data.filename, result.data.csv);
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-2">
+        <Link className="inline-flex h-8 items-center gap-2 rounded bg-slate-950 px-3 text-xs font-medium text-white" href={`/admin/bookings/${encodeURIComponent(bookingId)}`}>
+          <Eye className="h-3.5 w-3.5" />
+          View detail
+        </Link>
+        {getCustomerWorkspaceId(booking) ? (
+          <Link className="inline-flex h-8 items-center gap-2 rounded border border-slate-200 px-3 text-xs font-medium text-slate-700" href={`/admin/customers/${encodeURIComponent(getCustomerWorkspaceId(booking) ?? "")}`}>
+            <UserRound className="h-3.5 w-3.5" />
+            Customer
+          </Link>
+        ) : (
+          <DisabledAction label="Customer" reason="No customer id/mobile" />
+        )}
+        {booking.paymentRef ? (
+          <Link className="inline-flex h-8 items-center gap-2 rounded border border-slate-200 px-3 text-xs font-medium text-slate-700" href={`/admin/payments/${encodeURIComponent(booking.paymentRef)}`}>
+            <CreditCard className="h-3.5 w-3.5" />
+            Payment
+          </Link>
+        ) : (
+          <DisabledAction label="Payment" reason="No payment reference" />
+        )}
+        <DisabledAction label="Refund" reason="Refund id is not exposed by booking row" />
+        <button type="button" onClick={exportRow} className="inline-flex h-8 items-center gap-2 rounded border border-slate-200 px-3 text-xs font-medium text-slate-700 hover:bg-slate-50">
+          <Download className="h-3.5 w-3.5" />
+          Export
+        </button>
+      </div>
+      <div className="grid gap-2 md:grid-cols-3">
+        <div className="flex gap-1">
+          <input value={note} onChange={(event) => setNote(event.target.value)} placeholder="Internal note" className="h-8 min-w-0 flex-1 rounded border border-slate-200 px-2 text-xs outline-none focus:border-slate-400" />
+          <button type="button" onClick={submitNote} disabled={!note.trim()} className="h-8 rounded bg-slate-950 px-2 text-xs font-medium text-white disabled:bg-slate-200 disabled:text-slate-400">Add</button>
+        </div>
+        <div className="flex gap-1">
+          <input value={agent} onChange={(event) => setAgent(event.target.value)} placeholder="Assign agent" className="h-8 min-w-0 flex-1 rounded border border-slate-200 px-2 text-xs outline-none focus:border-slate-400" />
+          <button type="button" onClick={submitAssignment} disabled={!agent.trim()} className="h-8 rounded bg-slate-950 px-2 text-xs font-medium text-white disabled:bg-slate-200 disabled:text-slate-400">Assign</button>
+        </div>
+        <div className="flex gap-1">
+          <select value={priority} onChange={(event) => setPriority(event.target.value as AdminBookingPriorityValue)} className="h-8 min-w-0 flex-1 rounded border border-slate-200 px-2 text-xs outline-none focus:border-slate-400">
+            <option value="normal">Normal</option>
+            <option value="high">High</option>
+            <option value="urgent">Urgent</option>
+          </select>
+          <button type="button" onClick={submitPriority} className="h-8 rounded bg-slate-950 px-2 text-xs font-medium text-white">Mark</button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -570,6 +863,116 @@ function PlaceholderPanel({ icon: Icon, title, detail }: { icon: LucideIcon; tit
       <h2 className="mt-4 text-sm font-semibold text-slate-950">{title}</h2>
       <p className="mt-2 text-sm leading-6 text-slate-500">{detail}</p>
     </section>
+  );
+}
+
+function DisabledAction({ label, reason }: { label: string; reason: string }) {
+  return (
+    <button
+      type="button"
+      disabled
+      className="inline-flex h-8 items-center gap-2 rounded border border-slate-200 bg-slate-50 px-3 text-xs font-medium text-slate-400"
+      title={reason}
+    >
+      {label}
+      <span className="text-[10px] uppercase">Disabled</span>
+    </button>
+  );
+}
+
+function BookingNotesPanel({ bookingId, notes, loading, onAction }: { bookingId: string; notes: AdminBookingNote[]; loading: boolean; onAction: (state: BookingActionState) => void }) {
+  const [note, setNote] = useState("");
+  const [category, setCategory] = useState("general");
+
+  async function submitNote() {
+    if (!note.trim()) return;
+    const result = await addAdminBookingNote(bookingId, { note: note.trim(), category });
+    onAction({ bookingId, result });
+    if (result.ok) setNote("");
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-2 md:grid-cols-[1fr_160px_auto]">
+        <input value={note} onChange={(event) => setNote(event.target.value)} placeholder="Add admin-only internal note" className="h-10 rounded border border-slate-200 px-3 text-sm outline-none focus:border-slate-400" />
+        <select value={category} onChange={(event) => setCategory(event.target.value)} className="h-10 rounded border border-slate-200 px-3 text-sm outline-none focus:border-slate-400">
+          <option value="general">General</option>
+          <option value="follow_up">Follow-up</option>
+          <option value="payment">Payment</option>
+          <option value="refund">Refund</option>
+          <option value="supplier">Supplier</option>
+          <option value="sla">SLA</option>
+        </select>
+        <button type="button" onClick={submitNote} disabled={!note.trim()} className="h-10 rounded bg-slate-950 px-4 text-sm font-medium text-white disabled:bg-slate-200 disabled:text-slate-400">
+          Add note
+        </button>
+      </div>
+      <div className="divide-y divide-slate-100 rounded border border-slate-200">
+        {loading ? (
+          <p className="px-4 py-6 text-sm text-slate-500">Loading notes</p>
+        ) : notes.length === 0 ? (
+          <p className="px-4 py-6 text-sm text-slate-500">No internal notes recorded for this booking.</p>
+        ) : notes.map((item) => (
+          <div key={item.id} className="px-4 py-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs font-semibold uppercase text-slate-400">{item.category} · {item.visibility}</p>
+              <p className="text-xs text-slate-500">{formatCell(item.createdAt)}</p>
+            </div>
+            <p className="mt-2 text-sm text-slate-700">{item.note}</p>
+            <p className="mt-1 text-xs text-slate-500">{formatCell(item.createdByAdminEmail)}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function BookingWorkspaceActions({ bookingId, onAction }: { bookingId: string; onAction: (state: BookingActionState) => void }) {
+  const [agent, setAgent] = useState("");
+  const [priority, setPriority] = useState<AdminBookingPriorityValue>("normal");
+  const [reason, setReason] = useState("");
+
+  async function submitAssignment() {
+    if (!agent.trim()) return;
+    const result = await assignAdminBooking(bookingId, agent.trim());
+    onAction({ bookingId, result });
+  }
+
+  async function submitPriority() {
+    const result = await updateAdminBookingPriority(bookingId, {
+      priority,
+      ...(reason.trim() ? { reason: reason.trim() } : {}),
+    });
+    onAction({ bookingId, result });
+    if (result.ok) setReason("");
+  }
+
+  return (
+    <div className="mb-4 space-y-3 rounded border border-slate-200 bg-slate-50 p-3">
+      <div>
+        <p className="text-xs font-semibold uppercase text-slate-400">Assignment</p>
+        <div className="mt-2 flex gap-2">
+          <input value={agent} onChange={(event) => setAgent(event.target.value)} placeholder="Admin or agent name" className="h-9 min-w-0 flex-1 rounded border border-slate-200 px-3 text-sm outline-none focus:border-slate-400" />
+          <button type="button" onClick={submitAssignment} disabled={!agent.trim()} className="h-9 rounded bg-slate-950 px-3 text-sm font-medium text-white disabled:bg-slate-200 disabled:text-slate-400">
+            Assign
+          </button>
+        </div>
+      </div>
+      <div>
+        <p className="text-xs font-semibold uppercase text-slate-400">Priority / SLA</p>
+        <div className="mt-2 grid gap-2">
+          <select value={priority} onChange={(event) => setPriority(event.target.value as AdminBookingPriorityValue)} className="h-9 rounded border border-slate-200 px-3 text-sm outline-none focus:border-slate-400">
+            <option value="normal">Normal / SLA OK</option>
+            <option value="high">High / SLA Warning</option>
+            <option value="urgent">Urgent / SLA Breach</option>
+          </select>
+          <input value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Reason, optional" className="h-9 rounded border border-slate-200 px-3 text-sm outline-none focus:border-slate-400" />
+          <button type="button" onClick={submitPriority} className="h-9 rounded bg-slate-950 px-3 text-sm font-medium text-white">
+            Update priority
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -743,11 +1146,12 @@ function StatusPill({ value }: { value: unknown }) {
 }
 
 function SlaMarker({ booking }: { booking: AdminBookingRow }) {
-  const issue = isPaymentIssue(booking) || isRefundCandidate(booking);
+  const sla = getSlaStatus(booking);
+  const issue = sla !== "ok";
   return (
     <span className={["inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium", issue ? "bg-amber-50 text-amber-700" : "bg-slate-100 text-slate-600"].join(" ")}>
       <Clock3 className="h-3 w-3" />
-      {issue ? "Watch" : "Normal"}
+      {getPriority(booking)} / {sla}
     </span>
   );
 }
@@ -758,7 +1162,9 @@ function toBackendBookingQuery(query: AdminBookingOperationsQuery, activeService
     limit: query.limit ?? 100,
     offset: query.offset ?? 0,
     ...(activeService !== "all" ? { service: activeService } : {}),
+    ...(query.search?.trim() ? { search: query.search.trim() } : {}),
     ...(query.status?.trim() ? { status: query.status.trim() } : {}),
+    ...(customer ? { customer } : {}),
     ...(customer && /^[0-9+ -]+$/.test(customer) ? { mobile: customer.replace(/\s+/g, "") } : {}),
     ...(query.dateFrom?.trim() ? { dateFrom: query.dateFrom.trim() } : {}),
     ...(query.dateTo?.trim() ? { dateTo: query.dateTo.trim() } : {}),
@@ -770,6 +1176,10 @@ function applyLocalBookingFilters(rows: AdminBookingRow[], query: AdminBookingOp
   const customer = query.customer?.trim().toLowerCase();
   const paymentState = query.paymentState?.trim().toLowerCase();
   const refundState = query.refundState?.trim().toLowerCase();
+  const ecosystemType = query.ecosystemType?.trim();
+  const amountMin = query.amountMin?.trim() ? Number(query.amountMin) : null;
+  const amountMax = query.amountMax?.trim() ? Number(query.amountMax) : null;
+  const sourceChannel = query.sourceChannel?.trim().toLowerCase();
   return rows.filter((row) => {
     const haystack = JSON.stringify({
       id: row.id,
@@ -782,8 +1192,26 @@ function applyLocalBookingFilters(rows: AdminBookingRow[], query: AdminBookingOp
     }).toLowerCase();
     if (search && !haystack.includes(search)) return false;
     if (customer && !haystack.includes(customer)) return false;
+    if (ecosystemType && getEcosystemType(row) !== ecosystemType) return false;
     if (paymentState && !String(row.paymentStatus ?? getNestedString(row, "paymentStatus") ?? "").toLowerCase().includes(paymentState)) return false;
     if (refundState && !inferRefundState(row).toLowerCase().includes(refundState)) return false;
+    if (query.status?.trim() && !String(row.bookingStatus ?? row.status ?? "").toLowerCase().includes(query.status.trim().toLowerCase())) return false;
+    if (query.priority?.trim() && getPriority(row) !== query.priority.trim()) return false;
+    if (sourceChannel && !String(getSourceChannel(row)).toLowerCase().includes(sourceChannel)) return false;
+    if (query.dateFrom?.trim() && !dateOnOrAfter(getTravelDate(row), query.dateFrom)) return false;
+    if (query.dateTo?.trim() && !dateOnOrBefore(getTravelDate(row), query.dateTo)) return false;
+    if (query.createdFrom?.trim() && !dateOnOrAfter(getCreatedAt(row), query.createdFrom)) return false;
+    if (query.createdTo?.trim() && !dateOnOrBefore(getCreatedAt(row), query.createdTo)) return false;
+    if (amountMin !== null && Number.isFinite(amountMin) && toNumber(getBookingAmount(row)) < amountMin) return false;
+    if (amountMax !== null && Number.isFinite(amountMax) && toNumber(getBookingAmount(row)) > amountMax) return false;
+    if (query.highPriority === "true" && getPriority(row) === "normal") return false;
+    if (query.slaRisk === "true" && getSlaStatus(row) === "ok") return false;
+    if (query.supplierPending === "true" && !isSupplierPending(row)) return false;
+    if (query.paymentFailed === "true" && !includesAny(row.paymentStatus ?? getNestedString(row, "paymentStatus"), ["fail", "error"])) return false;
+    if (query.refundPending === "true" && !isRefundCandidate(row)) return false;
+    if (query.walletUsed === "true" && !hasWalletUsed(row)) return false;
+    if (query.offerApplied === "true" && !hasOfferApplied(row)) return false;
+    if (query.assignedAgent?.trim() && !String(getAssignedAgent(row)).toLowerCase().includes(query.assignedAgent.trim().toLowerCase())) return false;
     return true;
   });
 }
@@ -791,10 +1219,19 @@ function applyLocalBookingFilters(rows: AdminBookingRow[], query: AdminBookingOp
 function buildBookingOverview(rows: AdminBookingRow[]) {
   return {
     total: rows.length,
+    today: rows.filter(isTodayBooking).length,
     upcoming: rows.filter((row) => includesAny(row.status ?? row.bookingStatus, ["upcoming", "confirmed", "open", "created"])).length,
+    inProgress: rows.filter((row) => includesAny(row.status ?? row.bookingStatus, ["pending", "processing", "progress", "created"])).length,
     cancelled: rows.filter((row) => includesAny(row.status ?? row.bookingStatus, ["cancel"])).length,
+    paymentPending: rows.filter((row) => includesAny(row.paymentStatus ?? getNestedString(row, "paymentStatus"), ["pending", "initiated"])).length,
+    paymentFailed: rows.filter((row) => includesAny(row.paymentStatus ?? getNestedString(row, "paymentStatus"), ["fail", "error"])).length,
     refundPending: rows.filter(isRefundCandidate).length,
     paymentIssues: rows.filter(isPaymentIssue).length,
+    supplierPending: rows.filter(isSupplierPending).length,
+    slaBreach: rows.filter((row) => getSlaStatus(row) === "breach").length,
+    slaRisk: rows.filter((row) => getSlaStatus(row) !== "ok").length,
+    manualReview: rows.filter(requiresManualReview).length,
+    ecosystemBookings: rows.filter((row) => getEcosystemType(row) !== "ota").length,
   };
 }
 
@@ -984,9 +1421,14 @@ function isRefundCandidate(row: AdminBookingRow): boolean {
   return includesAny(row.bookingStatus ?? row.status, ["cancel", "refund"]) || includesAny(getNestedString(row, "refundStatus"), ["pending", "requested", "processing"]);
 }
 
+function isSupplierPending(row: AdminBookingRow): boolean {
+  return includesAny(getNestedString(row, "supplierStatus") ?? getNestedString(row, "providerStatus") ?? getNestedString(row, "compatBookingItem.supplierStatus"), ["pending", "queued", "awaiting", "manual"]);
+}
+
 function requiresManualReview(row: AdminBookingRow): boolean {
   return isPaymentIssue(row) ||
     isRefundCandidate(row) ||
+    isSupplierPending(row) ||
     includesAny(row.bookingStatus ?? row.status, ["pending", "processing", "manual", "review", "stuck"]);
 }
 
@@ -1001,6 +1443,22 @@ function getBookingIdentifier(booking: AdminBookingRow): string {
 
 function getBookingService(booking: AdminBookingRow): string {
   return formatCell(booking.compatBookingItem?.serviceType ?? booking.compatBookingItem?.type ?? booking.serviceType ?? booking.type).toLowerCase();
+}
+
+function getEcosystemType(booking: AdminBookingRow): string {
+  const explicit = formatCell(
+    getNestedString(booking, "ecosystemType") ??
+    getNestedString(booking, "compatBookingItem.ecosystemType") ??
+    getNestedString(booking, "orderType")
+  ).toLowerCase();
+  const service = getBookingService(booking);
+  if (explicit.includes("creator") || service.includes("creator")) return "creators";
+  if (explicit.includes("market") || service.includes("marketplace")) return "tpl-marketplace";
+  if (explicit.includes("local") || service.includes("local-life")) return "local-life";
+  if (["creators", "marketplace", "local-life"].includes(service)) {
+    return service === "marketplace" ? "tpl-marketplace" : service;
+  }
+  return "ota";
 }
 
 function getBookingServiceLabel(booking: AdminBookingRow): string {
@@ -1019,6 +1477,39 @@ function getCustomerWorkspaceId(booking: AdminBookingRow): string | null {
 
 function getBookingEmail(booking: AdminBookingRow): unknown {
   return getNestedString(booking, "customer.email") ?? getNestedString(booking, "leadTraveller.email") ?? getNestedString(booking, "email");
+}
+
+function getAssignedAgent(booking: AdminBookingRow): unknown {
+  return getNestedString(booking, "assignedAgent") ?? getNestedString(booking, "operations.assignedAgent") ?? "Unassigned";
+}
+
+function getPriority(booking: AdminBookingRow): AdminBookingPriorityValue {
+  const value = getNestedString(booking, "priority") ?? getNestedString(booking, "operations.priority");
+  return value === "urgent" || value === "high" ? value : "normal";
+}
+
+function getSlaStatus(booking: AdminBookingRow): "ok" | "warning" | "breach" {
+  const value = getNestedString(booking, "slaStatus") ?? getNestedString(booking, "operations.slaStatus");
+  if (value === "breach" || getPriority(booking) === "urgent" || isPaymentIssue(booking)) return "breach";
+  if (value === "warning" || getPriority(booking) === "high" || isRefundCandidate(booking) || isSupplierPending(booking)) return "warning";
+  return "ok";
+}
+
+function getLastUpdate(booking: AdminBookingRow): unknown {
+  return getNestedString(booking, "updatedAt") ?? getNestedString(booking, "createdAt") ?? getNestedString(booking, "compatBookingItem.updatedAt");
+}
+
+function getCreatedAt(booking: AdminBookingRow): unknown {
+  return getNestedString(booking, "createdAt") ?? getNestedString(booking, "compatBookingItem.createdAt");
+}
+
+function getSourceChannel(booking: AdminBookingRow): unknown {
+  return getNestedString(booking, "sourceChannel") ??
+    getNestedString(booking, "source") ??
+    getNestedString(booking, "channel") ??
+    getNestedString(booking, "compatBookingItem.sourceChannel") ??
+    getNestedString(booking, "compatBookingItem.source") ??
+    "Admin read model";
 }
 
 function getTravelDate(booking: AdminBookingRow): unknown {
@@ -1040,10 +1531,58 @@ function getBookingCurrency(booking: AdminBookingRow): unknown {
   return getNestedString(booking, "compatBookingItem.currency") ?? getNestedString(booking, "currency") ?? "INR";
 }
 
+function hasWalletUsed(booking: AdminBookingRow): boolean {
+  return includesAny(
+    getNestedString(booking, "walletUsed") ??
+    getNestedString(booking, "walletLedgerGroupId") ??
+    getNestedString(booking, "compatBookingItem.walletUsed"),
+    ["true", "wallet", "used", "yes"]
+  );
+}
+
+function hasOfferApplied(booking: AdminBookingRow): boolean {
+  return Boolean(
+    getNestedString(booking, "offerRedemptionId") ??
+    getNestedString(booking, "couponCode") ??
+    getNestedString(booking, "promoCode") ??
+    getNestedString(booking, "compatBookingItem.offerRedemptionId") ??
+    getNestedString(booking, "compatBookingItem.couponCode")
+  );
+}
+
 function inferRefundState(booking: AdminBookingRow): string {
   const explicit = getNestedString(booking, "refundStatus");
   if (explicit) return explicit;
   return isRefundCandidate(booking) ? "Review required" : "No refund signal";
+}
+
+function isTodayOrUpcoming(row: AdminBookingRow): boolean {
+  return isTodayBooking(row) || includesAny(row.status ?? row.bookingStatus, ["upcoming", "confirmed", "open", "created"]);
+}
+
+function isTodayBooking(row: AdminBookingRow): boolean {
+  const today = new Date().toISOString().slice(0, 10);
+  const travelDate = String(getTravelDate(row) ?? "");
+  const createdAt = getNestedString(row, "createdAt") ?? "";
+  return travelDate.startsWith(today) || createdAt.startsWith(today);
+}
+
+function dateOnOrAfter(value: unknown, date: string | undefined): boolean {
+  if (!date) return true;
+  const valueDate = String(value ?? "").slice(0, 10);
+  return Boolean(valueDate) && valueDate >= date;
+}
+
+function dateOnOrBefore(value: unknown, date: string | undefined): boolean {
+  if (!date) return true;
+  const valueDate = String(value ?? "").slice(0, 10);
+  return Boolean(valueDate) && valueDate <= date;
+}
+
+function toNumber(value: unknown): number {
+  const normalized = String(value ?? "0").replace(/[^0-9.-]/g, "");
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 function getNestedString(input: unknown, path: string): string | undefined {
@@ -1068,6 +1607,73 @@ function formatCell(value: unknown): string {
   if (typeof value === "undefined" || value === null || value === "") return "-";
   if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return String(value);
   return JSON.stringify(value);
+}
+
+function buildLocalBookingExport(rows: AdminBookingRow[], suffix = "visible"): AdminApiResult<AdminBookingExportResult> {
+  const headers = [
+    "Booking/Order ID",
+    "Service/Ecosystem",
+    "Customer",
+    "Date",
+    "Amount",
+    "Payment",
+    "Booking/Order Status",
+    "Refund",
+    "Priority",
+    "SLA",
+    "Assigned Agent",
+    "Source",
+    "Last Update",
+  ];
+  const csvRows = rows.map((booking) => [
+    getBookingIdentifier(booking),
+    `${getBookingServiceLabel(booking)} / ${titleCase(getEcosystemType(booking))}`,
+    `${formatCell(getBookingCustomer(booking))} ${formatCell(getBookingEmail(booking))}`.trim(),
+    formatCell(getTravelDate(booking)),
+    formatMoney(getBookingAmount(booking), getBookingCurrency(booking)),
+    formatCell(booking.paymentStatus ?? getNestedString(booking, "paymentStatus")),
+    formatCell(booking.bookingStatus ?? booking.status),
+    inferRefundState(booking),
+    getPriority(booking),
+    getSlaStatus(booking),
+    formatCell(getAssignedAgent(booking)),
+    formatCell(getSourceChannel(booking)),
+    formatCell(getLastUpdate(booking)),
+  ]);
+  const csv = [headers, ...csvRows].map((row) => row.map(escapeCsvCell).join(",")).join("\n");
+  const today = new Date().toISOString().slice(0, 10);
+  return {
+    ok: true,
+    data: {
+      filename: `tpl-bookings-${safeFilenamePart(suffix)}-${today}.csv`,
+      contentType: "text/csv",
+      csv,
+      rowCount: rows.length,
+    },
+    meta: { requestId: `local-csv-${Date.now()}`, apiVersion: "v1" },
+    status: 200,
+    requestId: `local-csv-${Date.now()}`,
+  };
+}
+
+function escapeCsvCell(value: unknown): string {
+  const text = formatCell(value).replace(/"/g, "\"\"");
+  return /[",\n\r]/.test(text) ? `"${text}"` : text;
+}
+
+function safeFilenamePart(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "") || "visible";
+}
+
+function downloadCsv(filename: string, csv: string) {
+  if (typeof window === "undefined") return;
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = window.URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  window.URL.revokeObjectURL(url);
 }
 
 function titleCase(value: string): string {

@@ -136,7 +136,7 @@ export default function SearchButton({
       <button
         onClick={handleSearch}
         type="button"
-        className="flex h-[52px] w-full items-center justify-center rounded-lg border-none bg-[#f97316] text-[14px] font-bold text-white shadow-sm transition active:scale-[0.99] sm:h-[74px] sm:w-[140px]"
+        className="flex h-[52px] w-full items-center justify-center rounded-lg border-none bg-[#f97316] text-[14px] font-bold text-white shadow-sm transition active:scale-[0.99] sm:h-[74px] xl:w-[140px]"
         style={{
           cursor: "pointer",
           alignSelf: "stretch",

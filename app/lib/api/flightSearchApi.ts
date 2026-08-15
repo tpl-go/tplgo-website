@@ -1,4 +1,8 @@
 import type { DummyFlight, FlightFareOption, FlightStopDetail } from "@/app/components/flight/data/flightDummyData";
+import {
+  normalizeFlightCurrency,
+  type FlightCurrency,
+} from "@/app/lib/flights/flightCurrency";
 import { tplApiRequest, isTplApiConfigured } from "./tplApiClient";
 
 export type FlightSearchTripType = "oneway" | "roundtrip" | "multicity";
@@ -24,7 +28,7 @@ export type BackendFlightMoney = {
   taxes: number;
   fees: number;
   total: number;
-  currency: "INR";
+  currency: FlightCurrency;
 };
 
 export type BackendFlightSegment = {
@@ -164,7 +168,8 @@ function mapBackendFlightOfferToDummyFlight(
   const arriveMinutes = minutesFromDateTime(lastSegment?.arrival.at);
   const durationMinutes = durationToMinutes(itinerary?.duration || firstSegment?.duration) || minutesBetween(departMinutes, arriveMinutes);
   const stops = Math.max(itinerary?.stops ?? Math.max((itinerary?.segments.length ?? 1) - 1, 0), 0);
-  const basePrice = Math.round(offer.price.total || offer.price.baseFare || 0);
+  const currency = normalizeFlightCurrency(offer.price.currency);
+  const basePrice = Number(offer.price.total || offer.price.baseFare || 0);
   const fareOptions = offer.fareOptions.length ? offer.fareOptions : [{
     fareId: `${offer.offerId}-published`,
     label: "Published",
@@ -198,7 +203,8 @@ function mapBackendFlightOfferToDummyFlight(
         offerId: offer.offerId,
         ...(fareOptions[0]?.fareId ? { fareId: fareOptions[0].fareId } : {}),
         ...(context.backendRequestId ? { backendRequestId: context.backendRequestId } : {}),
-        ...(Number.isFinite(offer.price.total) ? { priceTotal: Math.round(offer.price.total) } : {}),
+        ...(Number.isFinite(offer.price.total) ? { priceTotal: Number(offer.price.total) } : {}),
+        currency,
       },
     } : {}),
   };
@@ -209,7 +215,8 @@ function mapBackendFareOption(fare: BackendFlightFareOption, index: number): Fli
   return {
     id: fare.fareId || `backend-fare-${index + 1}`,
     title: fare.label || "Published",
-    price: Math.round(fare.price.total || 0),
+    price: Number(fare.price.total || 0),
+    currency: normalizeFlightCurrency(fare.price.currency),
     baggage: `${fare.baggageSummary || "Baggage as per airline rules"}, ${refundable}`,
     meals: "As per fare rules",
     seatCharge: "As per fare rules",

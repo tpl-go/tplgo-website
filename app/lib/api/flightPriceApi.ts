@@ -1,4 +1,5 @@
 import { tplApiRequest, type TplApiResult } from "./tplApiClient";
+import type { FlightCurrency } from "@/app/lib/flights/flightCurrency";
 
 export type BackendFlightPriceConfirmRequest = {
   searchId: string;
@@ -11,7 +12,7 @@ export type BackendFlightPriceConfirmRequest = {
   currency: "INR";
   clientOfferSnapshot?: {
     total: number;
-    currency: "INR";
+    currency: FlightCurrency;
   };
 };
 
@@ -31,7 +32,7 @@ export type BackendFlightPriceConfirmResponse = {
     taxes: number;
     fees: number;
     total: number;
-    currency: "INR";
+    currency: FlightCurrency;
   };
   priceChanged: boolean;
   previousTotal?: number;

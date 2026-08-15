@@ -10,6 +10,11 @@ import {
 } from "@/app/lib/booking/bookingStorage";
 
 import { getBookingPayload } from "@/app/lib/booking/bookingActionHelpers";
+import {
+  executeBackendSamePriceManage,
+  prepareBackendManageRequest,
+  persistBackendManageCache,
+} from "@/app/lib/manage/backendManageBookingIntegration";
 
 import TrainManageLayout, {
   type TrainManageTab,
@@ -514,7 +519,7 @@ function TrainManagePageContent() {
     );
 
   const handleSaveTravellers =
-    () => {
+    async () => {
       if (
         !booking?.payloadStorageKey ||
         !payload
@@ -546,13 +551,65 @@ function TrainManagePageContent() {
           ),
       };
 
+      const backendResult =
+        await executeBackendSamePriceManage(
+          {
+            booking,
+            payload,
+            serviceType: "train",
+            section:
+              "traveller-details",
+            changeType:
+              "traveller_update",
+            settlementMode:
+              "save",
+            currentAmount:
+              Number(
+                payload
+                  ?.paymentData
+                  ?.totalPaid ||
+                  fare?.totalPaid ||
+                  fare?.totalAmount ||
+                  booking.amount ||
+                  0
+              ),
+            requestedAmount:
+              Number(
+                payload
+                  ?.paymentData
+                  ?.totalPaid ||
+                  fare?.totalPaid ||
+                  fare?.totalAmount ||
+                  booking.amount ||
+                  0
+              ),
+            requestedChange: {
+              travellers:
+                nextPayload.travellers,
+            },
+            beforeSnapshot:
+              payload,
+            afterSnapshot:
+              nextPayload,
+          }
+        );
+
+      const payloadToSave =
+        backendResult.ok &&
+        backendResult.payload
+          ? {
+              ...nextPayload,
+              ...backendResult.payload,
+            }
+          : nextPayload;
+
       savePayload(
         booking.payloadStorageKey,
-        nextPayload
+        payloadToSave
       );
 
       setPayload(
-        nextPayload
+        payloadToSave
       );
 
       alert(
@@ -561,7 +618,7 @@ function TrainManagePageContent() {
     };
 
   const handleSaveContact =
-    () => {
+    async () => {
       if (
         !booking?.payloadStorageKey ||
         !payload
@@ -576,13 +633,58 @@ function TrainManagePageContent() {
         },
       };
 
+      const currentAmount =
+        Number(
+          payload?.paymentData
+            ?.totalPaid ||
+            fare?.totalPaid ||
+            fare?.totalAmount ||
+            booking.amount ||
+            0
+        );
+
+      const backendResult =
+        await executeBackendSamePriceManage(
+          {
+            booking,
+            payload,
+            serviceType: "train",
+            section:
+              "contact-details",
+            changeType:
+              "contact_update",
+            settlementMode:
+              "save",
+            currentAmount,
+            requestedAmount:
+              currentAmount,
+            requestedChange: {
+              contactDetails:
+                nextPayload.contactDetails,
+            },
+            beforeSnapshot:
+              payload,
+            afterSnapshot:
+              nextPayload,
+          }
+        );
+
+      const payloadToSave =
+        backendResult.ok &&
+        backendResult.payload
+          ? {
+              ...nextPayload,
+              ...backendResult.payload,
+            }
+          : nextPayload;
+
       savePayload(
         booking.payloadStorageKey,
-        nextPayload
+        payloadToSave
       );
 
       setPayload(
-        nextPayload
+        payloadToSave
       );
 
       alert(
@@ -591,7 +693,7 @@ function TrainManagePageContent() {
     };
 
   const handleSaveSpecialRequest =
-    () => {
+    async () => {
       if (
         !booking?.payloadStorageKey ||
         !payload
@@ -603,13 +705,57 @@ function TrainManagePageContent() {
         specialRequest,
       };
 
+      const currentAmount =
+        Number(
+          payload?.paymentData
+            ?.totalPaid ||
+            fare?.totalPaid ||
+            fare?.totalAmount ||
+            booking.amount ||
+            0
+        );
+
+      const backendResult =
+        await executeBackendSamePriceManage(
+          {
+            booking,
+            payload,
+            serviceType: "train",
+            section:
+              "special-request",
+            changeType:
+              "add_on_update",
+            settlementMode:
+              "save",
+            currentAmount,
+            requestedAmount:
+              currentAmount,
+            requestedChange: {
+              specialRequest,
+            },
+            beforeSnapshot:
+              payload,
+            afterSnapshot:
+              nextPayload,
+          }
+        );
+
+      const payloadToSave =
+        backendResult.ok &&
+        backendResult.payload
+          ? {
+              ...nextPayload,
+              ...backendResult.payload,
+            }
+          : nextPayload;
+
       savePayload(
         booking.payloadStorageKey,
-        nextPayload
+        payloadToSave
       );
 
       setPayload(
-        nextPayload
+        payloadToSave
       );
 
       alert(
@@ -618,7 +764,7 @@ function TrainManagePageContent() {
     };
 
   const handleSeatContinue =
-    () => {
+    async () => {
       if (
         !booking?.payloadStorageKey ||
         !payload
@@ -658,9 +804,67 @@ function TrainManagePageContent() {
         },
       };
 
-      savePayload(
+      const backendResult =
+        await prepareBackendManageRequest(
+          {
+            booking,
+            payload: nextPayload,
+            serviceType: "train",
+            section:
+              "seat-addons",
+            changeType:
+              seatQuote
+                .settlementMode ===
+              "payment"
+                ? "upgrade"
+                : seatQuote
+                    .settlementMode ===
+                  "wallet_credit"
+                ? "downgrade"
+                : "same_price",
+            settlementMode:
+              seatQuote
+                .settlementMode,
+            currentAmount:
+              seatQuote.oldTotal,
+            requestedAmount:
+              seatQuote.newTotal,
+            requestedChange: {
+              selectedSeat:
+                selectedSeatForDraft,
+              seatQuote,
+            },
+            beforeSnapshot:
+              payload,
+            afterSnapshot:
+              nextPayload,
+          }
+        );
+
+      if (
+        !backendResult.ok &&
+        !backendResult.fallbackAllowed
+      ) {
+        alert(
+          backendResult.error ||
+            "Backend manage booking request failed."
+        );
+
+        return;
+      }
+
+      const payloadToSave =
+        backendResult.ok &&
+        backendResult.payload
+          ? {
+              ...nextPayload,
+              ...backendResult.payload,
+            }
+          : nextPayload;
+
+      persistBackendManageCache(
         booking.payloadStorageKey,
-        nextPayload
+        payloadToSave
       );
 
       window.location.href = `/manage/payment?bookingId=${encodeURIComponent(

@@ -7,6 +7,12 @@ import OneWayCardDetailsPanel from "./card/OneWayCardDetailsPanel";
 import OneWayCardComparePanel from "./card/OneWayCardComparePanel";
 import OneWayModal from "./card/OneWayModal";
 import { DetailTab, Fare, StopDetail } from "./card/OneWayCardTypes";
+import type { FlightFareOption } from "@/app/components/flight/data/flightDummyData";
+import {
+  formatFlightMoney,
+  normalizeFlightCurrency,
+  type FlightCurrency,
+} from "@/app/lib/flights/flightCurrency";
 import { saveFlightReviewPayload } from "@/app/lib/flights/review/buildFlightReviewData";
 
 type Props = {
@@ -19,9 +25,11 @@ type Props = {
   arrive: string;
   arriveCity: string;
   price: string;
+  currency?: FlightCurrency;
   timing: string;
   promo: string;
   stopDetails?: StopDetail[];
+  backendFares?: FlightFareOption[];
   backendOffer?: {
     searchId: string;
     offerId: string;
@@ -29,6 +37,7 @@ type Props = {
     expiresAt?: string;
     backendRequestId?: string;
     priceTotal?: number;
+    currency?: FlightCurrency;
     smokeRunId?: string;
   };
 };
@@ -65,11 +74,11 @@ function normalizeCountry(value: string | null | undefined) {
 }
 
 function parseFareNumber(value: string) {
-  return Number(String(value || "").replace(/[^\d]/g, "")) || 0;
+  return Number(String(value || "").replace(/[^\d.]/g, "")) || 0;
 }
 
-function formatRupee(value: number) {
-  return `₹${Math.max(0, Math.round(value)).toLocaleString("en-IN")}`;
+function formatFare(value: number, currency: FlightCurrency) {
+  return formatFlightMoney(Math.max(0, value), currency);
 }
 
 function normalizeSearchDate(value: string | null | undefined) {
@@ -274,10 +283,15 @@ export default function FlightResultCard(props: Props) {
     arrive,
     arriveCity,
       stopDetails = [],
+    backendFares,
     backendOffer,
   } = props;
 
-  const baseCardFare = useMemo(() => parseFareNumber(props.price), [props.price]);
+  const displayCurrency = normalizeFlightCurrency(backendOffer?.currency || props.currency);
+  const baseCardFare = useMemo(
+    () => Number(backendOffer?.priceTotal || 0) || parseFareNumber(props.price),
+    [backendOffer?.priceTotal, props.price]
+  );
   const [activeOffer, setActiveOffer] = useState<ActiveOfferSnapshot | null>(null);
 
   useEffect(() => {
@@ -299,13 +313,34 @@ export default function FlightResultCard(props: Props) {
   }, []);
 
   const fares: Fare[] = useMemo(() => {
+    if (backendOffer && Array.isArray(backendFares) && backendFares.length > 0) {
+      return backendFares.map((fare, index) => {
+        const amount = Number(fare.price || 0);
+        const currency = normalizeFlightCurrency(fare.currency || displayCurrency);
+        return {
+          id: fare.id || `backend-fare-${index + 1}`,
+          title: fare.title || "Published",
+          price: formatFare(amount, currency),
+          priceAmount: amount,
+          currency,
+          baggage: fare.baggage,
+          meals: fare.meals || "As per fare rules",
+          seatCharge: fare.seatCharge || "As per fare rules",
+          cancellationFee: fare.cancellationFee || "As per fare rules",
+          dateChangeFee: fare.dateChangeFee || "As per fare rules",
+        };
+      });
+    }
+
     const publishedBase = baseCardFare || 9154;
 
     return [
       {
         id: "1",
         title: "Published",
-        price: formatRupee(publishedBase),
+        price: formatFare(publishedBase, displayCurrency),
+        priceAmount: publishedBase,
+        currency: displayCurrency,
         baggage: "Economy, Refundable",
         meals: "Chargeable",
         seatCharge: "Chargeable",
@@ -315,7 +350,9 @@ export default function FlightResultCard(props: Props) {
       {
         id: "2",
         title: "Flexi Plus",
-        price: formatRupee(publishedBase + 315),
+        price: formatFare(publishedBase + 315, displayCurrency),
+        priceAmount: publishedBase + 315,
+        currency: displayCurrency,
         baggage: "Economy, Free Meal, Refundable",
         meals: "Complimentary",
         seatCharge: "Chargeable",
@@ -325,7 +362,9 @@ export default function FlightResultCard(props: Props) {
       {
         id: "3",
         title: "SME",
-        price: formatRupee(publishedBase + 840),
+        price: formatFare(publishedBase + 840, displayCurrency),
+        priceAmount: publishedBase + 840,
+        currency: displayCurrency,
         baggage: "Economy, Refundable",
         meals: "Chargeable",
         seatCharge: "Chargeable",
@@ -335,7 +374,9 @@ export default function FlightResultCard(props: Props) {
       {
         id: "4",
         title: "Upfront",
-        price: formatRupee(publishedBase + 1995),
+        price: formatFare(publishedBase + 1995, displayCurrency),
+        priceAmount: publishedBase + 1995,
+        currency: displayCurrency,
         baggage: "Economy, Refundable",
         meals: "Chargeable",
         seatCharge: "Complimentary",
@@ -343,7 +384,7 @@ export default function FlightResultCard(props: Props) {
         dateChangeFee: "NA",
       },
     ];
-  }, [baseCardFare]);
+  }, [backendFares, backendOffer, baseCardFare, displayCurrency]);
 
   const [showAllFares, setShowAllFares] = useState(false);
   const [selectedFareId, setSelectedFareId] = useState(fares[0].id);
@@ -360,8 +401,8 @@ export default function FlightResultCard(props: Props) {
   );
 
   const selectedBaseFare = useMemo(
-    () => parseFareNumber(selectedFare.price),
-    [selectedFare.price]
+    () => Number(selectedFare.priceAmount || 0) || parseFareNumber(selectedFare.price),
+    [selectedFare.price, selectedFare.priceAmount]
   );
 
   const selectedOfferDiscount = useMemo(
@@ -375,7 +416,8 @@ export default function FlightResultCard(props: Props) {
   );
 
   const earnedOnThisFare = Math.round(selectedBaseAfterOffer * 0.02);
-  const displayFareAfterOffer = formatRupee(selectedBaseAfterOffer);
+  const selectedCurrency = selectedFare.currency || displayCurrency;
+  const displayFareAfterOffer = formatFare(selectedBaseAfterOffer, selectedCurrency);
 
   const selectedFareForDetails: Fare = useMemo(
     () => ({
@@ -431,7 +473,8 @@ export default function FlightResultCard(props: Props) {
     const departureDate = normalizeSearchDate(searchParams.get("departure"));
     const arrivalDate = departureDate;
 
-    const rawFare = parseFareNumber(selectedFare.price);
+    const rawFare =
+      Number(selectedFare.priceAmount || 0) || parseFareNumber(selectedFare.price);
     const baseFareTotal = rawFare * adults;
 
     const appliedOffer = calculateOfferDiscount(baseFareTotal, activeOffer);
@@ -461,6 +504,7 @@ export default function FlightResultCard(props: Props) {
       cabinClass,
       ...(backendOfferWithSmokeRun ? { backendOffer: backendOfferWithSmokeRun } : {}),
       pricing: {
+        currency: selectedCurrency,
         perAdultBaseFare: rawFare,
         baseFareTotal,
         appliedOffer,
@@ -539,17 +583,17 @@ export default function FlightResultCard(props: Props) {
                   <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[12px] font-bold text-[#111827]">
                     <span>Flight Price {selectedFare.price}</span>
                     <span className="text-[#15803d]">
-                      - {formatRupee(selectedOfferDiscount)}
+                      - {formatFare(selectedOfferDiscount, selectedCurrency)}
                     </span>
                     <span>= {displayFareAfterOffer}</span>
                   </div>
                   <div className="mt-1 text-[11px] font-semibold text-[#64748b]">
-                    Earn {formatRupee(earnedOnThisFare)} TPL Earned Credit
+                    Earn {formatFare(earnedOnThisFare, selectedCurrency)} TPL Earned Credit
                   </div>
                 </div>
 
                 <span className="shrink-0 rounded-full bg-[#16a34a] px-2.5 py-1 text-[10px] font-black text-white">
-                  Save {formatRupee(selectedOfferDiscount)}
+                  Save {formatFare(selectedOfferDiscount, selectedCurrency)}
                 </span>
               </div>
             </div>
@@ -561,7 +605,7 @@ export default function FlightResultCard(props: Props) {
                 </span>
 
                 <span className="text-gray-600">
-                  {selectedFare.price} - {formatRupee(selectedOfferDiscount)} =
+                  {selectedFare.price} - {formatFare(selectedOfferDiscount, selectedCurrency)} =
                 </span>
 
                 <span className="font-bold text-[#111827]">
@@ -569,13 +613,13 @@ export default function FlightResultCard(props: Props) {
                 </span>
 
                 <span className="text-[#6b7280]">
-                  · Earn {formatRupee(earnedOnThisFare)} TPL Earned Credit
+                  · Earn {formatFare(earnedOnThisFare, selectedCurrency)} TPL Earned Credit
                 </span>
               </div>
 
               <span className="w-fit shrink-0 rounded-full bg-[#16a34a] px-3 py-1 text-[10px] font-bold text-white md:text-[11px]">
                 {activeOffer.code || "OFFER"} applied · Save{" "}
-                {formatRupee(selectedOfferDiscount)}
+                {formatFare(selectedOfferDiscount, selectedCurrency)}
               </span>
             </div>
           </>

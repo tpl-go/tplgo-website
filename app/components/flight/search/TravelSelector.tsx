@@ -83,12 +83,12 @@ export default function TravelSelector({
   } • ${state.travellers.cabin}`;
 
   return (
-    <div className={isResults ? "relative shrink-0" : "relative shrink-0 w-full md:w-auto"} ref={ref}>
+    <div className={isResults ? "relative w-full shrink-0 xl:w-auto" : "relative shrink-0 w-full md:w-auto"} ref={ref}>
       <div
         onClick={() => setOpen(!open)}
         className={`cursor-pointer ${
           isResults
-            ? "flex h-[72px] w-full md:w-[210px] flex-col justify-center rounded-md border border-black bg-white px-4"
+            ? "flex h-[72px] w-full xl:w-[210px] flex-col justify-center rounded-md border border-black bg-white px-4"
             : "flex h-[76px] md:h-[86px] w-full md:w-[230px] flex-col justify-center rounded-2xl border border-slate-700 bg-white/60 px-4 py-3"
         }`}
       >

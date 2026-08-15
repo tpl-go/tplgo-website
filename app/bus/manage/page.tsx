@@ -9,6 +9,11 @@ import {
   type BookingItem,
 } from "@/app/lib/booking/bookingStorage";
 import { getBookingPayload } from "@/app/lib/booking/bookingActionHelpers";
+import {
+  executeBackendSamePriceManage,
+  prepareBackendManageRequest,
+  persistBackendManageCache,
+} from "@/app/lib/manage/backendManageBookingIntegration";
 
 import BusManageLayout, {
   type BusManageTab,
@@ -519,7 +524,7 @@ function BusManagePageContent() {
     };
   }, [seatSelections, hasSeatChanged]);
 
-  const handleSaveTravellers = () => {
+  const handleSaveTravellers = async () => {
     if (!booking?.payloadStorageKey || !payload) return;
 
     const nextTravellers = travellers.map((item, index) => ({
@@ -542,12 +547,31 @@ function BusManagePageContent() {
       },
     };
 
-    savePayload(booking.payloadStorageKey, nextPayload);
-    setPayload(nextPayload);
+    const backendResult = await executeBackendSamePriceManage({
+      booking,
+      payload,
+      serviceType: "bus",
+      section: "traveller-details",
+      changeType: "traveller_update",
+      settlementMode: "save",
+      currentAmount: fareSummary.totalAmount,
+      requestedAmount: fareSummary.totalAmount,
+      requestedChange: { travellers: nextTravellers },
+      beforeSnapshot: payload,
+      afterSnapshot: nextPayload,
+    });
+
+    const payloadToSave =
+      backendResult.ok && backendResult.payload
+        ? { ...nextPayload, ...backendResult.payload }
+        : nextPayload;
+
+    savePayload(booking.payloadStorageKey, payloadToSave);
+    setPayload(payloadToSave);
     alert("Traveller details updated successfully.");
   };
 
-  const handleSaveContact = () => {
+  const handleSaveContact = async () => {
     if (!booking?.payloadStorageKey || !payload) return;
 
     const nextPayload = {
@@ -560,12 +584,31 @@ function BusManagePageContent() {
       },
     };
 
-    savePayload(booking.payloadStorageKey, nextPayload);
-    setPayload(nextPayload);
+    const backendResult = await executeBackendSamePriceManage({
+      booking,
+      payload,
+      serviceType: "bus",
+      section: "contact-details",
+      changeType: "contact_update",
+      settlementMode: "save",
+      currentAmount: fareSummary.totalAmount,
+      requestedAmount: fareSummary.totalAmount,
+      requestedChange: { contactDetails: nextPayload.contactDetails },
+      beforeSnapshot: payload,
+      afterSnapshot: nextPayload,
+    });
+
+    const payloadToSave =
+      backendResult.ok && backendResult.payload
+        ? { ...nextPayload, ...backendResult.payload }
+        : nextPayload;
+
+    savePayload(booking.payloadStorageKey, payloadToSave);
+    setPayload(payloadToSave);
     alert("Contact details updated successfully.");
   };
 
-  const handleSaveSpecialRequest = () => {
+  const handleSaveSpecialRequest = async () => {
     if (!booking?.payloadStorageKey || !payload) return;
 
     const nextPayload = {
@@ -573,8 +616,27 @@ function BusManagePageContent() {
       specialRequest,
     };
 
-    savePayload(booking.payloadStorageKey, nextPayload);
-    setPayload(nextPayload);
+    const backendResult = await executeBackendSamePriceManage({
+      booking,
+      payload,
+      serviceType: "bus",
+      section: "special-request",
+      changeType: "add_on_update",
+      settlementMode: "save",
+      currentAmount: fareSummary.totalAmount,
+      requestedAmount: fareSummary.totalAmount,
+      requestedChange: { specialRequest },
+      beforeSnapshot: payload,
+      afterSnapshot: nextPayload,
+    });
+
+    const payloadToSave =
+      backendResult.ok && backendResult.payload
+        ? { ...nextPayload, ...backendResult.payload }
+        : nextPayload;
+
+    savePayload(booking.payloadStorageKey, payloadToSave);
+    setPayload(payloadToSave);
     alert("Special request updated successfully.");
   };
 
@@ -594,7 +656,7 @@ function BusManagePageContent() {
     );
   };
 
-  const handleSeatContinue = () => {
+  const handleSeatContinue = async () => {
     if (!booking?.payloadStorageKey || !payload) return;
 
     if (!hasSeatChanged) {
@@ -672,15 +734,61 @@ function BusManagePageContent() {
         },
       };
 
-      savePayload(booking.payloadStorageKey, directSavePayload);
-      setPayload(directSavePayload);
-      setTravellers(normalizeTravellers(directSavePayload));
-      setSeatSelections(normalizeSeatSelections(directSavePayload));
+      const backendResult = await executeBackendSamePriceManage({
+        booking,
+        payload: nextPayload,
+        serviceType: "bus",
+        section: "seats-addons",
+        changeType: "seat_update",
+        settlementMode: "save",
+        currentAmount: seatQuote.oldTotal,
+        requestedAmount: seatQuote.newTotal,
+        requestedChange: { seatSelections },
+        beforeSnapshot: payload,
+        afterSnapshot: directSavePayload,
+      });
+
+      const payloadToSave =
+        backendResult.ok && backendResult.payload
+          ? { ...directSavePayload, ...backendResult.payload }
+          : directSavePayload;
+
+      savePayload(booking.payloadStorageKey, payloadToSave);
+      setPayload(payloadToSave);
+      setTravellers(normalizeTravellers(payloadToSave));
+      setSeatSelections(normalizeSeatSelections(payloadToSave));
       alert("Seat changes saved successfully.");
       return;
     }
 
-    savePayload(booking.payloadStorageKey, nextPayload);
+    const backendResult = await prepareBackendManageRequest({
+      booking,
+      payload: nextPayload,
+      serviceType: "bus",
+      section: "seats-addons",
+      changeType: seatQuote.settlementMode === "payment" ? "upgrade" : "downgrade",
+      settlementMode: seatQuote.settlementMode,
+      currentAmount: seatQuote.oldTotal,
+      requestedAmount: seatQuote.newTotal,
+      requestedChange: {
+        seatSelections,
+        seatQuote,
+      },
+      beforeSnapshot: payload,
+      afterSnapshot: nextPayload,
+    });
+
+    if (!backendResult.ok && !backendResult.fallbackAllowed) {
+      alert(backendResult.error || "Backend manage booking request failed.");
+      return;
+    }
+
+    const payloadToSave =
+      backendResult.ok && backendResult.payload
+        ? { ...nextPayload, ...backendResult.payload }
+        : nextPayload;
+
+    persistBackendManageCache(booking.payloadStorageKey, payloadToSave);
 
     window.location.href = `/manage/payment?bookingId=${encodeURIComponent(
       booking.id

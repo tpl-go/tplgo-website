@@ -20,10 +20,26 @@ const excludedPrefixes = [
   "/creator",
   "/creator-studio",
   "/manage",
+  "/flights",
 ];
 
 function isComingSoonGateEnabled() {
+  if (isSmokeComingSoonBypassEnabled()) {
+    return false;
+  }
+
   return process.env.NEXT_PUBLIC_TPL_COMING_SOON_GATE_ENABLED !== "false";
+}
+
+function isSmokeComingSoonBypassEnabled() {
+  const enabled =
+    process.env.NEXT_PUBLIC_TPL_SMOKE_BYPASS_COMING_SOON === "true";
+  if (!enabled) return false;
+
+  return (
+    process.env.NODE_ENV !== "production" ||
+    process.env.TPL_ALLOW_PRODUCTION_SMOKE_BYPASS === "true"
+  );
 }
 
 function shouldSkipComingSoonGate(pathname: string) {

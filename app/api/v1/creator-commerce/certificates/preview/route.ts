@@ -1,0 +1,4 @@
+import { commerceBody,commerceError,commerceOk,commerceUser } from "@/app/lib/creators/creatorCommerceApi";
+import { creatorCommerceFlags } from "@/app/lib/creators/creatorCommerceFlags";
+import { creatorTestingCommerceRepository } from "@/app/lib/creators/creatorTestingCommerceRepository";
+export async function POST(request:Request){if(!creatorCommerceFlags.certificatePreviewEnabled())return commerceError("COMMERCE_DISABLED","Testing certificate preview is disabled.",503);const user=commerceUser(request);if(!user)return commerceError("AUTH_REQUIRED","Shared TPL login is required.",401);const body=await commerceBody(request);const record=creatorTestingCommerceRepository.entitlement(String(body.entitlementId??""),user);return record?.certificate?commerceOk(record.certificate):commerceError("CERTIFICATE_UNAVAILABLE","Testing certificate preview is unavailable.",404);}

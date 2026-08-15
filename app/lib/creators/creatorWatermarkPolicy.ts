@@ -1,0 +1,1 @@
+export const creatorWatermarkPolicy={version:"creator-watermark-policy.v1",previewWatermarkRequired:true,thumbnailWatermarkRequired:true,originalWatermarkStatus:"production_original_disabled",editorialWatermarkPolicy:"public_preview_required",videoPreviewWatermarkPolicy:"overlay_required",productionTranscodingAllowed:false} as const;

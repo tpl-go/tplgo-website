@@ -7,6 +7,7 @@ import {
   BOOKING_UPDATED_EVENT,
   type BookingItem,
 } from "@/app/lib/booking/bookingStorage";
+import { getBackendFirstBookingPayload } from "@/app/lib/api/bookingApi";
 import { normalizeSmartPlannerBooking } from "@/app/lib/ecosystem/planner/smartPlannerBookingNormalizer";
 import {
   resolveSmartPlannerBooking,
@@ -436,20 +437,51 @@ export default function PlannerBookingDetailPage() {
     useState<SmartPlannerBookingResolveResult | null>(null);
 
   useEffect(() => {
-    const loadBookingDetail = () => {
+    let cancelled = false;
+
+    const loadBookingDetail = async () => {
+      const backendResult = await getBackendFirstBookingPayload<RecordValue>(
+        bookingId,
+        "smart-planner"
+      );
+      if (cancelled) return;
+
+      if (backendResult.booking && backendResult.payload) {
+        const payload = asRecord(backendResult.payload);
+        setBooking(backendResult.booking);
+        setData({
+          ...payload,
+          fullPayload: payload,
+          originalPayload: payload,
+          __rawPayload: payload,
+        });
+        setDebugInfo({
+          availableBookingIds: [backendResult.booking.id],
+          booking: backendResult.booking,
+          checkedStorageKeys: ["backend:/api/v1/bookings/:bookingId/detail"],
+          fullPayload: payload,
+          originalPayload: payload,
+          payload,
+          rawPayloadAvailable: true,
+          requestedBookingId: bookingId,
+        });
+        return;
+      }
+
       const resolved = resolveSmartPlannerBooking(bookingId);
       setBooking(resolved.booking);
       setData(asRecord(resolved.payload));
       setDebugInfo(resolved);
     };
 
-    loadBookingDetail();
+    void loadBookingDetail();
 
     window.addEventListener(BOOKING_UPDATED_EVENT, loadBookingDetail);
     window.addEventListener("storage", loadBookingDetail);
     window.addEventListener("focus", loadBookingDetail);
 
     return () => {
+      cancelled = true;
       window.removeEventListener(BOOKING_UPDATED_EVENT, loadBookingDetail);
       window.removeEventListener("storage", loadBookingDetail);
       window.removeEventListener("focus", loadBookingDetail);

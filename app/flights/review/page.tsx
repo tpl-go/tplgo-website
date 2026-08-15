@@ -20,6 +20,7 @@ import {
   saveFlightReviewPayload,
   type FlightReviewPayload,
 } from "@/app/lib/flights/review/buildFlightReviewData";
+import { normalizeFlightCurrency } from "@/app/lib/flights/flightCurrency";
 import { confirmBackendFlightPrice } from "@/app/lib/api/flightPriceApi";
 import { simulateBackendFlightBooking } from "@/app/lib/api/flightBookingSimulationApi";
 import { applyBenefitPricing } from "@/app/lib/pricing/applyBenefitPricing";
@@ -709,6 +710,7 @@ seatTotal={seatMealData.seatTotal}
           priceConfirmationId: string;
           expiresAt: string;
           backendRequestId?: string;
+          currency?: string;
         }
       | null = null;
     if (reviewData.backendOffer) {
@@ -731,7 +733,7 @@ seatTotal={seatMealData.seatTotal}
         contactDetails: buildBackendContactDetails(travellerValidation),
         clientPricingSnapshot: {
           total: finalTotalAmount,
-          currency: "INR",
+          currency: normalizeFlightCurrency(priceReady.backendOffer.currency),
         },
         idempotencyKey: buildFlightSmokeIdempotencyKey(`flight-sim:${priceReady.backendOffer.priceConfirmationId}`, priceReady.backendOffer.smokeRunId),
       });
@@ -750,6 +752,7 @@ seatTotal={seatMealData.seatTotal}
         bookingRef: simulation.data.bookingRef,
         priceConfirmationId: simulation.data.priceConfirmationId,
         expiresAt: simulation.data.expiresAt,
+        currency: normalizeFlightCurrency(simulation.data.priceSnapshot.currency),
         ...(priceReady.backendOffer.backendRequestId ? { backendRequestId: priceReady.backendOffer.backendRequestId } : {}),
       };
       nextReviewData = {
@@ -758,6 +761,7 @@ seatTotal={seatMealData.seatTotal}
           ...priceReady.backendOffer,
           priceConfirmationId: simulation.data.priceConfirmationId,
           expiresAt: simulation.data.expiresAt,
+          currency: normalizeFlightCurrency(simulation.data.priceSnapshot.currency),
         },
       };
       saveFlightReviewPayload(nextReviewData);
@@ -807,7 +811,7 @@ seatTotal={seatMealData.seatTotal}
       currency: "INR",
       clientOfferSnapshot: {
         total: getBackendOfferSnapshotTotal(source, finalTotalAmount),
-        currency: "INR",
+        currency: normalizeFlightCurrency(source.backendOffer.currency),
       },
     });
 
@@ -839,10 +843,13 @@ seatTotal={seatMealData.seatTotal}
         priceConfirmationId: result.data.priceConfirmationId,
         priceStatus: result.data.status,
         expiresAt: result.data.expiresAt,
+        priceTotal: result.data.price.total,
+        currency: normalizeFlightCurrency(result.data.price.currency),
       },
       pricing: {
         ...source.pricing,
-        perAdultBaseFare: Math.round(result.data.price.baseFare / Math.max(source.passengers.adults, 1)),
+        currency: normalizeFlightCurrency(result.data.price.currency),
+        perAdultBaseFare: result.data.price.baseFare / Math.max(source.passengers.adults, 1),
         baseFareTotal: result.data.price.baseFare,
         tax: result.data.price.taxes,
         surcharge: result.data.price.fees,

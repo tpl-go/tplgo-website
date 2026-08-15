@@ -23,7 +23,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       success: true,
       message: "OTP sent successfully.",
-      devOtp: "11111",
+      devOtp: "111111",
     });
   } catch {
     return NextResponse.json(

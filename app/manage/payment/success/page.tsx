@@ -41,6 +41,16 @@ function ManagePaymentSuccessPageContent() {
   const type = searchParams.get("type") || "flight";
   const section = searchParams.get("section") || "";
   const paid = Number(searchParams.get("paid") || 0);
+  const backendManageMetadata = useMemo(
+    () => ({
+      quoteId: searchParams.get("backendManageQuoteId") || "",
+      requestId: searchParams.get("backendManageRequestId") || "",
+      paymentId: searchParams.get("backendManagePaymentId") || "",
+      walletLedgerId: searchParams.get("backendManageWalletLedgerId") || "",
+      status: searchParams.get("backendManageStatus") || "",
+    }),
+    [searchParams]
+  );
 
   const sectionLabel = useMemo(() => {
     if (section === "seats") return "Seat Update";
@@ -51,6 +61,7 @@ function ManagePaymentSuccessPageContent() {
   }, [section]);
 
   const handleViewBooking = () => {
+    void backendManageMetadata;
     const route = getDetailRoute(type, bookingId);
     router.push(route);
   };

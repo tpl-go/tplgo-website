@@ -22,7 +22,6 @@ import {
   type Wallet,
 } from "@/app/lib/wallet/walletStorage";
 import {
-  confirmHotelBackendCheckout,
   startHotelBackendCheckout,
   type HotelBackendCheckoutRefs,
 } from "@/app/lib/api/hotelCheckoutIntegration";
@@ -418,13 +417,16 @@ const priceBreakup = {
   earnedOnThisBooking,
 };
 
-  const buildConfirmationPayload = () => {
+  const buildConfirmationPayload = (
+    sourcePayload: StoredHotelPaymentPayload & Record<string, unknown> =
+      storedPayload as StoredHotelPaymentPayload & Record<string, unknown>
+  ) => {
     const guests =
-      storedPayload.guestValidation?.travellers ||
-      storedPayload.guestValidation?.guests ||
+      sourcePayload.guestValidation?.travellers ||
+      sourcePayload.guestValidation?.guests ||
       [];
 
-    const contactDetails = storedPayload.guestValidation?.contactDetails;
+    const contactDetails = sourcePayload.guestValidation?.contactDetails;
     const leadGuest = guests?.[0] || {};
 
     const bookingId = `HTL-${Date.now()}`;
@@ -501,10 +503,10 @@ const priceBreakup = {
           promoUsed: savedPromoUsed,
           earnedUsed: savedEarnedUsed,
           refundUsed: savedRefundUsed,
-          promoAvailable: storedPayload.walletBreakdown?.promoAvailable,
-          earnedAvailable: storedPayload.walletBreakdown?.earnedAvailable,
+          promoAvailable: sourcePayload.walletBreakdown?.promoAvailable,
+          earnedAvailable: sourcePayload.walletBreakdown?.earnedAvailable,
           refundWalletAvailable:
-            storedPayload.walletBreakdown?.refundWalletAvailable,
+            sourcePayload.walletBreakdown?.refundWalletAvailable,
           totalWalletUsed: walletUsed,
           earnedOnThisBooking,
         },
@@ -533,27 +535,37 @@ const priceBreakup = {
       hotel,
       selectedVariant,
       searchMeta,
-      specialRequest: storedPayload.specialRequest || "",
+      specialRequest: sourcePayload.specialRequest || "",
       appliedOffer: benefitPricing.offerDiscount || 0,
       tplCredit,
       oldTplCredit,
-      appliedOfferCode: storedPayload.appliedOfferCode || "",
-      appliedOfferTitle: storedPayload.appliedOfferTitle || "",
+      appliedOfferCode: sourcePayload.appliedOfferCode || "",
+      appliedOfferTitle: sourcePayload.appliedOfferTitle || "",
 
       cabData: {
-        selected: !!storedPayload.cabSelected,
+        selected: !!sourcePayload.cabSelected,
         amount: cabTotal,
-        label: storedPayload.cabLabel || "",
+        label: sourcePayload.cabLabel || "",
       },
       addonsData: {
-        selected: !!storedPayload.addonsSelected,
+        selected: !!sourcePayload.addonsSelected,
         amount: addOnsTotal,
-        label: storedPayload.addonsLabel || "",
+        label: sourcePayload.addonsLabel || "",
       },
       tripSecureData: {
         selected: tripSecureSelected,
         amount: tripSecureSelected ? tripSecureAmount : 0,
       },
+      walletSource: sourcePayload.walletSource,
+      walletSyncStatus: sourcePayload.walletSyncStatus,
+      backendWalletSnapshot: sourcePayload.backendWalletSnapshot,
+      metadata: sourcePayload.metadata,
+      backendCheckoutId: sourcePayload.backendCheckoutId,
+      backendBookingId: sourcePayload.backendBookingId,
+      backendPaymentId: sourcePayload.backendPaymentId,
+      backendRequestId: sourcePayload.backendRequestId,
+      backendServiceType: sourcePayload.backendServiceType,
+      backendCheckoutStatus: sourcePayload.backendCheckoutStatus,
     };
   };
 
@@ -592,13 +604,19 @@ const priceBreakup = {
       const backendStart = await startHotelBackendCheckout(
         backendRawPayload as Record<string, unknown>
       );
-      let backendRefs: HotelBackendCheckoutRefs = backendStart.refs;
+      const backendRefs: HotelBackendCheckoutRefs = backendStart.refs;
+      let checkoutPayload = backendRawPayload as StoredHotelPaymentPayload &
+        Record<string, unknown>;
 
       if (backendStart.attempted) {
         const updatedBookingPayload = {
           ...backendRawPayload,
+          ...(backendStart.payload as Record<string, unknown>),
           ...backendStart.refs,
         };
+
+        checkoutPayload = updatedBookingPayload as StoredHotelPaymentPayload &
+          Record<string, unknown>;
 
         sessionStorage.setItem(
           "tplHotelBookingData",
@@ -673,24 +691,10 @@ const priceBreakup = {
       handlePaymentSuccess();
       confirmBooking();
 
-      let confirmationPayload = buildConfirmationPayload();
-
-      if (backendRefs.backendCheckoutId) {
-        const backendConfirm = await confirmHotelBackendCheckout({
-          ...confirmationPayload,
-          ...backendRefs,
-        });
-
-        backendRefs = {
-          ...backendRefs,
-          ...backendConfirm.refs,
-        };
-
-        confirmationPayload = {
-          ...confirmationPayload,
-          ...backendRefs,
-        };
-      }
+      const confirmationPayload = {
+        ...buildConfirmationPayload(checkoutPayload),
+        ...backendRefs,
+      };
 
       try {
         sessionStorage.setItem(

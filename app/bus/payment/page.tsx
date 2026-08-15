@@ -129,6 +129,10 @@ type BusPaymentPayload = {
   };
 
   manageBookingReady?: boolean;
+  walletSource?: string;
+  walletSyncStatus?: string;
+  backendWalletSnapshot?: unknown;
+  metadata?: Record<string, unknown>;
   timerLeft: number;
   timestamp?: number;
   backendCheckoutId?: string;
@@ -354,8 +358,8 @@ export default function BusPaymentPage() {
     );
   }, [paymentData, totalBeforeWallet, walletUsed]);
 
-  const buildConfirmationPayload = useCallback(() => {
-    if (!paymentData) return null;
+  const buildConfirmationPayload = useCallback((sourcePayload = paymentData) => {
+    if (!sourcePayload) return null;
 
     const {
       bookingPayload,
@@ -364,7 +368,7 @@ export default function BusPaymentPage() {
       addons,
       appliedOffer,
       pricing,
-    } = paymentData;
+    } = sourcePayload;
 
     const bus = bookingPayload.bus || {};
     const boarding = bookingPayload.selectedBoardingPoint || {};
@@ -466,10 +470,10 @@ export default function BusPaymentPage() {
           promoUsed: savedPromoUsed,
           earnedUsed: savedEarnedUsed,
           refundUsed: savedRefundUsed,
-          promoAvailable: paymentData.walletBreakdown?.promoAvailable,
-          earnedAvailable: paymentData.walletBreakdown?.earnedAvailable,
+          promoAvailable: sourcePayload.walletBreakdown?.promoAvailable,
+          earnedAvailable: sourcePayload.walletBreakdown?.earnedAvailable,
           refundWalletAvailable:
-            paymentData.walletBreakdown?.refundWalletAvailable,
+            sourcePayload.walletBreakdown?.refundWalletAvailable,
           totalWalletUsed: walletUsed,
           earnedOnThisBooking,
         },
@@ -505,6 +509,16 @@ export default function BusPaymentPage() {
           : 0,
       },
       appliedOffer,
+      walletSource: sourcePayload.walletSource,
+      walletSyncStatus: sourcePayload.walletSyncStatus,
+      backendWalletSnapshot: sourcePayload.backendWalletSnapshot,
+      metadata: sourcePayload.metadata,
+      backendCheckoutId: sourcePayload.backendCheckoutId,
+      backendBookingId: sourcePayload.backendBookingId,
+      backendPaymentId: sourcePayload.backendPaymentId,
+      backendRequestId: sourcePayload.backendRequestId,
+      backendServiceType: sourcePayload.backendServiceType,
+      backendCheckoutStatus: sourcePayload.backendCheckoutStatus,
     };
   }, [
     paymentData,
@@ -532,21 +546,22 @@ export default function BusPaymentPage() {
         );
         let backendRefs: BusBackendCheckoutRefs = backendStart.refs;
 
-        if (backendStart.attempted) {
-          const updatedPaymentData = {
-            ...paymentData,
-            ...backendStart.refs,
-          };
+        const checkoutPaymentData = {
+          ...paymentData,
+          ...(backendStart.payload as Partial<BusPaymentPayload>),
+          ...backendStart.refs,
+        } as BusPaymentPayload;
 
+        if (backendStart.attempted) {
           sessionStorage.setItem(
             "tplBusPaymentData",
-            JSON.stringify(updatedPaymentData)
+            JSON.stringify(checkoutPaymentData)
           );
 
-          setPaymentData(updatedPaymentData as BusPaymentPayload);
+          setPaymentData(checkoutPaymentData);
         }
 
-        const confirmedPayload = buildConfirmationPayload();
+        const confirmedPayload = buildConfirmationPayload(checkoutPaymentData);
 
         if (confirmedPayload) {
           if (backendRefs.backendCheckoutId) {

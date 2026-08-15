@@ -366,7 +366,7 @@ export default function MultiCityStickySummary({
 
   return (
     <div className="fixed bottom-3 left-0 right-0 z-40 px-3 md:bottom-4 md:px-4">
-      <div className="relative mx-auto max-w-8xl overflow-visible rounded-2xl bg-[#062b68] shadow-2xl">
+      <div className="relative mx-auto max-w-[1440px] overflow-visible rounded-2xl bg-[#062b68] shadow-2xl">
         <div className="flex flex-col gap-3 p-3 md:gap-4 md:p-4 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex-1">
             <div className="flex gap-2 overflow-x-auto overflow-y-hidden pb-1 [-ms-overflow-style:none] [scrollbar-width:none] md:flex-wrap md:gap-3 md:overflow-visible md:pb-0 [&::-webkit-scrollbar]:hidden">

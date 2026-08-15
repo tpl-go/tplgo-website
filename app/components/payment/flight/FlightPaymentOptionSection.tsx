@@ -29,6 +29,13 @@ export default function FlightPaymentOptionSection({
     useState<PaymentOptionKey | null>(defaultOption);
 
   const [selectedUpiMethod, setSelectedUpiMethod] = useState<string>("");
+  const selectOption = (option: PaymentOptionKey) => {
+    setActiveOption((prev) => {
+      const next = prev === option ? null : option;
+      onPaymentMethodChange?.(next || "");
+      return next;
+    });
+  };
 
   return (
     <section
@@ -58,10 +65,7 @@ export default function FlightPaymentOptionSection({
         subtitle="Pay Directly From Your Bank Account"
         isActive={activeOption === "upi"}
         testId="flight-payment-method-upi"
-        onClick={() => {
-          setActiveOption((prev) => (prev === "upi" ? null : "upi"));
-          onPaymentMethodChange?.("upi");
-        }}
+        onClick={() => selectOption("upi")}
       />
 
       {activeOption === "upi" && (
@@ -92,10 +96,8 @@ export default function FlightPaymentOptionSection({
         subtitle="Scan and pay using any UPI app"
         badge="UPI QR"
         isActive={activeOption === "qr"}
-        onClick={() => {
-          setActiveOption((prev) => (prev === "qr" ? null : "qr"));
-          onPaymentMethodChange?.("qr");
-        }}
+        testId="flight-payment-method-qr"
+        onClick={() => selectOption("qr")}
       />
 
       {activeOption === "qr" && (
@@ -136,10 +138,8 @@ export default function FlightPaymentOptionSection({
         title="Credit & Debit Cards"
         subtitle="Visa, Mastercard, Amex, Rupay and more"
         isActive={activeOption === "cards"}
-        onClick={() => {
-          setActiveOption((prev) => (prev === "cards" ? null : "cards"));
-          onPaymentMethodChange?.("cards");
-        }}
+        testId="flight-payment-method-cards"
+        onClick={() => selectOption("cards")}
       />
 
       {activeOption === "cards" && (
@@ -193,12 +193,8 @@ export default function FlightPaymentOptionSection({
         title="Net Banking"
         subtitle="40+ Banks Available"
         isActive={activeOption === "netbanking"}
-        onClick={() => {
-          setActiveOption((prev) =>
-            prev === "netbanking" ? null : "netbanking"
-          );
-          onPaymentMethodChange?.("netbanking");
-        }}
+        testId="flight-payment-method-netbanking"
+        onClick={() => selectOption("netbanking")}
       />
 
       {activeOption === "netbanking" && (
@@ -238,18 +234,25 @@ function PaymentRow({
   onClick?: () => void;
 }) {
   return (
-    <div
+    <button
+      type="button"
       data-testid={testId}
       data-selected={isActive ? "true" : "false"}
       onClick={disabled ? undefined : onClick}
       aria-disabled={disabled}
+      disabled={disabled}
       style={{
+        width: "100%",
         padding: "18px 20px",
         borderBottom: "1px solid #e5e7eb",
+        borderLeft: 0,
+        borderRight: 0,
+        borderTop: 0,
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
         gap: "14px",
+        textAlign: "left",
         cursor: disabled ? "not-allowed" : "pointer",
         background: disabled ? "#f8fafc" : isActive ? "#f8fbff" : "#ffffff",
         boxShadow: isActive ? "inset 0 0 0 1.5px #7dd3fc" : "none",
@@ -338,7 +341,7 @@ function PaymentRow({
           {disabled ? "×" : "›"}
         </span>
       </div>
-    </div>
+    </button>
   );
 }
 

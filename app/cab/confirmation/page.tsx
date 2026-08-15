@@ -24,6 +24,7 @@ import {
   saveWallet,
   addWalletLedgerItem,
 } from "@/app/lib/wallet/walletStorage";
+import { confirmCabBackendCheckout } from "@/app/lib/api/cabCheckoutIntegration";
 
 type ConfirmationPayload = any;
 
@@ -104,6 +105,9 @@ export default function CabConfirmationPage() {
   const [earnedCreditAmount, setEarnedCreditAmount] = useState(0);
 
   useEffect(() => {
+    let cancelled = false;
+
+    const loadConfirmation = async () => {
     const raw =
       typeof window !== "undefined"
         ? sessionStorage.getItem("cabConfirmationData") ||
@@ -114,7 +118,30 @@ export default function CabConfirmationPage() {
     if (!raw) return;
 
     try {
-      const parsed = JSON.parse(raw);
+      let parsed = JSON.parse(raw);
+
+      if (parsed?.backendCheckoutId) {
+        const backendConfirm = await confirmCabBackendCheckout({
+          ...parsed,
+          bookingId: parsed?.bookingId || "",
+          paymentId: parsed?.paymentId || parsed?.transactionId || "",
+          transactionId: parsed?.transactionId || parsed?.paymentId || "",
+          paymentMethod:
+            parsed?.paymentMethod ||
+            parsed?.paymentData?.method ||
+            "Online Payment",
+        });
+
+        if (backendConfirm.attempted && backendConfirm.refs) {
+          parsed = {
+            ...parsed,
+            ...backendConfirm.refs,
+          };
+          persistCabConfirmationSession(parsed);
+        }
+      }
+
+      if (cancelled) return;
 
       const travellers = Array.isArray(parsed?.travellers)
         ? parsed.travellers
@@ -366,6 +393,14 @@ const pickupDate = String(rawPickupDate).slice(0, 10);
     } catch (e) {
       console.error("Cab confirmation parse error:", e);
     }
+
+    };
+
+    void loadConfirmation();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const bookingId = useMemo(() => {

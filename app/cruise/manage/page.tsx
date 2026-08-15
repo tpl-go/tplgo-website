@@ -9,6 +9,11 @@ import {
   type BookingItem,
 } from "@/app/lib/booking/bookingStorage";
 import { getBookingPayload } from "@/app/lib/booking/bookingActionHelpers";
+import {
+  executeBackendSamePriceManage,
+  prepareBackendManageRequest,
+  persistBackendManageCache,
+} from "@/app/lib/manage/backendManageBookingIntegration";
 
 import CruiseManageLayout, {
   type CruiseManageTab,
@@ -287,9 +292,9 @@ function CruiseManagePageContent() {
           ? "wallet_credit"
           : "save",
     };
-  }, [payload, activeCabinVariant, cabins, nights]);
+  }, [payload, currentCabin, activeCabinVariant, cabins, nights]);
 
-  const handleSaveTravellers = () => {
+  const handleSaveTravellers = async () => {
     if (!booking?.payloadStorageKey || !payload) return;
 
     const nextPayload = {
@@ -304,12 +309,31 @@ function CruiseManagePageContent() {
       },
     };
 
-    savePayload(booking.payloadStorageKey, nextPayload);
-    setPayload(nextPayload);
+    const backendResult = await executeBackendSamePriceManage({
+      booking,
+      payload,
+      serviceType: "cruise",
+      section: "traveller-details",
+      changeType: "traveller_update",
+      settlementMode: "save",
+      currentAmount: fareSummary.totalAmount,
+      requestedAmount: fareSummary.totalAmount,
+      requestedChange: { travellers: nextPayload.travellers },
+      beforeSnapshot: payload,
+      afterSnapshot: nextPayload,
+    });
+
+    const payloadToSave =
+      backendResult.ok && backendResult.payload
+        ? { ...nextPayload, ...backendResult.payload }
+        : nextPayload;
+
+    savePayload(booking.payloadStorageKey, payloadToSave);
+    setPayload(payloadToSave);
     alert("Traveller details updated successfully.");
   };
 
-  const handleSaveContact = () => {
+  const handleSaveContact = async () => {
     if (!booking?.payloadStorageKey || !payload) return;
 
     const nextPayload = {
@@ -325,12 +349,31 @@ function CruiseManagePageContent() {
       },
     };
 
-    savePayload(booking.payloadStorageKey, nextPayload);
-    setPayload(nextPayload);
+    const backendResult = await executeBackendSamePriceManage({
+      booking,
+      payload,
+      serviceType: "cruise",
+      section: "contact-details",
+      changeType: "contact_update",
+      settlementMode: "save",
+      currentAmount: fareSummary.totalAmount,
+      requestedAmount: fareSummary.totalAmount,
+      requestedChange: { travellers: nextPayload.travellers },
+      beforeSnapshot: payload,
+      afterSnapshot: nextPayload,
+    });
+
+    const payloadToSave =
+      backendResult.ok && backendResult.payload
+        ? { ...nextPayload, ...backendResult.payload }
+        : nextPayload;
+
+    savePayload(booking.payloadStorageKey, payloadToSave);
+    setPayload(payloadToSave);
     alert("Contact details updated successfully.");
   };
 
-  const handleSaveSpecialRequest = () => {
+  const handleSaveSpecialRequest = async () => {
     if (!booking?.payloadStorageKey || !payload) return;
 
     const nextPayload = {
@@ -338,12 +381,31 @@ function CruiseManagePageContent() {
       specialRequest,
     };
 
-    savePayload(booking.payloadStorageKey, nextPayload);
-    setPayload(nextPayload);
+    const backendResult = await executeBackendSamePriceManage({
+      booking,
+      payload,
+      serviceType: "cruise",
+      section: "special-request",
+      changeType: "add_on_update",
+      settlementMode: "save",
+      currentAmount: fareSummary.totalAmount,
+      requestedAmount: fareSummary.totalAmount,
+      requestedChange: { specialRequest },
+      beforeSnapshot: payload,
+      afterSnapshot: nextPayload,
+    });
+
+    const payloadToSave =
+      backendResult.ok && backendResult.payload
+        ? { ...nextPayload, ...backendResult.payload }
+        : nextPayload;
+
+    savePayload(booking.payloadStorageKey, payloadToSave);
+    setPayload(payloadToSave);
     alert("Special request updated successfully.");
   };
 
-  const handleCabinContinue = () => {
+  const handleCabinContinue = async () => {
     if (!booking?.payloadStorageKey || !payload) return;
 
     const selectedCabinForDraft =
@@ -364,7 +426,39 @@ function CruiseManagePageContent() {
       },
     };
 
-    savePayload(booking.payloadStorageKey, nextPayload);
+    const backendResult = await prepareBackendManageRequest({
+      booking,
+      payload: nextPayload,
+      serviceType: "cruise",
+      section: "cabin-addons",
+      changeType:
+        cabinQuote.settlementMode === "payment"
+          ? "upgrade"
+          : cabinQuote.settlementMode === "wallet_credit"
+          ? "downgrade"
+          : "same_price",
+      settlementMode: cabinQuote.settlementMode,
+      currentAmount: cabinQuote.oldTotal,
+      requestedAmount: cabinQuote.newTotal,
+      requestedChange: {
+        selectedCabin: selectedCabinForDraft,
+        cabinQuote,
+      },
+      beforeSnapshot: payload,
+      afterSnapshot: nextPayload,
+    });
+
+    if (!backendResult.ok && !backendResult.fallbackAllowed) {
+      alert(backendResult.error || "Backend manage booking request failed.");
+      return;
+    }
+
+    const payloadToSave =
+      backendResult.ok && backendResult.payload
+        ? { ...nextPayload, ...backendResult.payload }
+        : nextPayload;
+
+    persistBackendManageCache(booking.payloadStorageKey, payloadToSave);
 
     window.location.href = `/manage/payment?bookingId=${encodeURIComponent(
       booking.id

@@ -23,6 +23,7 @@ import {
   type BackendFlightSearchRequest,
   type FlightSearchCabinClass,
 } from "@/app/lib/api/flightSearchApi";
+import { formatFlightMoney, normalizeFlightCurrency } from "@/app/lib/flights/flightCurrency";
 
 type OneWayResultsLayoutProps = {
   fromCity: string;
@@ -43,6 +44,13 @@ type AppliedChip = {
   key: keyof FlightsFiltersState;
   value: string;
   label: string;
+};
+
+type FlightPriceLike = Partial<DummyFlight> & {
+  basePrice?: number | string;
+  fares?: Array<{
+    price?: number | string;
+  }>;
 };
 
 const popularFilterLabels: Record<string, string> = {
@@ -94,6 +102,19 @@ function normalizeId(value: string) {
 
 function ensureArray(value: any) {
   return Array.isArray(value) ? value : [];
+}
+
+function getEffectiveFlightPrice(flight: FlightPriceLike): number {
+  const directPrice = Number(flight?.basePrice || 0);
+  if (Number.isFinite(directPrice) && directPrice > 0) return directPrice;
+
+  const farePrices = Array.isArray(flight?.fares)
+    ? flight.fares
+        .map((fare) => Number(fare?.price || 0))
+        .filter((price: number) => Number.isFinite(price) && price > 0)
+    : [];
+
+  return farePrices.length ? Math.min(...farePrices) : 0;
 }
 
 export default function OneWayResultsLayout({
@@ -162,14 +183,16 @@ export default function OneWayResultsLayout({
       };
     }
 
-    const prices = baseFlights.map((flight: any) => flight.basePrice ?? 0);
+    const prices = baseFlights
+      .map((flight) => getEffectiveFlightPrice(flight))
+      .filter((price: number) => price > 0);
     const durations = baseFlights.map(
-      (flight: any) => flight.durationMinutes ?? 0
+      (flight) => flight.durationMinutes ?? 0
     );
 
     return {
-      minPrice: Math.min(...prices),
-      maxPrice: Math.max(...prices),
+      minPrice: prices.length ? Math.min(...prices) : 0,
+      maxPrice: prices.length ? Math.max(...prices) : 0,
       minDuration: Math.min(...durations),
       maxDuration: Math.max(...durations),
     };
@@ -221,7 +244,7 @@ export default function OneWayResultsLayout({
         departureAirportMap.set(departAirportId, {
           id: departAirportId,
           label: departAirportName,
-          price: `₹ ${Number(flight.basePrice || 0).toLocaleString("en-IN")}`,
+          price: `₹ ${getEffectiveFlightPrice(flight).toLocaleString("en-IN")}`,
         });
       }
     });
@@ -545,8 +568,10 @@ export default function OneWayResultsLayout({
 
     if (isPriceFilterApplied) {
       flights = flights.filter(
-        (f) =>
-          f.basePrice >= safePriceRange[0] && f.basePrice <= safePriceRange[1]
+        (f) => {
+          const price = getEffectiveFlightPrice(f);
+          return price >= safePriceRange[0] && price <= safePriceRange[1];
+        }
       );
     }
 
@@ -624,7 +649,9 @@ export default function OneWayResultsLayout({
     }
 
     if (sortType === "cheapest") {
-      flights.sort((a, b) => a.basePrice - b.basePrice);
+      flights.sort(
+        (a, b) => getEffectiveFlightPrice(a) - getEffectiveFlightPrice(b)
+      );
     }
 
     if (sortType === "nonstop") {
@@ -634,7 +661,9 @@ export default function OneWayResultsLayout({
     if (sortType === "prefer") {
       flights.sort(
         (a, b) =>
-          a.basePrice + a.durationMinutes - (b.basePrice + b.durationMinutes)
+          getEffectiveFlightPrice(a) +
+          a.durationMinutes -
+          (getEffectiveFlightPrice(b) + b.durationMinutes)
       );
     }
 
@@ -690,13 +719,13 @@ export default function OneWayResultsLayout({
   );
 
   return (
-    <div className="grid w-full grid-cols-1 gap-2.5 overflow-x-hidden lg:grid-cols-[310px_minmax(0,1fr)] lg:gap-5 lg:overflow-visible">
-      <div className="hidden lg:sticky lg:top-[82px] lg:block lg:h-fit lg:self-start">
+    <div className="grid w-full grid-cols-1 gap-2.5 overflow-x-hidden xl:grid-cols-[290px_minmax(0,1fr)] xl:gap-5 xl:overflow-visible">
+      <div className="hidden xl:sticky xl:top-[82px] xl:block xl:h-fit xl:self-start">
         {filterPanel}
       </div>
 
-      <section className="min-w-0 max-w-full space-y-2.5 lg:space-y-2">
-        <div className="sticky top-0 z-30 -mx-3 border-b border-[#e5edf6] bg-[#eef3f8]/95 px-3 py-2 backdrop-blur lg:hidden">
+      <section className="min-w-0 max-w-full space-y-2.5 xl:space-y-2">
+        <div className="sticky top-0 z-30 -mx-3 border-b border-[#e5edf6] bg-[#eef3f8]/95 px-3 py-2 backdrop-blur xl:hidden">
           <div className="flex items-center justify-between gap-3">
             <button
               type="button"
@@ -726,7 +755,7 @@ export default function OneWayResultsLayout({
           </div>
         </div>
 
-        <div className="hidden lg:block">
+        <div className="hidden xl:block">
           <FlightsResultHeader
             tripType="oneway"
             segments={[
@@ -739,7 +768,7 @@ export default function OneWayResultsLayout({
           />
         </div>
 
-        <div className="max-w-full space-y-2 lg:hidden">
+        <div className="max-w-full space-y-2 xl:hidden">
           <button
             type="button"
             onClick={() => setShowMobileFilters(true)}
@@ -810,10 +839,14 @@ export default function OneWayResultsLayout({
                 stop={card.stopLabel}
                 arrive={formatMinutesToTime(card.arriveMinutes)}
                 arriveCity={toCity}
-                price={`₹${card.basePrice.toLocaleString("en-IN")}`}
+                price={formatFlightMoney(
+                  getEffectiveFlightPrice(card),
+                  normalizeFlightCurrency(card.backendOffer?.currency)
+                )}
                 timing={card.timing}
                 promo={card.promo}
                 stopDetails={card.stopDetails}
+                backendFares={card.fares}
                 backendOffer={card.backendOffer}
               />
             ))
@@ -826,7 +859,7 @@ export default function OneWayResultsLayout({
       </section>
 
       {showMobileFilters && (
-        <div className="fixed inset-0 z-[80] lg:hidden">
+        <div className="fixed inset-0 z-[80] xl:hidden">
           <button
             type="button"
             aria-label="Close filters"

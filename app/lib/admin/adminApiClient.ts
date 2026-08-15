@@ -156,8 +156,22 @@ export type AdminBookingRow = {
 export type AdminBookingOperationsQuery = AdminListQuery & {
   search?: string;
   customer?: string;
+  ecosystemType?: string;
   paymentState?: string;
   refundState?: string;
+  highPriority?: string;
+  slaRisk?: string;
+  supplierPending?: string;
+  paymentFailed?: string;
+  refundPending?: string;
+  assignedAgent?: string;
+  createdFrom?: string;
+  createdTo?: string;
+  amountMin?: string;
+  amountMax?: string;
+  sourceChannel?: string;
+  walletUsed?: string;
+  offerApplied?: string;
 };
 
 export type AdminBookingTimelineEvent = {
@@ -194,6 +208,47 @@ export type AdminBookingOperationalSummary = {
   documentsStatus: string;
   notificationStatus: string;
   walletStatus: string;
+};
+
+export type AdminBookingNote = {
+  id: string;
+  bookingId: string;
+  bookingRef?: string;
+  note: string;
+  category: string;
+  visibility: "admin_only";
+  createdByAdminId?: string;
+  createdByAdminEmail?: string;
+  createdAt: string;
+};
+
+export type AdminBookingAssignment = {
+  bookingId: string;
+  bookingRef?: string;
+  assignedAgent: string;
+  assignedByAdminId: string;
+  assignedByAdminEmail: string;
+  assignedAt: string;
+};
+
+export type AdminBookingPriorityValue = "normal" | "high" | "urgent";
+
+export type AdminBookingPriority = {
+  bookingId: string;
+  bookingRef?: string;
+  priority: AdminBookingPriorityValue;
+  slaStatus: "ok" | "warning" | "breach";
+  reason?: string;
+  updatedByAdminId: string;
+  updatedByAdminEmail: string;
+  updatedAt: string;
+};
+
+export type AdminBookingExportResult = {
+  filename: string;
+  contentType: "text/csv";
+  csv: string;
+  rowCount: number;
 };
 
 export type AdminCustomerListRow = {
@@ -2017,6 +2072,42 @@ export async function getAdminBookingDetail(bookingId: string): Promise<AdminApi
   return adminApiRequest<AdminBookingDetail>(`/api/v1/admin/bookings/${encodeURIComponent(bookingId)}`);
 }
 
+export async function getAdminBookingTimeline(bookingId: string): Promise<AdminApiResult<AdminBookingTimelineEvent[]>> {
+  return adminApiRequest<AdminBookingTimelineEvent[]>(`/api/v1/admin/bookings/${encodeURIComponent(bookingId)}/timeline`);
+}
+
+export async function listAdminBookingNotes(bookingId: string): Promise<AdminApiResult<AdminBookingNote[]>> {
+  return adminApiRequest<AdminBookingNote[]>(`/api/v1/admin/bookings/${encodeURIComponent(bookingId)}/notes`);
+}
+
+export async function addAdminBookingNote(bookingId: string, input: { note: string; category?: string }): Promise<AdminApiResult<AdminBookingNote>> {
+  return adminApiRequest<AdminBookingNote>(`/api/v1/admin/bookings/${encodeURIComponent(bookingId)}/notes`, {
+    method: "POST",
+    body: input,
+  });
+}
+
+export async function assignAdminBooking(bookingId: string, assignedAgent: string): Promise<AdminApiResult<AdminBookingAssignment>> {
+  return adminApiRequest<AdminBookingAssignment>(`/api/v1/admin/bookings/${encodeURIComponent(bookingId)}/assign`, {
+    method: "POST",
+    body: { assignedAgent },
+  });
+}
+
+export async function updateAdminBookingPriority(
+  bookingId: string,
+  input: { priority: AdminBookingPriorityValue; reason?: string }
+): Promise<AdminApiResult<AdminBookingPriority>> {
+  return adminApiRequest<AdminBookingPriority>(`/api/v1/admin/bookings/${encodeURIComponent(bookingId)}/priority`, {
+    method: "POST",
+    body: input,
+  });
+}
+
+export async function exportAdminBookings(query: AdminListQuery = {}): Promise<AdminApiResult<AdminBookingExportResult>> {
+  return adminApiRequest<AdminBookingExportResult>(`/api/v1/admin/bookings/export${buildAdminQuery(query)}`);
+}
+
 export async function listAdminCustomers(query: AdminListQuery = {}): Promise<AdminApiResult<AdminCustomerListRow[]>> {
   return adminApiRequest<AdminCustomerListRow[]>(`/api/v1/admin/customers${buildAdminQuery(query)}`);
 }
@@ -2376,11 +2467,11 @@ export async function listAdminWorkspaceFoundation(): Promise<AdminApiResult<Adm
 }
 
 export async function getAdminCreators(): Promise<AdminApiResult<AdminCreatorDashboard>> {
-  return adminApiRequest<AdminCreatorDashboard>("/api/v1/admin/creators");
+  return adminApiRequest<AdminCreatorDashboard>("/api/v1/admin/creator");
 }
 
 export async function getAdminCreatorDetail(creatorId: string): Promise<AdminApiResult<AdminCreatorDetail>> {
-  return adminApiRequest<AdminCreatorDetail>(`/api/v1/admin/creators/${encodeURIComponent(creatorId)}`);
+  return adminApiRequest<AdminCreatorDetail>(`/api/v1/admin/creator/${encodeURIComponent(creatorId)}`);
 }
 
 export async function listAdminCreatorMedia(): Promise<AdminApiResult<AdminCreatorMediaItem[]>> {
@@ -2612,7 +2703,6 @@ function readError(payload: Record<string, unknown> | null, status?: number): Ad
       message: "Admin session expired or is not authorized. Sign in again.",
     };
   }
-
   return {
     code: "ADMIN_API_INVALID_RESPONSE",
     message: "Admin API returned an unexpected response.",

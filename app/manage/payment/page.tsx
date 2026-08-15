@@ -8,6 +8,14 @@ import { applyManageUpdatePricing } from "@/app/lib/pricing/applyManageUpdatePri
 import { getBookingPayload } from "@/app/lib/booking/bookingActionHelpers";
 import { getAllBookings, type BookingItem } from "@/app/lib/booking/bookingStorage";
 import {
+  buildManageSuccessQuery,
+  isBackendManageEligible,
+  mergeBackendRefs,
+  persistBackendManageCache,
+  settleBackendManagePayment,
+  type BackendManageRefs,
+} from "@/app/lib/manage/backendManageBookingIntegration";
+import {
   getWallet,
   saveWallet,
   addWalletLedgerItem,
@@ -22,7 +30,7 @@ type ManageQuote = {
   currency?: string;
   settlementMode?: "payment" | "wallet_credit" | "save";
   refundCredit?: number;
-  breakdown?: any;
+  breakdown?: unknown;
 };
 
 const DEFAULT_WALLET: Wallet = {
@@ -89,6 +97,7 @@ function getManagePath(type: string, bookingId: string) {
     package: "/packages/manage",
     visa: "/visa/manage",
     insurance: "/insurance/manage",
+    "smart-planner": "/smart-planner/manage",
   };
 
   const basePath = pathMap[type] || "/account/bookings";
@@ -96,6 +105,35 @@ function getManagePath(type: string, bookingId: string) {
   if (basePath === "/account/bookings") return basePath;
 
   return `${basePath}?bookingId=${encodeURIComponent(bookingId)}&from=payment`;
+}
+
+function supportsBackendManagePayment(type: string) {
+  return (
+    type === "cab" ||
+    type === "bus" ||
+    type === "hotel" ||
+    type === "homestay" ||
+    type === "cruise" ||
+    type === "package" ||
+    type === "train" ||
+    type === "flight" ||
+    type === "smart-planner"
+  );
+}
+
+function hasBackendManageRequest(payload: unknown) {
+  const record = asRecord(payload);
+  const draft = asRecord(record.manageDraft);
+  return Boolean(
+    record.backendManageRequestId ||
+      draft.backendManageRequestId
+  );
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
 }
 
 function ManagePaymentPageContent() {
@@ -206,41 +244,72 @@ function ManagePaymentPageContent() {
       return;
     }
 
-    const payload = getBookingPayload<any>(latestBooking.payloadStorageKey);
+    const payload = getBookingPayload<Record<string, unknown>>(
+      latestBooking.payloadStorageKey
+    );
 
     if (!payload) {
       alert("Booking payload not found.");
       return;
     }
 
-    const draft = payload?.manageDraft || {};
+    const draft = asRecord(payload.manageDraft);
+    const useBackendManage =
+      supportsBackendManagePayment(type) &&
+      isBackendManageEligible(type, latestBooking) &&
+      hasBackendManageRequest(payload);
 
     try {
       setIsProcessing(true);
 
       if (settlementMode === "wallet_credit") {
+        let backendRefs: BackendManageRefs = {};
+        if (useBackendManage) {
+          const backendSettlement = await settleBackendManagePayment({
+            booking: latestBooking,
+            payload,
+            serviceType: type as "cab" | "bus" | "hotel" | "homestay" | "cruise" | "package" | "train" | "flight" | "smart-planner",
+            section,
+            settlementMode: "wallet_credit",
+            amount: refundCredit,
+          });
+
+          if (!backendSettlement.ok) {
+            alert(backendSettlement.error || "Backend manage settlement failed. Please retry.");
+            return;
+          }
+
+          backendRefs = backendSettlement.payload || {};
+          persistBackendManageCache(
+            latestBooking.payloadStorageKey,
+            mergeBackendRefs(payload, backendRefs)
+          );
+        }
+
         const latestWallet = getWallet(activeMobile);
 
-        const nextWallet: Wallet = {
-          ...latestWallet,
-          refundableBalance:
-            Number(latestWallet.refundableBalance || 0) + refundCredit,
-        };
+        if (!useBackendManage) {
+          const nextWallet: Wallet = {
+            ...latestWallet,
+            refundableBalance:
+              Number(latestWallet.refundableBalance || 0) + refundCredit,
+          };
 
-        saveWallet(nextWallet, activeMobile);
-        setWallet(nextWallet);
+          saveWallet(nextWallet, activeMobile);
+          setWallet(nextWallet);
 
-        if (refundCredit > 0) {
-          addWalletLedgerItem(
-            {
-              type: "refund_credit",
-              title: "Refund Wallet Credited",
-              description: `Manage booking downgrade refund credited for ${type} - ${section}`,
-              amount: refundCredit,
-              bookingId,
-            },
-            activeMobile
-          );
+          if (refundCredit > 0) {
+            addWalletLedgerItem(
+              {
+                type: "refund_credit",
+                title: "Refund Wallet Credited",
+                description: `Manage booking downgrade refund credited for ${type} - ${section}`,
+                amount: refundCredit,
+                bookingId,
+              },
+              activeMobile
+            );
+          }
         }
 
         await resolver.finalize({
@@ -265,12 +334,37 @@ function ManagePaymentPageContent() {
             bookingId
           )}&type=${encodeURIComponent(type)}&section=${encodeURIComponent(
             section
-          )}&paid=0&refund=${encodeURIComponent(refundCredit)}`
+          )}&paid=0&refund=${encodeURIComponent(refundCredit)}${buildManageSuccessQuery(
+            backendRefs
+          )}`
         );
         return;
       }
 
       if (settlementMode === "save") {
+        let backendRefs: BackendManageRefs = {};
+        if (useBackendManage) {
+          const backendSettlement = await settleBackendManagePayment({
+            booking: latestBooking,
+            payload,
+            serviceType: type as "cab" | "bus" | "hotel" | "homestay" | "cruise" | "package" | "train" | "flight" | "smart-planner",
+            section,
+            settlementMode: "save",
+            amount: 0,
+          });
+
+          if (!backendSettlement.ok) {
+            alert(backendSettlement.error || "Backend manage confirmation failed. Please retry.");
+            return;
+          }
+
+          backendRefs = backendSettlement.payload || {};
+          persistBackendManageCache(
+            latestBooking.payloadStorageKey,
+            mergeBackendRefs(payload, backendRefs)
+          );
+        }
+
         await resolver.finalize({
           bookingId,
           section,
@@ -293,7 +387,7 @@ function ManagePaymentPageContent() {
             bookingId
           )}&type=${encodeURIComponent(type)}&section=${encodeURIComponent(
             section
-          )}&paid=0`
+          )}&paid=0${buildManageSuccessQuery(backendRefs)}`
         );
         return;
       }
@@ -345,30 +439,55 @@ function ManagePaymentPageContent() {
               earnedOnThisUpdate: 0 as const,
             };
 
-      const nextWallet: Wallet = {
-        promoCredit: latestWallet.promoCredit,
-        earnedCredit: latestWallet.earnedCredit,
-        refundableBalance: Math.max(
-          Number(latestWallet.refundableBalance || 0) -
-            Number(latestCalculation.refundUsed || 0),
-          0
-        ),
-      };
+      let backendRefs: BackendManageRefs = {};
+      if (useBackendManage) {
+        const backendSettlement = await settleBackendManagePayment({
+          booking: latestBooking,
+          payload,
+          serviceType: type as "cab" | "bus" | "hotel" | "homestay" | "cruise" | "package" | "train" | "flight" | "smart-planner",
+          section,
+          settlementMode: "payment",
+          amount: latestCalculation.finalPayable,
+          refundWalletRequested: latestCalculation.refundUsed,
+          paymentAttemptId: `local_manage_${bookingId}_${Date.now()}`,
+        });
 
-      saveWallet(nextWallet, activeMobile);
-      setWallet(nextWallet);
+        if (!backendSettlement.ok) {
+          alert(backendSettlement.error || "Backend manage payment failed. Please retry.");
+          return;
+        }
 
-      if (Number(latestCalculation.refundUsed || 0) > 0) {
-        addWalletLedgerItem(
-          {
-            type: "wallet_used",
-            title: "Refund Wallet Used",
-            description: `Refund wallet used for manage payment - ${type} - ${section}`,
-            amount: Number(latestCalculation.refundUsed || 0),
-            bookingId,
-          },
-          activeMobile
+        backendRefs = backendSettlement.payload || {};
+        persistBackendManageCache(
+          latestBooking.payloadStorageKey,
+          mergeBackendRefs(payload, backendRefs)
         );
+      } else {
+        const nextWallet: Wallet = {
+          promoCredit: latestWallet.promoCredit,
+          earnedCredit: latestWallet.earnedCredit,
+          refundableBalance: Math.max(
+            Number(latestWallet.refundableBalance || 0) -
+              Number(latestCalculation.refundUsed || 0),
+            0
+          ),
+        };
+
+        saveWallet(nextWallet, activeMobile);
+        setWallet(nextWallet);
+
+        if (Number(latestCalculation.refundUsed || 0) > 0) {
+          addWalletLedgerItem(
+            {
+              type: "wallet_used",
+              title: "Refund Wallet Used",
+              description: `Refund wallet used for manage payment - ${type} - ${section}`,
+              amount: Number(latestCalculation.refundUsed || 0),
+              bookingId,
+            },
+            activeMobile
+          );
+        }
       }
 
       await resolver.finalize({
@@ -393,7 +512,9 @@ function ManagePaymentPageContent() {
           bookingId
         )}&type=${encodeURIComponent(type)}&section=${encodeURIComponent(
           section
-        )}&paid=${encodeURIComponent(latestCalculation.finalPayable)}`
+        )}&paid=${encodeURIComponent(
+          latestCalculation.finalPayable
+        )}${buildManageSuccessQuery(backendRefs)}`
       );
     } catch (error) {
       console.error(error);

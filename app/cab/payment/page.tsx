@@ -298,7 +298,7 @@ export default function CabPaymentPage() {
           paymentData as unknown as Record<string, unknown>
         );
         let backendRefs: CabBackendCheckoutRefs = backendStart.refs;
-        let checkoutPaymentData = {
+        const checkoutPaymentData = {
           ...paymentData,
           ...(backendStart.payload as Partial<CabPaymentPayload>),
           ...backendStart.refs,

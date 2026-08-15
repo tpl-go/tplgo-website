@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Fare, StopDetail } from "./OneWayCardTypes";
 
 type Props = {
@@ -80,26 +80,21 @@ export default function OneWayCardMainRow({
     return [cheapestFare, selectedFareItem];
   })();
 
-  const stopRef = useRef<HTMLDivElement | null>(null);
+  const stopRef = useRef<HTMLButtonElement | null>(null);
   const [showTooltip, setShowTooltip] = useState(false);
   const [tooltipPosition, setTooltipPosition] = useState<"top" | "bottom">(
     "bottom"
   );
 
-  useEffect(() => {
-    if (!showTooltip || !stopRef.current) return;
-
+  const updateTooltipPosition = () => {
+    if (!stopRef.current) return;
     const rect = stopRef.current.getBoundingClientRect();
     const tooltipHeight = 140;
     const spaceBelow = window.innerHeight - rect.bottom;
     const spaceAbove = rect.top;
 
-    if (spaceBelow < tooltipHeight && spaceAbove > tooltipHeight) {
-      setTooltipPosition("top");
-    } else {
-      setTooltipPosition("bottom");
-    }
-  }, [showTooltip]);
+    setTooltipPosition(spaceBelow < tooltipHeight && spaceAbove > tooltipHeight ? "top" : "bottom");
+  };
 
   const renderFlightStopTooltip = () => {
     if (!stopDetails.length || !showTooltip) return null;
@@ -216,7 +211,7 @@ export default function OneWayCardMainRow({
 
             <div className="mt-3 grid grid-cols-[1fr_auto] gap-2">
               <button type="button" onClick={onToggleDetails} className="h-11 rounded-xl border border-[#dbeafe] bg-white px-3 text-[12px] font-black text-[#2563eb]">View Details</button>
-              <button type="button" onClick={() => onBookNow({ airline, code, depart, departCity, duration, stop, arrive, arriveCity, stopDetails, selectedFare })} className="h-11 rounded-xl bg-[#f97316] px-5 text-[12px] font-black text-white shadow-[0_8px_18px_rgba(249,115,22,0.22)]">BOOK NOW</button>
+              <button type="button" data-testid="flight-book-now" aria-label="Book Now" onClick={() => onBookNow({ airline, code, depart, departCity, duration, stop, arrive, arriveCity, stopDetails, selectedFare })} className="h-11 rounded-xl bg-[#f97316] px-5 text-[12px] font-black text-white shadow-[0_8px_18px_rgba(249,115,22,0.22)]">BOOK NOW</button>
             </div>
           </div>
         </div>
@@ -271,11 +266,18 @@ export default function OneWayCardMainRow({
 
             <button
               type="button"
-              ref={stopRef as any}
+              ref={stopRef}
               className="group relative shrink-0 text-[11px] font-medium text-[#6b7280] sm:text-[12px]"
-              onMouseEnter={() => setShowTooltip(true)}
+              onMouseEnter={() => {
+                updateTooltipPosition();
+                setShowTooltip(true);
+              }}
               onMouseLeave={() => setShowTooltip(false)}
-              onClick={() => stopDetails.length && setShowTooltip((prev) => !prev)}
+              onClick={() => {
+                if (!stopDetails.length) return;
+                updateTooltipPosition();
+                setShowTooltip((prev) => !prev);
+              }}
             >
               {stop}
               {renderFlightStopTooltip()}
@@ -387,6 +389,8 @@ export default function OneWayCardMainRow({
 
           <button
             type="button"
+            data-testid="flight-book-now"
+            aria-label="Book Now"
             onClick={() =>
               onBookNow({
                 airline,

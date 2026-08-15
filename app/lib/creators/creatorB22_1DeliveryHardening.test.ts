@@ -1,0 +1,16 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
+const provider=readFileSync("app/lib/creators/creatorAssetDeliveryProvider.ts","utf8");
+const validation=readFileSync("app/lib/creators/creatorTestingFixtureValidation.ts","utf8");
+const repository=readFileSync("app/lib/creators/creatorDownloadRepository.ts","utf8");
+const service=readFileSync("app/lib/creators/creatorDownloadService.ts","utf8");
+const reconciliation=readFileSync("app/lib/creators/creatorDeliveryReconciliation.ts","utf8");
+test("realistic deterministic fixture registry covers approved formats",()=>{for(const expected of ["image/png","video/mp4","application/zip","application/rdf+xml","application/pdf"])assert.match(provider,new RegExp(expected.replace("+","\\+")));assert.match(provider,/createHash\("sha256"\)/);assert.match(provider,/fixtureSelfCheck/);});
+test("MIME magic checksum and unsafe content validation are server owned",()=>{assert.match(validation,/CHECKSUM_MISMATCH/);assert.match(validation,/MIME_MISMATCH/);assert.match(validation,/UNSAFE_SIGNATURE/);assert.match(validation,/HTML disguised|<script/);assert.match(validation,/%PDF-/);assert.match(validation,/ftyp/);assert.match(validation,/PNG/);});
+test("archive policy rejects traversal executables macros and bombs",()=>{assert.match(validation,/\.\./);assert.match(validation,/exe\|dll/);assert.match(validation,/docm\|xlsm\|pptm/);assert.match(validation,/entries>32/);assert.match(validation,/expanded\/compressed>50/);});
+test("repository provider and health report fallback limits honestly",()=>{assert.match(repository,/getCreatorDownloadRepository/);assert.match(repository,/transactionalDatabase:false/);assert.match(repository,/crossProcessLocking:false/);assert.match(repository,/No approved testing PostgreSQL adapter/);});
+test("rate limit persists through repository boundary",()=>{assert.match(repository,/downloadRateLimits/);assert.match(repository,/acquireRateLimit/);assert.doesNotMatch(service,/new Map/);assert.match(service,/download_authorization/);});
+test("distributed idempotency contract detects same-key request conflicts",()=>{assert.match(service,/requestHash/);assert.match(service,/IDEMPOTENCY_CONFLICT/);assert.match(service,/existing\.requestHash!==requestHash/);});
+test("consumption remains one repository transaction and reconciliation is dry run",()=>{assert.match(service,/repository\.transaction/);assert.match(repository,/consumeAuthorizationToken/);assert.match(reconciliation,/mode:"dry_run"/);for(const code of ["DUPLICATE_EVENT","CONSUMED_WITHOUT_EVENT","NEGATIVE_ALLOWANCE","BLOCKED_ENTITLEMENT_ACTIVE_TOKEN","FIXTURE_SELF_CHECK_FAILED"])assert.match(reconciliation,new RegExp(code));});
+test("production delivery remains disabled",()=>{assert.match(provider,/productionPrivateObjectEnabled:false/);assert.doesNotMatch(provider,/cloudflare|amazonaws|r2\.cloudflarestorage/i);});

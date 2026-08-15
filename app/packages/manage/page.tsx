@@ -9,6 +9,11 @@ import {
   type BookingItem,
 } from "@/app/lib/booking/bookingStorage";
 import { getBookingPayload } from "@/app/lib/booking/bookingActionHelpers";
+import {
+  executeBackendSamePriceManage,
+  prepareBackendManageRequest,
+  persistBackendManageCache,
+} from "@/app/lib/manage/backendManageBookingIntegration";
 
 import PackageManageLayout, {
   type PackageManageTab,
@@ -375,7 +380,7 @@ function PackageManagePageContent() {
       Number(fare?.finalPayableAmount || fare?.grandTotal || booking?.amount || 0),
   };
 
-  const handleSaveTravellers = () => {
+  const handleSaveTravellers = async () => {
     if (!booking?.payloadStorageKey || !payload) return;
 
     const nextTravellers = travellers.map((item, index) => ({
@@ -407,12 +412,34 @@ function PackageManagePageContent() {
       },
     };
 
-    savePayload(booking.payloadStorageKey, nextPayload);
-    setPayload(nextPayload);
+    const backendResult = await executeBackendSamePriceManage({
+      booking,
+      payload,
+      serviceType: "package",
+      section: "traveller-details",
+      changeType: "traveller_update",
+      settlementMode: "save",
+      currentAmount: fareSummary.totalAmount,
+      requestedAmount: fareSummary.totalAmount,
+      requestedChange: {
+        traveller: nextPayload.traveller,
+        leadTraveller: nextPayload.leadTraveller,
+      },
+      beforeSnapshot: payload,
+      afterSnapshot: nextPayload,
+    });
+
+    const payloadToSave =
+      backendResult.ok && backendResult.payload
+        ? { ...nextPayload, ...backendResult.payload }
+        : nextPayload;
+
+    savePayload(booking.payloadStorageKey, payloadToSave);
+    setPayload(payloadToSave);
     alert("Traveller details updated successfully.");
   };
 
-  const handleSaveContact = () => {
+  const handleSaveContact = async () => {
     if (!booking?.payloadStorageKey || !payload) return;
 
     const nextPayload = {
@@ -434,12 +461,34 @@ function PackageManagePageContent() {
       },
     };
 
-    savePayload(booking.payloadStorageKey, nextPayload);
-    setPayload(nextPayload);
+    const backendResult = await executeBackendSamePriceManage({
+      booking,
+      payload,
+      serviceType: "package",
+      section: "contact-details",
+      changeType: "contact_update",
+      settlementMode: "save",
+      currentAmount: fareSummary.totalAmount,
+      requestedAmount: fareSummary.totalAmount,
+      requestedChange: {
+        traveller: nextPayload.traveller,
+        leadTraveller: nextPayload.leadTraveller,
+      },
+      beforeSnapshot: payload,
+      afterSnapshot: nextPayload,
+    });
+
+    const payloadToSave =
+      backendResult.ok && backendResult.payload
+        ? { ...nextPayload, ...backendResult.payload }
+        : nextPayload;
+
+    savePayload(booking.payloadStorageKey, payloadToSave);
+    setPayload(payloadToSave);
     alert("Contact details updated successfully.");
   };
 
-  const handleSaveSpecialRequest = () => {
+  const handleSaveSpecialRequest = async () => {
     if (!booking?.payloadStorageKey || !payload) return;
 
     const nextPayload = {
@@ -451,8 +500,30 @@ function PackageManagePageContent() {
       },
     };
 
-    savePayload(booking.payloadStorageKey, nextPayload);
-    setPayload(nextPayload);
+    const backendResult = await executeBackendSamePriceManage({
+      booking,
+      payload,
+      serviceType: "package",
+      section: "special-request",
+      changeType: "add_on_update",
+      settlementMode: "save",
+      currentAmount: fareSummary.totalAmount,
+      requestedAmount: fareSummary.totalAmount,
+      requestedChange: {
+        specialRequest,
+        summary: nextPayload.summary,
+      },
+      beforeSnapshot: payload,
+      afterSnapshot: nextPayload,
+    });
+
+    const payloadToSave =
+      backendResult.ok && backendResult.payload
+        ? { ...nextPayload, ...backendResult.payload }
+        : nextPayload;
+
+    savePayload(booking.payloadStorageKey, payloadToSave);
+    setPayload(payloadToSave);
     alert("Special request updated successfully.");
   };
 
@@ -470,7 +541,7 @@ function PackageManagePageContent() {
     });
   };
 
-  const handleAddOnContinue = () => {
+  const handleAddOnContinue = async () => {
     if (!booking?.payloadStorageKey || !payload) return;
 
     const nextPayload = {
@@ -483,7 +554,39 @@ function PackageManagePageContent() {
       },
     };
 
-    savePayload(booking.payloadStorageKey, nextPayload);
+    const backendResult = await prepareBackendManageRequest({
+      booking,
+      payload: nextPayload,
+      serviceType: "package",
+      section: "package-addons",
+      changeType:
+        addOnQuote.settlementMode === "payment"
+          ? "upgrade"
+          : addOnQuote.settlementMode === "wallet_credit"
+          ? "downgrade"
+          : "same_price",
+      settlementMode: addOnQuote.settlementMode,
+      currentAmount: addOnQuote.oldTotal,
+      requestedAmount: addOnQuote.newTotal,
+      requestedChange: {
+        selectedAddOns: activeAddOns,
+        addOnQuote,
+      },
+      beforeSnapshot: payload,
+      afterSnapshot: nextPayload,
+    });
+
+    if (!backendResult.ok && !backendResult.fallbackAllowed) {
+      alert(backendResult.error || "Backend manage booking request failed.");
+      return;
+    }
+
+    const payloadToSave =
+      backendResult.ok && backendResult.payload
+        ? { ...nextPayload, ...backendResult.payload }
+        : nextPayload;
+
+    persistBackendManageCache(booking.payloadStorageKey, payloadToSave);
 
     window.location.href = `/manage/payment?bookingId=${encodeURIComponent(
       booking.id

@@ -21,9 +21,9 @@ export async function POST(req: Request) {
       );
     }
 
-    if (otp !== "11111") {
+    if (otp !== "111111") {
       return NextResponse.json(
-        { message: "Invalid OTP. Use 11111 for testing." },
+        { message: "Invalid OTP. Use 111111 for testing." },
         { status: 400 }
       );
     }

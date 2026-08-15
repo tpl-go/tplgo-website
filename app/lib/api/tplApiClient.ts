@@ -78,8 +78,8 @@ export type StoredTplAuthSession = {
 };
 
 const PRODUCTION_API_BASE_URL = "https://api.tplgo.com";
-const API_BASE_URL = (process.env.NEXT_PUBLIC_TPL_API_BASE_URL?.replace(/\/+$/, "") ||
-  (process.env.NODE_ENV === "production" ? PRODUCTION_API_BASE_URL : ""));
+const SMOKE_PROXY_API_BASE_URL = "/api/backend";
+const API_BASE_URL = resolveTplApiBaseUrl();
 const AUTH_STORAGE_KEY = "tpl_auth_session_v1";
 
 export function getTplApiBaseUrl(): string {
@@ -166,6 +166,28 @@ export async function tplApiRequest<TData>(
 
 function normalizePath(path: string): string {
   return path.startsWith("/") ? path : `/${path}`;
+}
+
+function resolveTplApiBaseUrl(): string {
+  if (isSmokeApiProxyEnabled()) {
+    return SMOKE_PROXY_API_BASE_URL;
+  }
+
+  return (
+    process.env.NEXT_PUBLIC_TPL_API_BASE_URL?.replace(/\/+$/, "") ||
+    (process.env.NODE_ENV === "production" ? PRODUCTION_API_BASE_URL : "")
+  );
+}
+
+function isSmokeApiProxyEnabled(): boolean {
+  if (process.env.NEXT_PUBLIC_TPL_SMOKE_API_PROXY_ENABLED !== "true") {
+    return false;
+  }
+
+  return (
+    process.env.NODE_ENV !== "production" ||
+    process.env.NEXT_PUBLIC_TPL_ALLOW_PRODUCTION_SMOKE_PROXY === "true"
+  );
 }
 
 async function readJsonBody(response: Response): Promise<Record<string, unknown> | null> {

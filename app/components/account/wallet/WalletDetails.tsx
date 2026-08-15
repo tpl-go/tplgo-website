@@ -10,12 +10,14 @@ import RefundWalletSection from "@/app/components/account/wallet/sections/Refund
 import WalletActivitySection from "@/app/components/account/wallet/sections/WalletActivitySection";
 import WalletStatementSection from "@/app/components/account/wallet/sections/WalletStatementSection";
 import {
-  getWallet,
-  getWalletLedger,
   type Wallet,
   type WalletLedgerItem,
   WALLET_UPDATED_EVENT,
 } from "@/app/lib/wallet/walletStorage";
+import {
+  getBackendFirstWallet,
+  getBackendFirstWalletLedger,
+} from "@/app/lib/api/walletApi";
 
 type WalletDetailsProps = {
   activeSection: WalletSectionKey;
@@ -34,7 +36,9 @@ export default function WalletDetails({
   const [ledger, setLedger] = useState<WalletLedgerItem[]>([]);
 
   useEffect(() => {
-    const loadWalletData = () => {
+    let cancelled = false;
+
+    const loadWalletData = async () => {
       let activeMobile = user?.mobile || "";
 
       try {
@@ -53,16 +57,23 @@ export default function WalletDetails({
         return;
       }
 
-      setWallet(getWallet(activeMobile));
-      setLedger(getWalletLedger(activeMobile));
+      const [walletResult, ledgerResult] = await Promise.all([
+        getBackendFirstWallet(activeMobile),
+        getBackendFirstWalletLedger(activeMobile),
+      ]);
+
+      if (cancelled) return;
+      setWallet(walletResult.wallet);
+      setLedger(ledgerResult.ledger);
     };
 
-    loadWalletData();
+    void loadWalletData();
     window.addEventListener(WALLET_UPDATED_EVENT, loadWalletData);
     window.addEventListener(AUTH_UPDATED_EVENT, loadWalletData);
     window.addEventListener("storage", loadWalletData);
 
     return () => {
+      cancelled = true;
       window.removeEventListener(WALLET_UPDATED_EVENT, loadWalletData);
       window.removeEventListener(AUTH_UPDATED_EVENT, loadWalletData);
       window.removeEventListener("storage", loadWalletData);

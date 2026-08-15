@@ -107,7 +107,7 @@ export default function FlightsPageClient({
   const estimatedBookingValue = isInternational ? 42000 : 12000;
 
   return (
-    <main className="min-h-screen w-full overflow-x-hidden bg-[#eef3f8]">
+    <main className="tpl-flight-shell min-h-screen w-full overflow-x-hidden bg-[#eef3f8]">
       <div
         className={`w-full border-b border-[#e5e7eb] bg-white ${
           draftState.tripType === "multicity" && isMultiCityExpanded
@@ -128,7 +128,7 @@ export default function FlightsPageClient({
 
       <div className="border-b border-[#dbeafe] bg-white">
         <div className="mx-auto w-full max-w-7xl px-3 py-3 sm:px-4">
-          <div className="w-full overflow-x-auto overflow-y-hidden [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="tpl-flight-scroll-row">
             <SmartResultsOfferStrip
               service="flight"
               destination={toCity}
@@ -139,7 +139,7 @@ export default function FlightsPageClient({
         </div>
       </div>
 
-      <div className="mx-auto w-full max-w-8xl px-3 py-4 sm:px-4 sm:py-6">
+      <div className="mx-auto w-full max-w-[1440px] px-3 py-4 sm:px-4 sm:py-6">
         <div className="w-full min-w-0">
           {tripType === "oneway" ? (
             <OneWayResultsLayout

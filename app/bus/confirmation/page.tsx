@@ -24,6 +24,7 @@ import {
   saveWallet,
   addWalletLedgerItem,
 } from "@/app/lib/wallet/walletStorage";
+import { confirmBusBackendCheckout } from "@/app/lib/api/busCheckoutIntegration";
 
 type ConfirmationPayload = any;
 
@@ -76,6 +77,15 @@ function creditEarnedForBusBooking(params: {
   localStorage.setItem(guardKey, "true");
 }
 
+function persistBusConfirmationSession(payload: ConfirmationPayload) {
+  if (typeof window === "undefined") return;
+
+  const value = JSON.stringify(payload);
+  sessionStorage.setItem("busConfirmationData", value);
+  sessionStorage.setItem("busPaymentSuccessData", value);
+  sessionStorage.setItem("tplBusPaymentConfirmedData", value);
+}
+
 export default function BusConfirmationPage() {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
@@ -86,6 +96,9 @@ export default function BusConfirmationPage() {
   const [earnedCreditAmount, setEarnedCreditAmount] = useState(0);
 
   useEffect(() => {
+    let cancelled = false;
+
+    const loadConfirmation = async () => {
     const raw =
       typeof window !== "undefined"
         ? sessionStorage.getItem("busConfirmationData") ||
@@ -96,7 +109,30 @@ export default function BusConfirmationPage() {
     if (!raw) return;
 
     try {
-      const parsed = JSON.parse(raw);
+      let parsed = JSON.parse(raw);
+
+      if (parsed?.backendCheckoutId) {
+        const backendConfirm = await confirmBusBackendCheckout({
+          ...parsed,
+          bookingId: parsed?.bookingId || "",
+          paymentId: parsed?.paymentId || parsed?.transactionId || "",
+          transactionId: parsed?.transactionId || parsed?.paymentId || "",
+          paymentMethod:
+            parsed?.paymentMethod ||
+            parsed?.paymentData?.method ||
+            "Online Payment",
+        });
+
+        if (backendConfirm.attempted && backendConfirm.refs) {
+          parsed = {
+            ...parsed,
+            ...backendConfirm.refs,
+          };
+          persistBusConfirmationSession(parsed);
+        }
+      }
+
+      if (cancelled) return;
 
       const bookingPayload = parsed?.bookingPayload || {};
       const search = bookingPayload?.search || {};
@@ -319,6 +355,14 @@ const payloadStorageKey = `tpl_booking_payload_bus_${safePaidAt}_${mobile}_${lea
     } catch (e) {
       console.error("Bus confirmation parse error:", e);
     }
+
+    };
+
+    void loadConfirmation();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const bookingId = useMemo(() => {

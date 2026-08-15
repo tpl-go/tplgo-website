@@ -13,10 +13,9 @@ import PackageConfirmationFareCard from "@/app/components/confirmation/packages/
 
 import {
   BOOKING_UPDATED_EVENT,
-  getAllBookings,
   type BookingItem,
 } from "@/app/lib/booking/bookingStorage";
-import { getBookingPayload } from "@/app/lib/booking/bookingActionHelpers";
+import { getBackendFirstBookingPayload } from "@/app/lib/api/bookingApi";
 
 type ConfirmationPayload = any;
 
@@ -37,33 +36,27 @@ export default function PackageBookingDetailPage() {
   const [data, setData] = useState<ConfirmationPayload | null>(null);
 
   useEffect(() => {
-    const loadBookingDetail = () => {
-      const all = getAllBookings();
+    let cancelled = false;
 
-      const found =
-        all.find((item) => item.id === bookingId && item.type === "package") ||
-        null;
+    const loadBookingDetail = async () => {
+      const result = await getBackendFirstBookingPayload<ConfirmationPayload>(
+        bookingId,
+        "package"
+      );
+      if (cancelled) return;
 
-      setBooking(found);
-
-      if (found?.payloadStorageKey) {
-        const savedPayload = getBookingPayload<ConfirmationPayload>(
-          found.payloadStorageKey
-        );
-
-        setData(savedPayload ? { ...savedPayload } : null);
-      } else {
-        setData(null);
-      }
+      setBooking(result.booking);
+      setData(result.payload);
     };
 
-    loadBookingDetail();
+    void loadBookingDetail();
 
     window.addEventListener(BOOKING_UPDATED_EVENT, loadBookingDetail);
     window.addEventListener("storage", loadBookingDetail);
     window.addEventListener("focus", loadBookingDetail);
 
     return () => {
+      cancelled = true;
       window.removeEventListener(BOOKING_UPDATED_EVENT, loadBookingDetail);
       window.removeEventListener("storage", loadBookingDetail);
       window.removeEventListener("focus", loadBookingDetail);

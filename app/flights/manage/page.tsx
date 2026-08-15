@@ -47,6 +47,13 @@ import {
   prepareBackendManageRequest,
   persistBackendManageCache,
 } from "@/app/lib/manage/backendManageBookingIntegration";
+import {
+  isGuestBookingClaimSmokeEnabled,
+  persistGuestClaimAuthSession,
+  startGuestBookingClaim,
+  verifyGuestBookingClaim,
+} from "@/app/lib/api/guestBookingClaimApi";
+import { useAuth } from "@/app/hooks/useAuth";
 
 type SidebarKey =
   | "summary"
@@ -168,6 +175,11 @@ function findBaggageByTravellerOrIndex(
 function dispatchBookingUpdate() {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new Event(BOOKING_UPDATED_EVENT));
+}
+
+function hasBackendBookingReference(booking: BookingItem | null | undefined): boolean {
+  if (!booking) return false;
+  return Boolean(booking.backendBookingRef || booking.backendBookingId);
 }
 
 function savePayloadToStorage(
@@ -393,6 +405,7 @@ function buildManageStateFromResolvedFlightSource(
 function FlightManagePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { isAuthenticated, openLoginModal } = useAuth();
 
   const bookingId = searchParams.get("bookingId") || "";
 
@@ -400,6 +413,7 @@ function FlightManagePageContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [bookingItem, setBookingItem] = useState<BookingItem | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [isVerifyingManage, setIsVerifyingManage] = useState(false);
   const [manageSummary, setManageSummary] =
     useState<FlightManageBookingRecord>(emptyBookingSummary);
 
@@ -841,6 +855,20 @@ function FlightManagePageContent() {
   const handleCancelBooking = async () => {
     if (!bookingItem || isCancelling) return;
 
+    const requiresVerification =
+      hasBackendBookingReference(bookingItem) && !isAuthenticated;
+
+    if (requiresVerification) {
+      openLoginModal({
+        accountType: "personal",
+        intent: "booking",
+      });
+      alert(
+        "Please verify or login with the booking contact before cancelling this backend booking."
+      );
+      return;
+    }
+
     const confirmed = window.confirm(
       "Cancel this flight booking? Refund will be tracked against the original payment method."
     );
@@ -866,6 +894,13 @@ function FlightManagePageContent() {
       }
 
       if (!backendResult.ok) {
+        if (hasBackendBookingReference(bookingItem)) {
+          alert(
+            "Backend cancellation was not verified. The booking has not been cancelled locally."
+          );
+          return;
+        }
+
         const cancelled = cancelBooking(bookingItem.id, reason);
         if (cancelled) {
           setBookingItem(cancelled);
@@ -966,6 +1001,48 @@ function FlightManagePageContent() {
       </section>
     );
   }
+
+  const requiresBackendManageVerification =
+    hasBackendBookingReference(bookingItem) && !isAuthenticated;
+  const handleVerifyBookingForManage = async () => {
+    const backendBookingId =
+      bookingItem?.backendBookingRef || bookingItem?.backendBookingId || manageSummary.bookingId;
+    const mobile = contact.phone || bookingItem?.mobile || "";
+
+    if (!bookingItem || !backendBookingId || !mobile || !isGuestBookingClaimSmokeEnabled()) {
+      openLoginModal({
+        accountType: "personal",
+        intent: "booking",
+      });
+      return;
+    }
+
+    setIsVerifyingManage(true);
+    try {
+      const contactPayload = {
+        mobile,
+        ...(contact.email ? { email: contact.email } : {}),
+        accountType: "personal" as const,
+      };
+      const start = await startGuestBookingClaim(backendBookingId, contactPayload);
+      if (!start.ok) throw new Error(start.error.message);
+
+      const verified = await verifyGuestBookingClaim(backendBookingId, contactPayload);
+      if (!verified.ok || !persistGuestClaimAuthSession(verified.data)) {
+        throw new Error(verified.ok ? "Booking verification failed." : verified.error.message);
+      }
+
+      alert("Booking verified. You can continue manage booking actions.");
+    } catch (error) {
+      openLoginModal({
+        accountType: "personal",
+        intent: "booking",
+      });
+      alert(error instanceof Error ? error.message : "Booking verification failed.");
+    } finally {
+      setIsVerifyingManage(false);
+    }
+  };
 
   return (
     <ManageBookingLayout
@@ -1079,13 +1156,18 @@ function FlightManagePageContent() {
             getRefundEstimate(bookingItem).cancellationCharge
           }
           onContinue={handleCancelBooking}
-          isSubmitting={isCancelling}
+          isSubmitting={isCancelling || isVerifyingManage}
           cancellationStatus={
             bookingItem.cancelMeta?.backendCancellationStatus || bookingItem.bookingStatus
           }
           refundStatus={bookingItem.refund?.backendRefundStatus || bookingItem.refund?.status}
           refundMethod={bookingItem.refund?.method || "original_payment"}
-          disableContinue={bookingItem.status === "cancelled"}
+          disableContinue={
+            bookingItem.status === "cancelled" ||
+            requiresBackendManageVerification
+          }
+          requiresVerification={requiresBackendManageVerification}
+          onVerifyBooking={handleVerifyBookingForManage}
         />
       )}
     </ManageBookingLayout>

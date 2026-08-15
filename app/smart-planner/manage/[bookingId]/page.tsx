@@ -19,7 +19,14 @@ import {
   resolveSmartPlannerBooking,
   type SmartPlannerBookingResolveResult,
 } from "@/app/lib/ecosystem/planner/smartPlannerBookingResolver";
-import { getSmartPlannerPayloadCompleteness } from "@/app/lib/ecosystem/planner/booking/smartPlannerBookingPayload";
+import {
+  getSmartPlannerPayloadCompleteness,
+  type SmartPlannerBookingPayload,
+} from "@/app/lib/ecosystem/planner/booking/smartPlannerBookingPayload";
+import {
+  executeBackendSamePriceManage,
+  mergeBackendRefs,
+} from "@/app/lib/manage/backendManageBookingIntegration";
 
 type RecordValue = Record<string, unknown>;
 type PlannerManageTab =
@@ -555,7 +562,7 @@ export default function SmartPlannerManageBookingPage() {
     if (!Array.isArray(payload.selectedBasketItems)) return;
     console.info(
       "[SmartPlanner] manage payload completeness",
-      getSmartPlannerPayloadCompleteness(payload as any)
+      getSmartPlannerPayloadCompleteness(payload as SmartPlannerBookingPayload)
     );
   }, [payload]);
 
@@ -601,7 +608,13 @@ export default function SmartPlannerManageBookingPage() {
   const travelDate = normalized.travelDate || booking?.travelDate || "";
   const travellerLabel = booking?.travellers || normalized.travellers.label || `${travellers.length || 1} Traveller`;
 
-  const saveManagedPayload = (params: { notes?: string; section: string; travellers?: TravellerForm[] }) => {
+  const saveManagedPayload = async (params: {
+    changeType: string;
+    notes?: string;
+    requestedChange: Record<string, unknown>;
+    section: string;
+    travellers?: TravellerForm[];
+  }) => {
     if (!booking || !payload) return false;
     const nextPayload = buildManagedPayload({
       booking,
@@ -611,26 +624,63 @@ export default function SmartPlannerManageBookingPage() {
       section: params.section,
       travellers: params.travellers,
     });
-    const saved = savePlannerManagePayload(booking, nextPayload);
+    const backendResult = await executeBackendSamePriceManage({
+      booking,
+      payload,
+      serviceType: "smart-planner",
+      section: params.section,
+      changeType: params.changeType,
+      settlementMode: "save",
+      currentAmount: totalAmount,
+      requestedAmount: totalAmount,
+      requestedChange: params.requestedChange,
+      beforeSnapshot: payload,
+      afterSnapshot: nextPayload,
+    });
+
+    if (!backendResult.ok && !backendResult.fallbackAllowed) {
+      alert(backendResult.error || "Backend manage booking request failed.");
+      return false;
+    }
+
+    const payloadToSave =
+      backendResult.ok && backendResult.payload
+        ? mergeBackendRefs(nextPayload, backendResult.payload)
+        : nextPayload;
+    const saved = savePlannerManagePayload(booking, payloadToSave);
     if (saved) {
-      setPayload(nextPayload);
+      setPayload(payloadToSave);
       return true;
     }
     return false;
   };
 
-  const handleSaveTravellers = () => {
-    const saved = saveManagedPayload({ section: "traveller-details", travellers });
+  const handleSaveTravellers = async () => {
+    const saved = await saveManagedPayload({
+      changeType: "traveller_update",
+      requestedChange: { travellers },
+      section: "traveller-details",
+      travellers,
+    });
     alert(saved ? "Traveller details updated successfully." : "Unable to save traveller details.");
   };
 
-  const handleSaveContact = () => {
-    const saved = saveManagedPayload({ section: "contact-details" });
+  const handleSaveContact = async () => {
+    const saved = await saveManagedPayload({
+      changeType: "contact_update",
+      requestedChange: { contactDetails: contact },
+      section: "contact-details",
+    });
     alert(saved ? "Contact details updated successfully." : "Unable to save contact details.");
   };
 
-  const handleSaveNotes = () => {
-    const saved = saveManagedPayload({ notes, section: "notes" });
+  const handleSaveNotes = async () => {
+    const saved = await saveManagedPayload({
+      changeType: "planner_change",
+      notes,
+      requestedChange: { notes },
+      section: "notes",
+    });
     alert(saved ? "Trip notes updated successfully." : "Unable to save trip notes.");
   };
 
@@ -824,7 +874,7 @@ export default function SmartPlannerManageBookingPage() {
                       </div>
                     ))}
                   </div>
-                  <PrimaryButton label="Save Traveller Details" onClick={handleSaveTravellers} />
+                  <PrimaryButton label="Save Traveller Details" onClick={() => { void handleSaveTravellers(); }} />
                 </div>
               ) : null}
 
@@ -836,7 +886,7 @@ export default function SmartPlannerManageBookingPage() {
                     <TextInput label="Mobile" value={contact.mobile} onChange={(value) => setContact((prev) => ({ ...prev, mobile: value }))} />
                     <TextInput label="Email" value={contact.email} onChange={(value) => setContact((prev) => ({ ...prev, email: value }))} />
                   </div>
-                  <PrimaryButton label="Save Contact Details" onClick={handleSaveContact} />
+                  <PrimaryButton label="Save Contact Details" onClick={() => { void handleSaveContact(); }} />
                 </div>
               ) : null}
 
@@ -870,7 +920,7 @@ export default function SmartPlannerManageBookingPage() {
                       className="mt-2 min-h-[160px] w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm font-semibold text-[#111827] outline-none focus:border-[#ff6b00]"
                     />
                   </label>
-                  <PrimaryButton label="Save Trip Notes" onClick={handleSaveNotes} />
+                  <PrimaryButton label="Save Trip Notes" onClick={() => { void handleSaveNotes(); }} />
                 </div>
               ) : null}
 

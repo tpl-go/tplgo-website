@@ -24,6 +24,7 @@ import {
   saveWallet,
   addWalletLedgerItem,
 } from "@/app/lib/wallet/walletStorage";
+import { confirmHotelBackendCheckout } from "@/app/lib/api/hotelCheckoutIntegration";
 
 type ConfirmationPayload = any;
 
@@ -116,6 +117,14 @@ function creditEarnedForHotelBooking(params: {
   localStorage.setItem(guardKey, "true");
 }
 
+function persistHotelConfirmationSession(payload: ConfirmationPayload) {
+  if (typeof window === "undefined") return;
+
+  const value = JSON.stringify(payload);
+  sessionStorage.setItem("hotelConfirmationData", value);
+  sessionStorage.setItem("hotelPaymentSuccessData", value);
+}
+
 export default function HotelConfirmationPage() {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
@@ -126,6 +135,9 @@ export default function HotelConfirmationPage() {
   const [earnedCreditAmount, setEarnedCreditAmount] = useState(0);
 
   useEffect(() => {
+    let cancelled = false;
+
+    const loadConfirmation = async () => {
     const raw =
       typeof window !== "undefined"
         ? sessionStorage.getItem("hotelConfirmationData") ||
@@ -135,7 +147,30 @@ export default function HotelConfirmationPage() {
     if (!raw) return;
 
     try {
-      const parsed = JSON.parse(raw);
+      let parsed = JSON.parse(raw);
+
+      if (parsed?.backendCheckoutId) {
+        const backendConfirm = await confirmHotelBackendCheckout({
+          ...parsed,
+          bookingId: parsed?.bookingId || "",
+          paymentId: parsed?.paymentId || parsed?.transactionId || "",
+          transactionId: parsed?.transactionId || parsed?.paymentId || "",
+          paymentMethod:
+            parsed?.paymentMethod ||
+            parsed?.paymentData?.method ||
+            "Online Payment",
+        });
+
+        if (backendConfirm.attempted && backendConfirm.refs) {
+          parsed = {
+            ...parsed,
+            ...backendConfirm.refs,
+          };
+          persistHotelConfirmationSession(parsed);
+        }
+      }
+
+      if (cancelled) return;
 
       const leadGuest = parsed?.leadGuest || {};
       const searchMeta = parsed?.searchMeta || {};
@@ -337,6 +372,14 @@ const payloadStorageKey = `tpl_booking_payload_hotel_${safePaidAt}_${mobile}_${l
     } catch (e) {
       console.error("Hotel confirmation parse error:", e);
     }
+
+    };
+
+    loadConfirmation();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const bookingId = useMemo(() => {

@@ -28,7 +28,6 @@ import {
   type Wallet,
 } from "@/app/lib/wallet/walletStorage";
 import {
-  confirmPackageBackendCheckout,
   startPackageBackendCheckout,
   type PackageBackendCheckoutRefs,
 } from "@/app/lib/api/packageCheckoutIntegration";
@@ -502,7 +501,7 @@ const walletCalc = {
         ((backendCheckoutPayload?.fare as Record<string, unknown> | undefined)
           ?.walletBreakdown as Record<string, unknown> | undefined);
 
-      let confirmationPayload = {
+      const confirmationPayload = {
           ...(backendCheckoutPayload || {}),
           ...backendRefs,
           id:
@@ -571,27 +570,6 @@ const walletCalc = {
           leadTraveller,
           earnedCreditAmount: earnedOnThisBooking,
         };
-
-      if (backendRefs.backendCheckoutId) {
-        try {
-          const backendConfirm = await confirmPackageBackendCheckout(
-            confirmationPayload as Record<string, unknown>
-          );
-          backendRefs = {
-            ...backendRefs,
-            ...backendConfirm.refs,
-          };
-          confirmationPayload = {
-            ...confirmationPayload,
-            ...backendConfirm.payload,
-            ...backendRefs,
-          };
-        } catch {
-          handlePaymentFailure();
-          setPaymentActionState("failure");
-          return;
-        }
-      }
 
       if (activeUser?.mobile && walletUsedTotal > 0) {
         const latestWallet = getWallet(activeUser.mobile);

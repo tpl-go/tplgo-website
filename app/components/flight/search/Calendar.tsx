@@ -111,16 +111,16 @@ export default function Calendar({
   return (
     <div
       className={`grid w-full grid-cols-1 ${
-        !multiCityMode ? "gap-3 md:flex md:w-auto md:items-center" : ""
-      } ${isResults ? "md:gap-2 md:shrink-0" : "md:gap-3 md:shrink-0"}`}
+        !multiCityMode ? isResults ? "gap-2 xl:flex xl:w-auto xl:items-center" : "gap-3 md:flex md:w-auto md:items-center" : ""
+      } ${isResults ? "xl:gap-2 xl:shrink-0" : "md:gap-3 md:shrink-0"}`}
     >
       {/* DEPARTURE */}
-      <div ref={depRef} className="relative w-full md:w-auto">
+      <div ref={depRef} className={`relative w-full ${isResults ? "xl:w-auto" : "md:w-auto"}`}>
         <div
           onClick={() => setOpenDep(true)}
           className={`flex cursor-pointer flex-col justify-center ${
             isResults
-              ? "h-[64px] w-full md:w-[140px] rounded-md border border-[#1f2937] bg-white px-3"
+              ? "h-[64px] w-full xl:w-[140px] rounded-md border border-[#1f2937] bg-white px-3"
               : "h-[76px] md:h-[86px] w-full md:w-[180px] rounded-2xl border border-slate-700 bg-white/60 px-4 py-3"
           }`}
         >
@@ -182,7 +182,7 @@ export default function Calendar({
 
       {/* RETURN - hide in multicity */}
       {!multiCityMode && (
-        <div ref={retRef} className="relative w-full md:w-auto">
+        <div ref={retRef} className={`relative w-full ${isResults ? "xl:w-auto" : "md:w-auto"}`}>
           <div
             onClick={() => {
               if (state.tripType === "roundtrip") {
@@ -191,7 +191,7 @@ export default function Calendar({
             }}
             className={`flex flex-col justify-center ${
               isResults
-                ? "h-[64px] w-full md:w-[150px] rounded-md border border-black px-4"
+                ? "h-[64px] w-full xl:w-[150px] rounded-md border border-black px-4"
                 : "h-[76px] md:h-[86px] w-full md:w-[180px] rounded-2xl border border-slate-700 px-4 py-3"
             } ${
               state.tripType === "oneway"

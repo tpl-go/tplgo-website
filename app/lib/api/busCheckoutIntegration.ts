@@ -39,9 +39,9 @@ export async function startBusBackendCheckout<TPayload extends Record<string, un
     return { payload: rawPayload, refs: {}, attempted: false, ok: false };
   }
 
+  const hash = hashPayload(stripVolatileBackendFields(rawPayload));
   const guarded = await prepareBackendCheckoutWalletPayload("bus", rawPayload);
   const guardedPayload = guarded.payload as TPayload;
-  const hash = hashPayload(guardedPayload);
   const idempotencyKey = readOrCreateSessionKey(
     `${BUS_START_KEY_PREFIX}${hash}`,
     `bus:start:${hash}`
@@ -117,7 +117,7 @@ export async function confirmBusBackendCheckout<TPayload extends Record<string, 
     {
       gatewayPaymentId: readOwnString(confirmationPayload, "paymentId") || paymentAttemptId,
       metadata: {
-        source: "bus_frontend_phase_15",
+        source: "bus_frontend_phase_3_5",
         paymentMethod: readOwnString(confirmationPayload, "paymentMethod"),
         paymentId: readOwnString(confirmationPayload, "paymentId"),
       },
@@ -211,6 +211,32 @@ function hashPayload(value: unknown): string {
   }
 
   return (hash >>> 0).toString(36);
+}
+
+function stripVolatileBackendFields(value: unknown): unknown {
+  if (value === null || typeof value !== "object") return value;
+
+  if (Array.isArray(value)) {
+    return value.map(stripVolatileBackendFields);
+  }
+
+  const record = value as Record<string, unknown>;
+  const volatileKeys = new Set([
+    "timerLeft",
+    "timestamp",
+    "walletSyncedAt",
+    "backendRequestId",
+    "backendCheckoutStatus",
+    "backendCheckoutId",
+    "backendBookingId",
+    "backendPaymentId",
+  ]);
+
+  return Object.fromEntries(
+    Object.entries(record)
+      .filter(([key]) => !volatileKeys.has(key))
+      .map(([key, current]) => [key, stripVolatileBackendFields(current)])
+  );
 }
 
 function stableStringify(value: unknown): string {

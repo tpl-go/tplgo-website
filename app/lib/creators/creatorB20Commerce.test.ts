@@ -1,0 +1,22 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+
+const service=readFileSync("app/lib/creators/creatorCommerceService.ts","utf8");
+const types=readFileSync("app/lib/creators/creatorCommerceTypes.ts","utf8");
+const flow=readFileSync("app/components/creators/catalog/commerce/CreatorCheckoutFlow.tsx","utf8");
+const flags=readFileSync("app/lib/creators/creatorCommerceFlags.ts","utf8");
+const paymentRoute=readFileSync("app/api/v1/creator-commerce/payment/confirm/route.ts","utf8");
+
+test("Creator commerce freezes versioned non-booking product contracts",()=>{assert.match(types,/creator-commerce-checkout\.v1/);assert.match(types,/creator-commerce-order\.v1/);for(const value of ["creator_plan","creator_asset_standard_license","creator_asset_extended_license","creator_enterprise_inquiry"])assert.match(types,new RegExp(value));assert.doesNotMatch(types,/productType[^\n]+flight|productType[^\n]+hotel|productType[^\n]+booking/);});
+test("plan and license prices are resolved from authoritative Creator configuration",()=>{assert.match(service,/creatorPlans\.find/);assert.match(service,/getCreatorAsset/);assert.match(service,/licenseOptions\.find/);assert.match(service,/INVALID_PLAN/);assert.match(service,/INVALID_ASSET/);assert.match(service,/UNAVAILABLE_LICENSE/);});
+test("totals are deterministic minor-unit calculations",()=>{assert.match(service,/Math\.round\(monthly\*/);assert.match(service,/Math\.round\(option\.price\*100\)/);assert.match(service,/Math\.round\(baseAmount\*0\.18\)/);assert.match(service,/totalAmount=baseAmount\+taxAmount/);});
+test("travel wallet credits and OTA offers are excluded",()=>{assert.match(service,/walletCreditsApplied:false/);assert.doesNotMatch(service,/Promo Credit|Earned Credit|Refund Wallet|offerCode|bookingType/);});
+test("idempotency is stable and testing store deduplicates checkout",()=>{assert.match(service,/creator:commerce:v1/);const store=readFileSync("app/lib/creators/creatorCommerceTestingStore.ts","utf8");assert.match(store,/find\(item=>item\.idempotencyKey===checkout\.idempotencyKey\)/);assert.match(store,/if\(existing\)return existing/);});
+test("payment failure remains retryable without a real gateway",()=>{assert.match(flow,/Simulate Failure/);assert.match(flow,/retry with the same checkout/);assert.doesNotMatch(paymentRoute,/razorpay|stripe|cashfree|capture|authorize/);});
+test("confirmation cannot activate entitlement or download",()=>{assert.match(service,/entitlementStatus:"pending_testing"/);assert.match(service,/licenseCertificateStatus:"not_generated"/);assert.match(service,/entitlementActivationAllowed:false/);assert.match(service,/downloadAllowed:false/);assert.match(flow,/Entitlement.*Pending testing/s);});
+test("enterprise inquiry does not enter payment",()=>{assert.match(service,/creator_enterprise_inquiry"\)throw new Error\("UNAVAILABLE_LICENSE"\)/);const plans=readFileSync("app/components/creators/catalog/plans/CreatorPlansPage.tsx","utf8");assert.match(plans,/planKey === "enterprise"/);});
+test("enterprise inquiry freezes every requested field but cannot send",()=>{const inquiry=readFileSync("app/lib/creators/creatorEnterpriseInquiry.ts","utf8");for(const field of ["company","contactName","email","campaignType","usageTerritory","expectedReach","duration","exclusivity","assetOrPlanContext","notes"])assert.match(inquiry,new RegExp(field));assert.match(inquiry,/sendAllowed:false/);assert.match(inquiry,/contractGenerationAllowed:false/);});
+test("feature flags default closed and certification is explicit",()=>{for(const name of ["COMMERCE_ENABLED","TEST_COMMERCE_ENABLED","CHECKOUT_ENABLED","TEST_PAYMENT_ENABLED","COMMERCE_FALLBACK_ENABLED","COMMERCE_CERTIFICATION_MODE"])assert.match(flags,new RegExp(name));assert.doesNotMatch(flags,/\|\|true|fallback=true/);});
+test("feature flag off preserves preview-safe UI",()=>{const plans=readFileSync("app/components/creators/catalog/plans/CreatorPlansPage.tsx","utf8");assert.match(plans,/testing commerce is disabled/i);const asset=readFileSync("app/components/creators/catalog/asset-detail/CreatorAssetDetailPage.tsx","utf8");assert.match(asset,/testing commerce is disabled/i);});
+test("checkout pages disclose testing status and pending rights",()=>{assert.match(flow,/Testing commerce only/);assert.match(flow,/No real payment/);assert.match(flow,/no subscription or license will be activated/i);assert.match(flow,/No real funds were charged/);});

@@ -39,9 +39,9 @@ export async function startCruiseBackendCheckout<
     return { payload: rawPayload, refs: {}, attempted: false, ok: false };
   }
 
+  const hash = hashPayload(stripVolatileBackendFields(rawPayload));
   const guarded = await prepareBackendCheckoutWalletPayload("cruise", rawPayload);
   const guardedPayload = guarded.payload as TPayload;
-  const hash = hashPayload(guardedPayload);
   const idempotencyKey = readOrCreateSessionKey(
     `${CRUISE_START_KEY_PREFIX}${hash}`,
     `cruise:start:${hash}`
@@ -135,7 +135,7 @@ export async function confirmCruiseBackendCheckout<
       gatewayPaymentId:
         readOwnString(confirmationPayload, "paymentId") || paymentAttemptId,
       metadata: {
-        source: "cruise_frontend_phase_21",
+        source: "cruise_frontend_phase_3_10",
         paymentMethod: readOwnString(confirmationPayload, "paymentMethod"),
         paymentId: readOwnString(confirmationPayload, "paymentId"),
       },
@@ -251,6 +251,31 @@ function hashPayload(value: unknown): string {
   }
 
   return (hash >>> 0).toString(36);
+}
+
+function stripVolatileBackendFields(value: unknown): unknown {
+  if (value === null || typeof value !== "object") return value;
+
+  if (Array.isArray(value)) {
+    return value.map(stripVolatileBackendFields);
+  }
+
+  const record = value as Record<string, unknown>;
+  const volatileKeys = new Set([
+    "timerLeft",
+    "walletSyncedAt",
+    "backendRequestId",
+    "backendCheckoutStatus",
+    "backendCheckoutId",
+    "backendBookingId",
+    "backendPaymentId",
+  ]);
+
+  return Object.fromEntries(
+    Object.entries(record)
+      .filter(([key]) => !volatileKeys.has(key))
+      .map(([key, current]) => [key, stripVolatileBackendFields(current)])
+  );
 }
 
 function stableStringify(value: unknown): string {

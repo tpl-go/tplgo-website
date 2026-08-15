@@ -1519,7 +1519,7 @@ export default function RoundTripResults({
   );
 
   return (
-    <div className="mx-auto w-full max-w-8xl overflow-x-hidden px-3 py-3 pb-[210px] sm:px-4 sm:pb-[210px] md:overflow-visible xl:pb-[150px]">
+    <div className="mx-auto w-full max-w-[1440px] overflow-x-hidden px-3 py-3 pb-[210px] sm:px-4 sm:pb-[210px] md:overflow-visible xl:pb-[150px]">
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-[300px_minmax(0,1fr)]">
         <div className="hidden xl:sticky xl:top-[82px] xl:block xl:h-fit xl:self-start">
           {filterPanel}
@@ -1707,7 +1707,7 @@ export default function RoundTripResults({
 
           {(selectedDeparture || selectedReturn) && (
   <div className="fixed bottom-3 left-0 right-0 z-[70] px-3 sm:px-4">
-    <div className="mx-auto grid w-full max-w-8xl grid-cols-1 gap-3 xl:grid-cols-[300px_minmax(0,1fr)]">
+    <div className="mx-auto grid w-full max-w-[1440px] grid-cols-1 gap-3 xl:grid-cols-[300px_minmax(0,1fr)]">
       <div className="hidden xl:block" />
 
       <div className="min-w-0">

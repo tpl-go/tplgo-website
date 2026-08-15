@@ -408,15 +408,15 @@ export default function VisaPaymentPage() {
     finalTotal: finalPayable,
   };
 
-  const buildConfirmationPayload = () => {
+  const buildConfirmationPayload = (sourcePayload = paymentPayload) => {
     const bookingId = `VSA-${Date.now()}`;
     const option = {
-      ...storedPayload.option,
+      ...sourcePayload.option,
       pricingSnapshot,
     };
-    const searchData = storedPayload.searchData;
-    const applicants = storedPayload.applicants || [];
-    const passports = storedPayload.passports || [];
+    const searchData = sourcePayload.searchData;
+    const applicants = sourcePayload.applicants || [];
+    const passports = sourcePayload.passports || [];
 
     const leadApplicant = applicants?.[0] || {};
 
@@ -441,11 +441,11 @@ export default function VisaPaymentPage() {
       stayDuration: option?.stayDuration || "",
       travelDate: searchData?.travelDate || "",
 
-      travellers: storedPayload.travellers || applicants.length || 1,
+      travellers: sourcePayload.travellers || applicants.length || 1,
       applicants,
       passports,
-      uploadedDocsByApplicant: storedPayload.uploadedDocsByApplicant || [],
-      acceptedDocsByApplicant: storedPayload.acceptedDocsByApplicant || [],
+      uploadedDocsByApplicant: sourcePayload.uploadedDocsByApplicant || [],
+      acceptedDocsByApplicant: sourcePayload.acceptedDocsByApplicant || [],
 
       leadApplicant: {
         title: leadApplicant?.title || "",
@@ -466,7 +466,7 @@ export default function VisaPaymentPage() {
         visaFee: Number(pricingSnapshot?.visaFee || 0),
         serviceFee: Number(pricingSnapshot?.serviceFee || 0),
         perApplicantTotal: Number(pricingSnapshot?.perApplicantTotal || 0),
-        travellers: Number(pricingSnapshot?.travellers || storedPayload.travellers || 1),
+        travellers: Number(pricingSnapshot?.travellers || sourcePayload.travellers || 1),
 
         baseVisaAmount: benefitPricing.baseAmount,
         baseAfterOffer: benefitPricing.baseAfterOffer,
@@ -532,11 +532,11 @@ export default function VisaPaymentPage() {
 
       option,
       searchData,
-      specialRequest: storedPayload.specialRequest || "",
-      walletBreakdown: paymentPayload.walletBreakdown,
+      specialRequest: sourcePayload.specialRequest || "",
+      walletBreakdown: sourcePayload.walletBreakdown,
       fareBreakup: pricingSnapshot,
       originalBookingBaseline: {
-        ...(storedPayload.originalBookingBaseline || {}),
+        ...(sourcePayload.originalBookingBaseline || {}),
         amount: finalPayable,
         payableAmount: finalPayable,
         totalBeforeWallet,
@@ -545,8 +545,18 @@ export default function VisaPaymentPage() {
         baseAfterOffer: benefitPricing.baseAfterOffer,
         nonBenefitTotal: benefitPricing.nonBenefitAmount,
         appliedOfferAmount,
-        travellers: Number(pricingSnapshot?.travellers || storedPayload.travellers || 1),
+        travellers: Number(pricingSnapshot?.travellers || sourcePayload.travellers || 1),
       },
+      walletSource: sourcePayload.walletSource,
+      walletSyncStatus: sourcePayload.walletSyncStatus,
+      backendWalletSnapshot: sourcePayload.backendWalletSnapshot,
+      metadata: sourcePayload.metadata,
+      backendCheckoutId: sourcePayload.backendCheckoutId,
+      backendBookingId: sourcePayload.backendBookingId,
+      backendPaymentId: sourcePayload.backendPaymentId,
+      backendRequestId: sourcePayload.backendRequestId,
+      backendServiceType: sourcePayload.backendServiceType,
+      backendCheckoutStatus: sourcePayload.backendCheckoutStatus,
       manageBookingReady: true,
       finalTotal: finalPayable,
     };
@@ -566,21 +576,22 @@ export default function VisaPaymentPage() {
       );
       let backendRefs: VisaBackendCheckoutRefs = backendStart.refs;
 
-      if (backendStart.attempted) {
-        const updatedBookingPayload = {
-          ...paymentPayload,
-          ...backendStart.refs,
-        };
+      const checkoutPayload = {
+        ...paymentPayload,
+        ...(backendStart.payload as Record<string, unknown>),
+        ...backendStart.refs,
+      };
 
+      if (backendStart.attempted) {
         sessionStorage.setItem(
           "tplVisaBookingData",
-          JSON.stringify(updatedBookingPayload)
+          JSON.stringify(checkoutPayload)
         );
 
-        setStoredPayload(updatedBookingPayload);
+        setStoredPayload(checkoutPayload);
       }
 
-      let confirmationPayload = buildConfirmationPayload();
+      let confirmationPayload = buildConfirmationPayload(checkoutPayload);
 
       if (backendRefs.backendCheckoutId) {
         const backendConfirm = await confirmVisaBackendCheckout({

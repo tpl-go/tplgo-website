@@ -14,6 +14,8 @@ interface CancelBookingEntrySectionProps {
   refundStatus?: string;
   refundMethod?: "original_payment" | "wallet" | "unknown";
   disableContinue?: boolean;
+  requiresVerification?: boolean;
+  onVerifyBooking?: () => void;
 }
 
 export default function CancelBookingEntrySection({
@@ -28,12 +30,21 @@ export default function CancelBookingEntrySection({
   refundStatus,
   refundMethod = "original_payment",
   disableContinue = false,
+  requiresVerification = false,
+  onVerifyBooking,
 }: CancelBookingEntrySectionProps) {
   const totalAmount = Number(refundableAmount || 0) + Number(deductionAmount || 0);
   const normalizedCancellationStatus = cancellationStatus || "Final confirmation pending";
   const normalizedRefundStatus = refundStatus || "Not started";
   const refundMethodLabel =
     refundMethod === "wallet" ? "Refund Wallet" : "Original Payment / Bank";
+  const actionLabel = requiresVerification
+    ? "Verify to Continue"
+    : disableContinue
+    ? "Cancellation Recorded"
+    : isSubmitting
+    ? "Cancelling..."
+    : "Continue to Cancellation";
 
   return (
     <div className="space-y-5">
@@ -111,16 +122,27 @@ export default function CancelBookingEntrySection({
           <InfoCard label="Refund Status" value={normalizedRefundStatus} />
         </div>
 
-        <div className="mt-6 rounded-[22px] border border-red-100 bg-[#fff7f7] px-4 py-4">
-          <p className="text-sm font-semibold text-[#111827]">
-            Important cancellation note
-          </p>
-          <p className="mt-2 text-sm leading-6 text-[#6b7280]">
-            This is a pre-cancellation review. Continue to open the final
-            cancellation confirmation flow before the booking is actually
-            cancelled.
-          </p>
-        </div>
+        {requiresVerification ? (
+          <div className="mt-6 rounded-[22px] border border-amber-200 bg-amber-50 px-4 py-4">
+            <p className="text-sm font-semibold text-[#111827]">
+              Verification required
+            </p>
+            <p className="mt-2 text-sm leading-6 text-[#6b7280]">
+              Login or claim this booking with the same contact details before cancellation or refund actions can be sent to the backend.
+            </p>
+          </div>
+        ) : (
+          <div className="mt-6 rounded-[22px] border border-red-100 bg-[#fff7f7] px-4 py-4">
+            <p className="text-sm font-semibold text-[#111827]">
+              Important cancellation note
+            </p>
+            <p className="mt-2 text-sm leading-6 text-[#6b7280]">
+              This is a pre-cancellation review. Continue to open the final
+              cancellation confirmation flow before the booking is actually
+              cancelled.
+            </p>
+          </div>
+        )}
 
         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs font-semibold text-[#6b7280]">
@@ -129,11 +151,11 @@ export default function CancelBookingEntrySection({
 
           <button
             type="button"
-            onClick={onContinue}
-            disabled={isSubmitting || disableContinue}
+            onClick={requiresVerification ? onVerifyBooking : onContinue}
+            disabled={isSubmitting || (disableContinue && !requiresVerification)}
             className="h-[54px] rounded-full bg-[#111827] px-7 text-sm font-black text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {disableContinue ? "Cancellation Recorded" : isSubmitting ? "Cancelling..." : "Continue to Cancellation"}
+            {actionLabel}
           </button>
         </div>
       </div>

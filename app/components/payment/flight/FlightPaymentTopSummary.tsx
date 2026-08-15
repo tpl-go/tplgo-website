@@ -417,7 +417,7 @@ export default function FlightPaymentTopSummary({
           </div>
         </div>
 
-        <div style={{ minWidth: "220px" }}>
+        <div style={{ minWidth: 0 }}>
           <div
             style={{
               fontSize: "13px",
@@ -464,7 +464,7 @@ export default function FlightPaymentTopSummary({
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "1.2fr 1fr",
+              gridTemplateColumns: "repeat(auto-fit, minmax(min(320px, 100%), 1fr))",
               gap: "18px",
             }}
           >

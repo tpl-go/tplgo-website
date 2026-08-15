@@ -29,6 +29,7 @@ import {
   saveWallet,
   addWalletLedgerItem,
 } from "@/app/lib/wallet/walletStorage";
+import { confirmInsuranceBackendCheckout } from "@/app/lib/api/insuranceCheckoutIntegration";
 
 type ConfirmationPayload = any;
 
@@ -329,6 +330,14 @@ function creditEarnedForInsuranceBooking(params: {
   localStorage.setItem(guardKey, "true");
 }
 
+function persistInsuranceConfirmationSession(payload: ConfirmationPayload) {
+  if (typeof window === "undefined") return;
+
+  const value = JSON.stringify(payload);
+  sessionStorage.setItem("tplInsuranceConfirmationData", value);
+  sessionStorage.setItem("insurancePaymentSuccessData", value);
+}
+
 export default function InsuranceConfirmationPage() {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
@@ -339,6 +348,9 @@ export default function InsuranceConfirmationPage() {
   const [earnedCreditAmount, setEarnedCreditAmount] = useState(0);
 
   useEffect(() => {
+    let cancelled = false;
+
+    const loadConfirmation = async () => {
     const raw =
       typeof window !== "undefined"
         ? sessionStorage.getItem("tplInsuranceConfirmationData") ||
@@ -348,7 +360,31 @@ export default function InsuranceConfirmationPage() {
     if (!raw) return;
 
     try {
-      const parsed = JSON.parse(raw);
+      let parsed = JSON.parse(raw);
+
+      if (parsed?.backendCheckoutId) {
+        const backendConfirm = await confirmInsuranceBackendCheckout({
+          ...parsed,
+          bookingId: parsed?.bookingId || "",
+          paymentId: parsed?.paymentId || parsed?.transactionId || "",
+          transactionId: parsed?.transactionId || parsed?.paymentId || "",
+          paymentMethod:
+            parsed?.paymentMethod ||
+            parsed?.paymentData?.method ||
+            "Online Payment",
+        });
+
+        if (backendConfirm.attempted && backendConfirm.refs) {
+          parsed = {
+            ...parsed,
+            ...backendConfirm.refs,
+          };
+          persistInsuranceConfirmationSession(parsed);
+        }
+      }
+
+      if (cancelled) return;
+
       const pricing = normalizeInsurancePricing(parsed);
 
       const normalizedParsed = {
@@ -486,8 +522,6 @@ export default function InsuranceConfirmationPage() {
 
       const earnedAmount = pricing.earnedOnThisBooking;
 
-      // Existing confirmation hydration; keep saved booking and wallet behavior unchanged.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setEarnedCreditAmount(earnedAmount);
 
       if (!mobile) {
@@ -664,6 +698,14 @@ export default function InsuranceConfirmationPage() {
     } catch (error) {
       console.error("Insurance confirmation parse error:", error);
     }
+
+    };
+
+    void loadConfirmation();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const policyNumber = useMemo(() => {

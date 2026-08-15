@@ -1,0 +1,2 @@
+import CreatorOrderDetailPage from "@/app/components/creators/catalog/orders/CreatorOrderDetailPage";
+export const dynamic="force-dynamic";export async function generateMetadata({params}:{params:Promise<{orderId:string}>}){return {title:`Creator Order ${(await params).orderId} | TPL`}}export default async function Page({params}:{params:Promise<{orderId:string}>}){return <CreatorOrderDetailPage orderId={(await params).orderId}/>;}

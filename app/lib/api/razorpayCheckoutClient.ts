@@ -60,14 +60,18 @@ export function isRazorpayTestCheckoutEnabled(): boolean {
 export function isValidRazorpayTestCheckoutPayload(
   checkout: BackendFlightRazorpayTestCheckout | undefined
 ): checkout is BackendFlightRazorpayTestCheckout {
+  if (!checkout) return false;
+
+  const gatewayOrderId = getCheckoutOrderId(checkout);
+  const amountMinor = getCheckoutAmountMinor(checkout);
+
   return Boolean(
-    checkout &&
-      checkout.provider === "razorpay" &&
+    checkout.provider === "razorpay" &&
       checkout.mode === "test" &&
       checkout.testOnly === true &&
       checkout.keyId &&
-      checkout.orderId &&
-      checkout.amountMinor > 0 &&
+      gatewayOrderId &&
+      amountMinor > 0 &&
       checkout.currency === "INR"
   );
 }
@@ -100,18 +104,20 @@ export async function openRazorpayTestCheckout(
       reject(new Error(message));
     };
 
+    const gatewayOrderId = getCheckoutOrderId(checkout);
+    const amountMinor = getCheckoutAmountMinor(checkout);
+
+    prepareRazorpayViewport();
+
     const razorpay = new Razorpay({
       key: checkout.keyId,
-      amount: checkout.amountMinor,
+      amount: amountMinor,
       currency: checkout.currency,
       name: checkout.name,
       description: checkout.description,
-      order_id: checkout.orderId,
+      order_id: gatewayOrderId,
       prefill: checkout.prefill,
-      notes: {
-        testOnly: "true",
-        source: "tpl_flight_test_checkout",
-      },
+      notes: sanitizeCheckoutNotes(checkout.notes),
       theme: {
         color: "#ef4444",
       },
@@ -139,6 +145,44 @@ export async function openRazorpayTestCheckout(
 
     razorpay.open();
   });
+}
+
+function prepareRazorpayViewport() {
+  if (typeof document === "undefined") return;
+
+  document.documentElement.style.overflowX = "hidden";
+  document.body.style.overflowX = "hidden";
+  document.body.style.overflowY = "auto";
+  document.body.style.maxWidth = "100vw";
+}
+
+function getCheckoutOrderId(checkout: BackendFlightRazorpayTestCheckout): string {
+  return String(checkout.gatewayOrderId || checkout.orderId || "").trim();
+}
+
+function getCheckoutAmountMinor(checkout: BackendFlightRazorpayTestCheckout): number {
+  const amountMinor = Number(checkout.amountMinor || 0);
+  if (Number.isFinite(amountMinor) && amountMinor > 0) return amountMinor;
+
+  const amount = Number(checkout.amount || 0);
+  return Number.isFinite(amount) && amount > 0 ? Math.round(amount) : 0;
+}
+
+function sanitizeCheckoutNotes(notes: BackendFlightRazorpayTestCheckout["notes"]): Record<string, string> {
+  const safeNotes: Record<string, string> = {
+    testOnly: "true",
+    source: "tpl_flight_test_checkout",
+  };
+
+  if (!notes) return safeNotes;
+
+  for (const [key, value] of Object.entries(notes)) {
+    if (typeof value === "string" && key.length <= 40 && value.length <= 120) {
+      safeNotes[key] = value;
+    }
+  }
+
+  return safeNotes;
 }
 
 function loadRazorpayCheckoutScript(): Promise<void> {

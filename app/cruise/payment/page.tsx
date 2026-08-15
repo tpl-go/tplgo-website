@@ -27,7 +27,6 @@ import {
   type Wallet,
 } from "@/app/lib/wallet/walletStorage";
 import {
-  confirmCruiseBackendCheckout,
   startCruiseBackendCheckout,
   type CruiseBackendCheckoutRefs,
 } from "@/app/lib/api/cruiseCheckoutIntegration";
@@ -322,7 +321,7 @@ const priceBreakup = {
         latestSessionPayload = {};
       }
 
-      let confirmationPayload = {
+      const confirmationPayload = {
         ...storedPayload,
         ...latestSessionPayload,
         ...backendRefs,
@@ -357,26 +356,6 @@ const priceBreakup = {
           paidAt: new Date().toISOString(),
         },
       };
-
-      if (backendRefs.backendCheckoutId) {
-        try {
-          const backendConfirm = await confirmCruiseBackendCheckout(
-            confirmationPayload as Record<string, unknown>
-          );
-          backendRefs = {
-            ...backendRefs,
-            ...backendConfirm.refs,
-          };
-          confirmationPayload = {
-            ...confirmationPayload,
-            ...backendRefs,
-          };
-        } catch {
-          handlePaymentFailure();
-          setPaymentActionState("failure");
-          return;
-        }
-      }
 
       if (activeUser?.mobile && walletUsedTotal > 0) {
   const latestWallet = getWallet(activeUser.mobile);

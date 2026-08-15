@@ -8,7 +8,14 @@ export type Wallet = {
 
 export type WalletLedgerItem = {
   id: string;
-  type: "promo_added" | "earned_added" | "refund_credit" | "wallet_used";
+  type:
+    | "promo_added"
+    | "earned_added"
+    | "refund_credit"
+    | "wallet_used"
+    | "wallet_reversal"
+    | "expiry"
+    | "adjustment";
   title: string;
   description: string;
   amount: number;
@@ -46,11 +53,16 @@ function dispatchWalletUpdate() {
   window.dispatchEvent(new Event(WALLET_UPDATED_EVENT));
 }
 
-function normalizeWallet(value: any): Wallet {
+function normalizeWallet(value: unknown): Wallet {
+  const input =
+    value && typeof value === "object" && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : {};
+
   return {
-    promoCredit: Number(value?.promoCredit || 0),
-    earnedCredit: Number(value?.earnedCredit || 0),
-    refundableBalance: Number(value?.refundableBalance || 0),
+    promoCredit: Number(input.promoCredit || 0),
+    earnedCredit: Number(input.earnedCredit || 0),
+    refundableBalance: Number(input.refundableBalance || 0),
   };
 }
 

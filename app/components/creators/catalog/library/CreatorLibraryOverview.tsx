@@ -1,0 +1,15 @@
+import { ArrowRight } from "lucide-react";
+import { libraryActivity, libraryStats, storagePreview, type LibraryTab } from "@/app/lib/creators/creatorLibraryData";
+
+export function CreatorLibraryStats({ onTab }: { onTab: (tab: LibraryTab) => void }) {
+  return <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">{libraryStats.map(({ label, value, description, icon: Icon, tab }) => <button type="button" key={label} onClick={() => onTab(tab)} className="rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"><span className="grid h-10 w-10 place-items-center rounded-xl bg-blue-50 text-blue-700"><Icon className="h-5 w-5" /></span><strong className="mt-4 block text-2xl font-extrabold text-slate-950">{value}</strong><span className="mt-1 block text-sm font-bold text-slate-900">{label}</span><span className="mt-1 block text-xs font-medium text-slate-600">{description}</span></button>)}</div>;
+}
+
+export function CreatorLibraryActivity() {
+  return <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-center justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-wide text-blue-700">Newest first</p><h2 className="mt-1">Recent activity</h2></div></div><ol className="mt-5 space-y-1">{libraryActivity.map(({ title, detail, icon: Icon }, index) => <li key={title} className="relative flex gap-3 pb-5 last:pb-0">{index < libraryActivity.length - 1 && <span className="absolute bottom-0 left-5 top-10 w-px bg-slate-200" />}<span className="relative grid h-10 w-10 shrink-0 place-items-center rounded-full bg-slate-100 text-blue-700"><Icon className="h-4 w-4" /></span><div className="pt-1"><p className="text-sm font-semibold text-slate-900">{title}</p><p className="mt-1 text-xs font-medium text-slate-600">{detail}</p></div></li>)}</ol></section>;
+}
+
+export function CreatorLibraryStorage({ onUpgrade }: { onUpgrade: () => void }) {
+  const StorageIcon = storagePreview.icon;
+  return <section className="rounded-2xl bg-[#071831] p-5 text-white shadow-xl"><div className="flex items-center justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-wide text-blue-200">Cloud storage preview</p><h2 className="mt-1 text-white">Storage</h2></div><StorageIcon className="h-7 w-7 text-blue-300" /></div><div className="mt-6 h-3 overflow-hidden rounded-full bg-white/15"><div className="h-full rounded-full bg-blue-500" style={{ width: `${storagePreview.percent}%` }} /></div><div className="mt-3 grid grid-cols-2 gap-3"><div><span className="text-xs font-semibold text-slate-300">Used</span><strong className="mt-1 block text-lg">{storagePreview.used}</strong></div><div><span className="text-xs font-semibold text-slate-300">Remaining</span><strong className="mt-1 block text-lg">{storagePreview.remaining}</strong></div></div><button type="button" onClick={onUpgrade} className="mt-5 inline-flex min-h-10 items-center gap-2 rounded-lg bg-white px-4 py-2 font-bold text-[#071831]">Upgrade Plan <ArrowRight className="h-4 w-4" /></button></section>;
+}

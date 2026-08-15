@@ -18,6 +18,7 @@ import {
 } from "@/app/lib/auth/auth.types";
 import { registerCurrentDeviceSession } from "@/app/lib/account/deviceSessions";
 import { AUTH_UPDATED_EVENT } from "@/app/lib/booking/guestAuth";
+import { getStoredAuthToken } from "@/app/lib/api/tplApiClient";
 
 type AuthContextType = AuthState & {
   openLoginModal: (options?: OpenLoginModalOptions) => void;
@@ -213,7 +214,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
   );
 
   const logout = useCallback(() => {
-    const token = readStoredAuthToken();
+    const token = getStoredAuthToken();
     if (token) void logoutBackendSession(token);
 
     setUser(null);
@@ -428,15 +429,4 @@ function canUseLocalAuthFallback(error: unknown): boolean {
   if (process.env.NODE_ENV !== "development") return false;
   return error instanceof TypeError ||
     (error instanceof Error && error.name === "AuthNetworkFallbackError");
-}
-
-function readStoredAuthToken(): string | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem(AUTH_STORAGE_KEY);
-    const parsed = raw ? JSON.parse(raw) as StoredAuthSession : null;
-    return parsed?.token || parsed?.sessionToken || parsed?.session?.token || null;
-  } catch {
-    return null;
-  }
 }

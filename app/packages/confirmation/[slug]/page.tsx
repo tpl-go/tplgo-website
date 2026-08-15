@@ -27,12 +27,21 @@ import {
   saveWallet,
   addWalletLedgerItem,
 } from "@/app/lib/wallet/walletStorage";
+import { confirmPackageBackendCheckout } from "@/app/lib/api/packageCheckoutIntegration";
 
 type ConfirmationPayload = {
   bookingId?: string;
   paymentId?: string;
+  paymentMethod?: string;
+  transactionId?: string;
   invoiceNumber?: string;
   bookingStatus?: "confirmed" | "pending" | "failed";
+  backendCheckoutId?: string;
+  backendBookingId?: string;
+  backendPaymentId?: string;
+  backendRequestId?: string;
+  backendServiceType?: "package";
+  backendCheckoutStatus?: string;
   summary?: {
     packageSlug?: string;
     packageTitle?: string;
@@ -239,6 +248,9 @@ export default function PackageConfirmationPage() {
   const [earnedCreditAmount, setEarnedCreditAmount] = useState(0);
 
   useEffect(() => {
+    let cancelled = false;
+
+    const loadConfirmation = async () => {
     const raw =
       typeof window !== "undefined"
         ? sessionStorage.getItem("tplPackageConfirmationPayload")
@@ -247,7 +259,42 @@ export default function PackageConfirmationPage() {
     if (!raw) return;
 
     try {
-      const parsed = JSON.parse(raw) as ConfirmationPayload;
+      let parsed = JSON.parse(raw) as ConfirmationPayload;
+
+      if (parsed?.backendCheckoutId) {
+        const backendConfirm = await confirmPackageBackendCheckout({
+          ...parsed,
+          bookingId: parsed?.bookingId || "",
+          paymentId:
+            parsed?.backendPaymentId ||
+            parsed?.payment?.paymentId ||
+            parsed?.paymentId ||
+            "",
+          transactionId:
+            parsed?.transactionId ||
+            parsed?.payment?.paymentId ||
+            parsed?.paymentId ||
+            "",
+          paymentMethod:
+            parsed?.payment?.selectedPaymentMethod ||
+            parsed?.paymentMethod ||
+            "Online Payment",
+        });
+
+        if (backendConfirm.attempted && backendConfirm.refs) {
+          parsed = {
+            ...parsed,
+            ...backendConfirm.payload,
+            ...backendConfirm.refs,
+          };
+          sessionStorage.setItem(
+            "tplPackageConfirmationPayload",
+            JSON.stringify(parsed)
+          );
+        }
+      }
+
+      if (cancelled) return;
 
       const summary = parsed.summary || {};
       const traveller = parsed.traveller || {};
@@ -477,6 +524,14 @@ const payloadStorageKey = `tpl_booking_payload_package_${safePaidAt}_${mobile}_$
     } catch (e) {
       console.error("Package confirmation parse error:", e);
     }
+
+    };
+
+    loadConfirmation();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const bookingId = useMemo(() => {

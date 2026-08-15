@@ -7,6 +7,7 @@ import {
   getAllBookings,
   type BookingItem,
 } from "@/app/lib/booking/bookingStorage";
+import { getBackendFirstBookingPayload } from "@/app/lib/api/bookingApi";
 
 import VisaConfirmationHero from "@/app/components/confirmation/visa/VisaConfirmationHero";
 import VisaConfirmationStatusTimeline from "@/app/components/confirmation/visa/VisaConfirmationStatusTimeline";
@@ -565,27 +566,54 @@ export default function VisaBookingDetailPage() {
   const [logs, setLogs] = useState<VisaStatusLog[]>([]);
 
   useEffect(() => {
-    const all = getAllBookings();
+    let cancelled = false;
 
-    const found =
-      all.find((item) => item.id === bookingId && item.type === "visa") ||
-      all.find(
-        (item) =>
-          item.type === "visa" &&
-          (item.id.endsWith(bookingId.slice(-4)) ||
-            bookingId.endsWith(item.id.slice(-4)))
-      ) ||
-      null;
+    const load = async () => {
+      const backendResult = await getBackendFirstBookingPayload<Payload>(
+        bookingId,
+        "visa"
+      );
+      if (cancelled) return;
 
-    setBooking(found);
+      if (backendResult.booking && backendResult.payload) {
+        setBooking(backendResult.booking);
+        setPayload(normalizeVisaDetailPricingPayload(
+          backendResult.payload,
+          backendResult.booking
+        ));
+        setStatus(getVisaCurrentStatus(backendResult.booking.id));
+        setLogs(getVisaStatusLogs(backendResult.booking.id));
+        return;
+      }
 
-    const parsed = getPayloadFromBooking(found);
-    setPayload(parsed);
+      const all = getAllBookings();
 
-    if (found) {
-      setStatus(getVisaCurrentStatus(found.id));
-      setLogs(getVisaStatusLogs(found.id));
-    }
+      const found =
+        all.find((item) => item.id === bookingId && item.type === "visa") ||
+        all.find(
+          (item) =>
+            item.type === "visa" &&
+            (item.id.endsWith(bookingId.slice(-4)) ||
+              bookingId.endsWith(item.id.slice(-4)))
+        ) ||
+        null;
+
+      setBooking(found);
+
+      const parsed = getPayloadFromBooking(found);
+      setPayload(parsed);
+
+      if (found) {
+        setStatus(getVisaCurrentStatus(found.id));
+        setLogs(getVisaStatusLogs(found.id));
+      }
+    };
+
+    void load();
+
+    return () => {
+      cancelled = true;
+    };
   }, [bookingId]);
 
   const data = payload;

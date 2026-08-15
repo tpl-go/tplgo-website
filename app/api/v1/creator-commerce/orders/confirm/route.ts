@@ -1,0 +1,4 @@
+import { commerceBody,commerceError,commerceOk,commerceUser } from "@/app/lib/creators/creatorCommerceApi";
+import { creatorCommerceFlags } from "@/app/lib/creators/creatorCommerceFlags";
+import { creatorTestingCommerceRepository } from "@/app/lib/creators/creatorTestingCommerceRepository";
+export async function POST(request:Request){if(!creatorCommerceFlags.testOrdersEnabled())return commerceError("COMMERCE_DISABLED","Testing orders are disabled.",503);const user=commerceUser(request);if(!user)return commerceError("AUTH_REQUIRED","Shared TPL login is required.",401);const body=await commerceBody(request);const record=creatorTestingCommerceRepository.order(String(body.orderId??""),user);return record?commerceOk(record):commerceError("ORDER_NOT_FOUND","Testing order was not found or is not owned by this buyer.",404);}

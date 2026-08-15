@@ -9,6 +9,11 @@ import {
   type BookingItem,
 } from "@/app/lib/booking/bookingStorage";
 import { getBookingPayload } from "@/app/lib/booking/bookingActionHelpers";
+import {
+  executeBackendSamePriceManage,
+  prepareBackendManageRequest,
+  persistBackendManageCache,
+} from "@/app/lib/manage/backendManageBookingIntegration";
 
 import HotelManageLayout, {
   type HotelManageTab,
@@ -282,7 +287,7 @@ function HotelManagePageContent() {
     booking?.bookingDate ||
     "";
 
-  const handleSaveGuests = () => {
+  const handleSaveGuests = async () => {
     if (!booking?.payloadStorageKey || !payload) return;
 
     const nextPayload = {
@@ -303,12 +308,31 @@ function HotelManagePageContent() {
       },
     };
 
-    savePayload(booking.payloadStorageKey, nextPayload);
-    setPayload(nextPayload);
+    const backendResult = await executeBackendSamePriceManage({
+      booking,
+      payload,
+      serviceType: "hotel",
+      section: "guest-details",
+      changeType: "traveller_update",
+      settlementMode: "save",
+      currentAmount: fareSummary.totalAmount,
+      requestedAmount: fareSummary.totalAmount,
+      requestedChange: { guestList: nextPayload.guestList, leadGuest: nextPayload.leadGuest },
+      beforeSnapshot: payload,
+      afterSnapshot: nextPayload,
+    });
+
+    const payloadToSave =
+      backendResult.ok && backendResult.payload
+        ? { ...nextPayload, ...backendResult.payload }
+        : nextPayload;
+
+    savePayload(booking.payloadStorageKey, payloadToSave);
+    setPayload(payloadToSave);
     alert("Guest details updated successfully.");
   };
 
-  const handleSaveContact = () => {
+  const handleSaveContact = async () => {
     if (!booking?.payloadStorageKey || !payload) return;
 
     const nextPayload = {
@@ -329,12 +353,34 @@ function HotelManagePageContent() {
       },
     };
 
-    savePayload(booking.payloadStorageKey, nextPayload);
-    setPayload(nextPayload);
+    const backendResult = await executeBackendSamePriceManage({
+      booking,
+      payload,
+      serviceType: "hotel",
+      section: "contact-details",
+      changeType: "contact_update",
+      settlementMode: "save",
+      currentAmount: fareSummary.totalAmount,
+      requestedAmount: fareSummary.totalAmount,
+      requestedChange: {
+        leadGuest: nextPayload.leadGuest,
+        guestValidation: nextPayload.guestValidation,
+      },
+      beforeSnapshot: payload,
+      afterSnapshot: nextPayload,
+    });
+
+    const payloadToSave =
+      backendResult.ok && backendResult.payload
+        ? { ...nextPayload, ...backendResult.payload }
+        : nextPayload;
+
+    savePayload(booking.payloadStorageKey, payloadToSave);
+    setPayload(payloadToSave);
     alert("Contact details updated successfully.");
   };
 
-  const handleSaveSpecialRequest = () => {
+  const handleSaveSpecialRequest = async () => {
     if (!booking?.payloadStorageKey || !payload) return;
 
     const nextPayload = {
@@ -342,12 +388,31 @@ function HotelManagePageContent() {
       specialRequest,
     };
 
-    savePayload(booking.payloadStorageKey, nextPayload);
-    setPayload(nextPayload);
+    const backendResult = await executeBackendSamePriceManage({
+      booking,
+      payload,
+      serviceType: "hotel",
+      section: "special-request",
+      changeType: "add_on_update",
+      settlementMode: "save",
+      currentAmount: fareSummary.totalAmount,
+      requestedAmount: fareSummary.totalAmount,
+      requestedChange: { specialRequest },
+      beforeSnapshot: payload,
+      afterSnapshot: nextPayload,
+    });
+
+    const payloadToSave =
+      backendResult.ok && backendResult.payload
+        ? { ...nextPayload, ...backendResult.payload }
+        : nextPayload;
+
+    savePayload(booking.payloadStorageKey, payloadToSave);
+    setPayload(payloadToSave);
     alert("Special request updated successfully.");
   };
 
-  const handleRoomChangeContinue = () => {
+  const handleRoomChangeContinue = async () => {
     if (!booking?.payloadStorageKey || !payload || !activeRoomVariant) return;
 
     const nextPayload = {
@@ -360,7 +425,39 @@ function HotelManagePageContent() {
       },
     };
 
-    savePayload(booking.payloadStorageKey, nextPayload);
+    const backendResult = await prepareBackendManageRequest({
+      booking,
+      payload: nextPayload,
+      serviceType: "hotel",
+      section: "room-addons",
+      changeType:
+        roomQuote.settlementMode === "payment"
+          ? "upgrade"
+          : roomQuote.settlementMode === "wallet_credit"
+          ? "downgrade"
+          : "same_price",
+      settlementMode: roomQuote.settlementMode,
+      currentAmount: roomQuote.oldTotal,
+      requestedAmount: roomQuote.newTotal,
+      requestedChange: {
+        selectedVariant: activeRoomVariant,
+        roomQuote,
+      },
+      beforeSnapshot: payload,
+      afterSnapshot: nextPayload,
+    });
+
+    if (!backendResult.ok && !backendResult.fallbackAllowed) {
+      alert(backendResult.error || "Backend manage booking request failed.");
+      return;
+    }
+
+    const payloadToSave =
+      backendResult.ok && backendResult.payload
+        ? { ...nextPayload, ...backendResult.payload }
+        : nextPayload;
+
+    persistBackendManageCache(booking.payloadStorageKey, payloadToSave);
 
     window.location.href = `/manage/payment?bookingId=${encodeURIComponent(
       booking.id

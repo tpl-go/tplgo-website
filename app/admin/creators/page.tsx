@@ -1,13 +1,5 @@
-import AdminProtected from "../_components/AdminProtected";
-import AdminShell from "../_components/AdminShell";
-import { AdminCreatorsCenter } from "../_components/AdminCreatorsCenter";
+import CreatorAdminOperationsPage from "@/app/components/admin/creators/CreatorAdminOperationsPage";
 
 export default function AdminCreatorsPage() {
-  return (
-    <AdminProtected>
-      <AdminShell title="Creators">
-        <AdminCreatorsCenter />
-      </AdminShell>
-    </AdminProtected>
-  );
+  return <CreatorAdminOperationsPage section="dashboard" />;
 }

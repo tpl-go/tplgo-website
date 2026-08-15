@@ -30,6 +30,7 @@ import {
   saveWallet,
   addWalletLedgerItem,
 } from "@/app/lib/wallet/walletStorage";
+import { confirmVisaBackendCheckout } from "@/app/lib/api/visaCheckoutIntegration";
 
 type ConfirmationPayload = any;
 
@@ -418,6 +419,14 @@ function creditEarnedForVisaBooking(params: {
   localStorage.setItem(guardKey, "true");
 }
 
+function persistVisaConfirmationSession(payload: ConfirmationPayload) {
+  if (typeof window === "undefined") return;
+
+  const value = JSON.stringify(payload);
+  sessionStorage.setItem("tplVisaConfirmationData", value);
+  sessionStorage.setItem("visaPaymentSuccessData", value);
+}
+
 export default function VisaConfirmationPage() {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
@@ -428,6 +437,9 @@ export default function VisaConfirmationPage() {
   const [earnedCreditAmount, setEarnedCreditAmount] = useState(0);
 
   useEffect(() => {
+    let cancelled = false;
+
+    const loadConfirmation = async () => {
     const raw =
       typeof window !== "undefined"
         ? sessionStorage.getItem("tplVisaConfirmationData") ||
@@ -437,7 +449,31 @@ export default function VisaConfirmationPage() {
     if (!raw) return;
 
     try {
-      const parsedRaw = JSON.parse(raw);
+      let parsedRaw = JSON.parse(raw);
+
+      if (parsedRaw?.backendCheckoutId) {
+        const backendConfirm = await confirmVisaBackendCheckout({
+          ...parsedRaw,
+          bookingId: parsedRaw?.bookingId || "",
+          paymentId: parsedRaw?.paymentId || parsedRaw?.transactionId || "",
+          transactionId: parsedRaw?.transactionId || parsedRaw?.paymentId || "",
+          paymentMethod:
+            parsedRaw?.paymentMethod ||
+            parsedRaw?.paymentData?.method ||
+            "Online Payment",
+        });
+
+        if (backendConfirm.attempted && backendConfirm.refs) {
+          parsedRaw = {
+            ...parsedRaw,
+            ...backendConfirm.refs,
+          };
+          persistVisaConfirmationSession(parsedRaw);
+        }
+      }
+
+      if (cancelled) return;
+
       const parsed = normalizeVisaPricingPayload(parsedRaw);
 
       const leadApplicant = parsed?.leadApplicant || parsed?.applicants?.[0] || {};
@@ -469,8 +505,6 @@ export default function VisaConfirmationPage() {
 
       const earnedAmount = Number(parsed?.earnedCreditAmount || 0);
 
-      // Existing confirmation hydration; preserve saved booking and wallet behavior.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setEarnedCreditAmount(earnedAmount);
 
       if (!mobile) {
@@ -650,6 +684,14 @@ export default function VisaConfirmationPage() {
     } catch (error) {
       console.error("Visa confirmation parse error:", error);
     }
+
+    };
+
+    void loadConfirmation();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const applicationId = useMemo(() => {

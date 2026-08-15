@@ -1,0 +1,8 @@
+import { NextResponse } from "next/server";
+import type { CreatorCommerceErrorCode } from "./creatorCommerceTypes";
+export function commerceRequestId(){return `creator-commerce-request-${Date.now().toString(36)}`;}
+export function commerceUser(request:Request){const auth=request.headers.get("authorization");if(auth?.startsWith("Bearer ")&&auth.length>16)return `shared-${auth.slice(7,23)}`;return process.env.NODE_ENV!=="production"?request.headers.get("x-creator-test-user"):null;}
+export function commerceOk(data:unknown,status=200){return NextResponse.json({ok:true,data,meta:{requestId:commerceRequestId(),source:"testing_api",realGatewayAllowed:false}},{status});}
+export function commerceError(code:CreatorCommerceErrorCode,message:string,status=400){return NextResponse.json({ok:false,error:{code,message},meta:{requestId:commerceRequestId()}},{status});}
+export async function commerceBody(request:Request){const type=request.headers.get("content-type")??"";if(!type.includes("application/json"))throw new Error("INCOMPATIBLE_DTO");return await request.json() as Record<string,unknown>;}
+export function safeCommerceError(error:unknown){const code=error instanceof Error?error.message:"INCOMPATIBLE_DTO";const allowed:CreatorCommerceErrorCode[]=["AUTH_REQUIRED","INVALID_PLAN","INVALID_ASSET","UNAVAILABLE_LICENSE","INVALID_AMOUNT","AMOUNT_MISMATCH","PAYMENT_NOT_SUCCESSFUL","ORDER_NOT_FOUND","ENTITLEMENT_NOT_FOUND","CERTIFICATE_UNAVAILABLE","INVALID_TRANSITION","INCOMPATIBLE_DTO"];const safe=allowed.includes(code as CreatorCommerceErrorCode)?code as CreatorCommerceErrorCode:"INCOMPATIBLE_DTO";return commerceError(safe,safe==="INCOMPATIBLE_DTO"?"The testing commerce request is incompatible.":safe.replaceAll("_"," ").toLowerCase()+".");}

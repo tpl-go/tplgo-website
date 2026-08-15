@@ -11,11 +11,11 @@ import {
   saveProfile,
 } from "@/app/lib/account/profileStorage";
 import {
-  getWallet,
   WALLET_UPDATED_EVENT,
   formatWalletPrice,
   type Wallet,
 } from "@/app/lib/wallet/walletStorage";
+import { getBackendFirstWallet } from "@/app/lib/api/walletApi";
 
 const tabs = [
   { href: "/account/profile", label: "My Profile" },
@@ -121,7 +121,9 @@ export default function AccountLayout({
   }, [user?.mobile]);
 
   useEffect(() => {
-    const syncWallet = () => {
+    let cancelled = false;
+
+    const syncWallet = async () => {
       const activeMobile = getActiveMobile();
 
       if (!activeMobile) {
@@ -133,16 +135,18 @@ export default function AccountLayout({
         return;
       }
 
-      setWallet(getWallet(activeMobile));
+      const result = await getBackendFirstWallet(activeMobile);
+      if (!cancelled) setWallet(result.wallet);
     };
 
-    syncWallet();
+    void syncWallet();
 
     window.addEventListener(WALLET_UPDATED_EVENT, syncWallet);
     window.addEventListener(AUTH_UPDATED_EVENT, syncWallet);
     window.addEventListener("storage", syncWallet);
 
     return () => {
+      cancelled = true;
       window.removeEventListener(WALLET_UPDATED_EVENT, syncWallet);
       window.removeEventListener(AUTH_UPDATED_EVENT, syncWallet);
       window.removeEventListener("storage", syncWallet);

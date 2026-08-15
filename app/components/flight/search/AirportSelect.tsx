@@ -127,8 +127,8 @@ export default function AirportSelect({
     <div
       className={`relative flex items-center ${
         isResults
-          ? "md:w-[430px] w-full shrink-0 gap-2 overflow-visible"
-: "md:w-[430px] w-full shrink-0 gap-3 overflow-visible"
+          ? "w-full shrink-0 gap-2 overflow-visible xl:w-[430px]"
+: "w-full shrink-0 gap-3 overflow-visible md:w-[430px]"
       }`}
     >
       {/* FROM */}

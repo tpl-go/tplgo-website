@@ -1,0 +1,8 @@
+.tmp/
+artifacts/
+outputs/
+reports/
+*.log
+*_REPORT.md
+*_RESULT.json
+*_ERROR.txt
