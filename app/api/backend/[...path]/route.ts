@@ -1,6 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
+import {
+  isProductionApiUrl,
+  isVercelPreviewEnv,
+  TPL_PRODUCTION_API_BASE_URL,
+} from "@/app/lib/api/apiTargetResolver";
 
-const DEFAULT_BACKEND_BASE_URL = "https://api.tplgo.com";
+const DEFAULT_BACKEND_BASE_URL = TPL_PRODUCTION_API_BASE_URL;
 
 type RouteContext = {
   params: Promise<{
@@ -44,7 +49,21 @@ async function proxyBackendRequest(request: NextRequest, context: RouteContext) 
 
   const { path = [] } = await context.params;
   const backendPath = normalizeBackendPath(path);
-  const target = new URL(backendPath, getBackendBaseUrl());
+  const backendBaseUrl = getBackendBaseUrl();
+  if (!backendBaseUrl) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: {
+          code: "SMOKE_BACKEND_PROXY_PREVIEW_TARGET_BLOCKED",
+          message: "Preview backend smoke proxy requires an explicit non-production API target.",
+        },
+      },
+      { status: 404 }
+    );
+  }
+
+  const target = new URL(backendPath, backendBaseUrl);
   target.search = request.nextUrl.search;
 
   const headers = buildForwardHeaders(request, backendPath);
@@ -82,11 +101,19 @@ function isSmokeProxyEnabled() {
 }
 
 function getBackendBaseUrl() {
-  return (
+  const configured = (
     process.env.TPL_BACKEND_API_BASE_URL ||
     process.env.NEXT_PUBLIC_TPL_API_BASE_URL ||
-    DEFAULT_BACKEND_BASE_URL
+    ""
   ).replace(/\/+$/, "");
+
+  if (configured) {
+    if (isVercelPreviewEnv() && isProductionApiUrl(configured)) return "";
+    return configured;
+  }
+
+  if (isVercelPreviewEnv()) return "";
+  return DEFAULT_BACKEND_BASE_URL;
 }
 
 function normalizeBackendPath(path: string[]) {

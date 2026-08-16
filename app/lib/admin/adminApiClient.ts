@@ -1,5 +1,7 @@
 "use client";
 
+import { resolveCurrentTplApiTarget } from "@/app/lib/api/apiTargetResolver";
+
 export const ADMIN_SESSION_STORAGE_KEY = "tpl_admin_session_v1";
 export const ADMIN_MFA_CHALLENGE_STORAGE_KEY = "tpl_admin_mfa_challenge_v1";
 
@@ -1826,16 +1828,8 @@ type StoredAdminSession = {
   };
 };
 
-const PRODUCTION_API_BASE_URL = "https://api.tplgo.com";
-const API_BASE_URL = resolveAdminApiBaseUrl();
-
-function resolveAdminApiBaseUrl(): string {
-  return (
-    process.env.NEXT_PUBLIC_TPL_ADMIN_API_BASE_URL ||
-    process.env.NEXT_PUBLIC_TPL_API_BASE_URL ||
-    (process.env.NODE_ENV === "production" ? PRODUCTION_API_BASE_URL : "")
-  ).replace(/\/+$/, "");
-}
+const API_TARGET = resolveCurrentTplApiTarget({ preferAdminApiBase: true });
+const API_BASE_URL = API_TARGET.baseUrl;
 
 export function getAdminApiBaseUrl(): string {
   return API_BASE_URL;
