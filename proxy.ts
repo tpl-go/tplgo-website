@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { isPartnerDeskPreviewEnabled } from "./app/lib/partner/partnerPreviewGate";
 
 const COMING_SOON_PATH = "/coming-soon";
 const PUBLIC_FILE_PATTERN = /\/[^/]+\.[^/]+$/;
@@ -23,6 +24,8 @@ const excludedPrefixes = [
   "/flights",
 ];
 
+const partnerPreviewPaths = new Set(["/partner-preview"]);
+
 function isComingSoonGateEnabled() {
   if (isSmokeComingSoonBypassEnabled()) {
     return false;
@@ -43,6 +46,10 @@ function isSmokeComingSoonBypassEnabled() {
 }
 
 function shouldSkipComingSoonGate(pathname: string) {
+  if (partnerPreviewPaths.has(pathname) && isPartnerPreviewGateBypassEnabled()) {
+    return true;
+  }
+
   if (excludedExactPaths.has(pathname)) {
     return true;
   }
@@ -54,6 +61,10 @@ function shouldSkipComingSoonGate(pathname: string) {
   return excludedPrefixes.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
+}
+
+function isPartnerPreviewGateBypassEnabled() {
+  return isPartnerDeskPreviewEnabled();
 }
 
 export function proxy(request: NextRequest) {
