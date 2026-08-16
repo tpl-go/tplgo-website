@@ -4,7 +4,7 @@ export const PARTNER_PREVIEW_SELECTED_SERVICES_STORAGE_KEY = "tpl.partnerPreview
 
 export type PartnerPreviewSelectionState = {
   selectedServiceIds: string[];
-  completedStep: "choose-services" | "business-profile-preview";
+  completedStep: "choose-services" | "business-profile" | "verification-preview";
 };
 
 export type PartnerPreviewStorage = {
@@ -59,7 +59,7 @@ export function readPartnerPreviewSelection(storage: PartnerPreviewStorage): Par
       selectedServiceIds: Array.isArray(parsed.selectedServiceIds)
         ? parsed.selectedServiceIds.filter((item): item is string => typeof item === "string")
         : [],
-      completedStep: parsed.completedStep === "business-profile-preview" ? "business-profile-preview" : "choose-services",
+      completedStep: parseCompletedStep(parsed.completedStep),
     };
   } catch {
     return emptyPartnerPreviewSelection;
@@ -75,4 +75,10 @@ export function writePartnerPreviewSelection(
 
 export function resetPartnerPreviewSelection(storage: PartnerPreviewStorage): void {
   storage.removeItem(PARTNER_PREVIEW_SELECTED_SERVICES_STORAGE_KEY);
+}
+
+function parseCompletedStep(value: unknown): PartnerPreviewSelectionState["completedStep"] {
+  if (value === "business-profile" || value === "business-profile-preview") return "business-profile";
+  if (value === "verification-preview") return "verification-preview";
+  return "choose-services";
 }

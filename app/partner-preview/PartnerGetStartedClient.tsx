@@ -14,15 +14,25 @@ import {
   HelpCircle,
   LineChart,
   Link2,
+  Menu,
   Megaphone,
   Search,
   Settings,
-  ShieldCheck,
   Sparkles,
   Trash2,
   Users,
   X,
 } from "lucide-react";
+import {
+  BusinessProfileSavedPanel,
+  PartnerBusinessProfileStep,
+} from "./PartnerBusinessProfileStep";
+import {
+  emptyPartnerOrganizationPreviewProfile,
+  readPartnerOrganizationPreviewProfile,
+  writePartnerOrganizationPreviewProfile,
+  type PartnerOrganizationPreviewProfile,
+} from "../lib/partner/partnerOrganizationPreviewProfile";
 import {
   filterPartnerServiceCatalog,
   partnerServiceCatalog,
@@ -74,17 +84,21 @@ const valuePoints = [
 ];
 
 export default function PartnerGetStartedClient() {
+  const [currentStep, setCurrentStep] = useState<"choose-services" | "business-profile" | "verification-preview">("choose-services");
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [showSelectedOnly, setShowSelectedOnly] = useState(false);
-  const [transitionVisible, setTransitionVisible] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [organizationProfile, setOrganizationProfile] = useState<PartnerOrganizationPreviewProfile>(emptyPartnerOrganizationPreviewProfile);
+  const [draftSaved, setDraftSaved] = useState(false);
   const [storageReady, setStorageReady] = useState(false);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
       const previewState = readPartnerPreviewSelection(window.localStorage);
       setSelectedServiceIds(previewState.selectedServiceIds);
-      setTransitionVisible(previewState.completedStep === "business-profile-preview");
+      setCurrentStep(previewState.completedStep);
+      setOrganizationProfile(readPartnerOrganizationPreviewProfile(window.localStorage));
       setStorageReady(true);
     }, 0);
 
@@ -95,9 +109,14 @@ export default function PartnerGetStartedClient() {
     if (!storageReady) return;
     writePartnerPreviewSelection(window.localStorage, {
       selectedServiceIds,
-      completedStep: transitionVisible ? "business-profile-preview" : "choose-services",
+      completedStep: currentStep,
     });
-  }, [selectedServiceIds, storageReady, transitionVisible]);
+  }, [currentStep, selectedServiceIds, storageReady]);
+
+  useEffect(() => {
+    if (!storageReady) return;
+    writePartnerOrganizationPreviewProfile(window.localStorage, organizationProfile);
+  }, [organizationProfile, storageReady]);
 
   const filteredCatalog = useMemo(() => filterPartnerServiceCatalog(searchQuery), [searchQuery]);
   const selectedServices = useMemo(() => selectedPartnerServices(selectedServiceIds), [selectedServiceIds]);
@@ -106,19 +125,30 @@ export default function PartnerGetStartedClient() {
 
   function toggleService(serviceId: string) {
     setSelectedServiceIds((current) => toggleServiceSelection(current, serviceId));
-    setTransitionVisible(false);
+    setCurrentStep("choose-services");
   }
 
   function clearAll() {
     setSelectedServiceIds(clearServiceSelection());
     setShowSelectedOnly(false);
-    setTransitionVisible(false);
+    setCurrentStep("choose-services");
     writePartnerPreviewSelection(window.localStorage, emptyPartnerPreviewSelection);
   }
 
   function continueToBusinessProfile() {
     if (!continueEnabled) return;
-    setTransitionVisible(true);
+    setCurrentStep("business-profile");
+  }
+
+  function saveProfileDraft() {
+    setOrganizationProfile((current) => ({ ...current, savedForPreview: true }));
+    setDraftSaved(true);
+  }
+
+  function saveProfileAndContinue() {
+    setOrganizationProfile((current) => ({ ...current, savedForPreview: true }));
+    setDraftSaved(true);
+    setCurrentStep("verification-preview");
   }
 
   return (
@@ -145,11 +175,24 @@ export default function PartnerGetStartedClient() {
 
       <div className="mx-auto grid max-w-7xl gap-5 px-4 py-5 lg:grid-cols-[248px_minmax(0,1fr)]">
         <aside className="lg:sticky lg:top-4 lg:self-start">
-          <nav aria-label="Partner navigation" className="grid gap-1 rounded-lg border border-[#dbe3ef] bg-white p-2 shadow-sm">
+          <button
+            type="button"
+            onClick={() => setMobileNavOpen((current) => !current)}
+            className="flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-[#cfd8e3] bg-white px-4 text-[13px] font-black text-[#334155] shadow-sm focus:outline-none focus:ring-2 focus:ring-[#818cf8] lg:hidden"
+            aria-expanded={mobileNavOpen}
+          >
+            <Menu size={17} aria-hidden="true" />
+            Partner navigation
+          </button>
+          <nav
+            aria-label="Partner navigation"
+            className={`${mobileNavOpen ? "mt-2 grid" : "hidden"} gap-1 rounded-lg border border-[#dbe3ef] bg-white p-2 shadow-sm lg:grid`}
+          >
             {navItems.map((item) => (
               <button
                 key={item.label}
                 type="button"
+                onClick={() => setMobileNavOpen(false)}
                 className={
                   item.active
                     ? "flex h-10 items-center gap-3 rounded-md bg-[#eef2ff] px-3 text-left text-[13px] font-black text-[#4338ca] focus:outline-none focus:ring-2 focus:ring-[#818cf8]"
@@ -166,7 +209,27 @@ export default function PartnerGetStartedClient() {
         </aside>
 
         <section className="grid min-w-0 gap-5">
-          <div className="rounded-lg border border-[#dbe3ef] bg-white p-5 shadow-sm">
+          {currentStep === "business-profile" ? (
+            <PartnerBusinessProfileStep
+              selectedServices={selectedServices}
+              profile={organizationProfile}
+              onProfileChange={(profile) => {
+                setOrganizationProfile(profile);
+                setDraftSaved(false);
+              }}
+              onBackToServices={() => setCurrentStep("choose-services")}
+              onSaveDraft={saveProfileDraft}
+              onSaveAndContinue={saveProfileAndContinue}
+              draftSaved={draftSaved}
+            />
+          ) : currentStep === "verification-preview" ? (
+            <BusinessProfileSavedPanel
+              selectedServices={selectedServices}
+              onBack={() => setCurrentStep("business-profile")}
+            />
+          ) : (
+          <>
+            <div className="rounded-lg border border-[#dbe3ef] bg-white p-5 shadow-sm">
             <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
               <div className="min-w-0">
                 <div className="inline-flex items-center gap-2 rounded-full bg-[#eef2ff] px-3 py-1 text-[12px] font-black text-[#4338ca]">
@@ -194,12 +257,6 @@ export default function PartnerGetStartedClient() {
             <OnboardingJourney />
           </div>
 
-          {transitionVisible ? (
-            <TransitionPanel
-              selectedServices={selectedServices}
-              onBack={() => setTransitionVisible(false)}
-            />
-          ) : (
             <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
               <div className="grid min-w-0 gap-4">
                 <div className="rounded-lg border border-[#dbe3ef] bg-white p-4 shadow-sm">
@@ -264,6 +321,7 @@ export default function PartnerGetStartedClient() {
                 continueEnabled={continueEnabled}
               />
             </div>
+          </>
           )}
         </section>
       </div>
@@ -418,49 +476,6 @@ function SelectionSummary({
         </div>
       </div>
     </aside>
-  );
-}
-
-function TransitionPanel({
-  selectedServices,
-  onBack,
-}: {
-  selectedServices: PartnerServiceDefinition[];
-  onBack: () => void;
-}) {
-  return (
-    <section className="rounded-lg border border-[#c7d2fe] bg-white p-5 shadow-sm">
-      <div className="inline-flex items-center gap-2 rounded-full bg-[#dcfce7] px-3 py-1 text-[12px] font-black text-[#15803d]">
-        <ShieldCheck size={14} aria-hidden="true" />
-        Services selected successfully
-      </div>
-      <h2 className="mt-4 text-[24px] font-black text-[#111827]">Next: Business Profile</h2>
-      <p className="mt-2 max-w-3xl text-[14px] font-semibold leading-6 text-[#64748b]">
-        Page 2 will collect business and organization details. This Preview step does not create a live organization or publish any service.
-      </p>
-      <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-        {selectedServices.map((serviceItem) => (
-          <div key={serviceItem.id} className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2 text-[13px] font-bold text-[#334155]">
-            {serviceItem.label}
-          </div>
-        ))}
-      </div>
-      <div className="mt-5 flex flex-col gap-2 sm:flex-row">
-        <button
-          type="button"
-          onClick={onBack}
-          className="inline-flex h-10 items-center justify-center rounded-lg border border-[#cfd8e3] bg-white px-4 text-[13px] font-black text-[#334155] transition hover:border-[#4f46e5] focus:outline-none focus:ring-2 focus:ring-[#818cf8]"
-        >
-          Back to Services
-        </button>
-        <button
-          type="button"
-          className="inline-flex h-10 items-center justify-center rounded-lg bg-[#eef2ff] px-4 text-[13px] font-black text-[#4338ca] focus:outline-none focus:ring-2 focus:ring-[#818cf8]"
-        >
-          Business Profile - Next Page / Preview
-        </button>
-      </div>
-    </section>
   );
 }
 

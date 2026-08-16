@@ -47,13 +47,26 @@ test("preview persistence stores and restores selected services", () => {
   const storage = memoryStorage();
   writePartnerPreviewSelection(storage, {
     selectedServiceIds: ["hotels-resorts", "cab-taxi", "activities"],
-    completedStep: "business-profile-preview",
+    completedStep: "business-profile",
   });
 
   assert.equal(storage.getItem(PARTNER_PREVIEW_SELECTED_SERVICES_STORAGE_KEY)?.includes("cab-taxi"), true);
   assert.deepEqual(readPartnerPreviewSelection(storage), {
     selectedServiceIds: ["hotels-resorts", "cab-taxi", "activities"],
+    completedStep: "business-profile",
+  });
+});
+
+test("legacy Page 1 business profile preview marker maps to Business Profile", () => {
+  const storage = memoryStorage();
+  storage.setItem(PARTNER_PREVIEW_SELECTED_SERVICES_STORAGE_KEY, JSON.stringify({
+    selectedServiceIds: ["hotels-resorts"],
     completedStep: "business-profile-preview",
+  }));
+
+  assert.deepEqual(readPartnerPreviewSelection(storage), {
+    selectedServiceIds: ["hotels-resorts"],
+    completedStep: "business-profile",
   });
 });
 
