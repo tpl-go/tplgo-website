@@ -439,7 +439,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
             onChange={handleAccountTypeChange}
           />
 
-          <div style={authPanelContentStyle(isCompactViewport, step === "otp")}>
+          <div style={authPanelContentStyle(isCompactViewport, step === "otp" || partnerView === "register")}>
             <div style={headingBlockStyle}>
               <p style={eyebrowStyle}>{activeTab === "partner" ? "TPL GO PARTNER ACCESS" : "TPL GO ACCOUNT"}</p>
               <h2 id={titleId} style={titleStyle(isCompactViewport)}>
@@ -604,7 +604,7 @@ function PromoBrand({ content }: { content: ReturnType<typeof getLoginPromoConte
   return (
     <div style={promoLogoRowStyle}>
       {content.brandLogoImage ? (
-        <span aria-hidden="true" style={brandLogoImageStyle(content.brandLogoImage)} />
+        <span aria-hidden="true" data-media-slot={content.brandMediaSlot} style={brandLogoImageStyle(content.brandLogoImage)} />
       ) : (
         <span style={brandMarkStyle}>TPL</span>
       )}
@@ -957,11 +957,12 @@ function AuthPanel(props: {
 
   return (
     <div style={stackStyle}>
-      <MethodSelector
-        active={method}
-        onChange={setMethod}
-        onGoogleAvailability={onGoogleAvailability}
-      />
+        <MethodSelector
+          active={method}
+          onChange={setMethod}
+          onGoogleAvailability={onGoogleAvailability}
+        />
+      <AuthDivider />
       {method === "mobile" ? (
         <>
           <MobileIdentityInput
@@ -1074,7 +1075,7 @@ function MethodSelector({
     <div aria-label="Authentication method" style={methodGridStyle}>
       <button type="button" onClick={() => onChange("mobile")} style={methodButtonStyle(active === "mobile")}>
         <Phone size={16} aria-hidden="true" />
-        Mobile
+        Continue with Mobile
       </button>
       <button
         type="button"
@@ -1083,12 +1084,22 @@ function MethodSelector({
         style={disabledMethodButtonStyle}
       >
         <span aria-hidden="true" style={googleMarkStyle}>G</span>
-        Google
+        Continue with Google
       </button>
       <button type="button" onClick={() => onChange("email")} style={methodButtonStyle(active === "email")}>
         <Mail size={16} aria-hidden="true" />
-        Email
+        Continue with Email
       </button>
+    </div>
+  );
+}
+
+function AuthDivider() {
+  return (
+    <div style={authDividerStyle} aria-hidden="true">
+      <span style={authDividerLineStyle} />
+      <b>OR</b>
+      <span style={authDividerLineStyle} />
     </div>
   );
 }
@@ -1266,17 +1277,17 @@ function overlayStyle(isCompact: boolean): React.CSSProperties {
 
 function modalShellStyle(isCompact: boolean): React.CSSProperties {
   return {
-    width: isCompact ? "100%" : "min(940px, calc(100vw - 48px))",
+    width: isCompact ? "100%" : "min(900px, calc(100vw - 48px))",
     maxWidth: "100%",
-    height: isCompact ? "auto" : "min(610px, calc(100vh - 40px))",
+    height: isCompact ? "auto" : "min(570px, calc(100vh - 40px))",
     maxHeight: isCompact ? "92dvh" : "90vh",
-    minHeight: isCompact ? "auto" : "560px",
+    minHeight: isCompact ? "auto" : "520px",
     overflow: "hidden",
     background: "#ffffff",
     borderRadius: isCompact ? "24px 24px 18px 18px" : "28px",
     display: "grid",
     gridTemplateColumns: isCompact ? "1fr" : "43fr 57fr",
-    boxShadow: "0 28px 84px rgba(2, 6, 23, 0.38)",
+    boxShadow: "0 24px 70px rgba(2, 6, 23, 0.34)",
     position: "relative",
     fontFamily: "inherit",
   };
@@ -1287,8 +1298,8 @@ function closeButtonStyle(isCompact: boolean, disabled: boolean): React.CSSPrope
     position: "absolute",
     top: isCompact ? "12px" : "18px",
     right: isCompact ? "12px" : "18px",
-    width: "38px",
-    height: "38px",
+    width: "34px",
+    height: "34px",
     border: "1px solid rgba(148, 163, 184, 0.34)",
     borderRadius: "999px",
     background: isCompact ? "rgba(15, 23, 42, 0.5)" : "#ffffff",
@@ -1305,19 +1316,19 @@ function closeButtonStyle(isCompact: boolean, disabled: boolean): React.CSSPrope
 function promoPanelStyle(isCompact: boolean, desktopImage: string, mobileImage?: string): React.CSSProperties {
   const image = isCompact ? mobileImage || desktopImage : desktopImage;
   return {
-    minHeight: isCompact ? "104px" : "100%",
-    height: isCompact ? "104px" : "100%",
+    minHeight: isCompact ? "90px" : "100%",
+    height: isCompact ? "90px" : "100%",
     background: [
       "linear-gradient(180deg, rgba(4, 15, 34, 0.18), rgba(4, 15, 34, 0.82))",
       "linear-gradient(135deg, rgba(11, 95, 255, 0.5), rgba(3, 12, 32, 0.26) 50%, rgba(2, 6, 23, 0.82))",
       `url('${image}') center/cover`,
     ].join(", "),
     color: "#ffffff",
-    padding: isCompact ? "14px 18px 12px" : "28px 28px 26px",
+    padding: isCompact ? "12px 16px 10px" : "22px 22px 20px",
     display: "flex",
     flexDirection: "column",
     justifyContent: "space-between",
-    gap: isCompact ? "6px" : "13px",
+    gap: isCompact ? "5px" : "9px",
     position: "relative",
   };
 }
@@ -1325,9 +1336,9 @@ function promoPanelStyle(isCompact: boolean, desktopImage: string, mobileImage?:
 function rightPanelStyle(isCompact: boolean): React.CSSProperties {
   return {
     minHeight: 0,
-    maxHeight: isCompact ? "calc(92dvh - 104px)" : "100%",
+    maxHeight: isCompact ? "calc(92dvh - 90px)" : "100%",
     overflow: "hidden",
-    padding: isCompact ? "16px 16px 18px" : "30px 40px 28px",
+    padding: isCompact ? "14px 14px 16px" : "24px 34px 22px",
     display: "flex",
     flexDirection: "column",
     background: "#ffffff",
@@ -1337,38 +1348,38 @@ function rightPanelStyle(isCompact: boolean): React.CSSProperties {
 const promoLogoRowStyle: React.CSSProperties = {
   display: "flex",
   alignItems: "center",
-  gap: "9px",
+  gap: "8px",
 };
 
 const brandMarkStyle: React.CSSProperties = {
-  width: "42px",
-  height: "42px",
-  borderRadius: "14px",
+  width: "34px",
+  height: "34px",
+  borderRadius: "11px",
   background: "#ffffff",
   color: "#0b5fff",
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  fontSize: "13px",
+  fontSize: "12px",
   fontWeight: 950,
 };
 
 function brandLogoImageStyle(imageUrl: string): React.CSSProperties {
   return {
-    width: "42px",
-    height: "42px",
-    borderRadius: "14px",
+    width: "34px",
+    height: "34px",
+    borderRadius: "11px",
     backgroundColor: "#ffffff",
     backgroundImage: `url(${imageUrl})`,
     backgroundRepeat: "no-repeat",
     backgroundPosition: "center",
-    backgroundSize: "30px 30px",
+    backgroundSize: "contain",
     display: "inline-block",
   };
 }
 
 const brandWordStyle: React.CSSProperties = {
-  fontSize: "15px",
+  fontSize: "13px",
   fontWeight: 900,
   letterSpacing: 0,
 };
@@ -1376,15 +1387,15 @@ const brandWordStyle: React.CSSProperties = {
 function promoCopyStyle(isCompact: boolean): React.CSSProperties {
   return {
     display: "grid",
-    gap: isCompact ? "3px" : "8px",
+    gap: isCompact ? "3px" : "6px",
   };
 }
 
 const promoEyebrowStyle: React.CSSProperties = {
   margin: 0,
   color: "#93c5fd",
-  fontSize: "12px",
-  lineHeight: "16px",
+  fontSize: "10px",
+  lineHeight: "14px",
   fontWeight: 850,
   textTransform: "uppercase",
   letterSpacing: 0,
@@ -1395,8 +1406,8 @@ function promoHeadlineStyle(isCompact: boolean): React.CSSProperties {
     margin: 0,
     maxWidth: "340px",
     color: "#ffffff",
-    fontSize: isCompact ? "20px" : "38px",
-    lineHeight: isCompact ? "25px" : "43px",
+    fontSize: isCompact ? "18px" : "33px",
+    lineHeight: isCompact ? "23px" : "38px",
     fontWeight: 900,
     letterSpacing: 0,
   };
@@ -1411,17 +1422,17 @@ function promoSubtitleStyle(isCompact: boolean): React.CSSProperties {
     margin: 0,
     maxWidth: "330px",
     color: "#dbeafe",
-    fontSize: isCompact ? "12px" : "14px",
-    lineHeight: isCompact ? "17px" : "21px",
+    fontSize: isCompact ? "11px" : "13px",
+    lineHeight: isCompact ? "16px" : "19px",
     fontWeight: 650,
   };
 }
 
 function promoVisualStyle(isCompact: boolean): React.CSSProperties {
   return {
-    width: isCompact ? "38px" : "54px",
-    height: isCompact ? "38px" : "54px",
-    borderRadius: "18px",
+    width: isCompact ? "34px" : "44px",
+    height: isCompact ? "34px" : "44px",
+    borderRadius: "15px",
     background: "rgba(255, 255, 255, 0.16)",
     border: "1px solid rgba(255, 255, 255, 0.24)",
     display: isCompact ? "none" : "inline-flex",
@@ -1433,40 +1444,40 @@ function promoVisualStyle(isCompact: boolean): React.CSSProperties {
 function benefitGridStyle(isCompact: boolean): React.CSSProperties {
   return {
     display: isCompact ? "none" : "grid",
-    gap: "8px",
+    gap: "6px",
   };
 }
 
 const promoFooterStyle: React.CSSProperties = {
   margin: 0,
   color: "#bfdbfe",
-  fontSize: "12px",
-  lineHeight: "17px",
+  fontSize: "11px",
+  lineHeight: "15px",
   fontWeight: 750,
 };
 
-function authPanelContentStyle(isCompact: boolean, isOtpStep: boolean): React.CSSProperties {
+function authPanelContentStyle(isCompact: boolean, shouldScroll: boolean): React.CSSProperties {
   return {
     minHeight: 0,
     flex: "1 1 auto",
-    overflowY: isCompact || isOtpStep ? "auto" : "visible",
+    overflowY: isCompact || shouldScroll ? "auto" : "visible",
     overscrollBehavior: "contain",
     display: "flex",
     flexDirection: "column",
-    gap: isCompact ? "12px" : "13px",
+    gap: isCompact ? "10px" : "10px",
   };
 }
 
 const headingBlockStyle: React.CSSProperties = {
   display: "grid",
-  gap: "4px",
+  gap: "3px",
 };
 
 const eyebrowStyle: React.CSSProperties = {
   margin: 0,
   color: "#0b5fff",
-  fontSize: "12px",
-  lineHeight: "16px",
+  fontSize: "10px",
+  lineHeight: "14px",
   fontWeight: 900,
   letterSpacing: 0,
 };
@@ -1474,8 +1485,8 @@ const eyebrowStyle: React.CSSProperties = {
 function titleStyle(isCompact: boolean): React.CSSProperties {
   return {
     margin: 0,
-    fontSize: isCompact ? "23px" : "30px",
-    lineHeight: isCompact ? "29px" : "36px",
+    fontSize: isCompact ? "22px" : "27px",
+    lineHeight: isCompact ? "28px" : "33px",
     color: "#0f172a",
     fontWeight: 950,
     letterSpacing: 0,
@@ -1484,8 +1495,8 @@ function titleStyle(isCompact: boolean): React.CSSProperties {
 
 const introTextStyle: React.CSSProperties = {
   margin: 0,
-  fontSize: "14px",
-  lineHeight: "20px",
+  fontSize: "13px",
+  lineHeight: "18px",
   color: "#64748b",
   fontWeight: 650,
 };
@@ -1497,22 +1508,22 @@ function topTabsStyle(isCompact: boolean): React.CSSProperties {
     border: "1px solid #dbe4ef",
     borderRadius: "999px",
     background: "#eef3f8",
-    padding: "5px",
-    gap: "5px",
-    margin: isCompact ? "0 0 15px" : "0 46px 18px 0",
+    padding: "4px",
+    gap: "4px",
+    margin: isCompact ? "0 0 12px" : "0 42px 14px 0",
     flexShrink: 0,
   };
 }
 
 function topTabStyle(active: boolean): React.CSSProperties {
   return {
-    minHeight: "46px",
+    minHeight: "42px",
     border: "none",
     borderRadius: "999px",
     background: active ? "linear-gradient(135deg, #0b5fff, #0284c7)" : "transparent",
     color: active ? "#ffffff" : "#475569",
     fontWeight: 900,
-    fontSize: "13px",
+    fontSize: "12px",
     cursor: "pointer",
     display: "inline-flex",
     alignItems: "center",
@@ -1526,20 +1537,20 @@ function topTabStyle(active: boolean): React.CSSProperties {
 
 const stackStyle: React.CSSProperties = {
   display: "grid",
-  gap: "11px",
+  gap: "9px",
 };
 
 const methodGridStyle: React.CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-  gap: "8px",
+  gridTemplateColumns: "1fr",
+  gap: "7px",
 };
 
 function methodButtonStyle(active: boolean): React.CSSProperties {
   return {
-    minHeight: "46px",
+    minHeight: "44px",
     border: active ? "1px solid #0b5fff" : "1px solid #d9e2ec",
-    borderRadius: "13px",
+    borderRadius: "12px",
     background: active ? "linear-gradient(180deg, #f4f9ff, #eaf3ff)" : "#ffffff",
     color: active ? "#0b5fff" : "#334155",
     fontWeight: 850,
@@ -1548,13 +1559,14 @@ function methodButtonStyle(active: boolean): React.CSSProperties {
     alignItems: "center",
     justifyContent: "center",
     gap: "7px",
+    fontSize: "14px",
   };
 }
 
 const disabledMethodButtonStyle: React.CSSProperties = {
-  minHeight: "46px",
+  minHeight: "44px",
   border: "1px solid #d9e2ec",
-  borderRadius: "13px",
+  borderRadius: "12px",
   background: "#f8fafc",
   color: "#64748b",
   fontWeight: 850,
@@ -1564,11 +1576,12 @@ const disabledMethodButtonStyle: React.CSSProperties = {
   justifyContent: "center",
   gap: "7px",
   opacity: 0.82,
+  fontSize: "14px",
 };
 
 const googleMarkStyle: React.CSSProperties = {
-  width: "21px",
-  height: "21px",
+  width: "19px",
+  height: "19px",
   borderRadius: "999px",
   display: "inline-flex",
   alignItems: "center",
@@ -1577,39 +1590,55 @@ const googleMarkStyle: React.CSSProperties = {
   border: "1px solid #d9e2ec",
   color: "#111827",
   fontWeight: 900,
-  fontSize: "12px",
+  fontSize: "11px",
+};
+
+const authDividerStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "1fr auto 1fr",
+  alignItems: "center",
+  gap: "9px",
+  color: "#94a3b8",
+  fontSize: "10px",
+  lineHeight: "14px",
+  fontWeight: 850,
+};
+
+const authDividerLineStyle: React.CSSProperties = {
+  height: "1px",
+  background: "#e2e8f0",
 };
 
 const labelStyle: React.CSSProperties = {
-  fontSize: "13px",
-  lineHeight: "17px",
+  fontSize: "12px",
+  lineHeight: "16px",
   fontWeight: 850,
   color: "#0f172a",
 };
 
 const helperTextStyle: React.CSSProperties = {
   margin: 0,
-  fontSize: "12px",
-  lineHeight: "18px",
+  fontSize: "11px",
+  lineHeight: "16px",
   color: "#64748b",
   fontWeight: 650,
 };
 
 const warningTextStyle: React.CSSProperties = {
   margin: 0,
-  fontSize: "12px",
-  lineHeight: "18px",
+  fontSize: "11px",
+  lineHeight: "16px",
   color: "#b45309",
   fontWeight: 750,
 };
 
 function mobileInputShellStyle(invalid: boolean): React.CSSProperties {
   return {
-    minHeight: "50px",
+    minHeight: "46px",
     border: invalid ? "1px solid #f97316" : "1px solid #cbd5e1",
-    borderRadius: "14px",
+    borderRadius: "12px",
     display: "grid",
-    gridTemplateColumns: "minmax(116px, 0.78fr) minmax(0, 1.22fr)",
+    gridTemplateColumns: "minmax(108px, 0.74fr) minmax(0, 1.26fr)",
     overflow: "hidden",
     background: "#ffffff",
   };
@@ -1619,9 +1648,9 @@ const countrySelectStyle: React.CSSProperties = {
   border: "none",
   borderRight: "1px solid #e2e8f0",
   outline: "none",
-  padding: "0 10px 0 12px",
+  padding: "0 9px 0 11px",
   color: "#1e293b",
-  fontSize: "14px",
+  fontSize: "13px",
   fontWeight: 800,
   background: "#f8fafc",
   fontFamily: "inherit",
@@ -1630,12 +1659,12 @@ const countrySelectStyle: React.CSSProperties = {
 
 const compactInputStyle: React.CSSProperties = {
   minWidth: 0,
-  height: "50px",
+  height: "46px",
   border: "none",
   outline: "none",
-  padding: "0 13px",
-  fontSize: "16px",
-  lineHeight: "22px",
+  padding: "0 12px",
+  fontSize: "14px",
+  lineHeight: "20px",
   color: "#0f172a",
   background: "transparent",
   fontFamily: "inherit",
@@ -1647,13 +1676,13 @@ const compactInputStyle: React.CSSProperties = {
 const standaloneInputStyle: React.CSSProperties = {
   width: "100%",
   minWidth: 0,
-  height: "50px",
+  height: "46px",
   border: "1px solid #cbd5e1",
-  borderRadius: "14px",
+  borderRadius: "12px",
   outline: "none",
-  padding: "0 13px",
-  fontSize: "16px",
-  lineHeight: "22px",
+  padding: "0 12px",
+  fontSize: "14px",
+  lineHeight: "20px",
   color: "#0f172a",
   background: "#ffffff",
   fontFamily: "inherit",
@@ -1669,17 +1698,18 @@ const standaloneSelectStyle: React.CSSProperties = {
 
 function primaryButtonStyle(disabled: boolean): React.CSSProperties {
   return {
-    minHeight: "50px",
+    minHeight: "48px",
     border: "none",
-    borderRadius: "14px",
+    borderRadius: "12px",
     background: disabled ? "#dbeafe" : "linear-gradient(135deg, #0b5fff, #0284c7)",
     color: disabled ? "#64748b" : "#ffffff",
-    fontWeight: 900,
+    fontWeight: 850,
     cursor: disabled ? "not-allowed" : "pointer",
     opacity: 0.98,
     letterSpacing: 0,
-    padding: "0 16px",
-    boxShadow: disabled ? "none" : "0 15px 32px rgba(11, 95, 255, 0.28)",
+    padding: "0 14px",
+    fontSize: "14px",
+    boxShadow: disabled ? "none" : "0 12px 24px rgba(11, 95, 255, 0.24)",
   };
 }
 
@@ -1690,7 +1720,7 @@ const secondaryActionRowStyle: React.CSSProperties = {
 };
 
 const secondaryButtonStyle: React.CSSProperties = {
-  minHeight: "44px",
+  minHeight: "42px",
   border: "1px solid #cbd5e1",
   borderRadius: "13px",
   background: "#ffffff",
@@ -1711,28 +1741,28 @@ function resendButtonStyle(disabled: boolean): React.CSSProperties {
 }
 
 const registerInlineStyle: React.CSSProperties = {
-  minHeight: "48px",
+  minHeight: "42px",
   marginTop: "0",
   borderTop: "1px solid #e2e8f0",
-  paddingTop: "10px",
+  paddingTop: "8px",
   display: "grid",
-  gridTemplateColumns: "minmax(0, 1fr) minmax(174px, auto)",
+  gridTemplateColumns: "minmax(0, 1fr) minmax(160px, auto)",
   alignItems: "center",
-  gap: "10px",
+  gap: "8px",
 };
 
 const registerTitleStyle: React.CSSProperties = {
   margin: 0,
   color: "#0f172a",
-  fontSize: "14px",
-  lineHeight: "18px",
+  fontSize: "13px",
+  lineHeight: "17px",
   fontWeight: 900,
 };
 
 const registerButtonStyle: React.CSSProperties = {
-  minHeight: "42px",
+  minHeight: "40px",
   border: "1px solid #0b5fff",
-  borderRadius: "13px",
+  borderRadius: "12px",
   background: "#ffffff",
   color: "#0b5fff",
   display: "inline-flex",
@@ -1741,7 +1771,7 @@ const registerButtonStyle: React.CSSProperties = {
   gap: "8px",
   fontWeight: 900,
   cursor: "pointer",
-  padding: "0 16px",
+  padding: "0 12px",
   whiteSpace: "nowrap",
   width: "100%",
 };
@@ -1750,7 +1780,7 @@ const partnerInlineActionsStyle: React.CSSProperties = {
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  gap: "10px",
+  gap: "8px",
   marginTop: "-2px",
 };
 
@@ -1758,7 +1788,7 @@ const plainLinkButtonStyle: React.CSSProperties = {
   border: "none",
   background: "transparent",
   color: "#0b5fff",
-  fontSize: "12px",
+  fontSize: "11px",
   lineHeight: "16px",
   fontWeight: 850,
   cursor: "pointer",
@@ -1770,18 +1800,18 @@ const termsCheckStyle: React.CSSProperties = {
   alignItems: "flex-start",
   gap: "8px",
   color: "#475569",
-  fontSize: "12px",
-  lineHeight: "17px",
+  fontSize: "11px",
+  lineHeight: "16px",
   fontWeight: 700,
 };
 
 const benefitLineStyle: React.CSSProperties = {
   display: "flex",
-  gap: "10px",
+  gap: "8px",
   alignItems: "center",
-  minHeight: "48px",
-  padding: "8px 10px",
-  borderRadius: "14px",
+  minHeight: "40px",
+  padding: "6px 8px",
+  borderRadius: "12px",
   background: "rgba(255, 255, 255, 0.13)",
   border: "1px solid rgba(255, 255, 255, 0.17)",
   backdropFilter: "blur(10px)",
@@ -1795,9 +1825,9 @@ function benefitIconStyle(isCompact: boolean, tone: "sky" | "emerald" | "amber" 
     violet: { background: "#8b5cf6", color: "#ffffff" },
   }[tone];
   return {
-    width: isCompact ? "24px" : "32px",
-    height: isCompact ? "24px" : "32px",
-    borderRadius: "10px",
+    width: isCompact ? "22px" : "28px",
+    height: isCompact ? "22px" : "28px",
+    borderRadius: "9px",
     background: colors.background,
     color: colors.color,
     display: "inline-flex",

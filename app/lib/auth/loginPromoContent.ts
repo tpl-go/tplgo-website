@@ -2,6 +2,7 @@ export type LoginPromoContext = "user_login" | "partner_login";
 
 export type LoginPromoContent = {
   context: LoginPromoContext;
+  brandMediaSlot: "auth_promo_brand_image";
   brandLogoImage?: string;
   brandLabel: string;
   desktopImage: string;
@@ -23,6 +24,7 @@ export type LoginPromoContent = {
 const DEFAULT_LOGIN_PROMO_CONTENT: Record<LoginPromoContext, LoginPromoContent> = {
   user_login: {
     context: "user_login",
+    brandMediaSlot: "auth_promo_brand_image",
     brandLogoImage: "/logo.png",
     brandLabel: "TPL GO",
     desktopImage: "/hero-bg.jpg",
@@ -42,6 +44,7 @@ const DEFAULT_LOGIN_PROMO_CONTENT: Record<LoginPromoContext, LoginPromoContent> 
   },
   partner_login: {
     context: "partner_login",
+    brandMediaSlot: "auth_promo_brand_image",
     brandLogoImage: "/logo.png",
     brandLabel: "TPL GO",
     desktopImage: "/experiences/adventure.jpg",
@@ -70,6 +73,7 @@ export function getLoginPromoContent(context: LoginPromoContext): LoginPromoCont
 export const loginPromoContentAdminSchema = {
   contexts: ["user_login", "partner_login"] as const,
   editableFields: [
+    "brandMediaSlot",
     "brandLogoImage",
     "brandLabel",
     "desktopImage",
