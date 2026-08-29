@@ -1,4 +1,6 @@
-export type LoginPromoContext = "user_login" | "partner_login";
+import { resolveCurrentTplApiTarget } from "@/app/lib/api/apiTargetResolver";
+
+export type LoginPromoContext = "user_login" | "partner_login" | "partner_registration";
 
 export type LoginPromoContent = {
   context: LoginPromoContext;
@@ -21,7 +23,7 @@ export type LoginPromoContent = {
   active: boolean;
 };
 
-const DEFAULT_LOGIN_PROMO_CONTENT: Record<LoginPromoContext, LoginPromoContent> = {
+export const DEFAULT_LOGIN_PROMO_CONTENT: Record<LoginPromoContext, LoginPromoContent> = {
   user_login: {
     context: "user_login",
     brandMediaSlot: "auth_promo_brand_image",
@@ -62,6 +64,26 @@ const DEFAULT_LOGIN_PROMO_CONTENT: Record<LoginPromoContext, LoginPromoContent> 
     footerTrustLine: "Same TPL identity. No separate Partner credentials.",
     active: true,
   },
+  partner_registration: {
+    context: "partner_registration",
+    brandMediaSlot: "auth_promo_brand_image",
+    brandLogoImage: "/logo.png",
+    brandLabel: "TPL GO",
+    desktopImage: "/experiences/adventure.jpg",
+    mobileImage: "/experiences/adventure.jpg",
+    eyebrow: "Start Partner Registration",
+    headline: "Bring your service",
+    highlightedText: "online",
+    subtitle: "Register basic details first. Full verification continues in Partner Desk.",
+    benefits: [
+      { title: "Simple Entry", description: "Start with essential business details", tone: "sky" },
+      { title: "Verified Contact", description: "Use a service mobile for OTP", tone: "emerald" },
+      { title: "Admin Review", description: "Applications enter the Partner queue", tone: "amber" },
+      { title: "Multiple Services", description: "Add more scopes in Partner Desk", tone: "violet" },
+    ],
+    footerTrustLine: "Registration does not activate sellable inventory.",
+    active: true,
+  },
 };
 
 export function getLoginPromoContent(context: LoginPromoContext): LoginPromoContent {
@@ -70,8 +92,72 @@ export function getLoginPromoContent(context: LoginPromoContext): LoginPromoCont
   return DEFAULT_LOGIN_PROMO_CONTENT.user_login;
 }
 
+type WebsiteExperiencePublicResponse = {
+  contexts?: Partial<Record<LoginPromoContext, Partial<LoginPromoContent>>>;
+};
+
+const API_TARGET = resolveCurrentTplApiTarget();
+
+export async function fetchPublishedLoginPromoContent(context: LoginPromoContext): Promise<LoginPromoContent | null> {
+  if (!API_TARGET.baseUrl) return null;
+  try {
+    const response = await fetch(`${API_TARGET.baseUrl}/api/v1/content/website-experience/login-signup`, {
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    });
+    if (!response.ok) return null;
+    const payload = await response.json();
+    const data = payload?.ok === true ? payload.data as WebsiteExperiencePublicResponse : null;
+    const configured = data?.contexts?.[context];
+    return configured ? normalizeLoginPromoContent(context, configured) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function normalizeLoginPromoContent(
+  context: LoginPromoContext,
+  input: Partial<LoginPromoContent>
+): LoginPromoContent {
+  const fallback = DEFAULT_LOGIN_PROMO_CONTENT[context];
+  return {
+    ...fallback,
+    ...input,
+    context,
+    brandMediaSlot: "auth_promo_brand_image",
+    brandLogoImage: safeMediaUrl(input.brandLogoImage, fallback.brandLogoImage),
+    desktopImage: safeMediaUrl(input.desktopImage, fallback.desktopImage) || fallback.desktopImage,
+    mobileImage: safeMediaUrl(input.mobileImage, fallback.mobileImage),
+    benefits: normalizeBenefits(input.benefits, fallback.benefits),
+    active: typeof input.active === "boolean" ? input.active : fallback.active,
+  };
+}
+
+function normalizeBenefits(
+  benefits: LoginPromoContent["benefits"] | undefined,
+  fallback: LoginPromoContent["benefits"]
+): LoginPromoContent["benefits"] {
+  if (!Array.isArray(benefits)) return fallback;
+  return fallback.map((fallbackBenefit, index) => {
+    const value = benefits[index];
+    return {
+      title: value?.title || fallbackBenefit.title,
+      description: value?.description || fallbackBenefit.description,
+      tone: value?.tone || fallbackBenefit.tone,
+    };
+  }) as LoginPromoContent["benefits"];
+}
+
+function safeMediaUrl(value: string | undefined, fallback?: string): string | undefined {
+  if (!value) return fallback;
+  if (!value.startsWith("/") && !value.startsWith("https://")) return fallback;
+  const path = value.split("?")[0]?.toLowerCase() || "";
+  if (![".png", ".jpg", ".jpeg", ".webp"].some((extension) => path.endsWith(extension))) return fallback;
+  return value;
+}
+
 export const loginPromoContentAdminSchema = {
-  contexts: ["user_login", "partner_login"] as const,
+  contexts: ["user_login", "partner_login", "partner_registration"] as const,
   editableFields: [
     "brandMediaSlot",
     "brandLogoImage",

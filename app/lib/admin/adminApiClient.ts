@@ -609,6 +609,105 @@ export type AdminContentDashboard = {
   versionHistory: AdminContentVersionItem[];
 };
 
+export type WebsiteExperienceContext = "user_login" | "partner_login" | "partner_registration";
+export type WebsiteExperienceTone = "sky" | "emerald" | "amber" | "violet";
+
+export type WebsiteExperienceBenefit = {
+  icon?: string;
+  title: string;
+  description: string;
+  tone: WebsiteExperienceTone;
+};
+
+export type WebsiteExperienceContent = {
+  context: WebsiteExperienceContext;
+  brandMediaSlot: "auth_promo_brand_image";
+  brandLogoImage?: string;
+  brandLogoAlt?: string;
+  brandLabel: string;
+  desktopImage: string;
+  desktopImageAlt?: string;
+  mobileImage?: string;
+  mobileImageAlt?: string;
+  eyebrow: string;
+  headline: string;
+  highlightedText: string;
+  subtitle: string;
+  benefits: WebsiteExperienceBenefit[];
+  footerTrustLine: string;
+  active: boolean;
+};
+
+export type WebsiteExperienceAdminContext = {
+  context: WebsiteExperienceContext;
+  label: string;
+  draftContent: WebsiteExperienceContent;
+  publishedContent: WebsiteExperienceContent;
+  defaultContent: WebsiteExperienceContent;
+  draftVersion: number;
+  publishedVersion: number;
+  status: string;
+  active: boolean;
+  updatedAt?: string;
+  publishedAt?: string;
+};
+
+export type WebsiteExperienceMediaView = {
+  id: string;
+  context: WebsiteExperienceContext;
+  slot: string;
+  url: string;
+  contentType: string;
+  sizeBytes: number;
+  width?: number;
+  height?: number;
+  altText?: string;
+  createdAt: string;
+};
+
+export type WebsiteExperienceAuditView = {
+  id: string;
+  action: string;
+  context?: string;
+  actorAdminId?: string;
+  entityId?: string;
+  changeSummary?: string;
+  createdAt: string;
+};
+
+export type PartnerRegistrationIntakeView = {
+  id: string;
+  legalName: string;
+  serviceMobileCountryCode: string;
+  serviceMobile: string;
+  businessEmail: string;
+  primaryCategory: string;
+  requestedServiceName?: string;
+  status: string;
+  createdAt: string;
+};
+
+export type WebsiteExperienceAdminResponse = {
+  contexts: WebsiteExperienceAdminContext[];
+  permissions: {
+    canRead: boolean;
+    canWrite: boolean;
+    canPublish: boolean;
+  };
+  schema: {
+    contexts: WebsiteExperienceContext[];
+    mediaSlots: string[];
+    editableFields: string[];
+    lockedSecurityFields: string[];
+    allowedMediaTypes: string[];
+    maxBenefits: number;
+    maxMediaBytes: number;
+  };
+  recentMedia: WebsiteExperienceMediaView[];
+  recentAudit: WebsiteExperienceAuditView[];
+  partnerRegistrationIntakes: PartnerRegistrationIntakeView[];
+};
+
 export type AdminExecutiveKpi = {
   id: string;
   label: string;
@@ -1809,7 +1908,7 @@ export type AdminEnterpriseEcosystemDashboard = {
 };
 
 type RequestOptions = {
-  method?: "GET" | "POST" | "PATCH";
+  method?: "GET" | "POST" | "PATCH" | "PUT";
   body?: unknown;
   token?: string | null;
   requestId?: string;
@@ -2208,6 +2307,50 @@ export async function listAdminContentMedia(query: AdminListQuery = {}): Promise
 
 export async function listAdminContentSeo(query: AdminListQuery = {}): Promise<AdminApiResult<AdminContentSeoItem[]>> {
   return adminApiRequest<AdminContentSeoItem[]>(`/api/v1/admin/content/seo${buildAdminQuery(query)}`);
+}
+
+export async function getAdminWebsiteExperienceLoginSignup(): Promise<AdminApiResult<WebsiteExperienceAdminResponse>> {
+  return adminApiRequest<WebsiteExperienceAdminResponse>("/api/v1/admin/content/website-experience/login-signup");
+}
+
+export async function saveAdminWebsiteExperienceDraft(
+  context: WebsiteExperienceContext,
+  content: WebsiteExperienceContent
+): Promise<AdminApiResult<WebsiteExperienceAdminContext>> {
+  return adminApiRequest<WebsiteExperienceAdminContext>(
+    `/api/v1/admin/content/website-experience/login-signup/${encodeURIComponent(context)}/draft`,
+    {
+      method: "PUT",
+      body: content,
+    }
+  );
+}
+
+export async function publishAdminWebsiteExperienceContext(
+  context: WebsiteExperienceContext
+): Promise<AdminApiResult<WebsiteExperienceAdminContext>> {
+  return adminApiRequest<WebsiteExperienceAdminContext>(
+    `/api/v1/admin/content/website-experience/login-signup/${encodeURIComponent(context)}/publish`,
+    {
+      method: "POST",
+    }
+  );
+}
+
+export async function registerAdminWebsiteExperienceMedia(input: {
+  context: WebsiteExperienceContext;
+  slot: string;
+  url: string;
+  contentType: string;
+  sizeBytes: number;
+  width?: number;
+  height?: number;
+  altText?: string;
+}): Promise<AdminApiResult<WebsiteExperienceMediaView>> {
+  return adminApiRequest<WebsiteExperienceMediaView>("/api/v1/admin/content/website-experience/media", {
+    method: "POST",
+    body: input,
+  });
 }
 
 export async function getAdminExecutiveDashboard(): Promise<AdminApiResult<AdminExecutiveDashboard>> {

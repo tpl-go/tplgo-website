@@ -35,6 +35,7 @@ import {
   type AdminContentVersionItem,
   type AdminContentWorkflowItem,
 } from "../../lib/admin/adminApiClient";
+import { WebsiteExperienceManager } from "./WebsiteExperienceManager";
 
 type LoadState<T> =
   | { status: "loading"; data: T; error: null }
@@ -128,6 +129,8 @@ export function AdminContentOperationsCenter() {
 
       {state.status === "loading" ? <Notice text="Loading content operations..." /> : null}
       {state.status === "error" ? <Notice tone="danger" text={state.error.message} /> : null}
+
+      <WebsiteExperienceManager />
 
       <section className="grid gap-4 xl:grid-cols-[17rem_1fr]">
         <ContentNavigation />

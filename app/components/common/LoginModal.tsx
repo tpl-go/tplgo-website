@@ -20,9 +20,12 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/app/hooks/useAuth";
 import {
+  fetchPublishedLoginPromoContent,
   getLoginPromoContent,
+  type LoginPromoContent,
   type LoginPromoContext,
 } from "@/app/lib/auth/loginPromoContent";
+import { createPartnerRegistrationIntake } from "@/app/lib/partner/partnerRegistrationIntake";
 
 type LoginModalProps = {
   isOpen: boolean;
@@ -65,6 +68,7 @@ const PARTNER_PRIMARY_CATEGORIES = [
   "Guide",
   "Travel Agency / DMC",
   "Marketplace Seller",
+  "Others",
 ] as const;
 
 export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
@@ -81,6 +85,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const registerMobileInputId = useId();
   const registerEmailInputId = useId();
   const registerCategoryInputId = useId();
+  const registerRequestedServiceInputId = useId();
   const registerTermsInputId = useId();
   const modalRef = useRef<HTMLDivElement | null>(null);
   const mobileInputRef = useRef<HTMLInputElement | null>(null);
@@ -102,6 +107,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const [registerMobile, setRegisterMobile] = useState("");
   const [registerEmail, setRegisterEmail] = useState("");
   const [registerCategory, setRegisterCategory] = useState("Hotels & Resorts");
+  const [registerRequestedService, setRegisterRequestedService] = useState("");
   const [registerTermsAccepted, setRegisterTermsAccepted] = useState(false);
   const [otp, setOtp] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -123,6 +129,8 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const isValidMobile = isNationalMobileValid(cleanedMobile, selectedCountry);
   const isValidRegisterMobile = isNationalMobileValid(cleanedRegisterMobile, selectedRegisterCountry);
   const isValidRegisterEmail = isEmailValid(normalizedRegisterEmail);
+  const cleanedRequestedService = useMemo(() => sanitizePlainText(registerRequestedService).slice(0, 80), [registerRequestedService]);
+  const isOtherRegisterCategory = registerCategory === "Others";
   const isCertifiedMobileOtp = selectedCountry.certifiedOtp && selectedCountry.code === "IN";
   const isValidEmail = isEmailValid(normalizedEmail);
   const isValidOtp = cleanedOtp.length === 6;
@@ -139,9 +147,15 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     isValidRegisterMobile &&
     isValidRegisterEmail &&
     Boolean(registerCategory) &&
+    (!isOtherRegisterCategory || cleanedRequestedService.length >= 2) &&
     registerTermsAccepted;
   const maskedMobile = cleanedMobile.length >= 4 ? `XXXXX${cleanedMobile.slice(-4)}` : "";
-  const promoContext: LoginPromoContext = activeTab === "partner" ? "partner_login" : "user_login";
+  const promoContext: LoginPromoContext =
+    activeTab === "partner" && partnerView === "register"
+      ? "partner_registration"
+      : activeTab === "partner"
+        ? "partner_login"
+        : "user_login";
 
   useEffect(() => {
     const checkViewport = () => setIsCompactViewport(window.innerWidth < 900);
@@ -201,6 +215,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     setRegisterMobile("");
     setRegisterEmail("");
     setRegisterCategory("Hotels & Resorts");
+    setRegisterRequestedService("");
     setRegisterTermsAccepted(false);
     setIsSubmitting(false);
   }, [resetChallengeState]);
@@ -372,22 +387,41 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     setInfoText("");
   };
 
-  const handleRegisterContinue = () => {
+  const handleRegisterContinue = async () => {
     if (!canContinueRegistration) {
-      setErrorText("Complete the required Partner registration fields and accept the terms.");
+      setErrorText(
+        isOtherRegisterCategory
+          ? "Tell us your service and complete the required Partner registration fields."
+          : "Complete the required Partner registration fields and accept the terms."
+      );
       return;
     }
     if (!selectedRegisterCountry.certifiedOtp || selectedRegisterCountry.code !== "IN") {
       setErrorText("WhatsApp OTP delivery is currently certified for India only. Global provider certification is pending.");
       return;
     }
-    setErrorText("");
-    setCountryCode(registerCountryCode);
-    setMobile(cleanedRegisterMobile);
-    setPartnerView("login");
-    setPartnerAccessMethod("otp");
-    setMethod("mobile");
-    setInfoText("Now verify the service mobile. After sign-in, Partner Desk will continue your application.");
+    try {
+      setIsSubmitting(true);
+      setErrorText("");
+      await createPartnerRegistrationIntake({
+        legalName: registerLegalName.trim(),
+        serviceMobileCountryCode: registerCountryCode,
+        serviceMobile: cleanedRegisterMobile,
+        businessEmail: normalizedRegisterEmail,
+        primaryCategory: isOtherRegisterCategory ? "OTHER" : registerCategory,
+        requestedServiceName: isOtherRegisterCategory ? cleanedRequestedService : undefined,
+      });
+      setCountryCode(registerCountryCode);
+      setMobile(cleanedRegisterMobile);
+      setPartnerView("login");
+      setPartnerAccessMethod("otp");
+      setMethod("mobile");
+      setInfoText("Now verify the service mobile. After sign-in, Partner Desk will continue your application.");
+    } catch (error) {
+      setErrorText(error instanceof Error ? error.message : "Partner registration could not be saved.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleForgotPartnerPassword = () => {
@@ -528,6 +562,9 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
               setRegisterEmail={setRegisterEmail}
               registerCategory={registerCategory}
               setRegisterCategory={setRegisterCategory}
+              registerRequestedServiceInputId={registerRequestedServiceInputId}
+              registerRequestedService={registerRequestedService}
+              setRegisterRequestedService={setRegisterRequestedService}
               registerTermsAccepted={registerTermsAccepted}
               setRegisterTermsAccepted={setRegisterTermsAccepted}
               registerMobileInvalid={cleanedRegisterMobile.length > 0 && !isValidRegisterMobile}
@@ -558,8 +595,20 @@ function PromoPanel({
   isCompact: boolean;
   descriptionId: string;
 }) {
-  const content = getLoginPromoContent(context);
-  const ImageIcon = context === "partner_login" ? BriefcaseBusiness : Sparkles;
+  const fallbackContent = useMemo(() => getLoginPromoContent(context), [context]);
+  const [publishedContent, setPublishedContent] = useState<{ context: LoginPromoContext; content: LoginPromoContent } | null>(null);
+  const content = publishedContent?.context === context ? publishedContent.content : fallbackContent;
+  const ImageIcon = context === "partner_login" || context === "partner_registration" ? BriefcaseBusiness : Sparkles;
+
+  useEffect(() => {
+    let active = true;
+    void fetchPublishedLoginPromoContent(context).then((configured) => {
+      if (active && configured?.active) setPublishedContent({ context, content: configured });
+    });
+    return () => {
+      active = false;
+    };
+  }, [context]);
 
   if (isCompact) {
     return (
@@ -600,7 +649,7 @@ function PromoPanel({
   );
 }
 
-function PromoBrand({ content }: { content: ReturnType<typeof getLoginPromoContent> }) {
+function PromoBrand({ content }: { content: LoginPromoContent }) {
   return (
     <div style={promoLogoRowStyle}>
       {content.brandLogoImage ? (
@@ -668,6 +717,7 @@ function AuthPanel(props: {
   registerMobileInputId: string;
   registerEmailInputId: string;
   registerCategoryInputId: string;
+  registerRequestedServiceInputId: string;
   registerTermsInputId: string;
   registerLegalName: string;
   setRegisterLegalName: (value: string) => void;
@@ -679,6 +729,8 @@ function AuthPanel(props: {
   setRegisterEmail: (value: string) => void;
   registerCategory: string;
   setRegisterCategory: (value: string) => void;
+  registerRequestedService: string;
+  setRegisterRequestedService: (value: string) => void;
   registerTermsAccepted: boolean;
   setRegisterTermsAccepted: (value: boolean) => void;
   registerMobileInvalid: boolean;
@@ -741,6 +793,7 @@ function AuthPanel(props: {
     registerMobileInputId,
     registerEmailInputId,
     registerCategoryInputId,
+    registerRequestedServiceInputId,
     registerTermsInputId,
     registerLegalName,
     setRegisterLegalName,
@@ -752,6 +805,8 @@ function AuthPanel(props: {
     setRegisterEmail,
     registerCategory,
     setRegisterCategory,
+    registerRequestedService,
+    setRegisterRequestedService,
     registerTermsAccepted,
     setRegisterTermsAccepted,
     registerMobileInvalid,
@@ -857,7 +912,10 @@ function AuthPanel(props: {
         <select
           id={registerCategoryInputId}
           value={registerCategory}
-          onChange={(event) => setRegisterCategory(event.target.value)}
+          onChange={(event) => {
+            setRegisterCategory(event.target.value);
+            if (event.target.value !== "Others") setRegisterRequestedService("");
+          }}
           style={standaloneSelectStyle}
         >
           {PARTNER_PRIMARY_CATEGORIES.map((category) => (
@@ -866,6 +924,24 @@ function AuthPanel(props: {
             </option>
           ))}
         </select>
+
+        {registerCategory === "Others" ? (
+          <>
+            <label htmlFor={registerRequestedServiceInputId} style={labelStyle}>
+              Tell us your service *
+            </label>
+            <input
+              id={registerRequestedServiceInputId}
+              value={registerRequestedService}
+              onChange={(event) => setRegisterRequestedService(sanitizePlainText(event.target.value).slice(0, 80))}
+              type="text"
+              inputMode="text"
+              autoComplete="off"
+              placeholder="e.g. Yacht Charter, Interpreter, Event Equipment"
+              style={standaloneInputStyle}
+            />
+          </>
+        ) : null}
 
         <label htmlFor={registerTermsInputId} style={termsCheckStyle}>
           <input
@@ -1216,6 +1292,10 @@ function sanitizeDigits(value: string) {
 
 function normalizeEmail(value: string) {
   return value.trim().toLowerCase();
+}
+
+function sanitizePlainText(value: string) {
+  return value.replace(/[<>]/g, "").replace(/\s+/g, " ").trimStart();
 }
 
 function isEmailValid(value: string) {
