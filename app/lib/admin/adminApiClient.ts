@@ -659,6 +659,9 @@ export type WebsiteExperienceMediaView = {
   url: string;
   contentType: string;
   sizeBytes: number;
+  source?: "uploaded" | "external_url";
+  originalFilename?: string;
+  storageKey?: string;
   width?: number;
   height?: number;
   altText?: string;
@@ -685,6 +688,10 @@ export type PartnerRegistrationIntakeView = {
   requestedServiceName?: string;
   status: string;
   createdAt: string;
+};
+
+export type PartnerAdminRegistrationIntakesResponse = {
+  rows: PartnerRegistrationIntakeView[];
 };
 
 export type WebsiteExperienceAdminResponse = {
@@ -2351,6 +2358,70 @@ export async function registerAdminWebsiteExperienceMedia(input: {
     method: "POST",
     body: input,
   });
+}
+
+export async function uploadAdminWebsiteExperienceMedia(input: {
+  context: WebsiteExperienceContext;
+  slot: string;
+  file: File;
+  altText?: string;
+}): Promise<AdminApiResult<WebsiteExperienceMediaView>> {
+  const requestId = createAdminRequestId();
+  if (!API_BASE_URL) {
+    return failure(requestId, 0, {
+      code: "ADMIN_API_NOT_CONFIGURED",
+      message: "TPL API base URL is not configured.",
+    });
+  }
+  const token = readAdminSession()?.session.token;
+  if (!token) {
+    return failure(requestId, 401, {
+      code: "ADMIN_UNAUTHORIZED",
+      message: "Admin session expired or is not authorized. Sign in again.",
+    });
+  }
+
+  const params = new URLSearchParams({
+    context: input.context,
+    slot: input.slot,
+    filename: input.file.name,
+  });
+  if (input.altText?.trim()) params.set("altText", input.altText.trim());
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/admin/content/website-experience/media/upload?${params.toString()}`, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+        "Content-Type": input.file.type || "application/octet-stream",
+        "X-Request-Id": requestId,
+      },
+      body: input.file,
+    });
+    const payload = await readJson(response);
+    const responseRequestId = readRequestId(payload) || response.headers.get("x-request-id") || requestId;
+    if (response.ok && payload?.ok === true) {
+      return {
+        ok: true,
+        data: payload.data as WebsiteExperienceMediaView,
+        meta: payload.meta as AdminApiMeta,
+        status: response.status,
+        requestId: responseRequestId,
+      };
+    }
+    if (response.status === 401) clearAdminSession();
+    return failure(responseRequestId, response.status, readError(payload, response.status));
+  } catch (error) {
+    return failure(requestId, 0, {
+      code: "ADMIN_API_NETWORK_ERROR",
+      message: error instanceof Error ? error.message : "Admin media upload failed.",
+    });
+  }
+}
+
+export async function listAdminPartnerRegistrationIntakes(): Promise<AdminApiResult<PartnerAdminRegistrationIntakesResponse>> {
+  return adminApiRequest<PartnerAdminRegistrationIntakesResponse>("/api/v1/admin/partners/registration-intakes");
 }
 
 export async function getAdminExecutiveDashboard(): Promise<AdminApiResult<AdminExecutiveDashboard>> {

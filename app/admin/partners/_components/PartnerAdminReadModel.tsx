@@ -14,7 +14,12 @@ import {
   Users,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { adminApiRequest, type AdminApiResult } from "../../../lib/admin/adminApiClient";
+import {
+  adminApiRequest,
+  listAdminPartnerRegistrationIntakes,
+  type AdminApiResult,
+  type PartnerRegistrationIntakeView,
+} from "../../../lib/admin/adminApiClient";
 import type { PartnerOrganizationBundle, PartnerServiceScope } from "../../../lib/partner/partnerApiClient";
 
 type PartnerQueueRow = {
@@ -29,6 +34,7 @@ type PartnerAdminMode = "overview" | "applications" | "organizations" | "service
 
 export function PartnerAdminReadModel({ mode }: { mode: PartnerAdminMode }) {
   const [result, setResult] = useState<AdminApiResult<PartnerQueueRow[]> | null>(null);
+  const [intakesResult, setIntakesResult] = useState<AdminApiResult<{ rows: PartnerRegistrationIntakeView[] }> | null>(null);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("");
@@ -36,8 +42,12 @@ export function PartnerAdminReadModel({ mode }: { mode: PartnerAdminMode }) {
 
   const loadQueue = useCallback(async () => {
     setLoading(true);
-    const response = await adminApiRequest<PartnerQueueRow[]>("/api/v1/admin/partner-verification/queue");
+    const [response, intakes] = await Promise.all([
+      adminApiRequest<PartnerQueueRow[]>("/api/v1/admin/partner-verification/queue"),
+      listAdminPartnerRegistrationIntakes(),
+    ]);
     setResult(response);
+    setIntakesResult(intakes);
     setLoading(false);
   }, []);
 
@@ -49,6 +59,7 @@ export function PartnerAdminReadModel({ mode }: { mode: PartnerAdminMode }) {
   }, [loadQueue]);
 
   const rows = useMemo(() => (result?.ok ? result.data : []), [result]);
+  const intakes = useMemo(() => (intakesResult?.ok ? intakesResult.data.rows : []), [intakesResult]);
   const filteredRows = useMemo(() => filterRows(rows, { query, status, service }), [rows, query, status, service]);
   const serviceRows = useMemo(() => buildServiceRows(filteredRows), [filteredRows]);
   const documentRows = useMemo(() => buildDocumentRows(filteredRows), [filteredRows]);
@@ -69,7 +80,7 @@ export function PartnerAdminReadModel({ mode }: { mode: PartnerAdminMode }) {
           onService={setService}
         />
       ) : null}
-      {mode === "applications" ? <Applications rows={filteredRows} loading={loading} /> : null}
+      {mode === "applications" ? <Applications rows={filteredRows} intakes={intakes} loading={loading} /> : null}
       {mode === "organizations" ? <Organizations rows={filteredRows} loading={loading} /> : null}
       {mode === "services" ? <Services rows={serviceRows} loading={loading} /> : null}
       {mode === "documents" ? <Documents rows={documentRows} loading={loading} /> : null}
@@ -127,10 +138,56 @@ function Overview({ metrics, rows }: { metrics: ReturnType<typeof buildMetrics>;
   );
 }
 
-function Applications({ rows, loading }: { rows: PartnerQueueRow[]; loading: boolean }) {
+function Applications({ rows, intakes, loading }: { rows: PartnerQueueRow[]; intakes: PartnerRegistrationIntakeView[]; loading: boolean }) {
   return (
-    <Panel title="Partner Applications" actionHref="/admin/partner-verification">
-      <QueueList rows={rows} emptyLabel={loading ? "Loading Partner applications." : "No Partner applications are currently returned by the verification queue."} />
+    <div className="space-y-4">
+      <PartnerRegistrationIntakePanel rows={intakes} loading={loading} />
+      <Panel title="Partner Applications" actionHref="/admin/partner-verification">
+        <QueueList rows={rows} emptyLabel={loading ? "Loading Partner applications." : "No Partner applications are currently returned by the verification queue."} />
+      </Panel>
+    </div>
+  );
+}
+
+function PartnerRegistrationIntakePanel({ rows, loading }: { rows: PartnerRegistrationIntakeView[]; loading: boolean }) {
+  if (rows.length === 0) {
+    return (
+      <Panel title="Partner Registration Intakes">
+        <Empty label={loading ? "Loading Partner registration intakes." : "No basic Partner registration intakes are currently recorded."} />
+      </Panel>
+    );
+  }
+  return (
+    <Panel title="Partner Registration Intakes">
+      <div className="overflow-x-auto">
+        <table className="min-w-[820px] w-full text-left text-sm">
+          <thead className="bg-slate-50 text-xs font-semibold uppercase text-slate-500">
+            <tr>
+              <th className="px-4 py-3">Legal / Company Name</th>
+              <th className="px-4 py-3">Primary Service</th>
+              <th className="px-4 py-3">Requested Service</th>
+              <th className="px-4 py-3">Business Email</th>
+              <th className="px-4 py-3">Service Mobile</th>
+              <th className="px-4 py-3">Status</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {rows.map((row) => (
+              <tr key={row.id}>
+                <td className="px-4 py-3 font-semibold text-slate-950">{row.legalName}</td>
+                <td className="px-4 py-3 text-slate-600">{row.primaryCategory === "OTHER" ? "Others" : row.primaryCategory}</td>
+                <td className="px-4 py-3 text-slate-600">{row.requestedServiceName || "-"}</td>
+                <td className="px-4 py-3 text-slate-600">{row.businessEmail}</td>
+                <td className="px-4 py-3 text-slate-600">+{row.serviceMobileCountryCode} {row.serviceMobile}</td>
+                <td className="px-4 py-3"><StatusPill value={row.status} /></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="mt-3 text-xs leading-5 text-slate-500">
+        Unknown requested services are review visibility only. They do not become official service scopes or activate sellable inventory automatically.
+      </p>
     </Panel>
   );
 }

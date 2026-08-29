@@ -5,8 +5,8 @@ import { Eye, Globe2, Image as ImageIcon, Save, Send, ShieldCheck } from "lucide
 import {
   getAdminWebsiteExperienceLoginSignup,
   publishAdminWebsiteExperienceContext,
-  registerAdminWebsiteExperienceMedia,
   saveAdminWebsiteExperienceDraft,
+  uploadAdminWebsiteExperienceMedia,
   type AdminApiError,
   type PartnerRegistrationIntakeView,
   type WebsiteExperienceAdminResponse,
@@ -77,6 +77,21 @@ export function WebsiteExperienceManager() {
     const benefits = [...activeDraft.benefits];
     benefits[index] = { ...benefits[index], ...patch };
     updateDraft({ benefits });
+  };
+
+  const applyUploadedMedia = (media: { slot: string; url: string; altText?: string }) => {
+    if (!activeDraft) return;
+    if (media.slot === "auth_promo_brand_image") {
+      updateDraft({ brandLogoImage: media.url, brandLogoAlt: media.altText || activeDraft.brandLogoAlt });
+      return;
+    }
+    if (media.slot === "auth_promo_desktop_hero") {
+      updateDraft({ desktopImage: media.url, desktopImageAlt: media.altText || activeDraft.desktopImageAlt });
+      return;
+    }
+    if (media.slot === "auth_promo_mobile_hero") {
+      updateDraft({ mobileImage: media.url, mobileImageAlt: media.altText || activeDraft.mobileImageAlt });
+    }
   };
 
   const saveDraft = async () => {
@@ -151,11 +166,8 @@ export function WebsiteExperienceManager() {
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2">
-            <Field label="Brand image URL" value={activeDraft.brandLogoImage || ""} maxLength={500} onChange={(value) => updateDraft({ brandLogoImage: value })} />
             <Field label="Brand image alt text" value={activeDraft.brandLogoAlt || ""} maxLength={120} onChange={(value) => updateDraft({ brandLogoAlt: value })} />
-            <Field label="Desktop hero image URL" value={activeDraft.desktopImage} maxLength={500} onChange={(value) => updateDraft({ desktopImage: value })} />
             <Field label="Desktop image alt text" value={activeDraft.desktopImageAlt || ""} maxLength={120} onChange={(value) => updateDraft({ desktopImageAlt: value })} />
-            <Field label="Mobile hero image URL" value={activeDraft.mobileImage || ""} maxLength={500} onChange={(value) => updateDraft({ mobileImage: value })} />
             <Field label="Mobile image alt text" value={activeDraft.mobileImageAlt || ""} maxLength={120} onChange={(value) => updateDraft({ mobileImageAlt: value })} />
             <Field label="Eyebrow" value={activeDraft.eyebrow} maxLength={64} onChange={(value) => updateDraft({ eyebrow: value })} />
             <Field label="Brand label fallback" value={activeDraft.brandLabel} maxLength={40} onChange={(value) => updateDraft({ brandLabel: value })} />
@@ -164,6 +176,15 @@ export function WebsiteExperienceManager() {
             <Field label="Subtitle" value={activeDraft.subtitle} maxLength={180} onChange={(value) => updateDraft({ subtitle: value })} />
             <Field label="Footer / trust line" value={activeDraft.footerTrustLine} maxLength={140} onChange={(value) => updateDraft({ footerTrustLine: value })} />
           </div>
+
+          <details className="rounded border border-slate-200 bg-slate-50 p-4">
+            <summary className="cursor-pointer text-xs font-semibold uppercase text-slate-500">Advanced media references</summary>
+            <div className="mt-3 grid gap-3 lg:grid-cols-3">
+              <Field label="Brand image URL" value={activeDraft.brandLogoImage || ""} maxLength={500} onChange={(value) => updateDraft({ brandLogoImage: value })} />
+              <Field label="Desktop hero image URL" value={activeDraft.desktopImage} maxLength={500} onChange={(value) => updateDraft({ desktopImage: value })} />
+              <Field label="Mobile hero image URL" value={activeDraft.mobileImage || ""} maxLength={500} onChange={(value) => updateDraft({ mobileImage: value })} />
+            </div>
+          </details>
 
           <div className="rounded border border-slate-200 p-4">
             <div className="flex items-center justify-between gap-3">
@@ -207,7 +228,7 @@ export function WebsiteExperienceManager() {
             {message ? <p className="text-sm font-semibold text-slate-600">{message}</p> : null}
           </div>
 
-          <MediaRegistration activeContext={activeContext} canWrite={canWrite} />
+          <MediaUpload activeContext={activeContext} canWrite={canWrite} onUploaded={applyUploadedMedia} />
           <PartnerRegistrationIntakes rows={state.data.partnerRegistrationIntakes} />
         </div>
 
@@ -230,23 +251,43 @@ function Field({ label, value, maxLength, onChange }: { label: string; value: st
   );
 }
 
-function MediaRegistration({ activeContext, canWrite }: { activeContext: WebsiteExperienceContext; canWrite: boolean }) {
+function MediaUpload({
+  activeContext,
+  canWrite,
+  onUploaded,
+}: {
+  activeContext: WebsiteExperienceContext;
+  canWrite: boolean;
+  onUploaded: (media: { slot: string; url: string; altText?: string }) => void;
+}) {
   const [slot, setSlot] = useState(mediaSlots[0].key);
-  const [url, setUrl] = useState("");
-  const [contentType, setContentType] = useState("image/png");
   const [altText, setAltText] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [uploaded, setUploaded] = useState<WebsiteExperienceAdminResponse["recentMedia"][number] | null>(null);
   const [message, setMessage] = useState("");
 
-  const register = async () => {
-    const result = await registerAdminWebsiteExperienceMedia({
+  const upload = async () => {
+    if (!file) return;
+    const result = await uploadAdminWebsiteExperienceMedia({
       context: activeContext,
       slot,
-      url,
-      contentType,
-      sizeBytes: 0,
+      file,
       altText,
     });
-    setMessage(result.ok ? "Media registered. Use the URL in the image field and save draft." : result.error.message);
+    if (!result.ok) {
+      setMessage(result.error.message);
+      return;
+    }
+    setUploaded(result.data);
+    onUploaded({ slot: result.data.slot, url: result.data.url, altText: result.data.altText });
+    setMessage("Image uploaded into the draft. Save Draft keeps it private to the editor until Publish.");
+  };
+
+  const clear = () => {
+    setFile(null);
+    setUploaded(null);
+    setAltText("");
+    setMessage("");
   };
 
   return (
@@ -255,33 +296,49 @@ function MediaRegistration({ activeContext, canWrite }: { activeContext: Website
         <ImageIcon className="h-4 w-4 text-slate-500" />
         <h4 className="text-sm font-semibold text-slate-950">Presentation Media</h4>
       </div>
-      <div className="mt-3 grid gap-3 lg:grid-cols-4">
+      <div className="mt-3 grid gap-3 lg:grid-cols-[0.8fr_1fr_1fr]">
         <label className="space-y-1 text-xs font-semibold uppercase text-slate-500">
           <span>Slot</span>
           <select value={slot} onChange={(event) => setSlot(event.target.value)} className="h-10 w-full rounded border border-slate-200 bg-white px-3 text-sm normal-case text-slate-900">
             {mediaSlots.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}
           </select>
         </label>
-        <Field label="PNG/JPG/WebP URL" value={url} maxLength={500} onChange={setUrl} />
-        <label className="space-y-1 text-xs font-semibold uppercase text-slate-500">
-          <span>MIME type</span>
-          <select value={contentType} onChange={(event) => setContentType(event.target.value)} className="h-10 w-full rounded border border-slate-200 bg-white px-3 text-sm normal-case text-slate-900">
-            <option value="image/png">PNG</option>
-            <option value="image/jpeg">JPG/JPEG</option>
-            <option value="image/webp">WebP</option>
-          </select>
-        </label>
         <Field label="Alt text" value={altText} maxLength={120} onChange={setAltText} />
+        <label className="space-y-1 text-xs font-semibold uppercase text-slate-500">
+          <span>Upload image</span>
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            disabled={!canWrite}
+            onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+            className="block h-10 w-full rounded border border-slate-200 bg-white px-3 py-2 text-xs normal-case text-slate-700 file:mr-3 file:rounded file:border-0 file:bg-slate-100 file:px-2 file:py-1 file:text-xs file:font-semibold file:text-slate-700"
+          />
+        </label>
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-3">
-        <button type="button" disabled={!canWrite || !url} onClick={register} className="h-9 rounded border border-blue-200 bg-blue-50 px-3 text-xs font-semibold text-blue-700 disabled:cursor-not-allowed disabled:opacity-50">
-          Register Media
+        <button type="button" disabled={!canWrite || !file} onClick={upload} className="h-9 rounded border border-blue-200 bg-blue-50 px-3 text-xs font-semibold text-blue-700 disabled:cursor-not-allowed disabled:opacity-50">
+          Upload Image
         </button>
+        {uploaded ? (
+          <button type="button" onClick={clear} className="h-9 rounded border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600">
+            Replace / Remove
+          </button>
+        ) : null}
         <p className="text-xs leading-5 text-slate-500">
-          Public presentation media only. Private Partner KYC storage is separate and not selectable here.
+          PNG, JPG/JPEG, or WebP only. Public presentation media stays separate from private Partner KYC storage.
         </p>
         {message ? <p className="text-xs font-semibold text-slate-700">{message}</p> : null}
       </div>
+      {uploaded ? (
+        <div className="mt-3 flex items-center gap-3 rounded border border-slate-100 bg-slate-50 p-3">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={uploaded.url} alt={uploaded.altText || "Uploaded presentation media"} className="h-14 w-20 rounded bg-white object-cover" />
+          <div className="min-w-0 text-xs text-slate-600">
+            <p className="truncate font-semibold text-slate-900">{uploaded.originalFilename || "Uploaded image"}</p>
+            <p>{uploaded.width && uploaded.height ? `${uploaded.width} x ${uploaded.height}px` : "Dimensions unavailable"} · {(uploaded.sizeBytes / 1024).toFixed(1)} KB</p>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
