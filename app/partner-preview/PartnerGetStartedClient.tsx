@@ -24,15 +24,40 @@ import {
   X,
 } from "lucide-react";
 import {
-  BusinessProfileSavedPanel,
   PartnerBusinessProfileStep,
 } from "./PartnerBusinessProfileStep";
+import { PartnerVerificationCenter, type DocumentUploadMetadata } from "./PartnerVerificationCenter";
 import {
   emptyPartnerOrganizationPreviewProfile,
+  markBusinessMobileVerifiedForPreview,
   readPartnerOrganizationPreviewProfile,
   writePartnerOrganizationPreviewProfile,
   type PartnerOrganizationPreviewProfile,
 } from "../lib/partner/partnerOrganizationPreviewProfile";
+import { useAuth } from "../hooks/useAuth";
+import {
+  confirmPartnerDocument,
+  createPartnerDocumentUploadSession,
+  fetchPartnerOrganizations,
+  fetchPartnerOrganizationBundle,
+  linkPartnerDocumentToRequirement,
+  requestPartnerEmailVerification,
+  requestPartnerMobileVerification,
+  savePartnerOrganizationToBackend,
+  submitPartnerVerification,
+  updatePartnerOrganizationOnBackend,
+  verifyPartnerMobile,
+  type PartnerMobileChallenge,
+  type PartnerOrganizationBundle,
+  type PartnerRequirement,
+} from "../lib/partner/partnerApiClient";
+import {
+  emptyPartnerVerificationPreviewState,
+  readPartnerVerificationPreviewState,
+  seedFictionalPreviewDocuments,
+  writePartnerVerificationPreviewState,
+  type PartnerVerificationPreviewState,
+} from "../lib/partner/partnerVerificationPreview";
 import {
   filterPartnerServiceCatalog,
   partnerServiceCatalog,
@@ -83,15 +108,29 @@ const valuePoints = [
   "Centralized bookings and payments",
 ];
 
+const PARTNER_BACKEND_ORGANIZATION_ID_KEY = "tpl.partnerPreview.backendOrganizationId.v1";
+
 export default function PartnerGetStartedClient() {
-  const [currentStep, setCurrentStep] = useState<"choose-services" | "business-profile" | "verification-preview">("choose-services");
+  const { isAuthenticated, openLoginModal } = useAuth();
+  const [currentStep, setCurrentStep] = useState<"choose-services" | "business-profile" | "verification-preview" | "activated-dashboard">("choose-services");
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [showSelectedOnly, setShowSelectedOnly] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [organizationProfile, setOrganizationProfile] = useState<PartnerOrganizationPreviewProfile>(emptyPartnerOrganizationPreviewProfile);
+  const [verificationState, setVerificationState] = useState<PartnerVerificationPreviewState>(emptyPartnerVerificationPreviewState);
   const [draftSaved, setDraftSaved] = useState(false);
   const [storageReady, setStorageReady] = useState(false);
+  const [backendBundle, setBackendBundle] = useState<PartnerOrganizationBundle | null>(null);
+  const [partnerOrganizations, setPartnerOrganizations] = useState<PartnerOrganizationBundle[]>([]);
+  const [backendStatus, setBackendStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [backendError, setBackendError] = useState<string | null>(null);
+  const [mobileChallenge, setMobileChallenge] = useState<PartnerMobileChallenge | null>(null);
+  const [mobileOtp, setMobileOtp] = useState("");
+  const [mobileVerificationBusy, setMobileVerificationBusy] = useState(false);
+  const [mobileVerificationMessage, setMobileVerificationMessage] = useState<string | null>(null);
+  const [emailVerificationBusy, setEmailVerificationBusy] = useState(false);
+  const [emailVerificationMessage, setEmailVerificationMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -99,6 +138,18 @@ export default function PartnerGetStartedClient() {
       setSelectedServiceIds(previewState.selectedServiceIds);
       setCurrentStep(previewState.completedStep);
       setOrganizationProfile(readPartnerOrganizationPreviewProfile(window.localStorage));
+      setVerificationState(seedFictionalPreviewDocuments(readPartnerVerificationPreviewState(window.localStorage)));
+      const organizationId = window.localStorage.getItem(PARTNER_BACKEND_ORGANIZATION_ID_KEY);
+      if (organizationId) {
+        void fetchPartnerOrganizationBundle(organizationId).then((result) => {
+          if (result.ok) {
+            applyBackendBundle(result.data, { restoreProfile: true });
+          } else {
+            setBackendStatus("error");
+            setBackendError(result.error.message);
+          }
+        });
+      }
       setStorageReady(true);
     }, 0);
 
@@ -106,10 +157,18 @@ export default function PartnerGetStartedClient() {
   }, []);
 
   useEffect(() => {
+    if (!storageReady || !isAuthenticated) return;
+    void loadPartnerOrganizations();
+    // Server organization loading is intentionally gated by auth/storage readiness;
+    // adding the local function as a dependency would repeat the resolver after each state write.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, storageReady]);
+
+  useEffect(() => {
     if (!storageReady) return;
     writePartnerPreviewSelection(window.localStorage, {
       selectedServiceIds,
-      completedStep: currentStep,
+      completedStep: currentStep === "activated-dashboard" ? "verification-preview" : currentStep,
     });
   }, [currentStep, selectedServiceIds, storageReady]);
 
@@ -117,6 +176,11 @@ export default function PartnerGetStartedClient() {
     if (!storageReady) return;
     writePartnerOrganizationPreviewProfile(window.localStorage, organizationProfile);
   }, [organizationProfile, storageReady]);
+
+  useEffect(() => {
+    if (!storageReady) return;
+    writePartnerVerificationPreviewState(window.localStorage, verificationState);
+  }, [verificationState, storageReady]);
 
   const filteredCatalog = useMemo(() => filterPartnerServiceCatalog(searchQuery), [searchQuery]);
   const selectedServices = useMemo(() => selectedPartnerServices(selectedServiceIds), [selectedServiceIds]);
@@ -141,18 +205,242 @@ export default function PartnerGetStartedClient() {
   }
 
   function saveProfileDraft() {
-    setOrganizationProfile((current) => ({ ...current, savedForPreview: true }));
-    setDraftSaved(true);
+    void saveProfileToStaging(false);
   }
 
   function saveProfileAndContinue() {
+    void saveProfileToStaging(true);
+  }
+
+  async function saveProfileToStaging(continueAfterSave: boolean) {
     setOrganizationProfile((current) => ({ ...current, savedForPreview: true }));
     setDraftSaved(true);
-    setCurrentStep("verification-preview");
+
+    if (!isAuthenticated) {
+      setBackendError("Sign in with TPL Login to save this Partner profile to staging.");
+      openLoginModal({ accountType: "partner", intent: "partner", redirectAfterLogin: "/partner-preview" });
+      if (continueAfterSave) setCurrentStep("verification-preview");
+      return;
+    }
+
+    setBackendStatus("saving");
+    setBackendError(null);
+    const result = backendBundle
+      ? await updatePartnerOrganizationOnBackend(backendBundle.organization.id, organizationProfile, selectedServices)
+      : await savePartnerOrganizationToBackend(organizationProfile, selectedServices);
+    if (!result.ok) {
+      setBackendStatus("error");
+      setBackendError(result.error.message);
+      return;
+    }
+
+    applyBackendBundle(result.data, { restoreProfile: false });
+    setPartnerOrganizations((current) => upsertBundle(current, result.data));
+    if (continueAfterSave) setCurrentStep(resolvePartnerStep(result.data));
+  }
+
+  async function refreshBackendBundle(organizationId = backendBundle?.organization.id) {
+    if (!organizationId) return;
+    const result = await fetchPartnerOrganizationBundle(organizationId);
+    if (result.ok) {
+      applyBackendBundle(result.data, { restoreProfile: true });
+      setPartnerOrganizations((current) => upsertBundle(current, result.data));
+    } else {
+      setBackendStatus("error");
+      setBackendError(result.error.message);
+    }
+  }
+
+  async function loadPartnerOrganizations() {
+    const result = await fetchPartnerOrganizations();
+    if (!result.ok) {
+      setBackendError(result.error.message);
+      return;
+    }
+    setPartnerOrganizations(result.data);
+    const storedId = window.localStorage.getItem(PARTNER_BACKEND_ORGANIZATION_ID_KEY);
+    const selected = result.data.find((bundle) => bundle.organization.id === storedId) ?? result.data[0] ?? null;
+    if (selected) applyBackendBundle(selected, { restoreProfile: true });
+  }
+
+  function applyBackendBundle(bundle: PartnerOrganizationBundle, options: { restoreProfile: boolean }) {
+    setBackendBundle(bundle);
+    window.localStorage.setItem(PARTNER_BACKEND_ORGANIZATION_ID_KEY, bundle.organization.id);
+    setBackendStatus("saved");
+    setBackendError(null);
+    if (options.restoreProfile) {
+      setOrganizationProfile(profileFromBackendBundle(bundle));
+      setSelectedServiceIds(bundle.serviceScopes.filter((scope) => scope.status !== "disabled").map((scope) => scope.serviceCode));
+      setCurrentStep(resolvePartnerStep(bundle));
+    }
+  }
+
+  async function requestMobileOtp() {
+    if (!backendBundle) {
+      setBackendError("Save the business profile to staging before requesting a business contact OTP.");
+      return;
+    }
+    setMobileVerificationBusy(true);
+    setBackendError(null);
+    setMobileVerificationMessage(null);
+    const result = await requestPartnerMobileVerification(backendBundle.organization.id, organizationProfile.businessMobile);
+    setMobileVerificationBusy(false);
+    if (result.ok) {
+      if (result.data.status === "verified_via_tpl_identity") {
+        setOrganizationProfile((current) => markBusinessMobileVerifiedForPreview(current));
+        setMobileChallenge(null);
+        setMobileOtp("");
+        setMobileVerificationMessage("Verified via your TPL account.");
+        await refreshBackendBundle(backendBundle.organization.id);
+        return;
+      }
+      setMobileChallenge(result.data);
+      setMobileOtp("");
+      setMobileVerificationMessage(getMobileChallengeMessage(result.data));
+      return;
+    }
+    setMobileVerificationMessage(result.error.message);
+  }
+
+  async function verifyMobileOtp() {
+    if (!backendBundle || !mobileChallenge) return;
+    setMobileVerificationBusy(true);
+    setBackendError(null);
+    setMobileVerificationMessage(null);
+    const result = await verifyPartnerMobile(backendBundle.organization.id, {
+      challengeId: mobileChallenge.challengeId,
+      mobile: organizationProfile.businessMobile,
+      otp: mobileOtp,
+    });
+    setMobileVerificationBusy(false);
+    if (!result.ok) {
+      setMobileVerificationMessage(result.error.message);
+      return;
+    }
+    setOrganizationProfile((current) => markBusinessMobileVerifiedForPreview(current));
+    setMobileChallenge(null);
+    setMobileOtp("");
+    setMobileVerificationMessage("Verified.");
+    await refreshBackendBundle(backendBundle.organization.id);
+  }
+
+  async function requestEmailVerificationUx() {
+    if (!backendBundle) {
+      setEmailVerificationMessage("Save the business profile to staging before requesting email verification.");
+      return;
+    }
+    setEmailVerificationBusy(true);
+    setBackendError(null);
+    setEmailVerificationMessage(null);
+    const result = await requestPartnerEmailVerification(backendBundle.organization.id, organizationProfile.businessEmail);
+    setEmailVerificationBusy(false);
+    if (result.ok && result.data.status === "EMAIL_DELIVERY_NOT_CONFIGURED") {
+      setEmailVerificationMessage("Email verification will be available when email delivery is enabled.");
+      return;
+    }
+    setEmailVerificationMessage(result.ok ? "Email verification request created." : result.error.message);
+  }
+
+  async function submitBackendReview() {
+    if (!backendBundle) {
+      setBackendError("Save the business profile to staging before submitting for review.");
+      return false;
+    }
+    const email = organizationProfile.businessEmail.trim();
+    if (email) void requestPartnerEmailVerification(backendBundle.organization.id, email);
+    const result = await submitPartnerVerification(backendBundle.organization.id);
+    if (!result.ok) {
+      setBackendError(result.error.message);
+      return false;
+    }
+    await refreshBackendBundle(backendBundle.organization.id);
+    return true;
+  }
+
+  async function uploadBackendDocument(requirement: PartnerRequirement, file: File, metadata: DocumentUploadMetadata) {
+    if (!backendBundle) {
+      setBackendError("Save the business profile to staging before uploading documents.");
+      return false;
+    }
+    setBackendError(null);
+    const validationError = validatePrivateDocumentFile(file);
+    if (validationError) {
+      setBackendError(validationError);
+      return false;
+    }
+    const checksumSha256 = await sha256File(file);
+    const session = await createPartnerDocumentUploadSession(backendBundle.organization.id, {
+      filename: file.name,
+      mimeType: file.type,
+      sizeBytes: file.size,
+      checksumSha256,
+    });
+    if (!session.ok) {
+      setBackendError(session.error.message);
+      return false;
+    }
+    if (session.data.executionStatus !== "READY" || !session.data.upload?.supported || !session.data.upload.url || !session.data.storageReference) {
+      setBackendError("Private staging storage is not ready for document upload.");
+      return false;
+    }
+    const putResponse = await fetch(session.data.upload.url, {
+      method: "PUT",
+      headers: { "Content-Type": file.type },
+      body: file,
+    });
+    if (!putResponse.ok) {
+      setBackendError(`Private document upload failed with HTTP ${putResponse.status}.`);
+      return false;
+    }
+    const confirmed = await confirmPartnerDocument(backendBundle.organization.id, {
+      ownerEntityType: requirement.ownerEntityType,
+      ownerEntityId: requirement.serviceScopeId ?? undefined,
+      documentCategory: "partner_verification",
+      documentType: requirement.title,
+      storageReference: session.data.storageReference,
+      originalFilename: file.name,
+      mimeType: file.type,
+      sizeBytes: file.size,
+      checksumSha256,
+      issueDate: metadata.issueDate,
+      expiryDate: metadata.expiryDate,
+      noExpiry: metadata.noExpiry,
+    });
+    if (!confirmed.ok) {
+      setBackendError(confirmed.error.message);
+      return false;
+    }
+    const linked = await linkPartnerDocumentToRequirement(backendBundle.organization.id, {
+      documentId: confirmed.data.id,
+      requirementId: requirement.id,
+    });
+    if (!linked.ok) {
+      setBackendError(linked.error.message);
+      return false;
+    }
+    await refreshBackendBundle(backendBundle.organization.id);
+    return true;
+  }
+
+  async function linkBackendDocument(documentId: string, requirementId: string) {
+    if (!backendBundle) return false;
+    setBackendError(null);
+    const linked = await linkPartnerDocumentToRequirement(backendBundle.organization.id, { documentId, requirementId });
+    if (!linked.ok) {
+      setBackendError(linked.error.message);
+      return false;
+    }
+    await refreshBackendBundle(backendBundle.organization.id);
+    return true;
   }
 
   return (
-    <main className="min-h-screen bg-[#f7f8fc] text-[#111827]">
+    <main data-partner-preview-root="true" className="min-h-screen bg-[#f7f8fc] pb-24 text-[#111827] lg:pb-0">
+      <style jsx global>{`
+        body:has([data-partner-preview-root="true"]) button.fixed.bottom-4 {
+          display: none !important;
+        }
+      `}</style>
       <header className="border-b border-[#dbe3ef] bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3">
           <div className="flex min-w-0 items-center gap-3">
@@ -209,11 +497,36 @@ export default function PartnerGetStartedClient() {
         </aside>
 
         <section className="grid min-w-0 gap-5">
-          {currentStep === "business-profile" ? (
+          {partnerOrganizations.length > 0 ? (
+            <OrganizationContextBar
+              organizations={partnerOrganizations}
+              activeOrganizationId={backendBundle?.organization.id ?? null}
+              onSwitch={(organizationId) => {
+                const next = partnerOrganizations.find((bundle) => bundle.organization.id === organizationId);
+                if (next) applyBackendBundle(next, { restoreProfile: true });
+              }}
+            />
+          ) : null}
+
+          {currentStep === "activated-dashboard" && backendBundle ? (
+            <ActivatedPartnerDashboard
+              bundle={backendBundle}
+              onOpenVerification={() => setCurrentStep("verification-preview")}
+              onOpenProfile={() => setCurrentStep("business-profile")}
+            />
+          ) : currentStep === "business-profile" ? (
             <PartnerBusinessProfileStep
               selectedServices={selectedServices}
               profile={organizationProfile}
               onProfileChange={(profile) => {
+                if (profile.businessMobile !== organizationProfile.businessMobile) {
+                  setMobileChallenge(null);
+                  setMobileOtp("");
+                  setMobileVerificationMessage(null);
+                }
+                if (profile.businessEmail !== organizationProfile.businessEmail) {
+                  setEmailVerificationMessage(null);
+                }
                 setOrganizationProfile(profile);
                 setDraftSaved(false);
               }}
@@ -221,11 +534,33 @@ export default function PartnerGetStartedClient() {
               onSaveDraft={saveProfileDraft}
               onSaveAndContinue={saveProfileAndContinue}
               draftSaved={draftSaved}
+              backendOrganizationId={backendBundle?.organization.id ?? null}
+              backendStatus={backendStatus}
+              backendError={backendError}
+              mobileChallenge={mobileChallenge}
+              mobileOtp={mobileOtp}
+              onMobileOtpChange={setMobileOtp}
+              onRequestMobileOtp={requestMobileOtp}
+              onVerifyMobileOtp={verifyMobileOtp}
+              mobileVerificationBusy={mobileVerificationBusy}
+              mobileVerificationMessage={mobileVerificationMessage}
+              emailVerificationBusy={emailVerificationBusy}
+              emailVerificationMessage={emailVerificationMessage}
+              onRequestEmailVerification={requestEmailVerificationUx}
             />
           ) : currentStep === "verification-preview" ? (
-            <BusinessProfileSavedPanel
+            <PartnerVerificationCenter
+              profile={organizationProfile}
               selectedServices={selectedServices}
-              onBack={() => setCurrentStep("business-profile")}
+              state={verificationState}
+              onStateChange={setVerificationState}
+              onBackToBusinessProfile={() => setCurrentStep("business-profile")}
+              onBackToServices={() => setCurrentStep("choose-services")}
+              backendBundle={backendBundle}
+              backendError={backendError}
+              onSubmitBackendReview={submitBackendReview}
+              onUploadBackendDocument={uploadBackendDocument}
+              onLinkBackendDocument={linkBackendDocument}
             />
           ) : (
           <>
@@ -327,6 +662,183 @@ export default function PartnerGetStartedClient() {
       </div>
     </main>
   );
+}
+
+function OrganizationContextBar({
+  organizations,
+  activeOrganizationId,
+  onSwitch,
+}: {
+  organizations: PartnerOrganizationBundle[];
+  activeOrganizationId: string | null;
+  onSwitch: (organizationId: string) => void;
+}) {
+  if (organizations.length === 0) return null;
+  return (
+    <div className="rounded-lg border border-[#dbe3ef] bg-white p-4 shadow-sm">
+      <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_280px] md:items-center">
+        <div className="min-w-0">
+          <p className="text-[11px] font-black uppercase tracking-[0.08em] text-[#64748b]">Organization context</p>
+          <p className="mt-1 truncate text-[15px] font-black text-[#111827]">
+            {organizations.find((bundle) => bundle.organization.id === activeOrganizationId)?.organization.legalName ?? "Select organization"}
+          </p>
+        </div>
+        <label className="block">
+          <span className="sr-only">Switch Partner organization</span>
+          <select
+            value={activeOrganizationId ?? ""}
+            onChange={(event) => onSwitch(event.target.value)}
+            className="h-10 w-full rounded-lg border border-[#cfd8e3] bg-white px-3 text-[13px] font-bold text-[#111827] outline-none focus:border-[#4f46e5] focus:ring-2 focus:ring-[#c7d2fe]"
+          >
+            {organizations.map((bundle) => (
+              <option key={bundle.organization.id} value={bundle.organization.id}>
+                {bundle.organization.legalName}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+    </div>
+  );
+}
+
+function ActivatedPartnerDashboard({
+  bundle,
+  onOpenVerification,
+  onOpenProfile,
+}: {
+  bundle: PartnerOrganizationBundle;
+  onOpenVerification: () => void;
+  onOpenProfile: () => void;
+}) {
+  const alerts = [
+    ...bundle.readiness.blockingRequirements.map((requirement) => requirement.title),
+    ...bundle.readiness.expiringCredentials.map((document) => `${document.documentType} ${document.status.toLowerCase().replace("_", " ")}`),
+  ];
+  return (
+    <div className="grid gap-5">
+      <section className="rounded-lg border border-[#dbe3ef] bg-white p-5 shadow-sm">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+          <div className="min-w-0">
+            <div className="inline-flex items-center gap-2 rounded-full bg-[#ecfdf5] px-3 py-1 text-[12px] font-black text-[#047857]">
+              <BadgeCheck size={15} aria-hidden="true" />
+              Verified Partner
+            </div>
+            <h1 className="mt-4 text-[28px] font-black leading-9 text-[#111827] sm:text-[34px] sm:leading-10">
+              {bundle.organization.brandName || bundle.organization.legalName}
+            </h1>
+            <p className="mt-2 max-w-3xl text-[14px] font-semibold leading-6 text-[#64748b]">
+              Manage foundation readiness for this organization. Operational bookings, rates, inventory, and settlements begin in the next service operations phase.
+            </p>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2 lg:w-[320px] lg:grid-cols-1">
+            <button type="button" onClick={onOpenVerification} className="h-10 rounded-lg bg-[#111827] px-4 text-[13px] font-black text-white">
+              Open Verification
+            </button>
+            <button type="button" onClick={onOpenProfile} className="h-10 rounded-lg border border-[#cfd8e3] bg-white px-4 text-[13px] font-black text-[#334155]">
+              Organization Profile
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-3">
+        <FoundationPanel title="Today" value={alerts.length ? `${alerts.length} alert${alerts.length === 1 ? "" : "s"}` : "No blocking alerts"} detail={alerts[0] ?? "Foundation checks are clear for the selected organization."} />
+        <FoundationPanel title="Bookings" value="No activity yet" detail="Service operations are not enabled in D28E3C.4." />
+        <FoundationPanel title="Money" value="No settlement activity yet" detail="Earnings and settlement data will appear after real service bookings exist." />
+      </section>
+
+      <section className="rounded-lg border border-[#dbe3ef] bg-white p-5 shadow-sm">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-[18px] font-black text-[#111827]">My Services</h2>
+            <p className="mt-1 text-[13px] font-semibold text-[#64748b]">Each selected service keeps its own activation state.</p>
+          </div>
+        </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {bundle.serviceScopes.filter((scope) => scope.status !== "disabled").map((scope) => (
+            <div key={scope.id} className="rounded-lg border border-[#dbe3ef] bg-[#fbfdff] p-4">
+              <p className="text-[15px] font-black text-[#111827]">{scope.serviceLabel}</p>
+              <p className="mt-2 text-[12px] font-black uppercase tracking-[0.08em] text-[#475569]">{serviceStateLabel(scope.status)}</p>
+              <button type="button" className="mt-4 h-9 rounded-lg border border-[#cfd8e3] bg-white px-3 text-[12px] font-black text-[#334155]">
+                Set up {scope.serviceLabel}
+              </button>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-3">
+        <FoundationPanel title="Connections" value="Ready for setup" detail="External connectors are reserved for the service operations phase." />
+        <FoundationPanel title="Team" value={`${bundle.members.length} member${bundle.members.length === 1 ? "" : "s"}`} detail="Membership foundation is organization-scoped." />
+        <FoundationPanel title="Grade" value="Not assigned" detail="Partner grading is reserved for the later scoring engine." />
+      </section>
+    </div>
+  );
+}
+
+function FoundationPanel({ title, value, detail }: { title: string; value: string; detail: string }) {
+  return (
+    <div className="rounded-lg border border-[#dbe3ef] bg-white p-4 shadow-sm">
+      <p className="text-[12px] font-black uppercase tracking-[0.08em] text-[#64748b]">{title}</p>
+      <p className="mt-2 text-[18px] font-black text-[#111827]">{value}</p>
+      <p className="mt-2 text-[13px] font-semibold leading-5 text-[#64748b]">{detail}</p>
+    </div>
+  );
+}
+
+function profileFromBackendBundle(bundle: PartnerOrganizationBundle): PartnerOrganizationPreviewProfile {
+  const mobile = bundle.contacts.find((contact) => contact.channel === "mobile" && contact.isPrimary);
+  const email = bundle.contacts.find((contact) => contact.channel === "email" && contact.isPrimary);
+  return {
+    ...emptyPartnerOrganizationPreviewProfile,
+    businessName: bundle.organization.brandName ?? "",
+    legalName: bundle.organization.legalName,
+    organizationType: bundle.organization.organizationType as PartnerOrganizationPreviewProfile["organizationType"],
+    businessMobile: bundle.organization.businessMobile ?? mobile?.value ?? "",
+    businessEmail: bundle.organization.businessEmail ?? email?.value ?? "",
+    businessMobileVerificationStatus: mobile?.verificationStatus === "verified" ? "verified" : "verification-required",
+    businessMobileVerifiedValue: mobile?.verificationStatus === "verified" ? mobile.value : "",
+    businessEmailVerificationStatus: email?.verificationStatus === "verified" ? "verified" : "unavailable",
+    businessEmailVerifiedValue: email?.verificationStatus === "verified" ? email.value : "",
+    addressLine1: bundle.organization.addressLine1 ?? "",
+    addressLine2: bundle.organization.addressLine2 ?? "",
+    city: bundle.organization.city ?? "",
+    stateRegion: bundle.organization.stateRegion ?? "",
+    postalCode: bundle.organization.postalCode ?? "",
+    country: bundle.organization.country,
+    savedForPreview: true,
+  };
+}
+
+function resolvePartnerStep(bundle: PartnerOrganizationBundle): "choose-services" | "business-profile" | "verification-preview" | "activated-dashboard" {
+  if (bundle.organization.status === "active" || bundle.review?.status === "VERIFIED") return "activated-dashboard";
+  if (bundle.serviceScopes.length === 0) return "choose-services";
+  if (!bundle.organization.legalName || !bundle.organization.organizationType) return "business-profile";
+  return "verification-preview";
+}
+
+function upsertBundle(bundles: PartnerOrganizationBundle[], next: PartnerOrganizationBundle): PartnerOrganizationBundle[] {
+  const remaining = bundles.filter((bundle) => bundle.organization.id !== next.organization.id);
+  return [next, ...remaining];
+}
+
+function serviceStateLabel(status: string): string {
+  if (status === "active") return "Service Active";
+  if (status === "disabled") return "Disabled";
+  return "Service Setup Required";
+}
+
+function getMobileChallengeMessage(challenge: PartnerMobileChallenge): string {
+  const channel = challenge.deliveryChannel === "sms" ? "SMS" : "WhatsApp";
+  if (challenge.deliveryConfirmed || challenge.deliveryStatus === "sent") return `${channel} OTP sent.`;
+  if (challenge.deliveryStatus === "dry_run" || challenge.developmentOtp) {
+    return "Staging test OTP created. Provider delivery was not used for this request.";
+  }
+  if (challenge.deliveryStatus === "not_connected") {
+    return `${channel} delivery is not connected for this staging request.`;
+  }
+  return "OTP challenge created. Provider delivery is not confirmed.";
 }
 
 function OnboardingJourney() {
@@ -487,4 +999,21 @@ function selectedOnlyCatalog(selectedServiceIds: string[]): PartnerServiceCatego
       services: category.services.filter((serviceItem) => selectedIds.has(serviceItem.id)),
     }))
     .filter((category) => category.services.length > 0);
+}
+
+const allowedPrivateDocumentTypes = new Set(["application/pdf", "image/jpeg", "image/png", "image/webp"]);
+const maxPrivateDocumentBytes = 15 * 1024 * 1024;
+
+function validatePrivateDocumentFile(file: File): string | null {
+  if (!allowedPrivateDocumentTypes.has(file.type)) return "Upload a PDF, JPG, PNG, or WebP document.";
+  if (file.size <= 0 || file.size > maxPrivateDocumentBytes) return "Document must be larger than 0 bytes and no more than 15 MB.";
+  return null;
+}
+
+async function sha256File(file: File): Promise<string> {
+  const buffer = await file.arrayBuffer();
+  const hash = await crypto.subtle.digest("SHA-256", buffer);
+  return Array.from(new Uint8Array(hash))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
 }

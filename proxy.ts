@@ -31,7 +31,11 @@ function isComingSoonGateEnabled() {
     return false;
   }
 
-  return process.env.NEXT_PUBLIC_TPL_COMING_SOON_GATE_ENABLED !== "false";
+  if (process.env.VERCEL_ENV === "preview" || process.env.NEXT_PUBLIC_VERCEL_ENV === "preview") {
+    return false;
+  }
+
+  return process.env.NEXT_PUBLIC_TPL_COMING_SOON_GATE_ENABLED === "true";
 }
 
 function isSmokeComingSoonBypassEnabled() {

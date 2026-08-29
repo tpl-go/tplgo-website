@@ -9,6 +9,7 @@ import {
   Building2,
   CheckCircle2,
   ChevronRight,
+  ClipboardCheck,
   CircleDot,
   Clock3,
   CreditCard,
@@ -219,6 +220,7 @@ export function AdminDashboardView() {
           <div className="grid gap-3 sm:grid-cols-2">
             <QuickAction href="/admin/bookings" icon={BookOpen} title="Find booking" detail="Search service bookings" />
             <QuickAction href="/admin/customers" icon={Users} title="Customers / CRM" detail="Customer search and support context" />
+            <QuickAction href="/admin/partners" icon={ClipboardCheck} title="Partners" detail="Overview, applications, verification, and compliance" />
             <QuickAction href="/admin/payments" icon={CreditCard} title="Review payments" detail="Inspect latest payments" />
             <QuickAction href="/admin/system" icon={GaugeIcon} title="Run health check" detail="Database and platform status" />
           </div>

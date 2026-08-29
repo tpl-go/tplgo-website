@@ -22,6 +22,7 @@ import {
   Gift,
   Headphones,
   Landmark,
+  Layers3,
   LineChart,
   LayoutDashboard,
   Link2,
@@ -74,6 +75,15 @@ const navItems = [
   { href: "/admin/platform", label: "Platform", icon: ServerCog },
   { href: "/admin/audit", label: "Audit", icon: Activity },
   { href: "/admin/system", label: "System", icon: Gauge },
+];
+
+const partnerNavItems = [
+  { href: "/admin/partners", label: "Overview", icon: Building2 },
+  { href: "/admin/partners/applications", label: "Applications", icon: ClipboardCheck },
+  { href: "/admin/partner-verification", label: "Verification", icon: ShieldCheck },
+  { href: "/admin/partners/organizations", label: "Organizations", icon: Users },
+  { href: "/admin/partners/services", label: "Services", icon: Layers3 },
+  { href: "/admin/partners/documents-compliance", label: "Documents & Compliance", icon: FileText },
 ];
 
 const financeNavItems = [
@@ -166,6 +176,26 @@ export default function AdminShell({
           })}
           </div>
           <div className="space-y-1 border-t border-slate-100 pt-4">
+            <p className="px-3 pb-2 text-[11px] font-semibold uppercase text-slate-400">Partners</p>
+            {partnerNavItems.map((item) => {
+              const Icon = item.icon;
+              const active = pathname === item.href || (item.href !== "/admin/partner-verification" && pathname.startsWith(item.href));
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={[
+                    "flex h-10 items-center gap-3 rounded px-3 text-sm font-medium",
+                    active ? "bg-slate-950 text-white" : "text-slate-600 hover:bg-slate-100 hover:text-slate-950",
+                  ].join(" ")}
+                >
+                  <Icon className="h-4 w-4" />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </div>
+          <div className="space-y-1 border-t border-slate-100 pt-4">
             <p className="px-3 pb-2 text-[11px] font-semibold uppercase text-slate-400">Finance</p>
             {financeNavItems.map((item) => {
               const Icon = item.icon;
@@ -246,6 +276,28 @@ export default function AdminShell({
             </button>
           </div>
         </header>
+        <nav className="border-b border-slate-200 bg-white px-4 py-3 lg:hidden" aria-label="Admin Partners navigation">
+          <p className="text-[11px] font-semibold uppercase text-slate-400">Partners</p>
+          <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
+            {partnerNavItems.map((item) => {
+              const Icon = item.icon;
+              const active = pathname === item.href || (item.href !== "/admin/partner-verification" && pathname.startsWith(item.href));
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={[
+                    "inline-flex h-10 shrink-0 items-center gap-2 rounded border px-3 text-sm font-medium",
+                    active ? "border-slate-950 bg-slate-950 text-white" : "border-slate-200 bg-white text-slate-600",
+                  ].join(" ")}
+                >
+                  <Icon className="h-4 w-4" />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </div>
+        </nav>
         <main className="px-4 py-6 lg:px-8">{children}</main>
       </div>
     </div>

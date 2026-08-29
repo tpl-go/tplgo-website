@@ -2,11 +2,13 @@
 
 import { useMemo, useState } from "react";
 import type { HTMLAttributes, ReactNode } from "react";
-import { Check, ChevronRight, ImagePlus, Plus, X } from "lucide-react";
+import { Check, ChevronRight, ImagePlus, Loader2, MailCheck, MessageCircle, Plus, RefreshCcw, X } from "lucide-react";
 import {
   addOperatingLocation,
+  applyBusinessContactChange,
   calculateBusinessProfileCompletion,
   emptyPartnerOrganizationPreviewProfile,
+  getDisplayNameForProfile,
   isRegistrationNumberRecommended,
   organizationTypeOptions,
   removeOperatingLocation,
@@ -17,6 +19,14 @@ import {
 } from "../lib/partner/partnerOrganizationPreviewProfile";
 import { selectedServicesLabel } from "../lib/partner/partnerPreviewSelection";
 import type { PartnerServiceDefinition } from "../lib/partner/partnerServiceCatalog";
+import {
+  getPhoneCountry,
+  isNationalPhoneValid,
+  phoneCountryOptions,
+  sanitizePhoneDigits,
+  splitDisplayMobile,
+  toDisplayMobile,
+} from "../lib/phone/mobileIdentity";
 
 type PartnerBusinessProfileStepProps = {
   selectedServices: PartnerServiceDefinition[];
@@ -26,6 +36,27 @@ type PartnerBusinessProfileStepProps = {
   onSaveDraft: () => void;
   onSaveAndContinue: () => void;
   draftSaved: boolean;
+  backendOrganizationId?: string | null;
+  backendStatus?: "idle" | "saving" | "saved" | "error";
+  backendError?: string | null;
+  mobileChallenge?: {
+    challengeId: string;
+    expiresAt: string;
+    developmentOtp?: string;
+    otpLength?: number;
+    deliveryChannel?: string;
+    deliveryStatus?: string;
+    deliveryConfirmed?: boolean;
+  } | null;
+  mobileOtp: string;
+  onMobileOtpChange: (value: string) => void;
+  onRequestMobileOtp: () => void;
+  onVerifyMobileOtp: () => void;
+  mobileVerificationBusy?: boolean;
+  mobileVerificationMessage?: string | null;
+  emailVerificationBusy?: boolean;
+  emailVerificationMessage?: string | null;
+  onRequestEmailVerification: () => void;
 };
 
 export function PartnerBusinessProfileStep({
@@ -36,6 +67,19 @@ export function PartnerBusinessProfileStep({
   onSaveDraft,
   onSaveAndContinue,
   draftSaved,
+  backendOrganizationId,
+  backendStatus = "idle",
+  backendError,
+  mobileChallenge,
+  mobileOtp,
+  onMobileOtpChange,
+  onRequestMobileOtp,
+  onVerifyMobileOtp,
+  mobileVerificationBusy = false,
+  mobileVerificationMessage,
+  emailVerificationBusy = false,
+  emailVerificationMessage,
+  onRequestEmailVerification,
 }: PartnerBusinessProfileStepProps) {
   const [touchedFields, setTouchedFields] = useState<Set<keyof PartnerOrganizationPreviewProfile>>(new Set());
   const [showAllErrors, setShowAllErrors] = useState(false);
@@ -50,6 +94,10 @@ export function PartnerBusinessProfileStep({
     field: K,
     value: PartnerOrganizationPreviewProfile[K]
   ) {
+    if (field === "businessMobile" || field === "businessEmail") {
+      onProfileChange(applyBusinessContactChange(profile, field, value as string));
+      return;
+    }
     onProfileChange({ ...profile, [field]: value, savedForPreview: false });
   }
 
@@ -126,19 +174,20 @@ export function PartnerBusinessProfileStep({
           <FormSection title="Business Basics">
             <div className="grid gap-4 md:grid-cols-2">
               <TextInput
-                label="Business / Brand Name"
-                value={profile.businessName}
-                placeholder="e.g. Himalayan Hospitality"
-                error={displayedErrors.businessName}
+                label="Legal Name"
+                value={profile.legalName}
+                placeholder="e.g. Himalayan Adventures & Hospitality Pvt Ltd"
+                error={displayedErrors.legalName}
                 required
-                onBlur={() => markTouched("businessName")}
-                onChange={(value) => updateField("businessName", value)}
+                onBlur={() => markTouched("legalName")}
+                onChange={(value) => updateField("legalName", value)}
               />
               <TextInput
-                label="Legal Business Name"
-                value={profile.legalName}
-                placeholder="e.g. Himalayan Hospitality Private Limited"
-                onChange={(value) => updateField("legalName", value)}
+                label="Brand / Display Name"
+                value={profile.businessName}
+                placeholder="Optional public-facing name"
+                hint={`Optional. Display fallback: ${getDisplayNameForProfile(profile) || "Legal Name"}`}
+                onChange={(value) => updateField("businessName", value)}
               />
               <SelectInput
                 label="Organization Type"
@@ -199,25 +248,33 @@ export function PartnerBusinessProfileStep({
                 placeholder="e.g. Owner, Manager, Director"
                 onChange={(value) => updateField("contactRole", value)}
               />
-              <TextInput
-                label="Business mobile"
+              <InlineMobileVerificationField
                 value={profile.businessMobile}
+                status={profile.businessMobileVerificationStatus}
+                verifiedValue={profile.businessMobileVerifiedValue}
                 error={displayedErrors.businessMobile}
-                required
-                inputMode="tel"
-                placeholder="+91..."
+                backendReady={Boolean(backendOrganizationId)}
+                challenge={mobileChallenge}
+                otp={mobileOtp}
+                busy={mobileVerificationBusy}
+                message={mobileVerificationMessage}
+                disabled={!backendOrganizationId || !profile.businessMobile || Boolean(displayedErrors.businessMobile) || mobileVerificationBusy}
                 onBlur={() => markTouched("businessMobile")}
                 onChange={(value) => updateField("businessMobile", value)}
+                onOtpChange={onMobileOtpChange}
+                onRequestOtp={onRequestMobileOtp}
+                onVerifyOtp={onVerifyMobileOtp}
               />
-              <TextInput
-                label="Business email"
+              <InlineEmailVerificationField
                 value={profile.businessEmail}
+                status={profile.businessEmailVerificationStatus}
                 error={displayedErrors.businessEmail}
-                required
-                inputMode="email"
-                placeholder="business@example.com"
+                busy={emailVerificationBusy}
+                message={emailVerificationMessage}
+                disabled={!backendOrganizationId || !profile.businessEmail || Boolean(displayedErrors.businessEmail) || emailVerificationBusy}
                 onBlur={() => markTouched("businessEmail")}
                 onChange={(value) => updateField("businessEmail", value)}
+                onVerify={onRequestEmailVerification}
               />
             </div>
           </FormSection>
@@ -336,10 +393,16 @@ export function PartnerBusinessProfileStep({
               maxLength={180}
               onChange={(value) => updateField("publicDescription", value)}
             />
+          </FormSection>
+
+          <FormSection title="Branding">
             <LogoPreview
               logoPreviewName={profile.logoPreviewName}
               onChange={(logoPreviewName) => updateField("logoPreviewName", logoPreviewName)}
             />
+            <p className="text-[12px] font-semibold leading-5 text-[#64748b]">
+              Business Logo is optional branding only. It is never proof of identity, business registration, licence, qualification, or compliance, and it does not count toward Verification completion.
+            </p>
           </FormSection>
 
           <FormSection title="Operating Locations">
@@ -416,16 +479,21 @@ export function PartnerBusinessProfileStep({
               </button>
             </div>
             <div className="mt-4 rounded-lg border border-[#e2e8f0] bg-[#f8fafc] p-3">
-              <p className="text-[12px] font-black uppercase tracking-[0.08em] text-[#64748b]">What comes later</p>
+              <p className="text-[12px] font-black uppercase tracking-[0.08em] text-[#64748b]">Staging backend</p>
               <p className="mt-2 text-[12px] font-semibold leading-5 text-[#64748b]">
-                Rooms, vehicles, slots, prices, and service-specific operating zones are configured in Step 4.
+                {backendOrganizationId
+                  ? `Organization ${backendOrganizationId} is saved on staging.`
+                  : backendStatus === "saving"
+                    ? "Saving profile to staging."
+                    : "Sign in and save to create the staging organization."}
               </p>
+              {backendError ? <p className="mt-2 text-[12px] font-bold text-[#b91c1c]">{backendError}</p> : null}
             </div>
           </div>
         </aside>
       </div>
 
-      <div className="sticky bottom-0 z-20 -mx-4 border-t border-[#dbe3ef] bg-white/95 px-4 py-3 shadow-[0_-10px_30px_rgba(15,23,42,0.08)] backdrop-blur lg:static lg:mx-0 lg:rounded-lg lg:border lg:shadow-sm">
+      <div className="sticky bottom-20 z-20 -mx-4 border-t border-[#dbe3ef] bg-white/95 px-4 py-3 shadow-[0_-10px_30px_rgba(15,23,42,0.08)] backdrop-blur lg:static lg:mx-0 lg:rounded-lg lg:border lg:shadow-sm">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <button
             type="button"
@@ -705,6 +773,308 @@ function LogoPreview({
           />
         </label>
       </div>
+    </div>
+  );
+}
+
+function InlineMobileVerificationField({
+  value,
+  status,
+  verifiedValue,
+  error,
+  backendReady,
+  challenge,
+  otp,
+  busy,
+  message,
+  disabled,
+  onBlur,
+  onChange,
+  onOtpChange,
+  onRequestOtp,
+  onVerifyOtp,
+}: {
+  value: string;
+  status: PartnerOrganizationPreviewProfile["businessMobileVerificationStatus"];
+  verifiedValue: string;
+  error?: string;
+  backendReady: boolean;
+  challenge?: {
+    challengeId: string;
+    expiresAt: string;
+    developmentOtp?: string;
+    otpLength?: number;
+    deliveryChannel?: string;
+    deliveryStatus?: string;
+    deliveryConfirmed?: boolean;
+  } | null;
+  otp: string;
+  busy: boolean;
+  message?: string | null;
+  disabled: boolean;
+  onBlur: () => void;
+  onChange: (value: string) => void;
+  onOtpChange: (value: string) => void;
+  onRequestOtp: () => void;
+  onVerifyOtp: () => void;
+}) {
+  const verified = status === "verified" && verifiedValue === value;
+  const parsedMobile = splitDisplayMobile(value);
+  const selectedCountry = getPhoneCountry(parsedMobile.countryCode);
+  const nationalMobile = parsedMobile.nationalMobile;
+  const mobileInvalid = Boolean(error) || (nationalMobile.length > 0 && !isNationalPhoneValid(nationalMobile, selectedCountry));
+  const canRequestOtp = !disabled && nationalMobile.length > 0 && !mobileInvalid;
+  const otpLength = challenge?.otpLength ?? challenge?.developmentOtp?.length ?? 6;
+  const expiryLabel = challenge ? new Date(challenge.expiresAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
+  const deliveryLabel = getPartnerMobileDeliveryLabel(challenge);
+
+  function updateCountry(countryCode: string) {
+    const country = getPhoneCountry(countryCode);
+    onChange(toDisplayMobile(nationalMobile, country));
+  }
+
+  function updateNationalMobile(input: string) {
+    const digits = sanitizePhoneDigits(input).slice(0, selectedCountry.maxLength || 15);
+    onChange(toDisplayMobile(digits, selectedCountry));
+  }
+
+  return (
+    <div className="grid gap-2 md:col-span-2">
+      <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+        <div className="grid min-w-0 gap-1.5">
+          <span className="text-[13px] font-black text-[#334155]">
+            Business mobile <span className="text-[#dc2626]">*</span>
+          </span>
+          <div
+            className={`grid min-h-11 overflow-hidden rounded-lg border bg-white sm:grid-cols-[minmax(132px,0.95fr)_72px_minmax(0,1.1fr)] ${
+              mobileInvalid ? "border-[#f97316]" : "border-[#cfd8e3]"
+            }`}
+          >
+            <select
+              aria-label="Business mobile country and calling code"
+              value={parsedMobile.countryCode}
+              onChange={(event) => updateCountry(event.target.value)}
+              onBlur={onBlur}
+              className="h-11 min-w-0 border-0 border-b border-[#e2e8f0] bg-[#f8fafc] px-2 text-[13px] font-black text-[#1e293b] outline-none sm:border-b-0 sm:border-r"
+            >
+              {phoneCountryOptions.map((country) => (
+                <option key={country.code} value={country.code}>
+                  {country.name} {country.dialCode ? `+${country.dialCode}` : ""}
+                </option>
+              ))}
+            </select>
+            <div className="flex h-11 items-center border-b border-[#e2e8f0] bg-[#fbfdff] px-3 text-[14px] font-black text-[#334155] sm:border-b-0 sm:border-r">
+              {selectedCountry.dialCode ? `+${selectedCountry.dialCode}` : "+"}
+            </div>
+            <input
+              value={nationalMobile}
+              onChange={(event) => updateNationalMobile(event.target.value)}
+              onPaste={(event) => {
+                event.preventDefault();
+                updateNationalMobile(event.clipboardData.getData("text"));
+              }}
+              onBlur={onBlur}
+              inputMode="numeric"
+              type="tel"
+              autoComplete="tel"
+              placeholder="Mobile number"
+              aria-invalid={mobileInvalid}
+              className="h-11 min-w-0 border-0 bg-white px-3 text-[14px] font-semibold text-[#111827] outline-none transition placeholder:text-[#94a3b8] focus:ring-2 focus:ring-[#c7d2fe]"
+            />
+          </div>
+          {error ? <span className="text-[12px] font-bold text-[#dc2626]">{error}</span> : null}
+        </div>
+        <button
+          type="button"
+          onClick={onRequestOtp}
+          disabled={!canRequestOtp}
+          className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-[#cfd8e3] bg-white px-4 text-[13px] font-black text-[#334155] transition hover:border-[#4f46e5] disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-[#818cf8]"
+        >
+          {busy ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : challenge ? <RefreshCcw size={16} aria-hidden="true" /> : <MessageCircle size={16} aria-hidden="true" />}
+          {challenge ? "Resend" : verified ? "Verified" : "Verify"}
+        </button>
+      </div>
+      <div className="rounded-lg border border-[#dbeafe] bg-[#eff6ff] p-3">
+        <div className="flex flex-wrap items-center gap-2">
+          {verified ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-[#dcfce7] px-2.5 py-1 text-[11px] font-black text-[#15803d]">
+              <Check size={13} aria-hidden="true" />
+              {message?.includes("TPL account") ? "Verified via your TPL account" : "Verified"}
+            </span>
+          ) : challenge ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-[#fef3c7] px-2.5 py-1 text-[11px] font-black text-[#92400e]">
+              <MessageCircle size={13} aria-hidden="true" />
+              {deliveryLabel.badge}
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 rounded-full bg-[#fef3c7] px-2.5 py-1 text-[11px] font-black text-[#92400e]">
+              Verification required
+            </span>
+          )}
+          {backendReady ? (
+            <span className="text-[12px] font-semibold text-[#64748b]">Uses partner contact verification and keeps your TPL login unchanged.</span>
+          ) : (
+            <span className="text-[12px] font-semibold text-[#64748b]">Save the profile to staging before requesting OTP.</span>
+          )}
+        </div>
+        {challenge ? (
+          <div className="mt-3 grid gap-3">
+            <OtpCodeInput value={otp} length={otpLength} onChange={onOtpChange} />
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-[12px] font-semibold leading-5 text-[#64748b]">
+                {challenge.developmentOtp ? `Staging test OTP is ${challenge.developmentOtp}.` : `${deliveryLabel.detail} Expires around ${expiryLabel}.`}
+              </p>
+              <button
+                type="button"
+                onClick={onVerifyOtp}
+                disabled={busy || otp.trim().length === 0}
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#4f46e5] px-4 text-[13px] font-black text-white transition hover:bg-[#4338ca] disabled:cursor-not-allowed disabled:bg-[#cbd5e1] focus:outline-none focus:ring-2 focus:ring-[#818cf8]"
+              >
+                {busy ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : null}
+                Verify OTP
+              </button>
+            </div>
+          </div>
+        ) : null}
+        {message ? <p className={`mt-2 text-[12px] font-bold leading-5 ${verified ? "text-[#15803d]" : "text-[#b45309]"}`}>{message}</p> : null}
+      </div>
+    </div>
+  );
+}
+
+function getPartnerMobileDeliveryLabel(challenge: {
+  deliveryStatus?: string;
+  deliveryConfirmed?: boolean;
+  deliveryChannel?: string;
+  developmentOtp?: string;
+} | null | undefined): { badge: string; detail: string } {
+  if (!challenge) return { badge: "Verification required", detail: "" };
+  const channel = challenge.deliveryChannel === "sms" ? "SMS" : "WhatsApp";
+  if (challenge.deliveryConfirmed || challenge.deliveryStatus === "sent") {
+    return { badge: `OTP sent on ${channel}`, detail: `${channel} delivery accepted.` };
+  }
+  if (challenge.deliveryStatus === "dry_run" || challenge.developmentOtp) {
+    return { badge: "Staging test OTP ready", detail: "Provider delivery is in staging test mode." };
+  }
+  if (challenge.deliveryStatus === "not_connected") {
+    return { badge: "Delivery not connected", detail: `${channel} provider delivery is not connected.` };
+  }
+  return { badge: "OTP challenge ready", detail: `${channel} delivery is not confirmed.` };
+}
+
+function OtpCodeInput({
+  value,
+  length,
+  onChange,
+}: {
+  value: string;
+  length: number;
+  onChange: (value: string) => void;
+}) {
+  const normalizedLength = Math.min(Math.max(length, 4), 8);
+  const digits = Array.from({ length: normalizedLength }, (_, index) => value[index] ?? "");
+
+  function updateDigit(index: number, input: string) {
+    const clean = input.replace(/\D/g, "");
+    if (clean.length > 1) {
+      onChange(clean.slice(0, normalizedLength));
+      return;
+    }
+    const next = value.padEnd(normalizedLength, " ").split("");
+    next[index] = clean;
+    onChange(next.join("").replace(/\s/g, "").slice(0, normalizedLength));
+  }
+
+  return (
+    <div className="grid gap-1.5">
+      <span className="text-[13px] font-black text-[#334155]">WhatsApp OTP</span>
+      <div className="grid max-w-full grid-flow-col auto-cols-fr gap-1.5 sm:max-w-[360px] sm:gap-2">
+        {digits.map((digit, index) => (
+          <input
+            key={index}
+            value={digit}
+            onChange={(event) => updateDigit(index, event.target.value)}
+            onPaste={(event) => {
+              const text = event.clipboardData.getData("text");
+              if (text) {
+                event.preventDefault();
+                onChange(text.replace(/\D/g, "").slice(0, normalizedLength));
+              }
+            }}
+            inputMode="numeric"
+            pattern="[0-9]*"
+            aria-label={`OTP digit ${index + 1}`}
+            maxLength={normalizedLength}
+            className="h-11 min-w-0 rounded-lg border border-[#cfd8e3] bg-white text-center text-[16px] font-black text-[#111827] outline-none transition focus:border-[#4f46e5] focus:ring-2 focus:ring-[#c7d2fe]"
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function InlineEmailVerificationField({
+  value,
+  status,
+  error,
+  busy,
+  message,
+  disabled,
+  onBlur,
+  onChange,
+  onVerify,
+}: {
+  value: string;
+  status: PartnerOrganizationPreviewProfile["businessEmailVerificationStatus"];
+  error?: string;
+  busy: boolean;
+  message?: string | null;
+  disabled: boolean;
+  onBlur: () => void;
+  onChange: (value: string) => void;
+  onVerify: () => void;
+}) {
+  return (
+    <div className="grid gap-2 md:col-span-2">
+      <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+        <label className="grid min-w-0 gap-1.5">
+          <span className="text-[13px] font-black text-[#334155]">
+            Business email <span className="text-[#dc2626]">*</span>
+          </span>
+          <input
+            value={value}
+            onChange={(event) => onChange(event.target.value)}
+            onBlur={onBlur}
+            inputMode="email"
+            placeholder="business@example.com"
+            aria-invalid={Boolean(error)}
+            className="h-11 w-full rounded-lg border border-[#cfd8e3] bg-white px-3 text-[14px] font-semibold text-[#111827] outline-none transition placeholder:text-[#94a3b8] focus:border-[#4f46e5] focus:ring-2 focus:ring-[#c7d2fe]"
+          />
+          {error ? <span className="text-[12px] font-bold text-[#dc2626]">{error}</span> : null}
+        </label>
+        <button
+          type="button"
+          onClick={onVerify}
+          disabled={disabled}
+          className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-[#cfd8e3] bg-white px-4 text-[13px] font-black text-[#334155] transition hover:border-[#4f46e5] disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-[#818cf8]"
+        >
+          {busy ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : <MailCheck size={16} aria-hidden="true" />}
+          Verify Email
+        </button>
+      </div>
+      <div className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc] p-3">
+        <span className={status === "verified" ? "inline-flex rounded-full bg-[#dcfce7] px-2.5 py-1 text-[11px] font-black text-[#15803d]" : "inline-flex rounded-full bg-[#f1f5f9] px-2.5 py-1 text-[11px] font-black text-[#475569]"}>
+          {status === "verified" ? "Verified" : "Email verification unavailable"}
+        </span>
+        <p className="mt-2 text-[12px] font-semibold leading-5 text-[#64748b]">
+          {message ?? "Email verification will be available when email delivery is enabled."}
+        </p>
+        {status !== "verified" ? (
+          <p className="mt-1 text-[12px] font-semibold leading-5 text-[#64748b]">
+            A valid email format is not treated as verified.
+          </p>
+      ) : null}
+    </div>
     </div>
   );
 }

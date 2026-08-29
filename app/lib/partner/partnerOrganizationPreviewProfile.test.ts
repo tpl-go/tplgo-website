@@ -2,9 +2,12 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   addOperatingLocation,
+  applyBusinessContactChange,
   calculateBusinessProfileCompletion,
   emptyPartnerOrganizationPreviewProfile,
+  getDisplayNameForProfile,
   isRegistrationNumberRecommended,
+  markBusinessMobileVerifiedForPreview,
   readPartnerOrganizationPreviewProfile,
   removeOperatingLocation,
   samplePartnerOrganizationPreviewProfile,
@@ -31,7 +34,8 @@ test("organization profile persistence stores and restores preview state", () =>
 
   const restored = readPartnerOrganizationPreviewProfile(storage);
 
-  assert.equal(restored.businessName, "Himalayan Hospitality");
+  assert.equal(restored.businessName, "Himalayan Adventures");
+  assert.equal(restored.legalName, "Himalayan Adventures & Hospitality Pvt Ltd");
   assert.equal(restored.organizationType, "Private Limited");
   assert.equal(restored.savedForPreview, true);
   assert.deepEqual(restored.operatingLocations, ["Srinagar", "Gulmarg", "Pahalgam"]);
@@ -50,7 +54,7 @@ test("clear form resets required profile values", () => {
   const errors = validatePartnerOrganizationProfile(emptyPartnerOrganizationPreviewProfile);
 
   assert.equal(completion, 11);
-  assert.equal(errors.businessName, "Enter your business name.");
+  assert.equal(errors.legalName, "Enter legal name.");
   assert.equal(errors.organizationType, "Select organization type.");
   assert.equal(errors.businessEmail, "Enter a valid business email.");
 });
@@ -58,7 +62,8 @@ test("clear form resets required profile values", () => {
 test("required field and email validation returns partner-facing messages", () => {
   const profile = {
     ...emptyPartnerOrganizationPreviewProfile,
-    businessName: "TPL Test Partner",
+    legalName: "TPL Test Partner Legal",
+    businessName: "",
     organizationType: "Partnership" as const,
     contactName: "Test User",
     businessMobile: "123",
@@ -72,6 +77,37 @@ test("required field and email validation returns partner-facing messages", () =
 
   assert.equal(errors.businessMobile, "Enter a valid mobile number.");
   assert.equal(errors.businessEmail, "Enter a valid business email.");
+});
+
+test("brand is optional and falls back to legal name", () => {
+  const profile = {
+    ...emptyPartnerOrganizationPreviewProfile,
+    legalName: "Arjun Mehta",
+    organizationType: "Individual Professional" as const,
+    contactName: "Arjun Mehta",
+    businessMobile: "+919900001111",
+    businessEmail: "arjun.guide@example.invalid",
+    addressLine1: "Sample House 7",
+    city: "Jaipur",
+    stateRegion: "Rajasthan",
+  };
+
+  assert.deepEqual(validatePartnerOrganizationProfile(profile), {});
+  assert.equal(calculateBusinessProfileCompletion(profile), 100);
+  assert.equal(getDisplayNameForProfile(profile), "Arjun Mehta");
+});
+
+test("contact change resets exact-target verification state", () => {
+  const verified = markBusinessMobileVerifiedForPreview({
+    ...samplePartnerOrganizationPreviewProfile,
+    businessMobile: "+919876543210",
+  });
+
+  const changed = applyBusinessContactChange(verified, "businessMobile", "+919876543211");
+
+  assert.equal(verified.businessMobileVerificationStatus, "verified");
+  assert.equal(changed.businessMobileVerificationStatus, "verification-required");
+  assert.equal(changed.businessMobileVerifiedValue, "");
 });
 
 test("registration number recommendation follows organization type", () => {

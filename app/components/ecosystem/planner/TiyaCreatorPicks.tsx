@@ -366,7 +366,7 @@ export default function TiyaCreatorPicks({
                   TPL Creators
                 </p>
                 <h3 className="mt-1 text-2xl font-black text-white">
-                  Coming Soon
+                  Creator Marketplace
                 </h3>
               </div>
               <button
@@ -393,6 +393,12 @@ export default function TiyaCreatorPicks({
                   {feature}
                 </div>
               ))}
+              <a
+                href="/creators"
+                className="mt-2 inline-flex min-h-11 items-center justify-center rounded-full bg-white px-4 py-2 text-sm font-black text-[#0D1B2F]"
+              >
+                Open Creators
+              </a>
             </div>
           </section>
         </div>

@@ -1,6 +1,7 @@
 export const PARTNER_ORGANIZATION_PREVIEW_PROFILE_STORAGE_KEY = "tpl.partnerPreview.organizationProfile.v1";
 
 export const organizationTypeOptions = [
+  "Individual Professional",
   "Individual / Proprietor",
   "Partnership",
   "LLP",
@@ -21,6 +22,10 @@ export type PartnerOrganizationPreviewProfile = {
   contactRole: string;
   businessMobile: string;
   businessEmail: string;
+  businessMobileVerificationStatus: "verification-required" | "verified" | "unavailable";
+  businessMobileVerifiedValue: string;
+  businessEmailVerificationStatus: "verification-required" | "verified" | "unavailable";
+  businessEmailVerifiedValue: string;
   sameAsTplAccount: boolean;
   addressLine1: string;
   addressLine2: string;
@@ -58,6 +63,10 @@ export const emptyPartnerOrganizationPreviewProfile: PartnerOrganizationPreviewP
   contactRole: "",
   businessMobile: "",
   businessEmail: "",
+  businessMobileVerificationStatus: "verification-required",
+  businessMobileVerifiedValue: "",
+  businessEmailVerificationStatus: "unavailable",
+  businessEmailVerifiedValue: "",
   sameAsTplAccount: false,
   addressLine1: "",
   addressLine2: "",
@@ -80,8 +89,8 @@ export const emptyPartnerOrganizationPreviewProfile: PartnerOrganizationPreviewP
 
 export const samplePartnerOrganizationPreviewProfile: PartnerOrganizationPreviewProfile = {
   ...emptyPartnerOrganizationPreviewProfile,
-  businessName: "Himalayan Hospitality",
-  legalName: "Himalayan Hospitality Private Limited",
+  businessName: "Himalayan Adventures",
+  legalName: "Himalayan Adventures & Hospitality Pvt Ltd",
   organizationType: "Private Limited",
   description: "Travel, stay, and local experience operator serving leisure and family travellers.",
   contactName: "Aarav Sharma",
@@ -102,6 +111,23 @@ export const samplePartnerOrganizationPreviewProfile: PartnerOrganizationPreview
   publicDescription: "A local travel business offering stays, transfers, and curated activities.",
   operatingLocations: ["Srinagar", "Gulmarg", "Pahalgam"],
   logoPreviewName: "himalayan-hospitality-logo.png",
+};
+
+export const sampleIndividualGuidePreviewProfile: PartnerOrganizationPreviewProfile = {
+  ...emptyPartnerOrganizationPreviewProfile,
+  businessName: "",
+  legalName: "Arjun Mehta",
+  organizationType: "Individual Professional",
+  description: "Fictional independent guide profile for Preview QA.",
+  contactName: "Arjun Mehta",
+  contactRole: "Guide",
+  businessMobile: "+919900001111",
+  businessEmail: "arjun.guide@example.invalid",
+  addressLine1: "Sample House 7",
+  city: "Jaipur",
+  stateRegion: "Rajasthan",
+  country: "India",
+  operatingLocations: ["Jaipur", "Amer"],
 };
 
 export function readPartnerOrganizationPreviewProfile(
@@ -145,7 +171,7 @@ export function removeOperatingLocation(locations: string[], location: string): 
 
 export function calculateBusinessProfileCompletion(profile: PartnerOrganizationPreviewProfile): number {
   const requiredValues = [
-    profile.businessName,
+    profile.legalName,
     profile.organizationType,
     profile.contactName,
     profile.businessMobile,
@@ -164,7 +190,7 @@ export function validatePartnerOrganizationProfile(
 ): PartnerOrganizationProfileErrors {
   const errors: PartnerOrganizationProfileErrors = {};
 
-  if (!profile.businessName.trim()) errors.businessName = "Enter your business name.";
+  if (!profile.legalName.trim()) errors.legalName = "Enter legal name.";
   if (!profile.organizationType) errors.organizationType = "Select organization type.";
   if (!profile.contactName.trim()) errors.contactName = "Enter contact person name.";
   if (!isValidBusinessMobile(profile.businessMobile)) errors.businessMobile = "Enter a valid mobile number.";
@@ -186,6 +212,49 @@ export function validatePartnerOrganizationProfile(
 
 export function isRegistrationNumberRecommended(organizationType: PartnerOrganizationType | ""): boolean {
   return organizationType === "LLP" || organizationType === "Private Limited" || organizationType === "Public Limited";
+}
+
+export function getDisplayNameForProfile(profile: PartnerOrganizationPreviewProfile): string {
+  return profile.businessName.trim() || profile.legalName.trim();
+}
+
+export function applyBusinessContactChange<K extends "businessMobile" | "businessEmail">(
+  profile: PartnerOrganizationPreviewProfile,
+  field: K,
+  value: string
+): PartnerOrganizationPreviewProfile {
+  if (field === "businessMobile") {
+    const unchanged = profile.businessMobile === value;
+    return {
+      ...profile,
+      businessMobile: value,
+      businessMobileVerificationStatus: unchanged
+        ? profile.businessMobileVerificationStatus
+        : "verification-required",
+      businessMobileVerifiedValue: unchanged ? profile.businessMobileVerifiedValue : "",
+      savedForPreview: false,
+    };
+  }
+
+  const unchanged = profile.businessEmail === value;
+  return {
+    ...profile,
+    businessEmail: value,
+    businessEmailVerificationStatus: unchanged ? profile.businessEmailVerificationStatus : "unavailable",
+    businessEmailVerifiedValue: unchanged ? profile.businessEmailVerifiedValue : "",
+    savedForPreview: false,
+  };
+}
+
+export function markBusinessMobileVerifiedForPreview(
+  profile: PartnerOrganizationPreviewProfile
+): PartnerOrganizationPreviewProfile {
+  return {
+    ...profile,
+    businessMobileVerificationStatus: "verified",
+    businessMobileVerifiedValue: profile.businessMobile,
+    savedForPreview: false,
+  };
 }
 
 export function isValidBusinessEmail(value: string): boolean {
@@ -227,5 +296,17 @@ function normalizePartnerOrganizationPreviewProfile(
     savedForPreview: Boolean(parsed.savedForPreview),
     sameAsTplAccount: Boolean(parsed.sameAsTplAccount),
     gstNotApplicable: Boolean(parsed.gstNotApplicable),
+    businessMobileVerificationStatus: parseContactVerificationStatus(parsed.businessMobileVerificationStatus, "verification-required"),
+    businessMobileVerifiedValue: typeof parsed.businessMobileVerifiedValue === "string" ? parsed.businessMobileVerifiedValue : "",
+    businessEmailVerificationStatus: parseContactVerificationStatus(parsed.businessEmailVerificationStatus, "unavailable"),
+    businessEmailVerifiedValue: typeof parsed.businessEmailVerifiedValue === "string" ? parsed.businessEmailVerifiedValue : "",
   };
+}
+
+function parseContactVerificationStatus(
+  value: unknown,
+  fallback: PartnerOrganizationPreviewProfile["businessMobileVerificationStatus"]
+): PartnerOrganizationPreviewProfile["businessMobileVerificationStatus"] {
+  if (value === "verification-required" || value === "verified" || value === "unavailable") return value;
+  return fallback;
 }
