@@ -8,7 +8,12 @@ export type LoginPromoContent = {
   headline: string;
   highlightedText: string;
   subtitle: string;
-  benefits: [string, string, string, string];
+  benefits: [
+    { title: string; description: string; tone: "sky" | "emerald" | "amber" | "violet" },
+    { title: string; description: string; tone: "sky" | "emerald" | "amber" | "violet" },
+    { title: string; description: string; tone: "sky" | "emerald" | "amber" | "violet" },
+    { title: string; description: string; tone: "sky" | "emerald" | "amber" | "violet" }
+  ];
   footerTrustLine: string;
   active: boolean;
 };
@@ -16,17 +21,17 @@ export type LoginPromoContent = {
 const DEFAULT_LOGIN_PROMO_CONTENT: Record<LoginPromoContext, LoginPromoContent> = {
   user_login: {
     context: "user_login",
-    desktopImage: "/themes/banners/culture-2.jpg",
-    mobileImage: "/themes/banners/culture-2.jpg",
+    desktopImage: "/hero-bg.jpg",
+    mobileImage: "/hero-bg.jpg",
     eyebrow: "Travel smarter",
     headline: "Your trips stay",
     highlightedText: "together",
     subtitle: "Access bookings, travellers, wallet, and trip support from one TPL GO identity.",
     benefits: [
-      "Faster booking checkout",
-      "Saved travellers and trips",
-      "Wallet and refund tracking",
-      "One account across TPL GO",
+      { title: "Faster Checkout", description: "Continue bookings with saved traveller details", tone: "sky" },
+      { title: "Trip Records", description: "Access bookings and upcoming journeys", tone: "emerald" },
+      { title: "Wallet Tracking", description: "View eligible wallet and refund activity", tone: "amber" },
+      { title: "One TPL Identity", description: "Use one account across TPL GO", tone: "violet" },
     ],
     footerTrustLine: "Secure OTP login powered by the TPL identity layer.",
     active: true,
@@ -40,10 +45,10 @@ const DEFAULT_LOGIN_PROMO_CONTENT: Record<LoginPromoContext, LoginPromoContent> 
     highlightedText: "together",
     subtitle: "Use Partner Desk to manage your organization, verification, services, and readiness.",
     benefits: [
-      "Grow your reach",
-      "Manage partner opportunities",
-      "Service-aware verification",
-      "Dedicated partner support",
+      { title: "Grow Your Reach", description: "Reach more travellers and customers", tone: "sky" },
+      { title: "Real-time Opportunities", description: "Manage partner enquiries and readiness", tone: "emerald" },
+      { title: "Service-aware Setup", description: "Keep each selected service on its own path", tone: "amber" },
+      { title: "Dedicated Support", description: "Get help when your team needs it", tone: "violet" },
     ],
     footerTrustLine: "Same TPL identity. No separate Partner credentials.",
     active: true,

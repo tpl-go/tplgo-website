@@ -104,7 +104,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const promoContext: LoginPromoContext = activeTab === "partner" ? "partner_login" : "user_login";
 
   useEffect(() => {
-    const checkViewport = () => setIsCompactViewport(window.innerWidth < 768);
+    const checkViewport = () => setIsCompactViewport(window.innerWidth < 900);
     checkViewport();
     window.addEventListener("resize", checkViewport);
     return () => window.removeEventListener("resize", checkViewport);
@@ -337,9 +337,13 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
         <PromoPanel context={promoContext} isCompact={isCompactViewport} descriptionId={descriptionId} />
 
         <section style={rightPanelStyle(isCompactViewport)}>
-          <TopAccountTabs activeAccountType={activeTab} onChange={handleAccountTypeChange} />
+          <TopAccountTabs
+            activeAccountType={activeTab}
+            isCompact={isCompactViewport}
+            onChange={handleAccountTypeChange}
+          />
 
-          <div style={authPanelScrollContentStyle}>
+          <div style={authPanelContentStyle(isCompactViewport, step === "otp")}>
             <div style={headingBlockStyle}>
               <p style={eyebrowStyle}>{activeTab === "partner" ? "TPL GO PARTNER ACCESS" : "TPL GO ACCOUNT"}</p>
               <h2 id={titleId} style={titleStyle(isCompactViewport)}>
@@ -455,7 +459,7 @@ function PromoPanel({
       </div>
       <div style={benefitGridStyle(isCompact)}>
         {content.benefits.map((benefit) => (
-          <BenefitLine key={benefit} text={benefit} isCompact={isCompact} />
+          <BenefitLine key={benefit.title} benefit={benefit} isCompact={isCompact} />
         ))}
       </div>
       <p style={promoFooterStyle}>{content.footerTrustLine}</p>
@@ -665,10 +669,11 @@ function AuthPanel(props: {
 
 function TopAccountTabs(props: {
   activeAccountType: AccountTab;
+  isCompact: boolean;
   onChange: (type: AccountTab) => void;
 }) {
   return (
-    <div role="tablist" aria-label="Login area" style={topTabsStyle}>
+    <div role="tablist" aria-label="Login area" style={topTabsStyle(props.isCompact)}>
       <button
         type="button"
         role="tab"
@@ -676,6 +681,7 @@ function TopAccountTabs(props: {
         onClick={() => props.onChange("personal")}
         style={topTabStyle(props.activeAccountType === "personal")}
       >
+        <Phone size={17} aria-hidden="true" />
         User Login
       </button>
       <button
@@ -685,6 +691,7 @@ function TopAccountTabs(props: {
         onClick={() => props.onChange("partner")}
         style={topTabStyle(props.activeAccountType === "partner")}
       >
+        <BriefcaseBusiness size={17} aria-hidden="true" />
         Partner Desk
       </button>
     </div>
@@ -773,13 +780,22 @@ function MobileIdentityInput(props: {
   );
 }
 
-function BenefitLine({ text, isCompact }: { text: string; isCompact: boolean }) {
+function BenefitLine({
+  benefit,
+  isCompact,
+}: {
+  benefit: { title: string; description: string; tone: "sky" | "emerald" | "amber" | "violet" };
+  isCompact: boolean;
+}) {
   return (
     <div style={benefitLineStyle}>
-      <span aria-hidden="true" style={benefitIconStyle(isCompact)}>
+      <span aria-hidden="true" style={benefitIconStyle(isCompact, benefit.tone)}>
         <CheckCircle2 size={isCompact ? 13 : 15} />
       </span>
-      <span style={benefitTextStyle(isCompact)}>{text}</span>
+      <span style={benefitTextWrapStyle}>
+        <strong style={benefitTitleStyle(isCompact)}>{benefit.title}</strong>
+        <span style={benefitDescriptionStyle(isCompact)}>{benefit.description}</span>
+      </span>
     </div>
   );
 }
@@ -867,7 +883,8 @@ function overlayStyle(isCompact: boolean): React.CSSProperties {
   return {
     position: "fixed",
     inset: 0,
-    background: "rgba(2, 6, 23, 0.62)",
+    background: "rgba(2, 6, 23, 0.68)",
+    backdropFilter: "blur(8px)",
     zIndex: 1000,
     display: "flex",
     alignItems: isCompact ? "flex-end" : "center",
@@ -879,16 +896,17 @@ function overlayStyle(isCompact: boolean): React.CSSProperties {
 
 function modalShellStyle(isCompact: boolean): React.CSSProperties {
   return {
-    width: isCompact ? "100%" : "min(100%, 980px)",
+    width: isCompact ? "100%" : "min(1080px, calc(100vw - 48px))",
     maxWidth: "100%",
+    height: isCompact ? "auto" : "min(704px, 90vh)",
     maxHeight: isCompact ? "92dvh" : "90vh",
-    minHeight: isCompact ? "auto" : "560px",
+    minHeight: isCompact ? "auto" : "650px",
     overflow: "hidden",
     background: "#ffffff",
-    borderRadius: isCompact ? "24px 24px 18px 18px" : "28px",
+    borderRadius: isCompact ? "26px 26px 18px 18px" : "32px",
     display: "grid",
-    gridTemplateColumns: isCompact ? "1fr" : "0.95fr 1.05fr",
-    boxShadow: "0 28px 90px rgba(2, 6, 23, 0.35)",
+    gridTemplateColumns: isCompact ? "1fr" : "46fr 54fr",
+    boxShadow: "0 34px 110px rgba(2, 6, 23, 0.42)",
     position: "relative",
     fontFamily: "inherit",
   };
@@ -897,11 +915,11 @@ function modalShellStyle(isCompact: boolean): React.CSSProperties {
 function closeButtonStyle(isCompact: boolean, disabled: boolean): React.CSSProperties {
   return {
     position: "absolute",
-    top: isCompact ? "12px" : "18px",
-    right: isCompact ? "12px" : "18px",
-    width: "38px",
-    height: "38px",
-    border: "1px solid rgba(148, 163, 184, 0.28)",
+    top: isCompact ? "12px" : "22px",
+    right: isCompact ? "12px" : "22px",
+    width: "42px",
+    height: "42px",
+    border: "1px solid rgba(148, 163, 184, 0.34)",
     borderRadius: "999px",
     background: isCompact ? "rgba(15, 23, 42, 0.5)" : "#ffffff",
     color: isCompact ? "#ffffff" : "#334155",
@@ -917,23 +935,29 @@ function closeButtonStyle(isCompact: boolean, disabled: boolean): React.CSSPrope
 function promoPanelStyle(isCompact: boolean, desktopImage: string, mobileImage?: string): React.CSSProperties {
   const image = isCompact ? mobileImage || desktopImage : desktopImage;
   return {
-    minHeight: isCompact ? "112px" : "560px",
-    background: `linear-gradient(160deg, rgba(5, 18, 42, 0.94), rgba(9, 43, 88, 0.9)), url('${image}') center/cover`,
+    minHeight: isCompact ? "118px" : "100%",
+    height: isCompact ? "118px" : "100%",
+    background: [
+      "linear-gradient(180deg, rgba(4, 15, 34, 0.28), rgba(4, 15, 34, 0.86))",
+      "linear-gradient(135deg, rgba(11, 95, 255, 0.6), rgba(3, 12, 32, 0.36) 48%, rgba(2, 6, 23, 0.86))",
+      `url('${image}') center/cover`,
+    ].join(", "),
     color: "#ffffff",
-    padding: isCompact ? "16px 20px 14px" : "34px 34px 30px",
+    padding: isCompact ? "16px 20px 14px" : "36px 34px 32px",
     display: "flex",
     flexDirection: "column",
     justifyContent: "space-between",
-    gap: isCompact ? "10px" : "22px",
+    gap: isCompact ? "8px" : "18px",
+    position: "relative",
   };
 }
 
 function rightPanelStyle(isCompact: boolean): React.CSSProperties {
   return {
     minHeight: 0,
-    maxHeight: isCompact ? "calc(92dvh - 112px)" : "90vh",
+    maxHeight: isCompact ? "calc(92dvh - 118px)" : "100%",
     overflow: "hidden",
-    padding: isCompact ? "18px 18px 20px" : "34px 38px",
+    padding: isCompact ? "18px 18px 20px" : "36px 46px 34px",
     display: "flex",
     flexDirection: "column",
     background: "#ffffff",
@@ -947,9 +971,9 @@ const promoLogoRowStyle: React.CSSProperties = {
 };
 
 const brandMarkStyle: React.CSSProperties = {
-  width: "42px",
-  height: "42px",
-  borderRadius: "14px",
+  width: "46px",
+  height: "46px",
+  borderRadius: "16px",
   background: "#ffffff",
   color: "#0b5fff",
   display: "inline-flex",
@@ -968,7 +992,7 @@ const brandWordStyle: React.CSSProperties = {
 function promoCopyStyle(isCompact: boolean): React.CSSProperties {
   return {
     display: "grid",
-    gap: isCompact ? "4px" : "10px",
+    gap: isCompact ? "4px" : "12px",
   };
 }
 
@@ -985,10 +1009,10 @@ const promoEyebrowStyle: React.CSSProperties = {
 function promoHeadlineStyle(isCompact: boolean): React.CSSProperties {
   return {
     margin: 0,
-    maxWidth: "360px",
+    maxWidth: "390px",
     color: "#ffffff",
-    fontSize: isCompact ? "22px" : "38px",
-    lineHeight: isCompact ? "28px" : "45px",
+    fontSize: isCompact ? "22px" : "44px",
+    lineHeight: isCompact ? "28px" : "50px",
     fontWeight: 900,
     letterSpacing: 0,
   };
@@ -1001,10 +1025,10 @@ const promoHighlightStyle: React.CSSProperties = {
 function promoSubtitleStyle(isCompact: boolean): React.CSSProperties {
   return {
     margin: 0,
-    maxWidth: "360px",
+    maxWidth: "380px",
     color: "#dbeafe",
-    fontSize: isCompact ? "13px" : "15px",
-    lineHeight: isCompact ? "18px" : "23px",
+    fontSize: isCompact ? "13px" : "16px",
+    lineHeight: isCompact ? "18px" : "24px",
     fontWeight: 650,
   };
 }
@@ -1013,9 +1037,9 @@ function promoVisualStyle(isCompact: boolean): React.CSSProperties {
   return {
     width: isCompact ? "42px" : "66px",
     height: isCompact ? "42px" : "66px",
-    borderRadius: "20px",
-    background: "rgba(255, 255, 255, 0.14)",
-    border: "1px solid rgba(255, 255, 255, 0.18)",
+    borderRadius: "22px",
+    background: "rgba(255, 255, 255, 0.16)",
+    border: "1px solid rgba(255, 255, 255, 0.24)",
     display: isCompact ? "none" : "inline-flex",
     alignItems: "center",
     justifyContent: "center",
@@ -1025,7 +1049,7 @@ function promoVisualStyle(isCompact: boolean): React.CSSProperties {
 function benefitGridStyle(isCompact: boolean): React.CSSProperties {
   return {
     display: isCompact ? "none" : "grid",
-    gap: "12px",
+    gap: "11px",
   };
 }
 
@@ -1037,19 +1061,21 @@ const promoFooterStyle: React.CSSProperties = {
   fontWeight: 750,
 };
 
-const authPanelScrollContentStyle: React.CSSProperties = {
-  minHeight: 0,
-  flex: "1 1 auto",
-  overflowY: "auto",
-  overscrollBehavior: "contain",
-  display: "flex",
-  flexDirection: "column",
-  gap: "14px",
-};
+function authPanelContentStyle(isCompact: boolean, isOtpStep: boolean): React.CSSProperties {
+  return {
+    minHeight: 0,
+    flex: "1 1 auto",
+    overflowY: isCompact || isOtpStep ? "auto" : "visible",
+    overscrollBehavior: "contain",
+    display: "flex",
+    flexDirection: "column",
+    gap: isCompact ? "14px" : "16px",
+  };
+}
 
 const headingBlockStyle: React.CSSProperties = {
   display: "grid",
-  gap: "5px",
+  gap: "6px",
 };
 
 const eyebrowStyle: React.CSSProperties = {
@@ -1064,8 +1090,8 @@ const eyebrowStyle: React.CSSProperties = {
 function titleStyle(isCompact: boolean): React.CSSProperties {
   return {
     margin: 0,
-    fontSize: isCompact ? "24px" : "31px",
-    lineHeight: isCompact ? "30px" : "38px",
+    fontSize: isCompact ? "24px" : "34px",
+    lineHeight: isCompact ? "30px" : "40px",
     color: "#0f172a",
     fontWeight: 950,
     letterSpacing: 0,
@@ -1080,28 +1106,34 @@ const introTextStyle: React.CSSProperties = {
   fontWeight: 650,
 };
 
-const topTabsStyle: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "1fr 1fr",
-  border: "1px solid #dbe4ef",
-  borderRadius: "999px",
-  background: "#eef4fb",
-  padding: "5px",
-  gap: "5px",
-  margin: "0 48px 22px 0",
-  flexShrink: 0,
-};
+function topTabsStyle(isCompact: boolean): React.CSSProperties {
+  return {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    border: "1px solid #dbe4ef",
+    borderRadius: "999px",
+    background: "#eef3f8",
+    padding: "6px",
+    gap: "6px",
+    margin: isCompact ? "0 0 18px" : "0 54px 24px 0",
+    flexShrink: 0,
+  };
+}
 
 function topTabStyle(active: boolean): React.CSSProperties {
   return {
-    minHeight: "44px",
+    minHeight: "50px",
     border: "none",
     borderRadius: "999px",
-    background: active ? "#0b5fff" : "transparent",
+    background: active ? "linear-gradient(135deg, #0b5fff, #0284c7)" : "transparent",
     color: active ? "#ffffff" : "#475569",
     fontWeight: 900,
-    fontSize: "13px",
+    fontSize: "14px",
     cursor: "pointer",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "8px",
     boxShadow: active ? "0 7px 18px rgba(11, 95, 255, 0.28)" : "none",
     transition: "all 0.18s ease",
     letterSpacing: 0,
@@ -1110,21 +1142,21 @@ function topTabStyle(active: boolean): React.CSSProperties {
 
 const stackStyle: React.CSSProperties = {
   display: "grid",
-  gap: "12px",
+  gap: "14px",
 };
 
 const methodGridStyle: React.CSSProperties = {
   display: "grid",
   gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-  gap: "9px",
+  gap: "10px",
 };
 
 function methodButtonStyle(active: boolean): React.CSSProperties {
   return {
-    minHeight: "46px",
+    minHeight: "50px",
     border: active ? "1px solid #0b5fff" : "1px solid #d9e2ec",
-    borderRadius: "13px",
-    background: active ? "#eff6ff" : "#ffffff",
+    borderRadius: "15px",
+    background: active ? "linear-gradient(180deg, #f4f9ff, #eaf3ff)" : "#ffffff",
     color: active ? "#0b5fff" : "#334155",
     fontWeight: 850,
     cursor: "pointer",
@@ -1136,9 +1168,9 @@ function methodButtonStyle(active: boolean): React.CSSProperties {
 }
 
 const disabledMethodButtonStyle: React.CSSProperties = {
-  minHeight: "46px",
+  minHeight: "50px",
   border: "1px solid #d9e2ec",
-  borderRadius: "13px",
+  borderRadius: "15px",
   background: "#f8fafc",
   color: "#64748b",
   fontWeight: 850,
@@ -1189,11 +1221,11 @@ const warningTextStyle: React.CSSProperties = {
 
 function mobileInputShellStyle(invalid: boolean): React.CSSProperties {
   return {
-    minHeight: "52px",
+    minHeight: "56px",
     border: invalid ? "1px solid #f97316" : "1px solid #cbd5e1",
-    borderRadius: "14px",
+    borderRadius: "16px",
     display: "grid",
-    gridTemplateColumns: "minmax(128px, 0.88fr) minmax(0, 1.12fr)",
+    gridTemplateColumns: "minmax(122px, 0.82fr) minmax(0, 1.18fr)",
     overflow: "hidden",
     background: "#ffffff",
   };
@@ -1203,7 +1235,7 @@ const countrySelectStyle: React.CSSProperties = {
   border: "none",
   borderRight: "1px solid #e2e8f0",
   outline: "none",
-  padding: "0 10px",
+  padding: "0 10px 0 12px",
   color: "#1e293b",
   fontSize: "14px",
   fontWeight: 800,
@@ -1214,7 +1246,7 @@ const countrySelectStyle: React.CSSProperties = {
 
 const compactInputStyle: React.CSSProperties = {
   minWidth: 0,
-  height: "52px",
+  height: "56px",
   border: "none",
   outline: "none",
   padding: "0 13px",
@@ -1231,7 +1263,7 @@ const compactInputStyle: React.CSSProperties = {
 const standaloneInputStyle: React.CSSProperties = {
   width: "100%",
   minWidth: 0,
-  height: "52px",
+  height: "56px",
   border: "1px solid #cbd5e1",
   borderRadius: "14px",
   outline: "none",
@@ -1248,17 +1280,17 @@ const standaloneInputStyle: React.CSSProperties = {
 
 function primaryButtonStyle(disabled: boolean): React.CSSProperties {
   return {
-    minHeight: "50px",
+    minHeight: "54px",
     border: "none",
-    borderRadius: "14px",
-    background: disabled ? "#dbeafe" : "#0b5fff",
+    borderRadius: "16px",
+    background: disabled ? "#dbeafe" : "linear-gradient(135deg, #0b5fff, #0284c7)",
     color: disabled ? "#64748b" : "#ffffff",
     fontWeight: 900,
     cursor: disabled ? "not-allowed" : "pointer",
     opacity: 0.98,
     letterSpacing: 0,
     padding: "0 16px",
-    boxShadow: disabled ? "none" : "0 12px 28px rgba(11, 95, 255, 0.22)",
+    boxShadow: disabled ? "none" : "0 15px 32px rgba(11, 95, 255, 0.28)",
   };
 }
 
@@ -1290,13 +1322,15 @@ function resendButtonStyle(disabled: boolean): React.CSSProperties {
 }
 
 const registerBoxStyle: React.CSSProperties = {
-  marginTop: "2px",
-  border: "1px solid #dbeafe",
-  borderRadius: "16px",
-  background: "#f8fbff",
+  marginTop: "0",
+  border: "1px solid #bfdbfe",
+  borderRadius: "18px",
+  background: "linear-gradient(180deg, #f8fbff, #eef6ff)",
   padding: "14px",
   display: "grid",
-  gap: "12px",
+  gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))",
+  alignItems: "center",
+  gap: "14px",
 };
 
 const registerTitleStyle: React.CSSProperties = {
@@ -1316,9 +1350,9 @@ const registerCopyStyle: React.CSSProperties = {
 };
 
 const registerButtonStyle: React.CSSProperties = {
-  minHeight: "44px",
+  minHeight: "46px",
   border: "1px solid #0b5fff",
-  borderRadius: "13px",
+  borderRadius: "15px",
   background: "#ffffff",
   color: "#0b5fff",
   display: "inline-flex",
@@ -1327,21 +1361,36 @@ const registerButtonStyle: React.CSSProperties = {
   gap: "8px",
   fontWeight: 900,
   cursor: "pointer",
+  padding: "0 16px",
+  whiteSpace: "nowrap",
+  width: "100%",
 };
 
 const benefitLineStyle: React.CSSProperties = {
   display: "flex",
-  gap: "10px",
+  gap: "12px",
   alignItems: "center",
+  minHeight: "58px",
+  padding: "10px 12px",
+  borderRadius: "18px",
+  background: "rgba(255, 255, 255, 0.13)",
+  border: "1px solid rgba(255, 255, 255, 0.17)",
+  backdropFilter: "blur(10px)",
 };
 
-function benefitIconStyle(isCompact: boolean): React.CSSProperties {
+function benefitIconStyle(isCompact: boolean, tone: "sky" | "emerald" | "amber" | "violet"): React.CSSProperties {
+  const colors = {
+    sky: { background: "#0ea5e9", color: "#ffffff" },
+    emerald: { background: "#10b981", color: "#ffffff" },
+    amber: { background: "#f59e0b", color: "#ffffff" },
+    violet: { background: "#8b5cf6", color: "#ffffff" },
+  }[tone];
   return {
-    width: isCompact ? "24px" : "30px",
-    height: isCompact ? "24px" : "30px",
-    borderRadius: "999px",
-    background: "rgba(255, 255, 255, 0.16)",
-    color: "#93c5fd",
+    width: isCompact ? "24px" : "38px",
+    height: isCompact ? "24px" : "38px",
+    borderRadius: "12px",
+    background: colors.background,
+    color: colors.color,
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
@@ -1349,12 +1398,27 @@ function benefitIconStyle(isCompact: boolean): React.CSSProperties {
   };
 }
 
-function benefitTextStyle(isCompact: boolean): React.CSSProperties {
+const benefitTextWrapStyle: React.CSSProperties = {
+  display: "grid",
+  gap: "2px",
+  minWidth: 0,
+};
+
+function benefitTitleStyle(isCompact: boolean): React.CSSProperties {
   return {
-    color: "#eef6ff",
+    color: "#ffffff",
     fontSize: isCompact ? "13px" : "14px",
-    lineHeight: isCompact ? "18px" : "20px",
-    fontWeight: 800,
+    lineHeight: isCompact ? "18px" : "18px",
+    fontWeight: 900,
+  };
+}
+
+function benefitDescriptionStyle(isCompact: boolean): React.CSSProperties {
+  return {
+    color: "#dbeafe",
+    fontSize: isCompact ? "12px" : "12px",
+    lineHeight: isCompact ? "16px" : "16px",
+    fontWeight: 650,
   };
 }
 
