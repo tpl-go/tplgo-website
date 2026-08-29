@@ -32,6 +32,8 @@ type LoginModalProps = {
 type LoginStep = "mobile" | "otp";
 type AuthMethod = "mobile" | "email";
 type AccountTab = "personal" | "partner";
+type PartnerView = "login" | "register";
+type PartnerAccessMethod = "credentials" | "otp";
 
 type CountryOption = {
   code: string;
@@ -55,14 +57,31 @@ const COUNTRY_OPTIONS: CountryOption[] = [
   { code: "OTHER", name: "Other", dialCode: "", minLength: 6, maxLength: 15, certifiedOtp: false },
 ];
 
+const PARTNER_PRIMARY_CATEGORIES = [
+  "Hotels & Resorts",
+  "Homestay",
+  "Cab / Taxi",
+  "Activities",
+  "Guide",
+  "Travel Agency / DMC",
+  "Marketplace Seller",
+] as const;
+
 export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
-  const { activeAccountType, isAuthenticated, setActiveAccountType, sendOtp, verifyOtp } = useAuth();
+  const { activeAccountType, setActiveAccountType, sendOtp, verifyOtp } = useAuth();
 
   const titleId = useId();
   const descriptionId = useId();
   const mobileInputId = useId();
   const otpInputId = useId();
   const emailInputId = useId();
+  const partnerUsernameInputId = useId();
+  const partnerPasswordInputId = useId();
+  const registerLegalNameInputId = useId();
+  const registerMobileInputId = useId();
+  const registerEmailInputId = useId();
+  const registerCategoryInputId = useId();
+  const registerTermsInputId = useId();
   const modalRef = useRef<HTMLDivElement | null>(null);
   const mobileInputRef = useRef<HTMLInputElement | null>(null);
   const otpInputRef = useRef<HTMLInputElement | null>(null);
@@ -71,9 +90,19 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
   const [step, setStep] = useState<LoginStep>("mobile");
   const [method, setMethod] = useState<AuthMethod>("mobile");
+  const [partnerView, setPartnerView] = useState<PartnerView>("login");
+  const [partnerAccessMethod, setPartnerAccessMethod] = useState<PartnerAccessMethod>("credentials");
   const [countryCode, setCountryCode] = useState("IN");
   const [mobile, setMobile] = useState("");
   const [email, setEmail] = useState("");
+  const [partnerUsername, setPartnerUsername] = useState("");
+  const [partnerPassword, setPartnerPassword] = useState("");
+  const [registerLegalName, setRegisterLegalName] = useState("");
+  const [registerCountryCode, setRegisterCountryCode] = useState("IN");
+  const [registerMobile, setRegisterMobile] = useState("");
+  const [registerEmail, setRegisterEmail] = useState("");
+  const [registerCategory, setRegisterCategory] = useState("Hotels & Resorts");
+  const [registerTermsAccepted, setRegisterTermsAccepted] = useState(false);
   const [otp, setOtp] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorText, setErrorText] = useState("");
@@ -88,7 +117,12 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const cleanedMobile = useMemo(() => mobile.replace(/\D/g, ""), [mobile]);
   const cleanedOtp = useMemo(() => otp.replace(/\D/g, ""), [otp]);
   const normalizedEmail = useMemo(() => normalizeEmail(email), [email]);
+  const selectedRegisterCountry = useMemo(() => getCountry(registerCountryCode), [registerCountryCode]);
+  const cleanedRegisterMobile = useMemo(() => registerMobile.replace(/\D/g, ""), [registerMobile]);
+  const normalizedRegisterEmail = useMemo(() => normalizeEmail(registerEmail), [registerEmail]);
   const isValidMobile = isNationalMobileValid(cleanedMobile, selectedCountry);
+  const isValidRegisterMobile = isNationalMobileValid(cleanedRegisterMobile, selectedRegisterCountry);
+  const isValidRegisterEmail = isEmailValid(normalizedRegisterEmail);
   const isCertifiedMobileOtp = selectedCountry.certifiedOtp && selectedCountry.code === "IN";
   const isValidEmail = isEmailValid(normalizedEmail);
   const isValidOtp = cleanedOtp.length === 6;
@@ -100,6 +134,12 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const canSendOtp = method === "mobile" && isValidMobile && isCertifiedMobileOtp && !isSubmitting;
   const canVerifyOtp = method === "mobile" && isValidOtp && !isSubmitting;
   const canResendOtp = step === "otp" && canSendOtp && resendSecondsRemaining === 0;
+  const canContinueRegistration =
+    registerLegalName.trim().length >= 2 &&
+    isValidRegisterMobile &&
+    isValidRegisterEmail &&
+    Boolean(registerCategory) &&
+    registerTermsAccepted;
   const maskedMobile = cleanedMobile.length >= 4 ? `XXXXX${cleanedMobile.slice(-4)}` : "";
   const promoContext: LoginPromoContext = activeTab === "partner" ? "partner_login" : "user_login";
 
@@ -149,9 +189,19 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const resetState = useCallback(() => {
     resetChallengeState();
     setMethod("mobile");
+    setPartnerView("login");
+    setPartnerAccessMethod("credentials");
     setCountryCode("IN");
     setMobile("");
     setEmail("");
+    setPartnerUsername("");
+    setPartnerPassword("");
+    setRegisterLegalName("");
+    setRegisterCountryCode("IN");
+    setRegisterMobile("");
+    setRegisterEmail("");
+    setRegisterCategory("Hotels & Resorts");
+    setRegisterTermsAccepted(false);
     setIsSubmitting(false);
   }, [resetChallengeState]);
 
@@ -189,6 +239,8 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     if (isSubmitting) return;
     setActiveAccountType(nextType);
     resetChallengeState();
+    setPartnerView("login");
+    setPartnerAccessMethod(nextType === "partner" ? "credentials" : "otp");
     setInfoText("");
   };
 
@@ -293,11 +345,59 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const handleRegisterAsPartner = () => {
     setActiveAccountType("partner");
     resetChallengeState();
-    if (isAuthenticated) {
-      window.location.assign("/partner-preview");
+    setPartnerView("register");
+    setPartnerAccessMethod("otp");
+    setInfoText("");
+  };
+
+  const handlePartnerCredentialSignIn = () => {
+    setErrorText("");
+    setInfoText(
+      "Partner username and password access is pending secure credential activation. Use verified mobile OTP for this staging entry."
+    );
+  };
+
+  const handlePartnerOtpAccess = () => {
+    resetChallengeState();
+    setPartnerView("login");
+    setPartnerAccessMethod("otp");
+    setMethod("mobile");
+    setInfoText("Use your verified Partner contact mobile to continue.");
+  };
+
+  const handleBackToPartnerLogin = () => {
+    resetChallengeState();
+    setPartnerView("login");
+    setPartnerAccessMethod("credentials");
+    setInfoText("");
+  };
+
+  const handleRegisterContinue = () => {
+    if (!canContinueRegistration) {
+      setErrorText("Complete the required Partner registration fields and accept the terms.");
       return;
     }
-    setInfoText("Sign in with your TPL identity first. Then we will open Partner onboarding.");
+    if (!selectedRegisterCountry.certifiedOtp || selectedRegisterCountry.code !== "IN") {
+      setErrorText("WhatsApp OTP delivery is currently certified for India only. Global provider certification is pending.");
+      return;
+    }
+    setErrorText("");
+    setCountryCode(registerCountryCode);
+    setMobile(cleanedRegisterMobile);
+    setPartnerView("login");
+    setPartnerAccessMethod("otp");
+    setMethod("mobile");
+    setInfoText("Now verify the service mobile. After sign-in, Partner Desk will continue your application.");
+  };
+
+  const handleForgotPartnerPassword = () => {
+    setErrorText("");
+    setInfoText("Secure Partner password reset will be enabled with the Partner credential activation backend.");
+  };
+
+  const handleGoogleAvailability = () => {
+    setErrorText("");
+    setInfoText("Google sign-in will be enabled after secure OAuth configuration is active.");
   };
 
   const handleBackToMobile = () => {
@@ -343,11 +443,19 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
             <div style={headingBlockStyle}>
               <p style={eyebrowStyle}>{activeTab === "partner" ? "TPL GO PARTNER ACCESS" : "TPL GO ACCOUNT"}</p>
               <h2 id={titleId} style={titleStyle(isCompactViewport)}>
-                {activeTab === "partner" ? "Partner Desk" : step === "otp" ? "Verify OTP" : "User Login"}
+                {activeTab === "partner"
+                  ? partnerView === "register"
+                    ? "Register as Partner"
+                    : "Partner Desk"
+                  : step === "otp"
+                    ? "Verify OTP"
+                    : "Login or Sign up"}
               </h2>
               <p style={introTextStyle}>
                 {activeTab === "partner"
-                  ? "Sign in to manage your TPL Partner account."
+                  ? partnerView === "register"
+                    ? "Start with basic details. Full onboarding continues in Partner Desk."
+                    : "Sign in to manage your TPL Partner account."
                   : "Sign in to bookings, trips, wallet, and traveller services."}
               </p>
             </div>
@@ -358,6 +466,9 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
               activeTab={activeTab}
               method={method}
               setMethod={handleMethodChange}
+              partnerView={partnerView}
+              partnerAccessMethod={partnerAccessMethod}
+              setPartnerAccessMethod={setPartnerAccessMethod}
               step={step}
               mobileInputId={mobileInputId}
               mobileInputRef={mobileInputRef}
@@ -390,7 +501,39 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
               emailHasInvalidValue={emailHasInvalidValue}
               isValidEmail={isValidEmail}
               onEmailContinue={handleEmailContinue}
+              onGoogleAvailability={handleGoogleAvailability}
               onRegisterAsPartner={handleRegisterAsPartner}
+              onBackToPartnerLogin={handleBackToPartnerLogin}
+              partnerUsernameInputId={partnerUsernameInputId}
+              partnerPasswordInputId={partnerPasswordInputId}
+              partnerUsername={partnerUsername}
+              setPartnerUsername={setPartnerUsername}
+              partnerPassword={partnerPassword}
+              setPartnerPassword={setPartnerPassword}
+              onPartnerCredentialSignIn={handlePartnerCredentialSignIn}
+              onPartnerOtpAccess={handlePartnerOtpAccess}
+              onForgotPartnerPassword={handleForgotPartnerPassword}
+              registerLegalNameInputId={registerLegalNameInputId}
+              registerMobileInputId={registerMobileInputId}
+              registerEmailInputId={registerEmailInputId}
+              registerCategoryInputId={registerCategoryInputId}
+              registerTermsInputId={registerTermsInputId}
+              registerLegalName={registerLegalName}
+              setRegisterLegalName={setRegisterLegalName}
+              registerCountryCode={registerCountryCode}
+              setRegisterCountryCode={setRegisterCountryCode}
+              registerMobile={registerMobile}
+              setRegisterMobile={setRegisterMobile}
+              registerEmail={registerEmail}
+              setRegisterEmail={setRegisterEmail}
+              registerCategory={registerCategory}
+              setRegisterCategory={setRegisterCategory}
+              registerTermsAccepted={registerTermsAccepted}
+              setRegisterTermsAccepted={setRegisterTermsAccepted}
+              registerMobileInvalid={cleanedRegisterMobile.length > 0 && !isValidRegisterMobile}
+              registerEmailInvalid={normalizedRegisterEmail.length > 0 && !isValidRegisterEmail}
+              canContinueRegistration={canContinueRegistration}
+              onRegisterContinue={handleRegisterContinue}
             />
 
             {errorText ? <StatusMessage tone="error">{errorText}</StatusMessage> : null}
@@ -421,10 +564,7 @@ function PromoPanel({
   if (isCompact) {
     return (
       <aside style={promoPanelStyle(true, content.desktopImage, content.mobileImage)}>
-        <div style={promoLogoRowStyle}>
-          <span style={brandMarkStyle}>TPL</span>
-          <span style={brandWordStyle}>GO</span>
-        </div>
+        <PromoBrand content={content} />
         <div style={promoCopyStyle(true)}>
           <p style={promoEyebrowStyle}>{content.eyebrow}</p>
           <h3 style={promoHeadlineStyle(true)}>
@@ -437,10 +577,7 @@ function PromoPanel({
 
   return (
     <aside style={promoPanelStyle(isCompact, content.desktopImage, content.mobileImage)}>
-      <div style={promoLogoRowStyle}>
-        <span style={brandMarkStyle}>TPL</span>
-        <span style={brandWordStyle}>GO</span>
-      </div>
+      <PromoBrand content={content} />
       <div style={promoCopyStyle(isCompact)}>
         <p style={promoEyebrowStyle}>{content.eyebrow}</p>
         <h3 style={promoHeadlineStyle(isCompact)}>
@@ -463,10 +600,26 @@ function PromoPanel({
   );
 }
 
+function PromoBrand({ content }: { content: ReturnType<typeof getLoginPromoContent> }) {
+  return (
+    <div style={promoLogoRowStyle}>
+      {content.brandLogoImage ? (
+        <span aria-hidden="true" style={brandLogoImageStyle(content.brandLogoImage)} />
+      ) : (
+        <span style={brandMarkStyle}>TPL</span>
+      )}
+      <span style={brandWordStyle}>{content.brandLabel}</span>
+    </div>
+  );
+}
+
 function AuthPanel(props: {
   activeTab: AccountTab;
   method: AuthMethod;
   setMethod: (method: AuthMethod) => void;
+  partnerView: PartnerView;
+  partnerAccessMethod: PartnerAccessMethod;
+  setPartnerAccessMethod: (method: PartnerAccessMethod) => void;
   step: LoginStep;
   mobileInputId: string;
   mobileInputRef: React.RefObject<HTMLInputElement | null>;
@@ -499,12 +652,47 @@ function AuthPanel(props: {
   emailHasInvalidValue: boolean;
   isValidEmail: boolean;
   onEmailContinue: () => void;
+  onGoogleAvailability: () => void;
   onRegisterAsPartner: () => void;
+  onBackToPartnerLogin: () => void;
+  partnerUsernameInputId: string;
+  partnerPasswordInputId: string;
+  partnerUsername: string;
+  setPartnerUsername: (value: string) => void;
+  partnerPassword: string;
+  setPartnerPassword: (value: string) => void;
+  onPartnerCredentialSignIn: () => void;
+  onPartnerOtpAccess: () => void;
+  onForgotPartnerPassword: () => void;
+  registerLegalNameInputId: string;
+  registerMobileInputId: string;
+  registerEmailInputId: string;
+  registerCategoryInputId: string;
+  registerTermsInputId: string;
+  registerLegalName: string;
+  setRegisterLegalName: (value: string) => void;
+  registerCountryCode: string;
+  setRegisterCountryCode: (value: string) => void;
+  registerMobile: string;
+  setRegisterMobile: (value: string) => void;
+  registerEmail: string;
+  setRegisterEmail: (value: string) => void;
+  registerCategory: string;
+  setRegisterCategory: (value: string) => void;
+  registerTermsAccepted: boolean;
+  setRegisterTermsAccepted: (value: boolean) => void;
+  registerMobileInvalid: boolean;
+  registerEmailInvalid: boolean;
+  canContinueRegistration: boolean;
+  onRegisterContinue: () => void;
 }) {
   const {
     activeTab,
     method,
     setMethod,
+    partnerView,
+    partnerAccessMethod,
+    setPartnerAccessMethod,
     step,
     mobileInputId,
     mobileInputRef,
@@ -537,7 +725,39 @@ function AuthPanel(props: {
     emailHasInvalidValue,
     isValidEmail,
     onEmailContinue,
+    onGoogleAvailability,
     onRegisterAsPartner,
+    onBackToPartnerLogin,
+    partnerUsernameInputId,
+    partnerPasswordInputId,
+    partnerUsername,
+    setPartnerUsername,
+    partnerPassword,
+    setPartnerPassword,
+    onPartnerCredentialSignIn,
+    onPartnerOtpAccess,
+    onForgotPartnerPassword,
+    registerLegalNameInputId,
+    registerMobileInputId,
+    registerEmailInputId,
+    registerCategoryInputId,
+    registerTermsInputId,
+    registerLegalName,
+    setRegisterLegalName,
+    registerCountryCode,
+    setRegisterCountryCode,
+    registerMobile,
+    setRegisterMobile,
+    registerEmail,
+    setRegisterEmail,
+    registerCategory,
+    setRegisterCategory,
+    registerTermsAccepted,
+    setRegisterTermsAccepted,
+    registerMobileInvalid,
+    registerEmailInvalid,
+    canContinueRegistration,
+    onRegisterContinue,
   } = props;
 
   if (step === "otp") {
@@ -589,9 +809,159 @@ function AuthPanel(props: {
     );
   }
 
+  if (activeTab === "partner" && partnerView === "register") {
+    return (
+      <div style={stackStyle}>
+        <label htmlFor={registerLegalNameInputId} style={labelStyle}>
+          Legal / Company Name
+        </label>
+        <input
+          id={registerLegalNameInputId}
+          value={registerLegalName}
+          onChange={(event) => setRegisterLegalName(event.target.value)}
+          type="text"
+          autoComplete="organization"
+          placeholder="Registered business or professional name"
+          style={standaloneInputStyle}
+        />
+
+        <MobileIdentityInput
+          id={registerMobileInputId}
+          countryCode={registerCountryCode}
+          onCountryChange={setRegisterCountryCode}
+          value={registerMobile}
+          onChange={setRegisterMobile}
+          label="Service mobile number"
+          invalid={registerMobileInvalid}
+        />
+
+        <label htmlFor={registerEmailInputId} style={labelStyle}>
+          Business email
+        </label>
+        <input
+          id={registerEmailInputId}
+          value={registerEmail}
+          onChange={(event) => setRegisterEmail(event.target.value)}
+          onBlur={() => setRegisterEmail(normalizeEmail(registerEmail))}
+          type="email"
+          inputMode="email"
+          autoComplete="email"
+          placeholder="partner@example.com"
+          aria-invalid={registerEmailInvalid}
+          style={standaloneInputStyle}
+        />
+
+        <label htmlFor={registerCategoryInputId} style={labelStyle}>
+          Partner Type / Primary Service Category
+        </label>
+        <select
+          id={registerCategoryInputId}
+          value={registerCategory}
+          onChange={(event) => setRegisterCategory(event.target.value)}
+          style={standaloneSelectStyle}
+        >
+          {PARTNER_PRIMARY_CATEGORIES.map((category) => (
+            <option key={category} value={category}>
+              {category}
+            </option>
+          ))}
+        </select>
+
+        <label htmlFor={registerTermsInputId} style={termsCheckStyle}>
+          <input
+            id={registerTermsInputId}
+            type="checkbox"
+            checked={registerTermsAccepted}
+            onChange={(event) => setRegisterTermsAccepted(event.target.checked)}
+          />
+          <span>I agree to continue with TPL GO Partner verification.</span>
+        </label>
+
+        <button
+          type="button"
+          onClick={onRegisterContinue}
+          disabled={!canContinueRegistration}
+          style={primaryButtonStyle(!canContinueRegistration)}
+        >
+          Continue
+        </button>
+        <button type="button" onClick={onBackToPartnerLogin} style={plainLinkButtonStyle}>
+          Existing Partner? Sign in
+        </button>
+      </div>
+    );
+  }
+
+  if (activeTab === "partner" && partnerAccessMethod === "credentials") {
+    return (
+      <div style={stackStyle}>
+        <label htmlFor={partnerUsernameInputId} style={labelStyle}>
+          Partner Username / Partner ID
+        </label>
+        <input
+          id={partnerUsernameInputId}
+          value={partnerUsername}
+          onChange={(event) => setPartnerUsername(event.target.value)}
+          type="text"
+          autoComplete="username"
+          placeholder="TPLP-XXXXXX"
+          style={standaloneInputStyle}
+        />
+
+        <label htmlFor={partnerPasswordInputId} style={labelStyle}>
+          Password
+        </label>
+        <input
+          id={partnerPasswordInputId}
+          value={partnerPassword}
+          onChange={(event) => setPartnerPassword(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") onPartnerCredentialSignIn();
+          }}
+          type="password"
+          autoComplete="current-password"
+          placeholder="Enter password"
+          style={standaloneInputStyle}
+        />
+
+        <button type="button" onClick={onPartnerCredentialSignIn} style={primaryButtonStyle(false)}>
+          Sign In
+        </button>
+
+        <div style={partnerInlineActionsStyle}>
+          <button type="button" onClick={onForgotPartnerPassword} style={plainLinkButtonStyle}>
+            Forgot password?
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setPartnerAccessMethod("otp");
+              onPartnerOtpAccess();
+            }}
+            style={plainLinkButtonStyle}
+          >
+            Use OTP instead
+          </button>
+        </div>
+
+        <div style={registerInlineStyle}>
+          <span style={registerTitleStyle}>New Partner?</span>
+          <button type="button" onClick={onRegisterAsPartner} style={registerButtonStyle}>
+            Register as Partner
+            <ArrowRight size={15} aria-hidden="true" />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={stackStyle}>
-      <MethodSelector active={method} onChange={setMethod} />
+      <MethodSelector
+        active={method}
+        onChange={setMethod}
+        onGoogleAvailability={onGoogleAvailability}
+      />
       {method === "mobile" ? (
         <>
           <MobileIdentityInput
@@ -643,15 +1013,13 @@ function AuthPanel(props: {
           >
             Continue with Email
           </button>
-          <p style={helperTextStyle}>Email sign-in is presented truthfully and will not issue a session until secure email identity is enabled.</p>
+          <p style={helperTextStyle}>Email OTP will be enabled after secure email identity is connected.</p>
         </>
       )}
 
       {activeTab === "partner" ? (
-        <div style={registerBoxStyle}>
-          <div>
-            <p style={registerTitleStyle}>New Partner?</p>
-          </div>
+        <div style={registerInlineStyle}>
+          <span style={registerTitleStyle}>New Partner?</span>
           <button type="button" onClick={onRegisterAsPartner} style={registerButtonStyle}>
             Register as Partner
             <ArrowRight size={16} aria-hidden="true" />
@@ -693,7 +1061,15 @@ function TopAccountTabs(props: {
   );
 }
 
-function MethodSelector({ active, onChange }: { active: AuthMethod; onChange: (method: AuthMethod) => void }) {
+function MethodSelector({
+  active,
+  onChange,
+  onGoogleAvailability,
+}: {
+  active: AuthMethod;
+  onChange: (method: AuthMethod) => void;
+  onGoogleAvailability: () => void;
+}) {
   return (
     <div aria-label="Authentication method" style={methodGridStyle}>
       <button type="button" onClick={() => onChange("mobile")} style={methodButtonStyle(active === "mobile")}>
@@ -702,8 +1078,7 @@ function MethodSelector({ active, onChange }: { active: AuthMethod; onChange: (m
       </button>
       <button
         type="button"
-        disabled
-        aria-disabled="true"
+        onClick={onGoogleAvailability}
         title="Google login requires secure OAuth configuration before activation."
         style={disabledMethodButtonStyle}
       >
@@ -891,11 +1266,11 @@ function overlayStyle(isCompact: boolean): React.CSSProperties {
 
 function modalShellStyle(isCompact: boolean): React.CSSProperties {
   return {
-    width: isCompact ? "100%" : "min(980px, calc(100vw - 48px))",
+    width: isCompact ? "100%" : "min(940px, calc(100vw - 48px))",
     maxWidth: "100%",
-    height: isCompact ? "auto" : "min(626px, calc(100vh - 40px))",
+    height: isCompact ? "auto" : "min(610px, calc(100vh - 40px))",
     maxHeight: isCompact ? "92dvh" : "90vh",
-    minHeight: isCompact ? "auto" : "590px",
+    minHeight: isCompact ? "auto" : "560px",
     overflow: "hidden",
     background: "#ffffff",
     borderRadius: isCompact ? "24px 24px 18px 18px" : "28px",
@@ -977,6 +1352,20 @@ const brandMarkStyle: React.CSSProperties = {
   fontSize: "13px",
   fontWeight: 950,
 };
+
+function brandLogoImageStyle(imageUrl: string): React.CSSProperties {
+  return {
+    width: "42px",
+    height: "42px",
+    borderRadius: "14px",
+    backgroundColor: "#ffffff",
+    backgroundImage: `url(${imageUrl})`,
+    backgroundRepeat: "no-repeat",
+    backgroundPosition: "center",
+    backgroundSize: "30px 30px",
+    display: "inline-block",
+  };
+}
 
 const brandWordStyle: React.CSSProperties = {
   fontSize: "15px",
@@ -1273,6 +1662,11 @@ const standaloneInputStyle: React.CSSProperties = {
   letterSpacing: 0,
 };
 
+const standaloneSelectStyle: React.CSSProperties = {
+  ...standaloneInputStyle,
+  appearance: "auto",
+};
+
 function primaryButtonStyle(disabled: boolean): React.CSSProperties {
   return {
     minHeight: "50px",
@@ -1316,16 +1710,15 @@ function resendButtonStyle(disabled: boolean): React.CSSProperties {
   };
 }
 
-const registerBoxStyle: React.CSSProperties = {
+const registerInlineStyle: React.CSSProperties = {
+  minHeight: "48px",
   marginTop: "0",
-  border: "1px solid #bfdbfe",
-  borderRadius: "15px",
-  background: "linear-gradient(180deg, #f8fbff, #eef6ff)",
-  padding: "10px 12px",
+  borderTop: "1px solid #e2e8f0",
+  paddingTop: "10px",
   display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))",
+  gridTemplateColumns: "minmax(0, 1fr) minmax(174px, auto)",
   alignItems: "center",
-  gap: "12px",
+  gap: "10px",
 };
 
 const registerTitleStyle: React.CSSProperties = {
@@ -1351,6 +1744,35 @@ const registerButtonStyle: React.CSSProperties = {
   padding: "0 16px",
   whiteSpace: "nowrap",
   width: "100%",
+};
+
+const partnerInlineActionsStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: "10px",
+  marginTop: "-2px",
+};
+
+const plainLinkButtonStyle: React.CSSProperties = {
+  border: "none",
+  background: "transparent",
+  color: "#0b5fff",
+  fontSize: "12px",
+  lineHeight: "16px",
+  fontWeight: 850,
+  cursor: "pointer",
+  padding: "0",
+};
+
+const termsCheckStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "flex-start",
+  gap: "8px",
+  color: "#475569",
+  fontSize: "12px",
+  lineHeight: "17px",
+  fontWeight: 700,
 };
 
 const benefitLineStyle: React.CSSProperties = {
