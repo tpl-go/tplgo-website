@@ -142,18 +142,18 @@ export default function AdminShell({
   return (
     <div className="min-h-screen bg-[#f5f7fb] text-slate-950">
       <aside className="fixed left-0 top-0 hidden h-screen w-72 border-r border-slate-200 bg-white lg:block">
-        <div className="flex h-16 items-center gap-3 border-b border-slate-200 px-6">
-          <div className="flex h-9 w-9 items-center justify-center rounded bg-slate-950 text-white">
+        <div className="flex h-16 items-center gap-3 border-b border-slate-200 bg-gradient-to-r from-slate-950 to-slate-800 px-6 text-white">
+          <div className="flex h-9 w-9 items-center justify-center rounded bg-white/10 text-white ring-1 ring-white/15">
             <Shield className="h-5 w-5" />
           </div>
           <div>
             <p className="text-sm font-semibold leading-5">TPL Admin</p>
-            <p className="text-xs text-slate-500">Operations Console</p>
+            <p className="text-xs text-slate-300">Operations Console</p>
           </div>
         </div>
         <nav className="h-[calc(100vh-4rem)] space-y-6 overflow-y-auto px-3 py-4">
           <div className="space-y-1">
-            <p className="px-3 pb-2 text-[11px] font-semibold uppercase text-slate-400">Operations</p>
+            <p className="border-l-2 border-blue-500 px-3 pb-2 text-[11px] font-semibold uppercase text-blue-600">Operations</p>
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = item.href ? pathname === item.href || (item.href !== "/admin" && pathname.startsWith(item.href)) : false;
@@ -162,8 +162,8 @@ export default function AdminShell({
                 key={item.href}
                 href={item.href}
                 className={[
-                  "flex h-10 items-center gap-3 rounded px-3 text-sm font-medium",
-                  active ? "bg-slate-950 text-white" : "text-slate-600 hover:bg-slate-100 hover:text-slate-950",
+                  "flex h-10 items-center gap-3 rounded border-l-2 px-3 text-sm font-medium",
+                  active ? "border-blue-500 bg-blue-50 text-blue-800" : "border-transparent text-slate-600 hover:bg-blue-50/60 hover:text-slate-950",
                 ].join(" ")}
               >
                 <Icon className="h-4 w-4" />
@@ -186,7 +186,7 @@ export default function AdminShell({
           })}
           </div>
           <div className="space-y-1 border-t border-slate-100 pt-4">
-            <p className="px-3 pb-2 text-[11px] font-semibold uppercase text-slate-400">Partners</p>
+            <p className="border-l-2 border-emerald-500 px-3 pb-2 text-[11px] font-semibold uppercase text-emerald-700">Partners</p>
             {partnerNavItems.map((item) => {
               const Icon = item.icon;
               const active = pathname === item.href || (item.href !== "/admin/partner-verification" && pathname.startsWith(item.href));
@@ -195,8 +195,8 @@ export default function AdminShell({
                   key={item.href}
                   href={item.href}
                   className={[
-                    "flex h-10 items-center gap-3 rounded px-3 text-sm font-medium",
-                    active ? "bg-slate-950 text-white" : "text-slate-600 hover:bg-slate-100 hover:text-slate-950",
+                    "flex h-10 items-center gap-3 rounded border-l-2 px-3 text-sm font-medium",
+                    active ? "border-emerald-500 bg-emerald-50 text-emerald-800" : "border-transparent text-slate-600 hover:bg-emerald-50/60 hover:text-slate-950",
                   ].join(" ")}
                 >
                   <Icon className="h-4 w-4" />
@@ -206,7 +206,7 @@ export default function AdminShell({
             })}
           </div>
           <div className="space-y-1 border-t border-slate-100 pt-4">
-            <p className="px-3 pb-2 text-[11px] font-semibold uppercase text-slate-400">Website & Content</p>
+            <p className="border-l-2 border-amber-500 px-3 pb-2 text-[11px] font-semibold uppercase text-amber-700">Website & Content</p>
             {websiteContentNavItems.filter((item) => canAccess(item.permission)).map((item) => {
               const Icon = item.icon;
               const active = pathname === item.href || pathname.startsWith(item.href);
@@ -215,8 +215,8 @@ export default function AdminShell({
                   key={item.href}
                   href={item.href}
                   className={[
-                    "flex h-10 items-center gap-3 rounded px-3 text-sm font-medium",
-                    active ? "bg-slate-950 text-white" : "text-slate-600 hover:bg-slate-100 hover:text-slate-950",
+                    "flex h-10 items-center gap-3 rounded border-l-2 px-3 text-sm font-medium",
+                    active ? "border-amber-500 bg-amber-50 text-amber-800" : "border-transparent text-slate-600 hover:bg-amber-50/60 hover:text-slate-950",
                   ].join(" ")}
                 >
                   <Icon className="h-4 w-4" />
@@ -226,7 +226,7 @@ export default function AdminShell({
             })}
           </div>
           <div className="space-y-1 border-t border-slate-100 pt-4">
-            <p className="px-3 pb-2 text-[11px] font-semibold uppercase text-slate-400">Finance</p>
+            <p className="border-l-2 border-violet-500 px-3 pb-2 text-[11px] font-semibold uppercase text-violet-700">Finance</p>
             {financeNavItems.map((item) => {
               const Icon = item.icon;
               const active = pathname === item.href || pathname.startsWith(item.href);
@@ -235,8 +235,8 @@ export default function AdminShell({
                   key={item.href}
                   href={item.href}
                   className={[
-                    "flex h-10 items-center gap-3 rounded px-3 text-sm font-medium",
-                    active ? "bg-slate-950 text-white" : "text-slate-600 hover:bg-slate-100 hover:text-slate-950",
+                    "flex h-10 items-center gap-3 rounded border-l-2 px-3 text-sm font-medium",
+                    active ? "border-violet-500 bg-violet-50 text-violet-800" : "border-transparent text-slate-600 hover:bg-violet-50/60 hover:text-slate-950",
                   ].join(" ")}
                 >
                   <Icon className="h-4 w-4" />
@@ -246,7 +246,7 @@ export default function AdminShell({
             })}
           </div>
           <div className="space-y-1 border-t border-slate-100 pt-4">
-            <p className="px-3 pb-2 text-[11px] font-semibold uppercase text-slate-400">Admin tools</p>
+            <p className="border-l-2 border-indigo-500 px-3 pb-2 text-[11px] font-semibold uppercase text-indigo-700">Admin Controls</p>
             {secondaryNavItems.map((item) => {
               const Icon = item.icon;
               const active = item.href ? pathname === item.href || pathname.startsWith(item.href) : false;
@@ -255,8 +255,8 @@ export default function AdminShell({
                   key={item.href}
                   href={item.href}
                   className={[
-                    "flex h-10 items-center gap-3 rounded px-3 text-sm font-medium",
-                    active ? "bg-slate-950 text-white" : "text-slate-600 hover:bg-slate-100 hover:text-slate-950",
+                    "flex h-10 items-center gap-3 rounded border-l-2 px-3 text-sm font-medium",
+                    active ? "border-indigo-500 bg-indigo-50 text-indigo-800" : "border-transparent text-slate-600 hover:bg-indigo-50/60 hover:text-slate-950",
                   ].join(" ")}
                 >
                   <Icon className="h-4 w-4" />

@@ -646,6 +646,11 @@ export type WebsiteExperienceAdminContext = {
   defaultContent: WebsiteExperienceContent;
   draftVersion: number;
   publishedVersion: number;
+  scheduledContent?: WebsiteExperienceContent;
+  scheduledVersion?: number;
+  scheduledFor?: string;
+  scheduledEndAt?: string;
+  scheduledTimezone?: string;
   status: string;
   active: boolean;
   updatedAt?: string;
@@ -2338,6 +2343,30 @@ export async function publishAdminWebsiteExperienceContext(
 ): Promise<AdminApiResult<WebsiteExperienceAdminContext>> {
   return adminApiRequest<WebsiteExperienceAdminContext>(
     `/api/v1/admin/content/website-experience/login-signup/${encodeURIComponent(context)}/publish`,
+    {
+      method: "POST",
+    }
+  );
+}
+
+export async function scheduleAdminWebsiteExperienceContext(
+  context: WebsiteExperienceContext,
+  input: { publishAt: string; endAt?: string; timezone: string }
+): Promise<AdminApiResult<WebsiteExperienceAdminContext>> {
+  return adminApiRequest<WebsiteExperienceAdminContext>(
+    `/api/v1/admin/content/website-experience/login-signup/${encodeURIComponent(context)}/schedule`,
+    {
+      method: "POST",
+      body: JSON.stringify(input),
+    }
+  );
+}
+
+export async function cancelAdminWebsiteExperienceSchedule(
+  context: WebsiteExperienceContext
+): Promise<AdminApiResult<WebsiteExperienceAdminContext>> {
+  return adminApiRequest<WebsiteExperienceAdminContext>(
+    `/api/v1/admin/content/website-experience/login-signup/${encodeURIComponent(context)}/schedule/cancel`,
     {
       method: "POST",
     }
