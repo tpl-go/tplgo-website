@@ -29,6 +29,7 @@ import {
   LogOut,
   Map,
   MapPinned,
+  MonitorCog,
   Network,
   Newspaper,
   Radar,
@@ -86,6 +87,10 @@ const partnerNavItems = [
   { href: "/admin/partners/documents-compliance", label: "Documents & Compliance", icon: FileText },
 ];
 
+const websiteContentNavItems = [
+  { href: "/admin/website-experience", label: "Website Experience", icon: MonitorCog, permission: "content.read" },
+];
+
 const financeNavItems = [
   { href: "/admin/payments", label: "Payments", icon: CreditCard },
   { href: "/admin/refunds", label: "Refunds", icon: RefreshCcw },
@@ -113,6 +118,11 @@ export default function AdminShell({
   const pathname = usePathname();
   const router = useRouter();
   const [session, setSession] = useState<AdminSession | null>(null);
+  const canAccess = (permission?: string) => {
+    if (!permission) return true;
+    if (!session) return true;
+    return session.admin.permissions.includes(permission);
+  };
 
   useEffect(() => {
     let active = true;
@@ -180,6 +190,26 @@ export default function AdminShell({
             {partnerNavItems.map((item) => {
               const Icon = item.icon;
               const active = pathname === item.href || (item.href !== "/admin/partner-verification" && pathname.startsWith(item.href));
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={[
+                    "flex h-10 items-center gap-3 rounded px-3 text-sm font-medium",
+                    active ? "bg-slate-950 text-white" : "text-slate-600 hover:bg-slate-100 hover:text-slate-950",
+                  ].join(" ")}
+                >
+                  <Icon className="h-4 w-4" />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </div>
+          <div className="space-y-1 border-t border-slate-100 pt-4">
+            <p className="px-3 pb-2 text-[11px] font-semibold uppercase text-slate-400">Website & Content</p>
+            {websiteContentNavItems.filter((item) => canAccess(item.permission)).map((item) => {
+              const Icon = item.icon;
+              const active = pathname === item.href || pathname.startsWith(item.href);
               return (
                 <Link
                   key={item.href}
@@ -276,10 +306,10 @@ export default function AdminShell({
             </button>
           </div>
         </header>
-        <nav className="border-b border-slate-200 bg-white px-4 py-3 lg:hidden" aria-label="Admin Partners navigation">
-          <p className="text-[11px] font-semibold uppercase text-slate-400">Partners</p>
+        <nav className="border-b border-slate-200 bg-white px-4 py-3 lg:hidden" aria-label="Admin quick navigation">
+          <p className="text-[11px] font-semibold uppercase text-slate-400">Admin quick links</p>
           <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
-            {partnerNavItems.map((item) => {
+            {[...partnerNavItems, ...websiteContentNavItems.filter((item) => canAccess(item.permission))].map((item) => {
               const Icon = item.icon;
               const active = pathname === item.href || (item.href !== "/admin/partner-verification" && pathname.startsWith(item.href));
               return (
