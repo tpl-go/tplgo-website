@@ -137,6 +137,7 @@ export default function AdminShell({
     return session.admin.permissions.includes(permission);
   };
   const missingPermission = (permission?: string) => Boolean(permission && session && !session.admin.permissions.includes(permission));
+  const serviceCatalogueShell = pathname.startsWith("/admin/partners/services");
 
   useEffect(() => {
     let active = true;
@@ -154,9 +155,9 @@ export default function AdminShell({
   };
 
   return (
-    <div className="min-h-screen bg-[#f5f7fb] text-slate-950">
-      <aside className="fixed left-0 top-0 hidden h-screen w-72 border-r border-slate-200 bg-white lg:block">
-        <div className="flex h-16 items-center gap-3 border-b border-slate-200 bg-gradient-to-r from-slate-950 to-slate-800 px-6 text-white">
+    <div className={serviceCatalogueShell ? "min-h-screen bg-[#050b16] text-slate-100" : "min-h-screen bg-[#f5f7fb] text-slate-950"}>
+      <aside className={serviceCatalogueShell ? "fixed left-0 top-0 hidden h-screen w-72 border-r border-sky-300/10 bg-[#07111f] lg:block" : "fixed left-0 top-0 hidden h-screen w-72 border-r border-slate-200 bg-white lg:block"}>
+        <div className={serviceCatalogueShell ? "flex h-16 items-center gap-3 border-b border-sky-300/10 bg-gradient-to-r from-[#07111f] via-[#0a1b33] to-[#1f2937] px-6 text-white" : "flex h-16 items-center gap-3 border-b border-slate-200 bg-gradient-to-r from-slate-950 to-slate-800 px-6 text-white"}>
           <div className="flex h-9 w-9 items-center justify-center rounded bg-white/10 text-white ring-1 ring-white/15">
             <Shield className="h-5 w-5" />
           </div>
@@ -167,7 +168,7 @@ export default function AdminShell({
         </div>
         <nav className="h-[calc(100vh-4rem)] space-y-6 overflow-y-auto px-3 py-4">
           <div className="space-y-1">
-            <p className="border-l-2 border-blue-500 px-3 pb-2 text-[11px] font-semibold uppercase text-blue-600">Operations</p>
+            <p className={serviceCatalogueShell ? "border-l-2 border-sky-400 px-3 pb-2 text-[11px] font-semibold uppercase text-sky-300" : "border-l-2 border-blue-500 px-3 pb-2 text-[11px] font-semibold uppercase text-blue-600"}>Operations</p>
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = item.href ? pathname === item.href || (item.href !== "/admin" && pathname.startsWith(item.href)) : false;
@@ -177,7 +178,9 @@ export default function AdminShell({
                 href={item.href}
                 className={[
                   "flex h-10 items-center gap-3 rounded border-l-2 px-3 text-sm font-medium",
-                  active ? "border-blue-500 bg-blue-50 text-blue-800" : "border-transparent text-slate-600 hover:bg-blue-50/60 hover:text-slate-950",
+                  serviceCatalogueShell
+                    ? active ? "border-sky-400 bg-sky-400/12 text-sky-100" : "border-transparent text-slate-400 hover:bg-sky-400/10 hover:text-sky-100"
+                    : active ? "border-blue-500 bg-blue-50 text-blue-800" : "border-transparent text-slate-600 hover:bg-blue-50/60 hover:text-slate-950",
                 ].join(" ")}
               >
                 <Icon className="h-4 w-4" />
@@ -199,8 +202,8 @@ export default function AdminShell({
             );
           })}
           </div>
-          <div className="space-y-1 border-t border-slate-100 pt-4">
-            <p className="border-l-2 border-emerald-500 px-3 pb-2 text-[11px] font-semibold uppercase text-emerald-700">Partners</p>
+          <div className={serviceCatalogueShell ? "space-y-1 border-t border-sky-300/10 pt-4" : "space-y-1 border-t border-slate-100 pt-4"}>
+            <p className={serviceCatalogueShell ? "border-l-2 border-orange-400 px-3 pb-2 text-[11px] font-semibold uppercase text-orange-300" : "border-l-2 border-emerald-500 px-3 pb-2 text-[11px] font-semibold uppercase text-emerald-700"}>Partners</p>
             {partnerNavItems.map((item) => {
               const Icon = item.icon;
               const active = pathname === item.href || (item.href !== "/admin/partner-verification" && pathname.startsWith(item.href));
@@ -210,7 +213,9 @@ export default function AdminShell({
                   href={item.href}
                   className={[
                     "flex h-10 items-center gap-3 rounded border-l-2 px-3 text-sm font-medium",
-                    active ? "border-emerald-500 bg-emerald-50 text-emerald-800" : "border-transparent text-slate-600 hover:bg-emerald-50/60 hover:text-slate-950",
+                    serviceCatalogueShell
+                      ? active ? "border-orange-400 bg-orange-400/12 text-orange-100" : "border-transparent text-slate-400 hover:bg-sky-400/10 hover:text-sky-100"
+                      : active ? "border-emerald-500 bg-emerald-50 text-emerald-800" : "border-transparent text-slate-600 hover:bg-emerald-50/60 hover:text-slate-950",
                   ].join(" ")}
                 >
                   <Icon className="h-4 w-4" />
@@ -219,8 +224,8 @@ export default function AdminShell({
               );
             })}
           </div>
-          <div className="space-y-1 border-t border-slate-100 pt-4">
-            <p className="border-l-2 border-purple-500 px-3 pb-2 text-[11px] font-semibold uppercase text-purple-700">Website & Content</p>
+          <div className={serviceCatalogueShell ? "space-y-1 border-t border-sky-300/10 pt-4" : "space-y-1 border-t border-slate-100 pt-4"}>
+            <p className={serviceCatalogueShell ? "border-l-2 border-cyan-400 px-3 pb-2 text-[11px] font-semibold uppercase text-cyan-300" : "border-l-2 border-purple-500 px-3 pb-2 text-[11px] font-semibold uppercase text-purple-700"}>Website & Content</p>
             {websiteContentNavItems.filter((item) => canAccess(item.permission)).map((item) => {
               const Icon = item.icon;
               const active = pathname === item.href || pathname.startsWith(item.href);
@@ -230,7 +235,9 @@ export default function AdminShell({
                   href={item.href}
                   className={[
                     "flex h-10 items-center gap-3 rounded border-l-2 px-3 text-sm font-medium",
-                    active ? "border-purple-500 bg-purple-50 text-purple-800" : "border-transparent text-slate-600 hover:bg-purple-50/60 hover:text-slate-950",
+                    serviceCatalogueShell
+                      ? active ? "border-cyan-400 bg-cyan-400/12 text-cyan-100" : "border-transparent text-slate-400 hover:bg-cyan-400/10 hover:text-cyan-100"
+                      : active ? "border-purple-500 bg-purple-50 text-purple-800" : "border-transparent text-slate-600 hover:bg-purple-50/60 hover:text-slate-950",
                   ].join(" ")}
                 >
                   <Icon className="h-4 w-4" />
@@ -239,8 +246,8 @@ export default function AdminShell({
               );
             })}
           </div>
-          <div className="space-y-1 border-t border-slate-100 pt-4">
-            <p className="border-l-2 border-emerald-500 px-3 pb-2 text-[11px] font-semibold uppercase text-emerald-700">Finance</p>
+          <div className={serviceCatalogueShell ? "space-y-1 border-t border-sky-300/10 pt-4" : "space-y-1 border-t border-slate-100 pt-4"}>
+            <p className={serviceCatalogueShell ? "border-l-2 border-slate-500 px-3 pb-2 text-[11px] font-semibold uppercase text-slate-400" : "border-l-2 border-emerald-500 px-3 pb-2 text-[11px] font-semibold uppercase text-emerald-700"}>Finance</p>
             {financeNavItems.map((item) => {
               const Icon = item.icon;
               const active = pathname === item.href || pathname.startsWith(item.href);
@@ -250,7 +257,9 @@ export default function AdminShell({
                   href={item.href}
                   className={[
                     "flex h-10 items-center gap-3 rounded border-l-2 px-3 text-sm font-medium",
-                    active ? "border-emerald-500 bg-emerald-50 text-emerald-800" : "border-transparent text-slate-600 hover:bg-emerald-50/60 hover:text-slate-950",
+                    serviceCatalogueShell
+                      ? active ? "border-slate-400 bg-slate-400/12 text-slate-100" : "border-transparent text-slate-500 hover:bg-slate-400/10 hover:text-slate-200"
+                      : active ? "border-emerald-500 bg-emerald-50 text-emerald-800" : "border-transparent text-slate-600 hover:bg-emerald-50/60 hover:text-slate-950",
                   ].join(" ")}
                 >
                   <Icon className="h-4 w-4" />
@@ -259,8 +268,8 @@ export default function AdminShell({
               );
             })}
           </div>
-          <div className="space-y-1 border-t border-slate-100 pt-4">
-            <p className="border-l-2 border-orange-500 px-3 pb-2 text-[11px] font-semibold uppercase text-orange-700">Admin Controls</p>
+          <div className={serviceCatalogueShell ? "space-y-1 border-t border-sky-300/10 pt-4" : "space-y-1 border-t border-slate-100 pt-4"}>
+            <p className={serviceCatalogueShell ? "border-l-2 border-orange-400 px-3 pb-2 text-[11px] font-semibold uppercase text-orange-300" : "border-l-2 border-orange-500 px-3 pb-2 text-[11px] font-semibold uppercase text-orange-700"}>Admin Controls</p>
             {secondaryNavItems.map((item) => {
               const Icon = item.icon;
               const active = item.href ? pathname === item.href || pathname.startsWith(item.href) : false;
@@ -287,7 +296,9 @@ export default function AdminShell({
                     href={item.href}
                     className={[
                       "flex h-10 items-center gap-3 rounded border-l-2 px-3 text-sm font-medium",
-                      active ? "border-orange-500 bg-orange-50 text-orange-800" : "border-transparent text-slate-600 hover:bg-orange-50/60 hover:text-slate-950",
+                      serviceCatalogueShell
+                        ? active ? "border-orange-400 bg-orange-400/12 text-orange-100" : "border-transparent text-slate-400 hover:bg-orange-400/10 hover:text-orange-100"
+                        : active ? "border-orange-500 bg-orange-50 text-orange-800" : "border-transparent text-slate-600 hover:bg-orange-50/60 hover:text-slate-950",
                     ].join(" ")}
                   >
                     <Icon className="h-4 w-4" />
@@ -314,32 +325,32 @@ export default function AdminShell({
       </aside>
 
       <div className="lg:pl-72">
-        <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-slate-200 bg-white px-4 lg:px-8">
+        <header className={serviceCatalogueShell ? "sticky top-0 z-20 flex h-16 items-center justify-between border-b border-sky-300/10 bg-[#07111f]/95 px-4 text-slate-100 backdrop-blur lg:px-8" : "sticky top-0 z-20 flex h-16 items-center justify-between border-b border-slate-200 bg-white px-4 lg:px-8"}>
           <div>
-            <h1 className="text-base font-semibold text-slate-950">{title}</h1>
-            <p className="text-xs text-slate-500">Staging workspace</p>
+            <h1 className={serviceCatalogueShell ? "text-base font-semibold text-sky-100" : "text-base font-semibold text-slate-950"}>{title}</h1>
+            <p className={serviceCatalogueShell ? "text-xs text-orange-200" : "text-xs text-slate-500"}>Staging workspace</p>
           </div>
           <div className="flex items-center gap-3">
-            <div className="hidden items-center gap-2 rounded border border-slate-200 px-3 py-2 text-xs text-slate-600 md:flex">
+            <div className={serviceCatalogueShell ? "hidden items-center gap-2 rounded border border-sky-300/15 bg-white/[0.04] px-3 py-2 text-xs text-slate-300 md:flex" : "hidden items-center gap-2 rounded border border-slate-200 px-3 py-2 text-xs text-slate-600 md:flex"}>
               <Bell className="h-4 w-4" />
               {session?.admin.email ?? "Admin"}
             </div>
-            <div className="hidden items-center gap-2 rounded border border-slate-200 px-3 py-2 text-xs text-slate-600 md:flex">
+            <div className={serviceCatalogueShell ? "hidden items-center gap-2 rounded border border-orange-300/20 bg-orange-400/10 px-3 py-2 text-xs text-orange-100 md:flex" : "hidden items-center gap-2 rounded border border-slate-200 px-3 py-2 text-xs text-slate-600 md:flex"}>
               <BadgeIndianRupee className="h-4 w-4" />
               Staging console
             </div>
             <button
               type="button"
               onClick={handleLogout}
-              className="flex h-9 items-center gap-2 rounded bg-slate-950 px-3 text-sm font-medium text-white hover:bg-slate-800"
+              className={serviceCatalogueShell ? "flex h-9 items-center gap-2 rounded bg-sky-500 px-3 text-sm font-medium text-[#06101e] hover:bg-sky-400" : "flex h-9 items-center gap-2 rounded bg-slate-950 px-3 text-sm font-medium text-white hover:bg-slate-800"}
             >
               <LogOut className="h-4 w-4" />
               Logout
             </button>
           </div>
         </header>
-        <nav className="border-b border-slate-200 bg-white px-4 py-3 lg:hidden" aria-label="Admin quick navigation">
-          <p className="text-[11px] font-semibold uppercase text-slate-400">Admin quick links</p>
+        <nav className={serviceCatalogueShell ? "border-b border-sky-300/10 bg-[#07111f] px-4 py-3 lg:hidden" : "border-b border-slate-200 bg-white px-4 py-3 lg:hidden"} aria-label="Admin quick navigation">
+          <p className={serviceCatalogueShell ? "text-[11px] font-semibold uppercase text-sky-300" : "text-[11px] font-semibold uppercase text-slate-400"}>Admin quick links</p>
           <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
             {[
               ...partnerNavItems,
@@ -354,7 +365,9 @@ export default function AdminShell({
                   href={item.href}
                   className={[
                     "inline-flex h-10 shrink-0 items-center gap-2 rounded border px-3 text-sm font-medium",
-                    active ? "border-slate-950 bg-slate-950 text-white" : "border-slate-200 bg-white text-slate-600",
+                    serviceCatalogueShell
+                      ? active ? "border-sky-300 bg-sky-400 text-[#06101e]" : "border-sky-300/15 bg-white/[0.04] text-slate-300"
+                      : active ? "border-slate-950 bg-slate-950 text-white" : "border-slate-200 bg-white text-slate-600",
                   ].join(" ")}
                 >
                   <Icon className="h-4 w-4" />
