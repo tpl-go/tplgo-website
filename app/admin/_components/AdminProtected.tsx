@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { readAdminSession } from "../../lib/admin/adminApiClient";
+import { readAdminSession, refreshAdminSession } from "../../lib/admin/adminApiClient";
 
 export default function AdminProtected({
   children,
@@ -18,9 +18,9 @@ export default function AdminProtected({
 
   useEffect(() => {
     let active = true;
-    void Promise.resolve().then(() => {
+    void refreshAdminSession().then((refreshed) => {
       if (!active) return;
-      const session = readAdminSession();
+      const session = refreshed ?? readAdminSession();
       if (!session) {
         router.replace("/admin/login");
         return;
@@ -53,7 +53,7 @@ export default function AdminProtected({
         <div className="rounded border border-slate-200 bg-white p-6 shadow-sm">
           <p className="text-sm font-semibold text-slate-950">Access restricted</p>
           <p className="mt-2 max-w-sm text-sm leading-6 text-slate-600">
-            Your Admin role does not include the required permission for this Website Experience area.
+            Your Admin role does not include the required permission for this Admin area.
           </p>
         </div>
       </div>

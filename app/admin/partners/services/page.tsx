@@ -1,12 +1,12 @@
 import AdminProtected from "../../_components/AdminProtected";
 import AdminShell from "../../_components/AdminShell";
-import { PartnerAdminReadModel } from "../_components/PartnerAdminReadModel";
+import { AdminPartnerServiceCatalogueClient } from "./AdminPartnerServiceCatalogueClient";
 
 export default function AdminPartnerServicesPage() {
   return (
-    <AdminProtected>
-      <AdminShell title="Partner Services">
-        <PartnerAdminReadModel mode="services" />
+    <AdminProtected requiredPermissions={["partner_service_catalogue.read"]}>
+      <AdminShell title="Partner Service Catalogue">
+        <AdminPartnerServiceCatalogueClient />
       </AdminShell>
     </AdminProtected>
   );

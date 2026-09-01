@@ -609,7 +609,38 @@ export type AdminContentDashboard = {
   versionHistory: AdminContentVersionItem[];
 };
 
-export type WebsiteExperienceContext = "user_login" | "partner_login" | "partner_registration";
+export type AdminAuthActivitySummary = {
+  mobileOtp: number;
+  emailOtp: number;
+  googleLogin: number;
+  partnerContext: number;
+  successful: number;
+  failed: number;
+  accountLinkingRequired: number;
+};
+
+export type AdminAuthActivityEvent = {
+  id: string;
+  eventType: string;
+  context: string;
+  method: string;
+  channel?: string | null;
+  result: string;
+  reasonCode?: string | null;
+  maskedIdentifier?: string | null;
+  userId?: string | null;
+  partnerOrganizationId?: string | null;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+  createdAt: string;
+};
+
+export type AdminIdentityAccessOverview = {
+  summary: AdminAuthActivitySummary;
+  events: AdminAuthActivityEvent[];
+};
+
+export type WebsiteExperienceContext = "user_login" | "partner_login" | "partner_registration" | "partner_application";
 export type WebsiteExperienceTone = "sky" | "emerald" | "amber" | "violet";
 
 export type WebsiteExperienceBenefit = {
@@ -617,6 +648,27 @@ export type WebsiteExperienceBenefit = {
   title: string;
   description: string;
   tone: WebsiteExperienceTone;
+};
+
+export type PartnerApplicationContentNode = {
+  id: string;
+  label: string;
+  title: string;
+  subtitle: string;
+  helperText: string;
+  rightHelpCopy: string;
+  sectionDescription: string;
+  domainIntroductionCopy: string;
+  emptyStateCopy: string;
+  otherServiceGuidance: string;
+  ctaLabels: Record<string, string>;
+  editableFields: string[];
+  lockedFields: string[];
+};
+
+export type PartnerApplicationContentTree = {
+  root: string;
+  children: PartnerApplicationContentNode[];
 };
 
 export type WebsiteExperienceContent = {
@@ -636,6 +688,7 @@ export type WebsiteExperienceContent = {
   benefits: WebsiteExperienceBenefit[];
   footerTrustLine: string;
   active: boolean;
+  applicationTree?: PartnerApplicationContentTree;
 };
 
 export type WebsiteExperienceAdminContext = {
@@ -697,6 +750,63 @@ export type PartnerRegistrationIntakeView = {
 
 export type PartnerAdminRegistrationIntakesResponse = {
   rows: PartnerRegistrationIntakeView[];
+};
+
+export type AdminPartnerServiceCatalogueItem = {
+  id: string;
+  stableCode: string;
+  name: string;
+  shortDescription: string;
+  domain: string;
+  parentCode?: string;
+  icon: string;
+  displayOrder: number;
+  status: "active" | "inactive" | "archived";
+  published: boolean;
+  countries: string[];
+  individualAllowed: boolean;
+  organizationAllowed: boolean;
+  applicationSelectable: boolean;
+  serviceApprovalRequired: boolean;
+  verificationProfileKey: string;
+  capabilities: string[];
+  aliases: string[];
+};
+
+export type AdminPartnerApplicationContentTree = {
+  root: string;
+  children: Array<{ id: string; label: string; editableFields: string[]; lockedFields: string[] }>;
+};
+
+export type AdminPartnerServiceCatalogueResponse = {
+  draft: { items: AdminPartnerServiceCatalogueItem[]; contentTree: AdminPartnerApplicationContentTree };
+  published: { items: AdminPartnerServiceCatalogueItem[]; contentTree: AdminPartnerApplicationContentTree };
+  preview: { items: AdminPartnerServiceCatalogueItem[]; contentTree: AdminPartnerApplicationContentTree };
+  draftVersion: number;
+  publishedVersion: number;
+  status: string;
+  permissions: { canRead: boolean; canManage: boolean; canPublish: boolean };
+  scheduling: { supported: boolean; reason: string };
+  versions: Array<{ id: string; version: number; status: string; createdByAdminId?: string; publishedByAdminId?: string; createdAt: string; publishedAt?: string }>;
+  audit: Array<{ id: string; action: string; entityId?: string; actorAdminId?: string; changeSummary?: string; createdAt: string }>;
+  requestedServices: Array<{
+    requestKey: string;
+    requestedName: string;
+    description?: string;
+    closestDomain?: string;
+    status: string;
+    source: "partner_registration_intake" | "application_draft";
+    createdAt: string;
+    resolution?: { id: string; status: string; resolutionType: string; mappedServiceCode?: string; draftServiceCode?: string; resolutionNote?: string };
+  }>;
+  schema: {
+    statuses: string[];
+    capabilities: string[];
+    editableFields: string[];
+    lockedFields: string[];
+    lifecycleActions: string[];
+    resolutionActions: string[];
+  };
 };
 
 export type WebsiteExperienceAdminResponse = {
@@ -2003,6 +2113,21 @@ export function clearAdminSession(): void {
   window.localStorage.removeItem(ADMIN_SESSION_STORAGE_KEY);
 }
 
+export async function refreshAdminSession(): Promise<AdminSession | null> {
+  const current = readAdminSession();
+  if (!current) return null;
+  const result = await adminApiRequest<AdminUser>("/api/v1/admin/me", {
+    token: current.session.token,
+  });
+  if (!result.ok) return current;
+  const refreshed: AdminSession = {
+    ...current,
+    admin: result.data,
+  };
+  writeAdminSession(refreshed);
+  return refreshed;
+}
+
 export function readAdminMfaChallenge(): AdminLoginMfaChallenge | null {
   if (typeof window === "undefined") return null;
   try {
@@ -2453,6 +2578,59 @@ export async function listAdminPartnerRegistrationIntakes(): Promise<AdminApiRes
   return adminApiRequest<PartnerAdminRegistrationIntakesResponse>("/api/v1/admin/partners/registration-intakes");
 }
 
+export async function getAdminPartnerServiceCatalogue(): Promise<AdminApiResult<AdminPartnerServiceCatalogueResponse>> {
+  return adminApiRequest<AdminPartnerServiceCatalogueResponse>("/api/v1/admin/partners/service-catalogue");
+}
+
+export async function saveAdminPartnerServiceCatalogueDraft(input: {
+  item: Partial<AdminPartnerServiceCatalogueItem>;
+  expectedDraftVersion?: number;
+  changeSummary?: string;
+}): Promise<AdminApiResult<AdminPartnerServiceCatalogueResponse>> {
+  return adminApiRequest<AdminPartnerServiceCatalogueResponse>("/api/v1/admin/partners/service-catalogue/draft", {
+    method: "POST",
+    body: input,
+  });
+}
+
+export async function publishAdminPartnerServiceCatalogue(input: {
+  expectedDraftVersion?: number;
+  changeSummary?: string;
+}): Promise<AdminApiResult<AdminPartnerServiceCatalogueResponse>> {
+  return adminApiRequest<AdminPartnerServiceCatalogueResponse>("/api/v1/admin/partners/service-catalogue/publish", {
+    method: "POST",
+    body: input,
+  });
+}
+
+export async function changeAdminPartnerServiceCatalogueLifecycle(
+  stableCode: string,
+  action: "activate" | "inactivate" | "archive" | "reactivate",
+  input: { expectedDraftVersion?: number; changeSummary?: string } = {}
+): Promise<AdminApiResult<AdminPartnerServiceCatalogueResponse>> {
+  return adminApiRequest<AdminPartnerServiceCatalogueResponse>(
+    `/api/v1/admin/partners/service-catalogue/items/${encodeURIComponent(stableCode)}/${encodeURIComponent(action)}`,
+    {
+      method: "POST",
+      body: input,
+    }
+  );
+}
+
+export async function resolveAdminPartnerRequestedService(input: {
+  requestKey: string;
+  resolutionType: "mapped_to_existing" | "draft_service_created" | "closed";
+  mappedServiceCode?: string;
+  draftServiceCode?: string;
+  resolutionNote?: string;
+  expectedStatus?: string;
+}): Promise<AdminApiResult<AdminPartnerServiceCatalogueResponse>> {
+  return adminApiRequest<AdminPartnerServiceCatalogueResponse>("/api/v1/admin/partners/service-catalogue/requested-services/resolve", {
+    method: "POST",
+    body: input,
+  });
+}
+
 export async function getAdminExecutiveDashboard(): Promise<AdminApiResult<AdminExecutiveDashboard>> {
   return adminApiRequest<AdminExecutiveDashboard>("/api/v1/admin/executive");
 }
@@ -2745,6 +2923,16 @@ export async function getAdminPermissions(): Promise<AdminApiResult<Array<{ perm
 
 export async function getAdminSessions(): Promise<AdminApiResult<AdminSessionView[]>> {
   return adminApiRequest<AdminSessionView[]>("/api/v1/admin/sessions");
+}
+
+export async function getAdminIdentityAccessOverview(query: {
+  context?: string;
+  method?: string;
+  result?: string;
+  eventType?: string;
+  search?: string;
+} = {}): Promise<AdminApiResult<AdminIdentityAccessOverview>> {
+  return adminApiRequest<AdminIdentityAccessOverview>(`/api/v1/admin/identity-access/auth-activity${buildAdminQuery(query)}`);
 }
 
 export async function revokeAdminSession(sessionId: string): Promise<AdminApiResult<{ revoked: boolean }>> {

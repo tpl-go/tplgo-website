@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { CheckCircle2, Link2, Mail, Phone, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/app/hooks/useAuth";
 import { AUTH_UPDATED_EVENT } from "@/app/lib/booking/guestAuth";
 import {
@@ -37,11 +38,31 @@ const airlineOptions = [
   "Singapore Airlines",
 ];
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_TPL_API_BASE_URL?.replace(/\/+$/, "") || "";
+const AUTH_STORAGE_KEY = "tpl_auth_session_v1";
+
+type IdentityProvider = "mobile" | "email" | "google";
+
+type IdentityRecord = {
+  provider: IdentityProvider;
+  identifier: string;
+  normalizedIdentifier: string;
+  isVerified: boolean;
+  status: "active" | "disabled" | "pending";
+};
+
+type IdentitySummary = {
+  verifiedMobile: string | null;
+  identities: IdentityRecord[];
+};
+
 export default function MyProfileSection() {
   const { user } = useAuth();
 
   const [formData, setFormData] = useState<ProfileFormData>(defaultProfileData);
   const [savedMessage, setSavedMessage] = useState("");
+  const [identitySummary, setIdentitySummary] = useState<IdentitySummary | null>(null);
+  const [identityStatus, setIdentityStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
 
   useEffect(() => {
     const loadProfile = () => {
@@ -77,6 +98,50 @@ export default function MyProfileSection() {
       window.removeEventListener("storage", loadProfile);
     };
   }, [user?.mobile, user?.email]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadIdentity() {
+      if (!user?.id || !API_BASE_URL) {
+        setIdentitySummary(null);
+        setIdentityStatus("idle");
+        return;
+      }
+
+      try {
+        setIdentityStatus("loading");
+        const token = readStoredAuthToken();
+        const response = await fetch(`${API_BASE_URL}/api/v1/me/identity`, {
+          method: "GET",
+          credentials: "include",
+          headers: {
+            Accept: "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        });
+        const payload = await response.json().catch(() => null);
+        if (!response.ok || payload?.ok !== true) throw new Error("Identity details unavailable.");
+        if (cancelled) return;
+        setIdentitySummary(normalizeIdentitySummary(payload?.data?.identity));
+        setIdentityStatus("ready");
+      } catch {
+        if (cancelled) return;
+        setIdentitySummary(null);
+        setIdentityStatus("error");
+      }
+    }
+
+    void loadIdentity();
+    window.addEventListener(AUTH_UPDATED_EVENT, loadIdentity);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener(AUTH_UPDATED_EVENT, loadIdentity);
+    };
+  }, [user?.id]);
+
+  const identityCards = useMemo(() => buildIdentityCards(identitySummary, user), [identitySummary, user]);
 
   const countryOptions = Object.keys(countryStateCityMap);
   const stateOptions = formData.country
@@ -165,6 +230,41 @@ export default function MyProfileSection() {
       </div>
 
       <div className="space-y-8 px-6 py-6">
+        <section className="rounded-2xl border border-sky-100 bg-gradient-to-br from-sky-50 via-white to-indigo-50 p-4 shadow-[0_10px_28px_rgba(14,165,233,0.08)]">
+          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#0b5fff]">
+                Sign-in & Contact Details
+              </p>
+              <h2 className="mt-1 text-[16px] font-semibold text-slate-950">
+                Verified login identities
+              </h2>
+              <p className="mt-1 max-w-2xl text-[12px] leading-5 text-slate-600">
+                These details come from the TPL identity layer and control how you sign in.
+              </p>
+            </div>
+            <span className="inline-flex w-fit items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-black text-emerald-700">
+              <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
+              Server verified
+            </span>
+          </div>
+
+          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+            {identityCards.map((card) => (
+              <IdentityStatusCard key={card.label} {...card} />
+            ))}
+          </div>
+
+          {identityStatus === "loading" ? (
+            <p className="mt-3 text-[11px] font-semibold text-slate-500">Loading verified identifiers...</p>
+          ) : null}
+          {identityStatus === "error" ? (
+            <p className="mt-3 text-[11px] font-semibold text-amber-700">
+              Verified identity details are temporarily unavailable. Your login session is unchanged.
+            </p>
+          ) : null}
+        </section>
+
         <div className="flex flex-col gap-3 rounded-2xl border border-[#ddb0b0] bg-[#fff4f4] px-4 py-3 md:flex-row md:items-center md:justify-between">
           <div className="flex items-start gap-3">
             <div className="mt-0.5 text-[18px]">🎁</div>
@@ -395,6 +495,121 @@ export default function MyProfileSection() {
       </div>
     </div>
   );
+}
+
+function IdentityStatusCard(props: {
+  label: string;
+  value: string;
+  status: string;
+  tone: "verified" | "missing" | "connected";
+  icon: React.ComponentType<{ className?: string }>;
+}) {
+  const Icon = props.icon;
+  const isPositive = props.tone === "verified" || props.tone === "connected";
+
+  return (
+    <article className="rounded-2xl border border-white/80 bg-white p-4 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <span aria-hidden="true" className={`inline-flex h-10 w-10 items-center justify-center rounded-2xl ${
+          isPositive ? "bg-[#0b5fff]/10 text-[#0b5fff]" : "bg-slate-100 text-slate-500"
+        }`}>
+          <Icon className="h-4 w-4" />
+        </span>
+        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-black ${
+          isPositive ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"
+        }`}>
+          {isPositive ? <CheckCircle2 className="h-3 w-3" aria-hidden="true" /> : null}
+          {props.status}
+        </span>
+      </div>
+      <p className="mt-3 text-[11px] font-black uppercase tracking-[0.12em] text-slate-500">{props.label}</p>
+      <p className="mt-1 break-words text-[14px] font-bold text-slate-950">{props.value}</p>
+    </article>
+  );
+}
+
+function buildIdentityCards(identitySummary: IdentitySummary | null, user: ReturnType<typeof useAuth>["user"]) {
+  const identities = identitySummary?.identities ?? [];
+  const mobileIdentity = identities.find((identity) => identity.provider === "mobile" && identity.status === "active");
+  const emailIdentity = identities.find((identity) => identity.provider === "email" && identity.status === "active");
+  const googleIdentity = identities.find((identity) => identity.provider === "google" && identity.status === "active");
+  const mobileValue = mobileIdentity?.normalizedIdentifier || identitySummary?.verifiedMobile || user?.mobile || "";
+  const emailValue = emailIdentity?.normalizedIdentifier || user?.email || "";
+
+  return [
+    {
+      label: "Mobile",
+      value: mobileValue ? maskMobile(mobileValue) : "Not added",
+      status: mobileIdentity?.isVerified || identitySummary?.verifiedMobile ? "Verified" : "Not added",
+      tone: mobileValue ? "verified" as const : "missing" as const,
+      icon: Phone,
+    },
+    {
+      label: "Email",
+      value: emailValue ? maskEmail(emailValue) : "Not added",
+      status: emailIdentity?.isVerified ? "Verified" : "Not added",
+      tone: emailValue ? "verified" as const : "missing" as const,
+      icon: Mail,
+    },
+    {
+      label: "Google",
+      value: googleIdentity ? "Connected" : "Not connected",
+      status: googleIdentity ? "Connected" : "Not added",
+      tone: googleIdentity ? "connected" as const : "missing" as const,
+      icon: Link2,
+    },
+  ];
+}
+
+function normalizeIdentitySummary(input: unknown): IdentitySummary {
+  const record = input && typeof input === "object" && !Array.isArray(input)
+    ? input as Record<string, unknown>
+    : {};
+  const identities = Array.isArray(record.identities)
+    ? record.identities.map(normalizeIdentityRecord).filter(Boolean) as IdentityRecord[]
+    : [];
+  return {
+    verifiedMobile: typeof record.verifiedMobile === "string" ? record.verifiedMobile : null,
+    identities,
+  };
+}
+
+function normalizeIdentityRecord(input: unknown): IdentityRecord | null {
+  const record = input && typeof input === "object" && !Array.isArray(input)
+    ? input as Record<string, unknown>
+    : {};
+  if (record.provider !== "mobile" && record.provider !== "email" && record.provider !== "google") return null;
+  return {
+    provider: record.provider,
+    identifier: typeof record.identifier === "string" ? record.identifier : "",
+    normalizedIdentifier: typeof record.normalizedIdentifier === "string" ? record.normalizedIdentifier : "",
+    isVerified: record.isVerified === true,
+    status: record.status === "active" || record.status === "disabled" || record.status === "pending" ? record.status : "pending",
+  };
+}
+
+function readStoredAuthToken(): string | null {
+  try {
+    const raw = window.localStorage.getItem(AUTH_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) as { token?: string; sessionToken?: string; session?: { token?: string } } : null;
+    return parsed?.token || parsed?.sessionToken || parsed?.session?.token || null;
+  } catch {
+    return null;
+  }
+}
+
+function maskMobile(value: string) {
+  const digits = value.replace(/\D/g, "");
+  if (digits.length < 4) return "Verified mobile";
+  const suffix = digits.slice(-4);
+  const prefix = value.trim().startsWith("+") ? value.trim().replace(/\d(?=\d{4})/g, "•") : `•••••• ${suffix}`;
+  return prefix.includes(suffix) ? prefix : `•••••• ${suffix}`;
+}
+
+function maskEmail(value: string) {
+  const [name, domain] = value.split("@");
+  if (!name || !domain) return "Verified email";
+  return `${name.slice(0, 1)}••••@${domain}`;
 }
 
 function InputField({

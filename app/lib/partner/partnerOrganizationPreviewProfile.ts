@@ -5,8 +5,12 @@ export const organizationTypeOptions = [
   "Individual / Proprietor",
   "Partnership",
   "LLP",
+  "One Person Company",
   "Private Limited",
   "Public Limited",
+  "Trust",
+  "Society / NGO",
+  "Government / Public Body",
   "Trust / Society",
   "Other",
 ] as const;
@@ -211,7 +215,7 @@ export function validatePartnerOrganizationProfile(
 }
 
 export function isRegistrationNumberRecommended(organizationType: PartnerOrganizationType | ""): boolean {
-  return organizationType === "LLP" || organizationType === "Private Limited" || organizationType === "Public Limited";
+  return ["Partnership", "LLP", "One Person Company", "Private Limited", "Public Limited", "Trust", "Society / NGO", "Government / Public Body"].includes(organizationType);
 }
 
 export function getDisplayNameForProfile(profile: PartnerOrganizationPreviewProfile): string {

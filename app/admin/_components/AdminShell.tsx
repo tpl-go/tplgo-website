@@ -22,6 +22,7 @@ import {
   Gift,
   Headphones,
   Landmark,
+  KeyRound,
   Layers3,
   LineChart,
   LayoutDashboard,
@@ -44,7 +45,7 @@ import {
   Workflow,
   Store,
 } from "lucide-react";
-import { adminLogout, readAdminSession } from "../../lib/admin/adminApiClient";
+import { adminLogout, readAdminSession, refreshAdminSession } from "../../lib/admin/adminApiClient";
 import type { AdminSession } from "../../lib/admin/adminApiClient";
 
 const navItems = [
@@ -83,7 +84,7 @@ const partnerNavItems = [
   { href: "/admin/partners/applications", label: "Applications", icon: ClipboardCheck },
   { href: "/admin/partner-verification", label: "Verification", icon: ShieldCheck },
   { href: "/admin/partners/organizations", label: "Organizations", icon: Users },
-  { href: "/admin/partners/services", label: "Services", icon: Layers3 },
+  { href: "/admin/partners/services", label: "Service Catalogue", icon: Layers3 },
   { href: "/admin/partners/documents-compliance", label: "Documents & Compliance", icon: FileText },
 ];
 
@@ -103,10 +104,22 @@ const financeNavItems = [
 ];
 
 const secondaryNavItems = [
+  { href: "/admin/identity-access", label: "Identity & Access", icon: KeyRound, permission: "auth_activity.read" },
   { href: "/admin/security/sessions", label: "Sessions", icon: ShieldCheck },
   { href: "/admin/security/mfa", label: "MFA controls", icon: ShieldCheck },
   { href: null, label: "Support queue", icon: Headphones },
 ];
+
+type AdminNavLinkItem = {
+  href: string;
+  label: string;
+  icon: typeof KeyRound;
+  permission?: string;
+};
+
+function isAdminNavLinkItem(item: { href: string | null }): item is AdminNavLinkItem {
+  return typeof item.href === "string";
+}
 
 export default function AdminShell({
   title,
@@ -117,17 +130,18 @@ export default function AdminShell({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [session, setSession] = useState<AdminSession | null>(null);
+  const [session, setSession] = useState<AdminSession | null>(() => readAdminSession());
   const canAccess = (permission?: string) => {
     if (!permission) return true;
     if (!session) return true;
     return session.admin.permissions.includes(permission);
   };
+  const missingPermission = (permission?: string) => Boolean(permission && session && !session.admin.permissions.includes(permission));
 
   useEffect(() => {
     let active = true;
-    void Promise.resolve().then(() => {
-      if (active) setSession(readAdminSession());
+    void refreshAdminSession().then((refreshed) => {
+      if (active && refreshed) setSession(refreshed);
     });
     return () => {
       active = false;
@@ -206,7 +220,7 @@ export default function AdminShell({
             })}
           </div>
           <div className="space-y-1 border-t border-slate-100 pt-4">
-            <p className="border-l-2 border-amber-500 px-3 pb-2 text-[11px] font-semibold uppercase text-amber-700">Website & Content</p>
+            <p className="border-l-2 border-purple-500 px-3 pb-2 text-[11px] font-semibold uppercase text-purple-700">Website & Content</p>
             {websiteContentNavItems.filter((item) => canAccess(item.permission)).map((item) => {
               const Icon = item.icon;
               const active = pathname === item.href || pathname.startsWith(item.href);
@@ -216,7 +230,7 @@ export default function AdminShell({
                   href={item.href}
                   className={[
                     "flex h-10 items-center gap-3 rounded border-l-2 px-3 text-sm font-medium",
-                    active ? "border-amber-500 bg-amber-50 text-amber-800" : "border-transparent text-slate-600 hover:bg-amber-50/60 hover:text-slate-950",
+                    active ? "border-purple-500 bg-purple-50 text-purple-800" : "border-transparent text-slate-600 hover:bg-purple-50/60 hover:text-slate-950",
                   ].join(" ")}
                 >
                   <Icon className="h-4 w-4" />
@@ -226,7 +240,7 @@ export default function AdminShell({
             })}
           </div>
           <div className="space-y-1 border-t border-slate-100 pt-4">
-            <p className="border-l-2 border-violet-500 px-3 pb-2 text-[11px] font-semibold uppercase text-violet-700">Finance</p>
+            <p className="border-l-2 border-emerald-500 px-3 pb-2 text-[11px] font-semibold uppercase text-emerald-700">Finance</p>
             {financeNavItems.map((item) => {
               const Icon = item.icon;
               const active = pathname === item.href || pathname.startsWith(item.href);
@@ -236,7 +250,7 @@ export default function AdminShell({
                   href={item.href}
                   className={[
                     "flex h-10 items-center gap-3 rounded border-l-2 px-3 text-sm font-medium",
-                    active ? "border-violet-500 bg-violet-50 text-violet-800" : "border-transparent text-slate-600 hover:bg-violet-50/60 hover:text-slate-950",
+                    active ? "border-emerald-500 bg-emerald-50 text-emerald-800" : "border-transparent text-slate-600 hover:bg-emerald-50/60 hover:text-slate-950",
                   ].join(" ")}
                 >
                   <Icon className="h-4 w-4" />
@@ -246,22 +260,40 @@ export default function AdminShell({
             })}
           </div>
           <div className="space-y-1 border-t border-slate-100 pt-4">
-            <p className="border-l-2 border-indigo-500 px-3 pb-2 text-[11px] font-semibold uppercase text-indigo-700">Admin Controls</p>
+            <p className="border-l-2 border-orange-500 px-3 pb-2 text-[11px] font-semibold uppercase text-orange-700">Admin Controls</p>
             {secondaryNavItems.map((item) => {
               const Icon = item.icon;
               const active = item.href ? pathname === item.href || pathname.startsWith(item.href) : false;
+              const locked = missingPermission(item.permission);
               return item.href ? (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={[
-                    "flex h-10 items-center gap-3 rounded border-l-2 px-3 text-sm font-medium",
-                    active ? "border-indigo-500 bg-indigo-50 text-indigo-800" : "border-transparent text-slate-600 hover:bg-indigo-50/60 hover:text-slate-950",
-                  ].join(" ")}
-                >
-                  <Icon className="h-4 w-4" />
-                  {item.label}
-                </Link>
+                locked ? (
+                  <div
+                    key={item.href}
+                    aria-disabled="true"
+                    title="Ask a Super Admin for Identity & Access permission."
+                    className="flex h-10 items-center justify-between gap-3 rounded border-l-2 border-transparent px-3 text-sm font-medium text-slate-400"
+                  >
+                    <span className="flex items-center gap-3">
+                      <Icon className="h-4 w-4" />
+                      {item.label}
+                    </span>
+                    <span className="rounded bg-orange-50 px-2 py-0.5 text-[10px] font-semibold uppercase text-orange-600">
+                      Access needed
+                    </span>
+                  </div>
+                ) : (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={[
+                      "flex h-10 items-center gap-3 rounded border-l-2 px-3 text-sm font-medium",
+                      active ? "border-orange-500 bg-orange-50 text-orange-800" : "border-transparent text-slate-600 hover:bg-orange-50/60 hover:text-slate-950",
+                    ].join(" ")}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {item.label}
+                  </Link>
+                )
               ) : (
                 <div
                   key={item.label}
@@ -285,7 +317,7 @@ export default function AdminShell({
         <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-slate-200 bg-white px-4 lg:px-8">
           <div>
             <h1 className="text-base font-semibold text-slate-950">{title}</h1>
-            <p className="text-xs text-slate-500">Backend-controlled admin surface</p>
+            <p className="text-xs text-slate-500">Staging workspace</p>
           </div>
           <div className="flex items-center gap-3">
             <div className="hidden items-center gap-2 rounded border border-slate-200 px-3 py-2 text-xs text-slate-600 md:flex">
@@ -294,7 +326,7 @@ export default function AdminShell({
             </div>
             <div className="hidden items-center gap-2 rounded border border-slate-200 px-3 py-2 text-xs text-slate-600 md:flex">
               <BadgeIndianRupee className="h-4 w-4" />
-              Read-only foundation
+              Staging console
             </div>
             <button
               type="button"
@@ -309,7 +341,11 @@ export default function AdminShell({
         <nav className="border-b border-slate-200 bg-white px-4 py-3 lg:hidden" aria-label="Admin quick navigation">
           <p className="text-[11px] font-semibold uppercase text-slate-400">Admin quick links</p>
           <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
-            {[...partnerNavItems, ...websiteContentNavItems.filter((item) => canAccess(item.permission))].map((item) => {
+            {[
+              ...partnerNavItems,
+              ...websiteContentNavItems.filter((item) => canAccess(item.permission)),
+              ...secondaryNavItems.filter(isAdminNavLinkItem).filter((item) => !missingPermission(item.permission)),
+            ].map((item) => {
               const Icon = item.icon;
               const active = pathname === item.href || (item.href !== "/admin/partner-verification" && pathname.startsWith(item.href));
               return (

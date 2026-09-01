@@ -2,22 +2,19 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   BadgeCheck,
-  BarChart3,
   BriefcaseBusiness,
   Building2,
   Check,
   ChevronRight,
-  CircleDollarSign,
   ClipboardCheck,
+  FileCheck2,
   HelpCircle,
-  LineChart,
-  Link2,
   Menu,
-  Megaphone,
+  ShieldCheck,
   Search,
-  Settings,
   Sparkles,
   Trash2,
   Users,
@@ -75,29 +72,31 @@ import {
   toggleServiceSelection,
   writePartnerPreviewSelection,
 } from "../lib/partner/partnerPreviewSelection";
+import {
+  buildPartnerApplicationCenterReadModel,
+  type PartnerApplicationCenterReadModel,
+  type PartnerApplicationStep,
+  type PartnerApplicationStepId,
+  type PartnerApplicationStepStatus,
+} from "../lib/partner/partnerApplicationCenter";
+import {
+  buildPartnerQaPreviewBundle,
+  partnerQaPreviewStates,
+  type PartnerQaPreviewState,
+} from "../lib/partner/partnerQaPreviewFixtures";
 
 const navItems = [
-  { label: "Get Started", icon: Sparkles, active: true },
-  { label: "Overview", icon: BarChart3 },
-  { label: "My Organization", icon: Building2 },
-  { label: "My Services", icon: BriefcaseBusiness },
-  { label: "Bookings & Orders", icon: ClipboardCheck },
-  { label: "Earnings & Payments", icon: CircleDollarSign },
-  { label: "Verification Center", icon: BadgeCheck },
-  { label: "Team & Roles", icon: Users },
-  { label: "Marketing Tools", icon: Megaphone },
-  { label: "Analytics", icon: LineChart },
-  { label: "Integrations", icon: Link2 },
-  { label: "Help & Support", icon: HelpCircle },
-  { label: "Settings", icon: Settings },
+  { label: "Overview", icon: Sparkles, active: true },
+  { label: "Application", icon: ClipboardCheck },
+  { label: "Help", icon: HelpCircle },
 ];
 
 const onboardingSteps = [
-  "Choose Services",
-  "Business Profile",
-  "Verification",
-  "Service Setup",
-  "Go Live",
+  "Contact Verification",
+  "Business Information",
+  "Services",
+  "Documents",
+  "Review & Submit",
 ];
 
 const valuePoints = [
@@ -110,9 +109,20 @@ const valuePoints = [
 
 const PARTNER_BACKEND_ORGANIZATION_ID_KEY = "tpl.partnerPreview.backendOrganizationId.v1";
 
-export default function PartnerGetStartedClient() {
+export default function PartnerGetStartedClient({
+  qaPreviewEnabled = false,
+  initialQaPreviewState,
+}: {
+  qaPreviewEnabled?: boolean;
+  initialQaPreviewState?: string;
+}) {
+  const router = useRouter();
   const { isAuthenticated, openLoginModal } = useAuth();
-  const [currentStep, setCurrentStep] = useState<"choose-services" | "business-profile" | "verification-preview" | "activated-dashboard">("choose-services");
+  const initialQaState = parseQaPreviewState(initialQaPreviewState);
+  const [currentStep, setCurrentStep] = useState<"application-center" | "choose-services" | "business-profile" | "verification-preview" | "approved-transition">(
+    qaPreviewEnabled && initialQaState === "approved" ? "approved-transition" : "application-center"
+  );
+  const [qaPreviewState, setQaPreviewState] = useState<PartnerQaPreviewState>(initialQaState);
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [showSelectedOnly, setShowSelectedOnly] = useState(false);
@@ -134,9 +144,13 @@ export default function PartnerGetStartedClient() {
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
+      if (qaPreviewEnabled) {
+        setStorageReady(true);
+        return;
+      }
       const previewState = readPartnerPreviewSelection(window.localStorage);
       setSelectedServiceIds(previewState.selectedServiceIds);
-      setCurrentStep(previewState.completedStep);
+      setCurrentStep("application-center");
       setOrganizationProfile(readPartnerOrganizationPreviewProfile(window.localStorage));
       setVerificationState(seedFictionalPreviewDocuments(readPartnerVerificationPreviewState(window.localStorage)));
       const organizationId = window.localStorage.getItem(PARTNER_BACKEND_ORGANIZATION_ID_KEY);
@@ -154,38 +168,50 @@ export default function PartnerGetStartedClient() {
     }, 0);
 
     return () => window.clearTimeout(timer);
-  }, []);
+  }, [qaPreviewEnabled]);
 
   useEffect(() => {
-    if (!storageReady || !isAuthenticated) return;
+    if (qaPreviewEnabled || !storageReady || !isAuthenticated) return;
     void loadPartnerOrganizations();
     // Server organization loading is intentionally gated by auth/storage readiness;
     // adding the local function as a dependency would repeat the resolver after each state write.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, storageReady]);
+  }, [isAuthenticated, qaPreviewEnabled, storageReady]);
 
   useEffect(() => {
-    if (!storageReady) return;
+    if (qaPreviewEnabled || !storageReady) return;
     writePartnerPreviewSelection(window.localStorage, {
       selectedServiceIds,
-      completedStep: currentStep === "activated-dashboard" ? "verification-preview" : currentStep,
+      completedStep: currentStep === "business-profile" || currentStep === "verification-preview" ? currentStep : "choose-services",
     });
-  }, [currentStep, selectedServiceIds, storageReady]);
+  }, [currentStep, qaPreviewEnabled, selectedServiceIds, storageReady]);
 
   useEffect(() => {
-    if (!storageReady) return;
+    if (qaPreviewEnabled || !storageReady) return;
     writePartnerOrganizationPreviewProfile(window.localStorage, organizationProfile);
-  }, [organizationProfile, storageReady]);
+  }, [organizationProfile, qaPreviewEnabled, storageReady]);
 
   useEffect(() => {
-    if (!storageReady) return;
+    if (qaPreviewEnabled || !storageReady) return;
     writePartnerVerificationPreviewState(window.localStorage, verificationState);
-  }, [verificationState, storageReady]);
+  }, [qaPreviewEnabled, storageReady, verificationState]);
 
   const filteredCatalog = useMemo(() => filterPartnerServiceCatalog(searchQuery), [searchQuery]);
   const selectedServices = useMemo(() => selectedPartnerServices(selectedServiceIds), [selectedServiceIds]);
   const visibleCatalog = showSelectedOnly ? selectedOnlyCatalog(selectedServiceIds) : filteredCatalog;
   const continueEnabled = canContinuePartnerPreview(selectedServiceIds);
+  const qaPreviewBundle = useMemo(() => (qaPreviewEnabled ? buildPartnerQaPreviewBundle(qaPreviewState) : null), [qaPreviewEnabled, qaPreviewState]);
+  const activeBundle = qaPreviewEnabled ? qaPreviewBundle : backendBundle;
+  const applicationCenter = useMemo(
+    () => buildPartnerApplicationCenterReadModel({ bundle: activeBundle, profile: organizationProfile, selectedServices }),
+    [activeBundle, organizationProfile, selectedServices]
+  );
+
+  function changeQaPreviewState(state: PartnerQaPreviewState) {
+    setQaPreviewState(state);
+    setCurrentStep(state === "approved" ? "approved-transition" : "application-center");
+    router.replace(`/partner-preview?qa=1&state=${state}`, { scroll: false });
+  }
 
   function toggleService(serviceId: string) {
     setSelectedServiceIds((current) => toggleServiceSelection(current, serviceId));
@@ -202,6 +228,22 @@ export default function PartnerGetStartedClient() {
   function continueToBusinessProfile() {
     if (!continueEnabled) return;
     setCurrentStep("business-profile");
+  }
+
+  function openApplicationStep(stepId: PartnerApplicationStepId | "approved") {
+    if (stepId === "approved") {
+      setCurrentStep("approved-transition");
+      return;
+    }
+    if (stepId === "account_contact" || stepId === "business_identity" || stepId === "business_location") {
+      setCurrentStep("business-profile");
+      return;
+    }
+    if (stepId === "services") {
+      setCurrentStep("choose-services");
+      return;
+    }
+    setCurrentStep("verification-preview");
   }
 
   function saveProfileDraft() {
@@ -497,7 +539,11 @@ export default function PartnerGetStartedClient() {
         </aside>
 
         <section className="grid min-w-0 gap-5">
-          {partnerOrganizations.length > 0 ? (
+          {qaPreviewEnabled ? (
+            <PartnerQaPreviewBar selectedState={qaPreviewState} onChange={changeQaPreviewState} />
+          ) : null}
+
+          {!qaPreviewEnabled && partnerOrganizations.length > 0 ? (
             <OrganizationContextBar
               organizations={partnerOrganizations}
               activeOrganizationId={backendBundle?.organization.id ?? null}
@@ -508,12 +554,15 @@ export default function PartnerGetStartedClient() {
             />
           ) : null}
 
-          {currentStep === "activated-dashboard" && backendBundle ? (
-            <ActivatedPartnerDashboard
-              bundle={backendBundle}
-              onOpenVerification={() => setCurrentStep("verification-preview")}
-              onOpenProfile={() => setCurrentStep("business-profile")}
+          {currentStep === "application-center" ? (
+            <ApplicationCenterHome
+              model={applicationCenter}
+              authenticated={isAuthenticated}
+              onOpenStep={openApplicationStep}
+              onSignIn={() => openLoginModal({ accountType: "partner", intent: "partner", redirectAfterLogin: "/partner-preview" })}
             />
+          ) : currentStep === "approved-transition" && activeBundle ? (
+            <ApprovedPartnerTransition bundle={activeBundle} onBack={() => setCurrentStep("application-center")} />
           ) : currentStep === "business-profile" ? (
             <PartnerBusinessProfileStep
               selectedServices={selectedServices}
@@ -664,6 +713,357 @@ export default function PartnerGetStartedClient() {
   );
 }
 
+function ApplicationCenterHome({
+  model,
+  authenticated,
+  onOpenStep,
+  onSignIn,
+}: {
+  model: PartnerApplicationCenterReadModel;
+  authenticated: boolean;
+  onOpenStep: (stepId: PartnerApplicationStepId | "approved") => void;
+  onSignIn: () => void;
+}) {
+  const nextActionIsApproved = model.nextAction.stepId === "approved";
+  return (
+    <div className="grid gap-5">
+      <section className="overflow-hidden rounded-xl border border-[#bfdbfe] bg-white shadow-sm">
+        <div className="relative bg-[linear-gradient(135deg,#082f72_0%,#0b74ff_58%,#06b6d4_100%)] px-5 py-6 text-white sm:px-6">
+          <div className="absolute right-0 top-0 h-28 w-28 rounded-full bg-white/10 blur-2xl" />
+          <div className="relative grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+            <div className="min-w-0">
+              <p className="text-[11px] font-black uppercase tracking-[0.14em] text-cyan-100">Partner Application Center</p>
+              <h1 className="mt-2 text-[26px] font-black leading-8 sm:text-[32px] sm:leading-10">
+                Welcome, {model.organizationName}
+              </h1>
+              <p className="mt-2 max-w-2xl text-[14px] font-semibold leading-6 text-white/82">
+                Complete your Partner application to get verified with TPL GO.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <StatusPill status={model.overallStatus} label={model.statusLabel} />
+              <span className="inline-flex min-h-8 items-center rounded-full border border-white/20 bg-white/12 px-3 text-[11px] font-black uppercase tracking-[0.08em] text-white">
+                Save & continue later
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="grid gap-4">
+          <div className="rounded-xl border border-[#dbe3ef] bg-white p-4 shadow-sm sm:p-5">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#eff6ff] text-[#0b74ff]">
+                    <ClipboardCheck size={18} aria-hidden="true" />
+                  </div>
+                  <div>
+                    <h2 className="text-[18px] font-black text-[#111827]">Application progress</h2>
+                    <p className="text-[13px] font-semibold text-[#64748b]">
+                      {model.progressCompleted} of {model.progressTotal} steps completed
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="min-w-[180px]">
+                <div className="h-2 rounded-full bg-[#e2e8f0]">
+                  <div
+                    className="h-2 rounded-full bg-[linear-gradient(135deg,#f97316,#ea580c)]"
+                    style={{ width: `${model.progressPercent}%` }}
+                  />
+                </div>
+                <p className="mt-2 text-right text-[12px] font-black text-[#475569]">{model.progressPercent}% complete</p>
+              </div>
+            </div>
+          </div>
+
+          {model.overallStatus === "under-review" ? <ReviewTimeline submittedAt={model.submittedAt} /> : null}
+          {model.overallStatus === "changes-required" ? (
+            <AttentionCard
+              title="Action required"
+              description={model.reviewNote ?? "TPL GO needs a few updates before we can continue."}
+              onClick={() => onOpenStep(model.nextAction.stepId)}
+            />
+          ) : null}
+          {model.overallStatus === "rejected" ? (
+            <AttentionCard
+              title="Application not approved"
+              description={model.reviewNote ?? "Review the decision and contact support if you need help."}
+              onClick={() => onOpenStep("review_submit")}
+              tone="danger"
+            />
+          ) : null}
+
+          <div className="grid gap-3 md:grid-cols-2">
+            {model.steps.map((step) => (
+              <ApplicationStepCard key={step.id} step={step} onOpen={() => onOpenStep(step.id)} />
+            ))}
+          </div>
+        </div>
+
+        <aside className="xl:sticky xl:top-4 xl:self-start">
+          <div className="rounded-xl border border-[#fed7aa] bg-white p-4 shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#fff7ed] text-[#f97316]">
+                <Sparkles size={19} aria-hidden="true" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[11px] font-black uppercase tracking-[0.12em] text-[#ea580c]">Next step</p>
+                <h2 className="mt-1 text-[20px] font-black leading-6 text-[#111827]">{model.nextAction.title}</h2>
+                <p className="mt-2 text-[13px] font-semibold leading-5 text-[#64748b]">{model.nextAction.description}</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => onOpenStep(model.nextAction.stepId)}
+              className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[linear-gradient(135deg,#f97316,#ea580c)] px-4 text-[14px] font-black text-white shadow-[0_10px_24px_rgba(249,115,22,0.24)] transition hover:translate-y-[-1px] focus:outline-none focus:ring-2 focus:ring-[#fdba74]"
+            >
+              {nextActionIsApproved ? "View Status" : model.nextAction.actionLabel}
+              <ChevronRight size={17} aria-hidden="true" />
+            </button>
+            {!authenticated ? (
+              <button
+                type="button"
+                onClick={onSignIn}
+                className="mt-2 inline-flex h-10 w-full items-center justify-center rounded-xl border border-[#bfdbfe] bg-[#eff6ff] px-4 text-[13px] font-black text-[#0b74ff] transition hover:bg-[#dbeafe] focus:outline-none focus:ring-2 focus:ring-[#93c5fd]"
+              >
+                Sign in to save progress
+              </button>
+            ) : null}
+          </div>
+
+          <div className="mt-4 rounded-xl border border-[#dbe3ef] bg-white p-4 shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#eff6ff] text-[#0b74ff]">
+                <HelpCircle size={18} aria-hidden="true" />
+              </div>
+              <div>
+                <h2 className="text-[16px] font-black text-[#111827]">Need help with your application?</h2>
+                <p className="mt-1 text-[13px] font-semibold leading-5 text-[#64748b]">
+                  Contact TPL GO support if you are unsure which step to complete.
+                </p>
+                <Link href="/customer-support" className="mt-3 inline-flex h-9 items-center rounded-lg border border-[#cfd8e3] bg-white px-3 text-[12px] font-black text-[#334155] hover:border-[#0b74ff]">
+                  Get Help
+                </Link>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </section>
+    </div>
+  );
+}
+
+function PartnerQaPreviewBar({
+  selectedState,
+  onChange,
+}: {
+  selectedState: PartnerQaPreviewState;
+  onChange: (state: PartnerQaPreviewState) => void;
+}) {
+  const selectedLabel = partnerQaPreviewStates.find((state) => state.id === selectedState)?.label ?? "New Partner";
+  return (
+    <div className="rounded-xl border border-[#fed7aa] bg-white p-3 shadow-sm" data-partner-qa-current-state={selectedState}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="inline-flex h-8 shrink-0 items-center rounded-full bg-[linear-gradient(135deg,#082f72,#0b74ff)] px-3 text-[11px] font-black uppercase tracking-[0.1em] text-white">
+            Staging QA Preview
+          </span>
+          <p className="min-w-0 text-[12px] font-semibold text-[#64748b]">
+            Fictional read-only states for visual inspection. Current: {selectedLabel}.
+          </p>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-[minmax(0,240px)_auto]">
+          <label className="block">
+            <span className="sr-only">Preview as</span>
+            <select
+              data-partner-qa-state-select="true"
+              value={selectedState}
+              onChange={(event) => onChange(event.target.value as PartnerQaPreviewState)}
+              className="h-10 w-full rounded-lg border border-[#fdba74] bg-[#fff7ed] px-3 text-[13px] font-black text-[#9a3412] outline-none focus:border-[#f97316] focus:ring-2 focus:ring-[#fed7aa]"
+            >
+              {partnerQaPreviewStates.map((state) => (
+                <option key={state.id} value={state.id}>
+                  Preview as: {state.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <Link
+            data-partner-qa-exit="true"
+            href="/partner-preview"
+            className="inline-flex h-10 items-center justify-center rounded-lg border border-[#cfd8e3] bg-white px-3 text-[12px] font-black text-[#334155] hover:border-[#0b74ff] focus:outline-none focus:ring-2 focus:ring-[#93c5fd]"
+          >
+            Exit Preview
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ApplicationStepCard({ step, onOpen }: { step: PartnerApplicationStep; onOpen: () => void }) {
+  return (
+    <article className="rounded-xl border border-[#dbe3ef] bg-white p-4 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#eff6ff] text-[#0b74ff]">
+            {renderStepIcon(step.id)}
+          </div>
+          <div className="min-w-0">
+            <h3 className="text-[15px] font-black text-[#111827]">{step.name}</h3>
+            <p className="mt-1 text-[12px] font-semibold leading-5 text-[#64748b]">{step.description}</p>
+          </div>
+        </div>
+        <StepStatusPill status={step.status} />
+      </div>
+      <button
+        type="button"
+        onClick={onOpen}
+        disabled={!step.enabled}
+        className="mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-[#cfd8e3] bg-white px-3 text-[13px] font-black text-[#334155] transition hover:border-[#0b74ff] disabled:cursor-not-allowed disabled:bg-[#f1f5f9] disabled:text-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[#93c5fd]"
+      >
+        {step.enabled ? step.actionLabel : "Locked"}
+        <ChevronRight size={16} aria-hidden="true" />
+      </button>
+    </article>
+  );
+}
+
+function ReviewTimeline({ submittedAt }: { submittedAt?: string | null }) {
+  const items = ["Submitted", "TPL Review", "Verification", "Decision"];
+  return (
+    <section className="rounded-xl border border-[#fde68a] bg-[#fffbeb] p-4 shadow-sm">
+      <div className="flex items-start gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-[#d97706]">
+          <ShieldCheck size={18} aria-hidden="true" />
+        </div>
+        <div className="min-w-0">
+          <h2 className="text-[17px] font-black text-[#111827]">Application submitted</h2>
+          <p className="mt-1 text-[13px] font-semibold text-[#64748b]">
+            {submittedAt ? `Submitted ${formatDate(submittedAt)}.` : "TPL GO is reviewing your application."}
+          </p>
+        </div>
+      </div>
+      <ol className="mt-4 grid gap-2 sm:grid-cols-4">
+        {items.map((item, index) => (
+          <li key={item} className="flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-[12px] font-black text-[#475569]">
+            <span className={index === 0 ? "flex h-6 w-6 items-center justify-center rounded-full bg-[#22c55e] text-white" : "flex h-6 w-6 items-center justify-center rounded-full bg-[#fef3c7] text-[#92400e]"}>
+              {index === 0 ? <Check size={13} aria-hidden="true" /> : index + 1}
+            </span>
+            {item}
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
+function AttentionCard({
+  title,
+  description,
+  tone = "warning",
+  onClick,
+}: {
+  title: string;
+  description: string;
+  tone?: "warning" | "danger";
+  onClick: () => void;
+}) {
+  const toneClass = tone === "danger" ? "border-[#fecaca] bg-[#fff7f7] text-[#b91c1c]" : "border-[#fed7aa] bg-[#fff7ed] text-[#c2410c]";
+  return (
+    <section className={`rounded-xl border p-4 shadow-sm ${toneClass}`}>
+      <h2 className="text-[17px] font-black">{title}</h2>
+      <p className="mt-1 text-[13px] font-semibold leading-5 text-[#475569]">{description}</p>
+      <button type="button" onClick={onClick} className="mt-3 inline-flex h-9 items-center rounded-lg bg-white px-3 text-[12px] font-black text-[#334155] ring-1 ring-black/10">
+        Update now
+      </button>
+    </section>
+  );
+}
+
+function ApprovedPartnerTransition({ bundle, onBack }: { bundle: PartnerOrganizationBundle; onBack: () => void }) {
+  return (
+    <section className="rounded-xl border border-[#bbf7d0] bg-white p-5 shadow-sm">
+      <div className="inline-flex items-center gap-2 rounded-full bg-[#dcfce7] px-3 py-1 text-[12px] font-black text-[#15803d]">
+        <BadgeCheck size={15} aria-hidden="true" />
+        Approved
+      </div>
+      <h1 className="mt-4 text-[26px] font-black leading-8 text-[#111827] sm:text-[32px]">
+        {bundle.organization.brandName || bundle.organization.legalName}
+      </h1>
+      <p className="mt-2 max-w-2xl text-[14px] font-semibold leading-6 text-[#64748b]">
+        This organization is approved. The verified Partner Business Desk opens in the next phase.
+      </p>
+      <button
+        type="button"
+        onClick={onBack}
+        className="mt-5 inline-flex h-10 items-center justify-center rounded-lg border border-[#cfd8e3] bg-white px-4 text-[13px] font-black text-[#334155] hover:border-[#0b74ff] focus:outline-none focus:ring-2 focus:ring-[#93c5fd]"
+      >
+        Back to Application Center
+      </button>
+    </section>
+  );
+}
+
+function StatusPill({ status, label }: { status: PartnerApplicationCenterReadModel["overallStatus"]; label: string }) {
+  const className =
+    status === "approved"
+      ? "border-[#bbf7d0] bg-[#dcfce7] text-[#166534]"
+      : status === "under-review"
+        ? "border-[#fde68a] bg-[#fef3c7] text-[#92400e]"
+        : status === "changes-required" || status === "rejected"
+          ? "border-[#fecaca] bg-[#fee2e2] text-[#b91c1c]"
+          : "border-white/20 bg-white text-[#0b74ff]";
+  return <span className={`inline-flex min-h-8 items-center rounded-full border px-3 text-[11px] font-black uppercase tracking-[0.08em] ${className}`}>{label}</span>;
+}
+
+function StepStatusPill({ status }: { status: PartnerApplicationStepStatus }) {
+  const label = stepStatusLabel(status);
+  const className =
+    status === "completed"
+      ? "bg-[#dcfce7] text-[#15803d]"
+      : status === "under-review"
+        ? "bg-[#dbeafe] text-[#1d4ed8]"
+        : status === "needs-attention"
+          ? "bg-[#fee2e2] text-[#b91c1c]"
+          : status === "locked"
+            ? "bg-[#f1f5f9] text-[#64748b]"
+            : "bg-[#fef3c7] text-[#92400e]";
+  return <span className={`inline-flex shrink-0 rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.06em] ${className}`}>{label}</span>;
+}
+
+function stepStatusLabel(status: PartnerApplicationStepStatus): string {
+  if (status === "completed") return "Completed";
+  if (status === "in-progress") return "In progress";
+  if (status === "not-started") return "Not started";
+  if (status === "needs-attention") return "Needs attention";
+  if (status === "under-review") return "Under review";
+  return "Locked";
+}
+
+function renderStepIcon(stepId: PartnerApplicationStepId) {
+  if (stepId === "account_contact") return <Users size={18} aria-hidden="true" />;
+  if (stepId === "business_identity" || stepId === "business_location") return <Building2 size={18} aria-hidden="true" />;
+  if (stepId === "services") return <BriefcaseBusiness size={18} aria-hidden="true" />;
+  if (stepId === "documents_compliance") return <FileCheck2 size={18} aria-hidden="true" />;
+  return <ClipboardCheck size={18} aria-hidden="true" />;
+}
+
+function formatDate(value: string): string {
+  try {
+    return new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
+  } catch {
+    return value;
+  }
+}
+
+function parseQaPreviewState(value: string | undefined): PartnerQaPreviewState {
+  return partnerQaPreviewStates.some((state) => state.id === value) ? (value as PartnerQaPreviewState) : "new";
+}
+
 function OrganizationContextBar({
   organizations,
   activeOrganizationId,
@@ -702,91 +1102,6 @@ function OrganizationContextBar({
   );
 }
 
-function ActivatedPartnerDashboard({
-  bundle,
-  onOpenVerification,
-  onOpenProfile,
-}: {
-  bundle: PartnerOrganizationBundle;
-  onOpenVerification: () => void;
-  onOpenProfile: () => void;
-}) {
-  const alerts = [
-    ...bundle.readiness.blockingRequirements.map((requirement) => requirement.title),
-    ...bundle.readiness.expiringCredentials.map((document) => `${document.documentType} ${document.status.toLowerCase().replace("_", " ")}`),
-  ];
-  return (
-    <div className="grid gap-5">
-      <section className="rounded-lg border border-[#dbe3ef] bg-white p-5 shadow-sm">
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
-          <div className="min-w-0">
-            <div className="inline-flex items-center gap-2 rounded-full bg-[#ecfdf5] px-3 py-1 text-[12px] font-black text-[#047857]">
-              <BadgeCheck size={15} aria-hidden="true" />
-              Verified Partner
-            </div>
-            <h1 className="mt-4 text-[28px] font-black leading-9 text-[#111827] sm:text-[34px] sm:leading-10">
-              {bundle.organization.brandName || bundle.organization.legalName}
-            </h1>
-            <p className="mt-2 max-w-3xl text-[14px] font-semibold leading-6 text-[#64748b]">
-              Manage foundation readiness for this organization. Operational bookings, rates, inventory, and settlements begin in the next service operations phase.
-            </p>
-          </div>
-          <div className="grid gap-2 sm:grid-cols-2 lg:w-[320px] lg:grid-cols-1">
-            <button type="button" onClick={onOpenVerification} className="h-10 rounded-lg bg-[#111827] px-4 text-[13px] font-black text-white">
-              Open Verification
-            </button>
-            <button type="button" onClick={onOpenProfile} className="h-10 rounded-lg border border-[#cfd8e3] bg-white px-4 text-[13px] font-black text-[#334155]">
-              Organization Profile
-            </button>
-          </div>
-        </div>
-      </section>
-
-      <section className="grid gap-4 lg:grid-cols-3">
-        <FoundationPanel title="Today" value={alerts.length ? `${alerts.length} alert${alerts.length === 1 ? "" : "s"}` : "No blocking alerts"} detail={alerts[0] ?? "Foundation checks are clear for the selected organization."} />
-        <FoundationPanel title="Bookings" value="No activity yet" detail="Service operations are not enabled in D28E3C.4." />
-        <FoundationPanel title="Money" value="No settlement activity yet" detail="Earnings and settlement data will appear after real service bookings exist." />
-      </section>
-
-      <section className="rounded-lg border border-[#dbe3ef] bg-white p-5 shadow-sm">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h2 className="text-[18px] font-black text-[#111827]">My Services</h2>
-            <p className="mt-1 text-[13px] font-semibold text-[#64748b]">Each selected service keeps its own activation state.</p>
-          </div>
-        </div>
-        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {bundle.serviceScopes.filter((scope) => scope.status !== "disabled").map((scope) => (
-            <div key={scope.id} className="rounded-lg border border-[#dbe3ef] bg-[#fbfdff] p-4">
-              <p className="text-[15px] font-black text-[#111827]">{scope.serviceLabel}</p>
-              <p className="mt-2 text-[12px] font-black uppercase tracking-[0.08em] text-[#475569]">{serviceStateLabel(scope.status)}</p>
-              <button type="button" className="mt-4 h-9 rounded-lg border border-[#cfd8e3] bg-white px-3 text-[12px] font-black text-[#334155]">
-                Set up {scope.serviceLabel}
-              </button>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="grid gap-4 lg:grid-cols-3">
-        <FoundationPanel title="Connections" value="Ready for setup" detail="External connectors are reserved for the service operations phase." />
-        <FoundationPanel title="Team" value={`${bundle.members.length} member${bundle.members.length === 1 ? "" : "s"}`} detail="Membership foundation is organization-scoped." />
-        <FoundationPanel title="Grade" value="Not assigned" detail="Partner grading is reserved for the later scoring engine." />
-      </section>
-    </div>
-  );
-}
-
-function FoundationPanel({ title, value, detail }: { title: string; value: string; detail: string }) {
-  return (
-    <div className="rounded-lg border border-[#dbe3ef] bg-white p-4 shadow-sm">
-      <p className="text-[12px] font-black uppercase tracking-[0.08em] text-[#64748b]">{title}</p>
-      <p className="mt-2 text-[18px] font-black text-[#111827]">{value}</p>
-      <p className="mt-2 text-[13px] font-semibold leading-5 text-[#64748b]">{detail}</p>
-    </div>
-  );
-}
-
 function profileFromBackendBundle(bundle: PartnerOrganizationBundle): PartnerOrganizationPreviewProfile {
   const mobile = bundle.contacts.find((contact) => contact.channel === "mobile" && contact.isPrimary);
   const email = bundle.contacts.find((contact) => contact.channel === "email" && contact.isPrimary);
@@ -811,22 +1126,14 @@ function profileFromBackendBundle(bundle: PartnerOrganizationBundle): PartnerOrg
   };
 }
 
-function resolvePartnerStep(bundle: PartnerOrganizationBundle): "choose-services" | "business-profile" | "verification-preview" | "activated-dashboard" {
-  if (bundle.organization.status === "active" || bundle.review?.status === "VERIFIED") return "activated-dashboard";
-  if (bundle.serviceScopes.length === 0) return "choose-services";
-  if (!bundle.organization.legalName || !bundle.organization.organizationType) return "business-profile";
-  return "verification-preview";
+function resolvePartnerStep(bundle: PartnerOrganizationBundle): "application-center" | "approved-transition" {
+  if (bundle.organization.status === "active" || bundle.review?.status === "VERIFIED") return "approved-transition";
+  return "application-center";
 }
 
 function upsertBundle(bundles: PartnerOrganizationBundle[], next: PartnerOrganizationBundle): PartnerOrganizationBundle[] {
   const remaining = bundles.filter((bundle) => bundle.organization.id !== next.organization.id);
   return [next, ...remaining];
-}
-
-function serviceStateLabel(status: string): string {
-  if (status === "active") return "Service Active";
-  if (status === "disabled") return "Disabled";
-  return "Service Setup Required";
 }
 
 function getMobileChallengeMessage(challenge: PartnerMobileChallenge): string {

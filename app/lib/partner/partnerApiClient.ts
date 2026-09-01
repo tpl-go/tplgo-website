@@ -26,12 +26,15 @@ export type PartnerOrganization = {
   stateRegion?: string | null;
   postalCode?: string | null;
   country: string;
+  metadata?: Record<string, unknown>;
+  updatedAt?: string;
 };
 
 export type PartnerContact = {
   id: string;
   channel: "mobile" | "email";
   value: string;
+  normalizedValue?: string;
   verificationStatus: "verification_required" | "verified" | "delivery_unavailable";
   verifiedAt?: string | null;
   isPrimary: boolean;
@@ -42,6 +45,7 @@ export type PartnerServiceScope = {
   serviceCode: string;
   serviceLabel: string;
   status: string;
+  metadata?: Record<string, unknown>;
 };
 
 export type PartnerMember = {
@@ -161,6 +165,116 @@ export type PartnerMobileVerificationRequest =
     contact?: PartnerContact | null;
   };
 
+export type PartnerAccountContactDraftInput = {
+  organizationId?: string;
+  contactPersonFullName?: string;
+  designation?: string;
+  roleOther?: string;
+  businessMobile?: string;
+  businessEmail?: string;
+  authorizedRepresentative?: boolean;
+};
+
+export type PartnerRequirementClassification =
+  | "REQUIRED_FOR_APPLICATION"
+  | "CONDITIONAL_BY_ENTITY"
+  | "CONDITIONAL_BY_COUNTRY"
+  | "CONDITIONAL_BY_SERVICE"
+  | "REQUIRED_BEFORE_GO_LIVE"
+  | "OPTIONAL";
+
+export type PartnerBusinessIdentityDraftInput = {
+  organizationId?: string;
+  legalName?: string;
+  brandName?: string;
+  organizationType?: string;
+  organizationTypeOther?: string;
+  description?: string;
+  yearEstablished?: string;
+  registrationType?: string;
+  registrationNumber?: string;
+  registrationDate?: string;
+  registrationVerification?: Record<string, unknown>;
+  requirementClassifications?: Record<string, PartnerRequirementClassification>;
+};
+
+export type PartnerLocationAddressInput = {
+  country?: string;
+  countryCode?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  stateRegion?: string;
+  postalCode?: string;
+  landmark?: string;
+  latitude?: string;
+  longitude?: string;
+  verificationStatus?: string;
+};
+
+export type PartnerServiceAreaInput = {
+  id?: string;
+  coverageLevel?: string;
+  country?: string;
+  countryCode?: string;
+  stateRegion?: string;
+  cityDestination?: string;
+  localArea?: string;
+};
+
+export type PartnerBusinessLocationDraftInput = {
+  organizationId?: string;
+  primaryLocation?: PartnerLocationAddressInput;
+  sameAsOperating?: boolean;
+  operatingLocation?: PartnerLocationAddressInput;
+  serviceAreas?: PartnerServiceAreaInput[];
+};
+
+export type PartnerRequestedServiceInput = {
+  requestedName?: string;
+  description?: string;
+  closestDomain?: string;
+  closestCategoryCode?: string;
+};
+
+export type PartnerServicesDraftInput = {
+  organizationId?: string;
+  selectedServiceCodes?: string[];
+  requestedServices?: PartnerRequestedServiceInput[];
+};
+
+export function fetchPartnerApplicationDraft(): Promise<TplApiResult<PartnerOrganizationBundle | null>> {
+  return tplApiRequest<PartnerOrganizationBundle | null>("/api/v1/partner/application/draft");
+}
+
+export function savePartnerAccountContactDraft(input: PartnerAccountContactDraftInput): Promise<TplApiResult<PartnerOrganizationBundle>> {
+  return tplApiRequest<PartnerOrganizationBundle>("/api/v1/partner/application/draft/account-contact", {
+    method: "POST",
+    body: input,
+  });
+}
+
+export function savePartnerBusinessIdentityDraft(input: PartnerBusinessIdentityDraftInput): Promise<TplApiResult<PartnerOrganizationBundle>> {
+  return tplApiRequest<PartnerOrganizationBundle>("/api/v1/partner/application/draft/business-identity", {
+    method: "POST",
+    body: input,
+  });
+}
+
+export function savePartnerBusinessLocationDraft(input: PartnerBusinessLocationDraftInput): Promise<TplApiResult<PartnerOrganizationBundle>> {
+  return tplApiRequest<PartnerOrganizationBundle>("/api/v1/partner/application/draft/business-location", {
+    method: "POST",
+    body: input,
+  });
+}
+
+export function savePartnerServicesDraft(input: PartnerServicesDraftInput): Promise<TplApiResult<PartnerOrganizationBundle>> {
+  return tplApiRequest<PartnerOrganizationBundle>("/api/v1/partner/application/draft/services", {
+    method: "POST",
+    body: input,
+  });
+}
+
 export function savePartnerOrganizationToBackend(
   profile: PartnerOrganizationPreviewProfile,
   services: PartnerServiceDefinition[]
@@ -211,9 +325,19 @@ export function verifyPartnerMobile(
 }
 
 export function requestPartnerEmailVerification(organizationId: string, email: string) {
-  return tplApiRequest<{ status: "EMAIL_DELIVERY_NOT_CONFIGURED"; challengeId: string; expiresAt: string }>(
+  return tplApiRequest<{ status: string; challengeId: string; expiresAt: string }>(
     `/api/v1/partner/organizations/${encodeURIComponent(organizationId)}/contact/email/request`,
     { method: "POST", body: { value: email } }
+  );
+}
+
+export function verifyPartnerEmail(
+  organizationId: string,
+  input: { challengeId: string; email: string; token: string }
+): Promise<TplApiResult<{ verified: true; verifiedAt: string }>> {
+  return tplApiRequest<{ verified: true; verifiedAt: string }>(
+    `/api/v1/partner/organizations/${encodeURIComponent(organizationId)}/contact/email/verify`,
+    { method: "POST", body: input }
   );
 }
 

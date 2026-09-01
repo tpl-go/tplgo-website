@@ -24,11 +24,27 @@ type AuthContextType = AuthState & {
   closeLoginModal: () => void;
   setActiveAccountType: (type: AccountType) => void;
   sendOtp: (mobile: string, accountType: AccountType) => Promise<SendOtpResult>;
+  sendEmailOtp: (email: string, accountType: AccountType) => Promise<SendOtpResult>;
   verifyOtp: (
     mobile: string,
     otp: string,
     accountType: AccountType
   ) => Promise<void>;
+  verifyEmailOtp: (
+    email: string,
+    otp: string,
+    accountType: AccountType
+  ) => Promise<void>;
+  verifyOtpForSession: (
+    mobile: string,
+    otp: string,
+    accountType: AccountType
+  ) => Promise<AuthUser>;
+  verifyEmailOtpForSession: (
+    email: string,
+    otp: string,
+    accountType: AccountType
+  ) => Promise<AuthUser>;
   logout: () => void;
   requireAuth: (options?: OpenLoginModalOptions) => boolean;
 };
@@ -103,8 +119,8 @@ export default function AuthProvider({ children }: AuthProviderProps) {
 
       if (
         parsed?.user &&
-        typeof parsed.user.mobile === "string" &&
-        parsed.user.mobile.trim()
+        typeof parsed.user.id === "string" &&
+        parsed.user.id.trim()
       ) {
         setUser(parsed.user);
         setIsAuthenticated(true);
@@ -121,31 +137,6 @@ export default function AuthProvider({ children }: AuthProviderProps) {
       localStorage.removeItem(AUTH_STORAGE_KEY);
     }
   }, []);
-
-  // ✅ INITIAL LOAD
-  useEffect(() => {
-    const timer = window.setTimeout(syncAuthFromStorage, 0);
-    return () => window.clearTimeout(timer);
-  }, [syncAuthFromStorage]);
-
-  // ✅ LISTEN TO AUTH CHANGE
-  useEffect(() => {
-    const handleAuthUpdate = () => {
-      syncAuthFromStorage();
-    };
-
-    window.addEventListener(AUTH_UPDATED_EVENT, handleAuthUpdate);
-
-    // 🔥 EXTRA SAFETY (tab change / focus)
-    window.addEventListener("focus", handleAuthUpdate);
-    document.addEventListener("visibilitychange", handleAuthUpdate);
-
-    return () => {
-      window.removeEventListener(AUTH_UPDATED_EVENT, handleAuthUpdate);
-      window.removeEventListener("focus", handleAuthUpdate);
-      document.removeEventListener("visibilitychange", handleAuthUpdate);
-    };
-  }, [syncAuthFromStorage]);
 
   // ✅ PERSIST SESSION
   const persistSession = useCallback((nextUser: AuthUser | null, session?: StoredAuthSession["session"]) => {
@@ -169,6 +160,79 @@ export default function AuthProvider({ children }: AuthProviderProps) {
       console.error("Persist session error:", err);
     }
   }, []);
+
+  const hydrateBackendCookieSession = useCallback(async () => {
+    if (!API_BASE_URL) return false;
+    try {
+      const authResult = await readBackendCookieSession();
+      const nextUser = authResult.user;
+      setUser(nextUser);
+      setIsAuthenticated(true);
+      setActiveAccountType(nextUser.accountType || "personal");
+      persistSession(nextUser, authResult.session);
+      window.dispatchEvent(new Event(AUTH_UPDATED_EVENT));
+      return true;
+    } catch {
+      return false;
+    }
+  }, [persistSession]);
+
+  // ✅ INITIAL LOAD
+  useEffect(() => {
+    const timer = window.setTimeout(syncAuthFromStorage, 0);
+    return () => window.clearTimeout(timer);
+  }, [syncAuthFromStorage]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("auth") !== "google") return;
+    const status = params.get("status");
+    const cleanUrl = `${window.location.pathname}${removeAuthQuery(window.location.search)}${window.location.hash}`;
+    window.history.replaceState({}, "", cleanUrl || "/");
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+    if (status === "success") {
+      void hydrateBackendCookieSession().then((hydrated) => {
+        if (cancelled) return;
+        if (hydrated) {
+          setIsLoginModalOpen(false);
+          const safeRedirect = normalizeRedirectAfterLogin(redirectAfterLogin);
+          if (safeRedirect) {
+            setRedirectAfterLogin(null);
+            window.location.assign(safeRedirect);
+          }
+        }
+      });
+    } else {
+      setIsLoginModalOpen(true);
+    }
+    }, 0);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [hydrateBackendCookieSession, redirectAfterLogin]);
+
+  // ✅ LISTEN TO AUTH CHANGE
+  useEffect(() => {
+    const handleAuthUpdate = () => {
+      syncAuthFromStorage();
+      if (!localStorage.getItem(AUTH_STORAGE_KEY)) void hydrateBackendCookieSession();
+    };
+
+    window.addEventListener(AUTH_UPDATED_EVENT, handleAuthUpdate);
+
+    // 🔥 EXTRA SAFETY (tab change / focus)
+    window.addEventListener("focus", handleAuthUpdate);
+    document.addEventListener("visibilitychange", handleAuthUpdate);
+
+    return () => {
+      window.removeEventListener(AUTH_UPDATED_EVENT, handleAuthUpdate);
+      window.removeEventListener("focus", handleAuthUpdate);
+      document.removeEventListener("visibilitychange", handleAuthUpdate);
+    };
+  }, [hydrateBackendCookieSession, syncAuthFromStorage]);
 
   const openLoginModal = useCallback((options?: OpenLoginModalOptions) => {
     if (options?.accountType) setActiveAccountType(options.accountType);
@@ -224,6 +288,74 @@ export default function AuthProvider({ children }: AuthProviderProps) {
     [persistSession, redirectAfterLogin]
   );
 
+  const verifyEmailOtp = useCallback(
+    async (email: string, otp: string, accountType: AccountType) => {
+      const authResult = await verifyBackendEmailOtp(email, otp, accountType);
+      const nextUser = authResult.user;
+
+      setUser(nextUser);
+      setIsAuthenticated(true);
+      setActiveAccountType(accountType);
+
+      persistSession(nextUser, authResult.session);
+      registerCurrentDeviceSession();
+
+      setIsLoginModalOpen(false);
+      const safeRedirect = normalizeRedirectAfterLogin(redirectAfterLogin);
+      if (safeRedirect) {
+        setRedirectAfterLogin(null);
+        window.location.assign(safeRedirect);
+      }
+    },
+    [persistSession, redirectAfterLogin]
+  );
+
+  const sendEmailOtp = useCallback(
+    async (email: string, accountType: AccountType) => {
+      return await sendBackendEmailOtp(email, accountType);
+    },
+    []
+  );
+
+  const verifyOtpForSession = useCallback(
+    async (mobile: string, otp: string, accountType: AccountType) => {
+      let authResult: { user: AuthUser; session?: StoredAuthSession["session"] | undefined };
+      try {
+        authResult = await verifyBackendOtp(mobile, otp, accountType);
+      } catch (error) {
+        if (!canUseLocalAuthFallback(error)) throw error;
+        authResult = { user: await verifyLocalOtp(mobile, otp, accountType) };
+      }
+
+      const nextUser = authResult.user;
+
+      setUser(nextUser);
+      setIsAuthenticated(true);
+      setActiveAccountType(accountType);
+      persistSession(nextUser, authResult.session);
+      registerCurrentDeviceSession();
+
+      return nextUser;
+    },
+    [persistSession]
+  );
+
+  const verifyEmailOtpForSession = useCallback(
+    async (email: string, otp: string, accountType: AccountType) => {
+      const authResult = await verifyBackendEmailOtp(email, otp, accountType);
+      const nextUser = authResult.user;
+
+      setUser(nextUser);
+      setIsAuthenticated(true);
+      setActiveAccountType(accountType);
+      persistSession(nextUser, authResult.session);
+      registerCurrentDeviceSession();
+
+      return nextUser;
+    },
+    [persistSession]
+  );
+
   const logout = useCallback(() => {
     const token = readStoredAuthToken();
     if (token) void logoutBackendSession(token);
@@ -260,7 +392,11 @@ export default function AuthProvider({ children }: AuthProviderProps) {
       closeLoginModal,
       setActiveAccountType,
       sendOtp,
+      sendEmailOtp,
       verifyOtp,
+      verifyEmailOtp,
+      verifyOtpForSession,
+      verifyEmailOtpForSession,
       logout,
       requireAuth,
     }),
@@ -274,7 +410,11 @@ export default function AuthProvider({ children }: AuthProviderProps) {
       openLoginModal,
       closeLoginModal,
       sendOtp,
+      sendEmailOtp,
       verifyOtp,
+      verifyEmailOtp,
+      verifyOtpForSession,
+      verifyEmailOtpForSession,
       logout,
       requireAuth,
     ]
@@ -328,9 +468,57 @@ async function verifyBackendOtp(
   return { user, session };
 }
 
+async function sendBackendEmailOtp(email: string, accountType: AccountType): Promise<SendOtpResult> {
+  if (!API_BASE_URL) throw authNetworkFallbackError("TPL API base URL is not configured.");
+  const response = await fetch(`${API_BASE_URL}/api/v1/auth/email/send-otp`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ email, accountType }),
+  });
+  const payload = await readAuthJson(response);
+  if (!response.ok || payload?.ok !== true) {
+    throw authApiError(payload, "Email OTP send failed");
+  }
+  return {
+    resendAvailableAt: payload?.data?.resendAvailableAt,
+    expiresAt: payload?.data?.expiresAt,
+  };
+}
+
+async function verifyBackendEmailOtp(
+  email: string,
+  otp: string,
+  accountType: AccountType
+): Promise<{ user: AuthUser; session?: StoredAuthSession["session"] | undefined }> {
+  if (!API_BASE_URL) throw authNetworkFallbackError("TPL API base URL is not configured.");
+  const token = readStoredAuthToken();
+  const response = await fetch(`${API_BASE_URL}/api/v1/auth/email/verify-otp`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ email, otp, accountType }),
+  });
+  const payload = await readAuthJson(response);
+  if (!response.ok || payload?.ok !== true) {
+    throw authApiError(payload, "Email OTP verify failed");
+  }
+
+  const session = normalizeBackendSession(payload);
+  const user = session?.token
+    ? await readBackendMeUser(session.token).catch(() => normalizeAuthUser(payload?.data?.user, accountType))
+    : normalizeAuthUser(payload?.data?.user, accountType);
+  return { user, session };
+}
+
 async function readBackendMeUser(token: string): Promise<AuthUser> {
   const response = await fetch(`${API_BASE_URL}/api/v1/me`, {
     method: "GET",
+    credentials: "include",
     headers: {
       Accept: "application/json",
       Authorization: `Bearer ${token}`,
@@ -344,11 +532,30 @@ async function readBackendMeUser(token: string): Promise<AuthUser> {
   return normalizeAuthUser(data?.user, "personal");
 }
 
+async function readBackendCookieSession(): Promise<{ user: AuthUser; session?: StoredAuthSession["session"] | undefined }> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/auth/session`, {
+    method: "GET",
+    credentials: "include",
+    headers: {
+      Accept: "application/json",
+    },
+  });
+  const payload = await readAuthJson(response);
+  if (!response.ok || payload?.ok !== true) {
+    throw authApiError(payload, "Failed to load authenticated session.");
+  }
+  return {
+    user: normalizeAuthUser(payload?.data?.user, "personal"),
+    session: normalizeBackendSession(payload),
+  };
+}
+
 async function logoutBackendSession(token: string): Promise<void> {
   if (!API_BASE_URL) return;
   try {
     await fetch(`${API_BASE_URL}/api/v1/auth/logout`, {
       method: "POST",
+      credentials: "include",
       headers: {
         Accept: "application/json",
         Authorization: `Bearer ${token}`,
@@ -465,4 +672,13 @@ function normalizeRedirectAfterLogin(value: string | null): string | null {
   if (!value) return null;
   if (!value.startsWith("/") || value.startsWith("//")) return null;
   return value;
+}
+
+function removeAuthQuery(search: string): string {
+  const params = new URLSearchParams(search);
+  params.delete("auth");
+  params.delete("status");
+  params.delete("code");
+  const next = params.toString();
+  return next ? `?${next}` : "";
 }

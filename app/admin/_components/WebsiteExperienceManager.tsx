@@ -71,6 +71,7 @@ const contextLabels: Record<WebsiteExperienceContext, string> = {
   user_login: "User Login",
   partner_login: "Partner Login",
   partner_registration: "Partner Registration",
+  partner_application: "Partner Application",
 };
 
 export function WebsiteExperienceManager() {
@@ -354,6 +355,26 @@ function BlockEditor({
   onSchedule: () => void;
   onCancelSchedule: () => void;
 }) {
+  if (content.context === "partner_application") {
+    return (
+      <PartnerApplicationTreeEditor
+        content={content}
+        canWrite={canWrite}
+        canPublish={canPublish}
+        schedule={schedule}
+        activeRow={activeRow}
+        busyAction={busyAction}
+        message={message}
+        onContentChange={onContentChange}
+        onScheduleChange={onScheduleChange}
+        onSaveDraft={onSaveDraft}
+        onPublish={onPublish}
+        onSchedule={onSchedule}
+        onCancelSchedule={onCancelSchedule}
+      />
+    );
+  }
+
   if (block === "brand") {
     return (
       <EditorSection title="Brand" detail="Manage the brand image slot and fallback label. This is presentation-only media.">
@@ -482,6 +503,180 @@ function BlockEditor({
       </div>
       {message ? <p className="rounded border border-slate-200 bg-slate-50 p-3 text-sm font-semibold text-slate-700">{message}</p> : null}
     </EditorSection>
+  );
+}
+
+function PartnerApplicationTreeEditor({
+  content,
+  canWrite,
+  canPublish,
+  schedule,
+  activeRow,
+  busyAction,
+  message,
+  onContentChange,
+  onScheduleChange,
+  onSaveDraft,
+  onPublish,
+  onSchedule,
+  onCancelSchedule,
+}: {
+  content: WebsiteExperienceContent;
+  canWrite: boolean;
+  canPublish: boolean;
+  schedule: typeof defaultSchedule;
+  activeRow: WebsiteExperienceAdminContext;
+  busyAction: string;
+  message: string;
+  onContentChange: (patch: Partial<WebsiteExperienceContent>) => void;
+  onScheduleChange: (value: typeof defaultSchedule) => void;
+  onSaveDraft: () => void;
+  onPublish: () => void;
+  onSchedule: () => void;
+  onCancelSchedule: () => void;
+}) {
+  const tree = content.applicationTree;
+  const updateNode = (nodeId: string, patch: Record<string, string>) => {
+    if (!tree) return;
+    onContentChange({
+      applicationTree: {
+        ...tree,
+        children: tree.children.map((node) => node.id === nodeId ? { ...node, ...patch } : node),
+      },
+    });
+  };
+  const updateCta = (nodeId: string, key: string, value: string) => {
+    if (!tree) return;
+    onContentChange({
+      applicationTree: {
+        ...tree,
+        children: tree.children.map((node) => node.id === nodeId ? { ...node, ctaLabels: { ...node.ctaLabels, [key]: value } } : node),
+      },
+    });
+  };
+  const stepFour = tree?.children.find((node) => node.id === "step-4-services");
+  return (
+    <EditorSection title="Partner Application" detail="Persist safe Partner Application presentation copy in the existing Website Experience content engine.">
+      <div className="rounded border border-blue-100 bg-blue-50 p-3 text-sm text-blue-900">
+        Partner Experience &gt; Partner Application &gt; Application Shell &gt; Step 1-8
+      </div>
+      <div className="grid gap-3 xl:grid-cols-2">
+        {(tree?.children ?? []).map((node) => (
+          <section key={node.id} className="rounded border border-slate-200 bg-slate-50 p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h4 className="text-sm font-semibold text-slate-950">{node.label}</h4>
+              <span className="rounded bg-white px-2 py-1 text-[11px] font-semibold text-slate-500">{node.editableFields.length} editable fields</span>
+            </div>
+            <div className="mt-3 grid gap-3">
+              <Field label="Title" value={node.title} maxLength={80} onChange={(value) => updateNode(node.id, { title: value })} />
+              <Field label="Subtitle" value={node.subtitle} maxLength={180} onChange={(value) => updateNode(node.id, { subtitle: value })} />
+              {node.id === "step-4-services" ? (
+                <>
+                  <Field label="Helper text" value={node.helperText} maxLength={220} onChange={(value) => updateNode(node.id, { helperText: value })} />
+                  <Field label="Right help copy" value={node.rightHelpCopy} maxLength={300} onChange={(value) => updateNode(node.id, { rightHelpCopy: value })} />
+                  <Field label="Section description" value={node.sectionDescription} maxLength={260} onChange={(value) => updateNode(node.id, { sectionDescription: value })} />
+                  <Field label="Domain introduction copy" value={node.domainIntroductionCopy} maxLength={260} onChange={(value) => updateNode(node.id, { domainIntroductionCopy: value })} />
+                  <Field label="Empty-state copy" value={node.emptyStateCopy} maxLength={180} onChange={(value) => updateNode(node.id, { emptyStateCopy: value })} />
+                  <Field label="Other-service guidance" value={node.otherServiceGuidance} maxLength={180} onChange={(value) => updateNode(node.id, { otherServiceGuidance: value })} />
+                  {Object.entries(node.ctaLabels).map(([key, value]) => (
+                    <Field key={key} label={`CTA: ${key}`} value={value} maxLength={60} onChange={(next) => updateCta(node.id, key, next)} />
+                  ))}
+                </>
+              ) : null}
+            </div>
+            <div className="mt-3 flex flex-wrap gap-1">
+              {node.lockedFields.slice(0, 6).map((field) => <span key={field} className="rounded bg-orange-50 px-2 py-1 text-[10px] font-semibold text-orange-800">{field}</span>)}
+            </div>
+          </section>
+        ))}
+      </div>
+      {stepFour ? <p className="rounded border border-slate-200 bg-white p-3 text-xs text-slate-600">Step 4 preview source: {stepFour.title} - {stepFour.subtitle}</p> : null}
+      <WorkflowActions
+        canWrite={canWrite}
+        canPublish={canPublish}
+        schedule={schedule}
+        activeRow={activeRow}
+        busyAction={busyAction}
+        message={message}
+        onScheduleChange={onScheduleChange}
+        onSaveDraft={onSaveDraft}
+        onPublish={onPublish}
+        onSchedule={onSchedule}
+        onCancelSchedule={onCancelSchedule}
+      />
+    </EditorSection>
+  );
+}
+
+function WorkflowActions({
+  canWrite,
+  canPublish,
+  schedule,
+  activeRow,
+  busyAction,
+  message,
+  onScheduleChange,
+  onSaveDraft,
+  onPublish,
+  onSchedule,
+  onCancelSchedule,
+}: {
+  canWrite: boolean;
+  canPublish: boolean;
+  schedule: typeof defaultSchedule;
+  activeRow: WebsiteExperienceAdminContext;
+  busyAction: string;
+  message: string;
+  onScheduleChange: (value: typeof defaultSchedule) => void;
+  onSaveDraft: () => void;
+  onPublish: () => void;
+  onSchedule: () => void;
+  onCancelSchedule: () => void;
+}) {
+  return (
+    <>
+      <div className="grid gap-3 md:grid-cols-3">
+        <WorkflowCard label="Draft" value={`v${activeRow.draftVersion}`} detail="Editable working version" />
+        <WorkflowCard label="Published" value={`v${activeRow.publishedVersion}`} detail={activeRow.publishedAt ? formatDateTime(activeRow.publishedAt) : "Default content"} />
+        <WorkflowCard label="Scheduled" value={activeRow.scheduledVersion ? `v${activeRow.scheduledVersion}` : "None"} detail={activeRow.scheduledFor ? `${formatDateTime(activeRow.scheduledFor)} ${activeRow.scheduledTimezone || ""}` : "No future publish"} />
+      </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <button type="button" disabled={!canWrite || busyAction === "save"} onClick={onSaveDraft} className="inline-flex h-10 items-center gap-2 rounded bg-slate-900 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300">
+          <Save className="h-4 w-4" />
+          Save Draft
+        </button>
+        <button type="button" disabled={!canPublish || busyAction === "publish"} onClick={onPublish} className="inline-flex h-10 items-center gap-2 rounded bg-blue-600 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-blue-200">
+          <Send className="h-4 w-4" />
+          Publish Now
+        </button>
+      </div>
+      <div className="rounded border border-amber-200 bg-amber-50 p-4">
+        <div className="flex items-center gap-2 text-sm font-semibold text-amber-900">
+          <CalendarClock className="h-4 w-4" />
+          Schedule
+        </div>
+        <div className="mt-3 grid gap-3 md:grid-cols-3">
+          <ScheduleField label="Publish date" type="date" value={schedule.date} onChange={(date) => onScheduleChange({ ...schedule, date })} />
+          <ScheduleField label="Publish time" type="time" value={schedule.time} onChange={(time) => onScheduleChange({ ...schedule, time })} />
+          <Field label="Timezone" value={schedule.timezone} maxLength={64} onChange={(timezone) => onScheduleChange({ ...schedule, timezone })} />
+          <ScheduleField label="Optional end date" type="date" value={schedule.endDate} onChange={(endDate) => onScheduleChange({ ...schedule, endDate })} />
+          <ScheduleField label="Optional end time" type="time" value={schedule.endTime} onChange={(endTime) => onScheduleChange({ ...schedule, endTime })} />
+        </div>
+        <div className="mt-3 flex flex-wrap gap-3">
+          <button type="button" disabled={!canPublish || busyAction === "schedule"} onClick={onSchedule} className="inline-flex h-10 items-center gap-2 rounded bg-amber-600 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-amber-200">
+            <Clock3 className="h-4 w-4" />
+            Schedule
+          </button>
+          {activeRow.scheduledFor ? (
+            <button type="button" disabled={!canPublish || busyAction === "cancel-schedule"} onClick={onCancelSchedule} className="inline-flex h-10 items-center gap-2 rounded border border-amber-300 bg-white px-4 text-sm font-semibold text-amber-800 disabled:cursor-not-allowed disabled:opacity-50">
+              <XCircle className="h-4 w-4" />
+              Cancel Schedule
+            </button>
+          ) : null}
+        </div>
+      </div>
+      {message ? <p className="rounded border border-slate-200 bg-slate-50 p-3 text-sm font-semibold text-slate-700">{message}</p> : null}
+    </>
   );
 }
 
@@ -643,6 +838,24 @@ function PreviewPanel({ content, device, onDeviceChange }: { content: WebsiteExp
 }
 
 function PromoPreview({ content, compact }: { content: WebsiteExperienceContent; compact: boolean }) {
+  if (content.context === "partner_application" && content.applicationTree) {
+    const stepFour = content.applicationTree.children.find((node) => node.id === "step-4-services");
+    return (
+      <div className="min-h-[420px] bg-slate-950 p-4 text-white">
+        <p className="text-[10px] font-bold uppercase text-sky-300">{content.applicationTree.root}</p>
+        <h5 className={compact ? "mt-2 text-xl font-black" : "mt-2 text-2xl font-black"}>Partner Application</h5>
+        <div className="mt-4 space-y-2">
+          {content.applicationTree.children.slice(0, compact ? 5 : 9).map((node) => (
+            <div key={node.id} className={`rounded border p-2 ${node.id === "step-4-services" ? "border-sky-400 bg-sky-500/15" : "border-white/10 bg-white/5"}`}>
+              <b className="block text-xs">{node.label}</b>
+              <span className="block text-[11px] text-blue-100">{node.title}</span>
+            </div>
+          ))}
+        </div>
+        {stepFour ? <p className="mt-4 rounded bg-white/10 p-2 text-[11px] text-blue-100">{stepFour.subtitle}</p> : null}
+      </div>
+    );
+  }
   const firstImage = compact ? content.mobileImage || content.desktopImage : content.desktopImage || content.mobileImage;
   return (
     <div className="relative min-h-[420px] overflow-hidden bg-slate-900 p-4 text-white">

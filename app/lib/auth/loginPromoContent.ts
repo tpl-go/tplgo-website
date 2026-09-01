@@ -39,9 +39,9 @@ export const DEFAULT_LOGIN_PROMO_CONTENT: Record<LoginPromoContext, LoginPromoCo
       { title: "Faster Checkout", description: "Use saved traveller details", tone: "sky" },
       { title: "Trip Records", description: "Find bookings and journeys", tone: "emerald" },
       { title: "Wallet Tracking", description: "View eligible wallet activity", tone: "amber" },
-      { title: "One TPL Identity", description: "One account across TPL GO", tone: "violet" },
+      { title: "One Account", description: "Use TPL GO with less friction", tone: "violet" },
     ],
-    footerTrustLine: "Secure OTP login powered by the TPL identity layer.",
+    footerTrustLine: "Secure sign-in for your TPL GO account.",
     active: true,
   },
   partner_login: {
@@ -58,10 +58,10 @@ export const DEFAULT_LOGIN_PROMO_CONTENT: Record<LoginPromoContext, LoginPromoCo
     benefits: [
       { title: "Grow Your Reach", description: "Reach more travellers and customers", tone: "sky" },
       { title: "Partner Opportunities", description: "Manage enquiries and readiness", tone: "emerald" },
-      { title: "Service-aware Setup", description: "Keep services on separate paths", tone: "amber" },
+      { title: "Clear Setup", description: "Complete each service at the right step", tone: "amber" },
       { title: "Dedicated Support", description: "Get help when needed", tone: "violet" },
     ],
-    footerTrustLine: "Same TPL identity. No separate Partner credentials.",
+    footerTrustLine: "One account. Easy Partner access.",
     active: true,
   },
   partner_registration: {
@@ -81,7 +81,7 @@ export const DEFAULT_LOGIN_PROMO_CONTENT: Record<LoginPromoContext, LoginPromoCo
       { title: "Admin Review", description: "Applications enter the Partner queue", tone: "amber" },
       { title: "Multiple Services", description: "Add more scopes in Partner Desk", tone: "violet" },
     ],
-    footerTrustLine: "Registration does not activate sellable inventory.",
+    footerTrustLine: "Your service goes live only after review and setup.",
     active: true,
   },
 };
