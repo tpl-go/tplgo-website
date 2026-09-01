@@ -23,7 +23,6 @@ import {
   Headphones,
   Landmark,
   KeyRound,
-  Layers3,
   LineChart,
   LayoutDashboard,
   Link2,
@@ -84,7 +83,6 @@ const partnerNavItems = [
   { href: "/admin/partners/applications", label: "Applications", icon: ClipboardCheck },
   { href: "/admin/partner-verification", label: "Verification", icon: ShieldCheck },
   { href: "/admin/partners/organizations", label: "Organizations", icon: Users },
-  { href: "/admin/partners/services", label: "Service Catalogue", icon: Layers3 },
   { href: "/admin/partners/documents-compliance", label: "Documents & Compliance", icon: FileText },
 ];
 
@@ -137,7 +135,7 @@ export default function AdminShell({
     return session.admin.permissions.includes(permission);
   };
   const missingPermission = (permission?: string) => Boolean(permission && session && !session.admin.permissions.includes(permission));
-  const serviceCatalogueShell = pathname.startsWith("/admin/partners/services");
+  const serviceCatalogueShell = true;
 
   useEffect(() => {
     let active = true;
@@ -155,7 +153,31 @@ export default function AdminShell({
   };
 
   return (
-    <div className={serviceCatalogueShell ? "min-h-screen bg-[#050b16] text-slate-100" : "min-h-screen bg-[#f5f7fb] text-slate-950"}>
+    <div className="tpl-admin-shell min-h-screen bg-[#050b16] text-slate-100">
+      <style>{`
+        .tpl-admin-shell main { color: #e2e8f0; }
+        .tpl-admin-shell main .bg-white { background-color: rgba(11, 22, 40, 0.96) !important; }
+        .tpl-admin-shell main .bg-slate-50 { background-color: rgba(15, 23, 42, 0.82) !important; }
+        .tpl-admin-shell main .bg-slate-100 { background-color: rgba(30, 41, 59, 0.78) !important; }
+        .tpl-admin-shell main .border-slate-200,
+        .tpl-admin-shell main .border-slate-100 { border-color: rgba(125, 211, 252, 0.14) !important; }
+        .tpl-admin-shell main .text-slate-950,
+        .tpl-admin-shell main .text-slate-900,
+        .tpl-admin-shell main .text-slate-800 { color: #eaf6ff !important; }
+        .tpl-admin-shell main .text-slate-700,
+        .tpl-admin-shell main .text-slate-600 { color: #cbd5e1 !important; }
+        .tpl-admin-shell main .text-slate-500 { color: #94a3b8 !important; }
+        .tpl-admin-shell main input,
+        .tpl-admin-shell main select,
+        .tpl-admin-shell main textarea { background-color: #081427 !important; color: #e2e8f0 !important; border-color: rgba(125, 211, 252, 0.20) !important; }
+        .tpl-admin-shell main input::placeholder,
+        .tpl-admin-shell main textarea::placeholder { color: #64748b !important; }
+        .tpl-admin-shell main button:focus-visible,
+        .tpl-admin-shell main a:focus-visible,
+        .tpl-admin-shell main input:focus-visible,
+        .tpl-admin-shell main select:focus-visible,
+        .tpl-admin-shell main textarea:focus-visible { outline: 2px solid #7dd3fc; outline-offset: 2px; }
+      `}</style>
       <aside className={serviceCatalogueShell ? "fixed left-0 top-0 hidden h-screen w-72 border-r border-sky-300/10 bg-[#07111f] lg:block" : "fixed left-0 top-0 hidden h-screen w-72 border-r border-slate-200 bg-white lg:block"}>
         <div className={serviceCatalogueShell ? "flex h-16 items-center gap-3 border-b border-sky-300/10 bg-gradient-to-r from-[#07111f] via-[#0a1b33] to-[#1f2937] px-6 text-white" : "flex h-16 items-center gap-3 border-b border-slate-200 bg-gradient-to-r from-slate-950 to-slate-800 px-6 text-white"}>
           <div className="flex h-9 w-9 items-center justify-center rounded bg-white/10 text-white ring-1 ring-white/15">

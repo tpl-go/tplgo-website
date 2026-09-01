@@ -74,9 +74,13 @@ const contextLabels: Record<WebsiteExperienceContext, string> = {
   partner_application: "Partner Application",
 };
 
-export function WebsiteExperienceManager() {
+export function WebsiteExperienceManager({
+  mode = "login-signup",
+}: {
+  mode?: "login-signup" | "partner-application";
+}) {
   const [state, setState] = useState<LoadState>({ status: "loading", data: null, error: null });
-  const [activeContext, setActiveContext] = useState<WebsiteExperienceContext>("user_login");
+  const [activeContext, setActiveContext] = useState<WebsiteExperienceContext>(mode === "partner-application" ? "partner_application" : "user_login");
   const [activeBlock, setActiveBlock] = useState<BlockKey>("brand");
   const [previewDevice, setPreviewDevice] = useState<PreviewDevice>("desktop");
   const [drafts, setDrafts] = useState<Partial<Record<WebsiteExperienceContext, WebsiteExperienceContent>>>({});
@@ -99,7 +103,10 @@ export function WebsiteExperienceManager() {
   }, [load]);
 
   const activeDraft = drafts[activeContext];
-  const contextRows = state.data?.contexts ?? [];
+  const contextRows = useMemo(() => {
+    const rows = state.data?.contexts ?? [];
+    return mode === "partner-application" ? rows.filter((item) => item.context === "partner_application") : rows.filter((item) => item.context !== "partner_application");
+  }, [mode, state.data?.contexts]);
   const activeRow = contextRows.find((item) => item.context === activeContext);
   const permissions = state.data?.permissions;
   const canWrite = Boolean(permissions?.canWrite);
@@ -145,7 +152,7 @@ export function WebsiteExperienceManager() {
       setMessage(result.error.message);
       return;
     }
-    setMessage("Draft saved. Public Login & Signup stays unchanged until Publish Now or the scheduled time.");
+    setMessage(mode === "partner-application" ? "Draft saved. Partner Application presentation stays unchanged until Publish Now or the scheduled time." : "Draft saved. Public Login & Signup stays unchanged until Publish Now or the scheduled time.");
     void load();
   };
 
@@ -158,7 +165,7 @@ export function WebsiteExperienceManager() {
       setMessage(result.error.message);
       return;
     }
-    setMessage("Published now. The public Login & Signup content uses this version.");
+    setMessage(mode === "partner-application" ? "Published now. Partner Application presentation uses this version." : "Published now. The public Login & Signup content uses this version.");
     void load();
   };
 
@@ -205,13 +212,15 @@ export function WebsiteExperienceManager() {
   return (
     <section className="space-y-5">
       <div className="rounded border border-slate-200 bg-white p-5 shadow-sm">
-        <Breadcrumbs activeContext={contextLabels[activeContext]} activeBlock={blocks.find((block) => block.key === activeBlock)?.label ?? "Brand"} />
+        <Breadcrumbs mode={mode} activeContext={contextLabels[activeContext]} activeBlock={blocks.find((block) => block.key === activeBlock)?.label ?? "Brand"} />
         <div className="mt-4 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase text-amber-700">Global Experience / Login & Signup</p>
-            <h2 className="mt-1 text-2xl font-semibold text-slate-950">Login & Signup</h2>
+            <p className="text-xs font-semibold uppercase text-amber-700">{mode === "partner-application" ? "Pages / Partner" : "Global Experience / Login & Signup"}</p>
+            <h2 className="mt-1 text-2xl font-semibold text-slate-950">{mode === "partner-application" ? "Partner Application" : "Login & Signup"}</h2>
             <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">
-              Manage shared login presentation used across TPL GO. Auth behavior, OTP, RBAC, and provider settings stay locked outside this editor.
+              {mode === "partner-application"
+                ? "Manage safe Partner Application presentation fields. Eligibility, validation, approval, and service activation stay locked outside this editor."
+                : "Manage shared login presentation used across TPL GO. Auth behavior, OTP, RBAC, and provider settings stay locked outside this editor."}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -222,8 +231,8 @@ export function WebsiteExperienceManager() {
         </div>
       </div>
 
-      <div className="grid gap-5 2xl:grid-cols-[18rem_minmax(0,1fr)_28rem] xl:grid-cols-[16rem_minmax(0,1fr)]">
-        <aside className="space-y-4">
+      <div className={mode === "partner-application" ? "grid gap-5 2xl:grid-cols-[minmax(0,1fr)_28rem]" : "grid gap-5 2xl:grid-cols-[18rem_minmax(0,1fr)_28rem] xl:grid-cols-[16rem_minmax(0,1fr)]"}>
+        {mode === "login-signup" ? <aside className="space-y-4">
           <section className="rounded border border-slate-200 bg-white p-3 shadow-sm">
             <p className="px-2 pb-2 text-xs font-semibold uppercase text-slate-500">Contexts</p>
             <div className="space-y-2">
@@ -270,7 +279,7 @@ export function WebsiteExperienceManager() {
               })}
             </div>
           </section>
-        </aside>
+        </aside> : null}
 
         <div className="space-y-4">
           <section className="rounded border border-slate-200 bg-white p-5 shadow-sm">
@@ -294,7 +303,7 @@ export function WebsiteExperienceManager() {
             />
           </section>
 
-          <PartnerRegistrationIntakes rows={state.data.partnerRegistrationIntakes} />
+          {mode === "login-signup" ? <PartnerRegistrationIntakes rows={state.data.partnerRegistrationIntakes} /> : null}
         </div>
 
         <aside className="space-y-4 xl:col-span-2 2xl:col-span-1">
@@ -307,10 +316,13 @@ export function WebsiteExperienceManager() {
   );
 }
 
-function Breadcrumbs({ activeContext, activeBlock }: { activeContext: string; activeBlock: string }) {
+function Breadcrumbs({ mode, activeContext, activeBlock }: { mode: "login-signup" | "partner-application"; activeContext: string; activeBlock: string }) {
+  const items = mode === "partner-application"
+    ? ["Website Experience", "Pages", "Partner", "Partner Application", activeContext]
+    : ["Website Experience", "Global Experience", "Login & Signup", activeContext, activeBlock];
   return (
     <nav className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-500" aria-label="Website Experience breadcrumbs">
-      {["Website Experience", "Global Experience", "Login & Signup", activeContext, activeBlock].map((item, index) => (
+      {items.map((item, index) => (
         <span key={`${item}:${index}`} className="flex items-center gap-2">
           {index > 0 ? <span className="text-slate-300">&gt;</span> : null}
           <span className={index === 4 ? "text-slate-950" : ""}>{item}</span>
@@ -558,7 +570,7 @@ function PartnerApplicationTreeEditor({
   return (
     <EditorSection title="Partner Application" detail="Persist safe Partner Application presentation copy in the existing Website Experience content engine.">
       <div className="rounded border border-blue-100 bg-blue-50 p-3 text-sm text-blue-900">
-        Partner Experience &gt; Partner Application &gt; Application Shell &gt; Step 1-8
+        Website Experience &gt; Pages &gt; Partner &gt; Partner Application &gt; Application Shell &gt; Step 1-8
       </div>
       <div className="grid gap-3 xl:grid-cols-2">
         {(tree?.children ?? []).map((node) => (

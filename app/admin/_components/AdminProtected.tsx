@@ -41,7 +41,7 @@ export default function AdminProtected({
 
   if (!ready) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f5f7fb] text-sm text-slate-500">
+      <div className="flex min-h-screen items-center justify-center bg-[#050b16] text-sm font-semibold text-slate-300">
         Checking admin session
       </div>
     );
@@ -49,10 +49,10 @@ export default function AdminProtected({
 
   if (forbidden) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f5f7fb] px-4 text-center">
-        <div className="rounded border border-slate-200 bg-white p-6 shadow-sm">
-          <p className="text-sm font-semibold text-slate-950">Access restricted</p>
-          <p className="mt-2 max-w-sm text-sm leading-6 text-slate-600">
+      <div className="flex min-h-screen items-center justify-center bg-[#050b16] px-4 text-center">
+        <div className="rounded-2xl border border-orange-300/25 bg-[#0b1628] p-6 shadow-2xl shadow-black/30">
+          <p className="text-sm font-black text-orange-100">Access restricted</p>
+          <p className="mt-2 max-w-sm text-sm leading-6 text-slate-300">
             Your Admin role does not include the required permission for this Admin area.
           </p>
         </div>
