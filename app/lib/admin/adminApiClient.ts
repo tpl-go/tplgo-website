@@ -2030,7 +2030,7 @@ export type AdminEnterpriseEcosystemDashboard = {
 };
 
 type RequestOptions = {
-  method?: "GET" | "POST" | "PATCH" | "PUT";
+  method?: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
   body?: unknown;
   token?: string | null;
   requestId?: string;
@@ -2612,6 +2612,19 @@ export async function changeAdminPartnerServiceCatalogueLifecycle(
     `/api/v1/admin/partners/service-catalogue/items/${encodeURIComponent(stableCode)}/${encodeURIComponent(action)}`,
     {
       method: "POST",
+      body: input,
+    }
+  );
+}
+
+export async function deleteAdminPartnerServiceCatalogueDraftItem(
+  stableCode: string,
+  input: { expectedDraftVersion?: number; changeSummary?: string } = {}
+): Promise<AdminApiResult<AdminPartnerServiceCatalogueResponse>> {
+  return adminApiRequest<AdminPartnerServiceCatalogueResponse>(
+    `/api/v1/admin/partners/service-catalogue/items/${encodeURIComponent(stableCode)}`,
+    {
+      method: "DELETE",
       body: input,
     }
   );
