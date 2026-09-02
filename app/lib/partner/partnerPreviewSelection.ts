@@ -1,4 +1,4 @@
-import { getAllPartnerServices, type PartnerServiceDefinition } from "./partnerServiceCatalog";
+import type { PartnerServiceDefinition } from "./partnerServiceCatalogRuntime";
 
 export const PARTNER_PREVIEW_SELECTED_SERVICES_STORAGE_KEY = "tpl.partnerPreview.selectedServices.v1";
 
@@ -43,7 +43,7 @@ export function selectedServicesLabel(count: number): string {
 
 export function selectedPartnerServices(
   selectedServiceIds: string[],
-  services: PartnerServiceDefinition[] = getAllPartnerServices()
+  services: PartnerServiceDefinition[] = []
 ): PartnerServiceDefinition[] {
   const selectedIds = new Set(selectedServiceIds);
   return services.filter((serviceItem) => selectedIds.has(serviceItem.id));

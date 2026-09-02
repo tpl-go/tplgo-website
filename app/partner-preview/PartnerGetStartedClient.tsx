@@ -37,6 +37,7 @@ import {
   createPartnerDocumentUploadSession,
   fetchPartnerOrganizations,
   fetchPartnerOrganizationBundle,
+  fetchPartnerServiceCatalogue,
   linkPartnerDocumentToRequirement,
   requestPartnerEmailVerification,
   requestPartnerMobileVerification,
@@ -57,10 +58,12 @@ import {
 } from "../lib/partner/partnerVerificationPreview";
 import {
   filterPartnerServiceCatalog,
-  partnerServiceCatalog,
+  buildPartnerServiceCatalogFromItems,
   type PartnerServiceCategory,
+  type PartnerServiceCatalogueItem,
+  type PartnerServiceCatalogueRuntimeDomain,
   type PartnerServiceDefinition,
-} from "../lib/partner/partnerServiceCatalog";
+} from "../lib/partner/partnerServiceCatalogRuntime";
 import {
   canContinuePartnerPreview,
   clearServiceSelection,
@@ -109,6 +112,12 @@ const valuePoints = [
 
 const PARTNER_BACKEND_ORGANIZATION_ID_KEY = "tpl.partnerPreview.backendOrganizationId.v1";
 
+type RuntimeCatalogueState = {
+  status: "loading" | "ready" | "error";
+  domains: PartnerServiceCatalogueRuntimeDomain[];
+  items: PartnerServiceCatalogueItem[];
+};
+
 export default function PartnerGetStartedClient({
   qaPreviewEnabled = false,
   initialQaPreviewState,
@@ -141,6 +150,27 @@ export default function PartnerGetStartedClient({
   const [mobileVerificationMessage, setMobileVerificationMessage] = useState<string | null>(null);
   const [emailVerificationBusy, setEmailVerificationBusy] = useState(false);
   const [emailVerificationMessage, setEmailVerificationMessage] = useState<string | null>(null);
+  const [serviceCatalogueState, setServiceCatalogueState] = useState<RuntimeCatalogueState>({
+    status: "loading",
+    domains: [],
+    items: [],
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    setServiceCatalogueState((current) => ({ ...current, status: "loading" }));
+    fetchPartnerServiceCatalogue().then((result) => {
+      if (cancelled) return;
+      if (result.ok) {
+        setServiceCatalogueState({ status: "ready", domains: result.data.domains, items: result.data.items });
+      } else {
+        setServiceCatalogueState({ status: "error", domains: [], items: [] });
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -196,15 +226,19 @@ export default function PartnerGetStartedClient({
     writePartnerVerificationPreviewState(window.localStorage, verificationState);
   }, [qaPreviewEnabled, storageReady, verificationState]);
 
-  const filteredCatalog = useMemo(() => filterPartnerServiceCatalog(searchQuery), [searchQuery]);
-  const selectedServices = useMemo(() => selectedPartnerServices(selectedServiceIds), [selectedServiceIds]);
-  const visibleCatalog = showSelectedOnly ? selectedOnlyCatalog(selectedServiceIds) : filteredCatalog;
+  const runtimeServiceCatalog = useMemo(
+    () => buildPartnerServiceCatalogFromItems(serviceCatalogueState.domains, serviceCatalogueState.items),
+    [serviceCatalogueState.domains, serviceCatalogueState.items]
+  );
+  const filteredCatalog = useMemo(() => filterPartnerServiceCatalog(searchQuery, runtimeServiceCatalog), [runtimeServiceCatalog, searchQuery]);
+  const selectedServices = useMemo(() => selectedPartnerServices(selectedServiceIds, runtimeServiceCatalog.flatMap((category) => category.services)), [runtimeServiceCatalog, selectedServiceIds]);
+  const visibleCatalog = showSelectedOnly ? selectedOnlyCatalog(selectedServiceIds, runtimeServiceCatalog) : filteredCatalog;
   const continueEnabled = canContinuePartnerPreview(selectedServiceIds);
   const qaPreviewBundle = useMemo(() => (qaPreviewEnabled ? buildPartnerQaPreviewBundle(qaPreviewState) : null), [qaPreviewEnabled, qaPreviewState]);
   const activeBundle = qaPreviewEnabled ? qaPreviewBundle : backendBundle;
   const applicationCenter = useMemo(
-    () => buildPartnerApplicationCenterReadModel({ bundle: activeBundle, profile: organizationProfile, selectedServices }),
-    [activeBundle, organizationProfile, selectedServices]
+    () => buildPartnerApplicationCenterReadModel({ bundle: activeBundle, profile: organizationProfile, selectedServices, catalogueItems: serviceCatalogueState.items }),
+    [activeBundle, organizationProfile, selectedServices, serviceCatalogueState.items]
   );
 
   function changeQaPreviewState(state: PartnerQaPreviewState) {
@@ -1298,9 +1332,9 @@ function SelectionSummary({
   );
 }
 
-function selectedOnlyCatalog(selectedServiceIds: string[]): PartnerServiceCategory[] {
+function selectedOnlyCatalog(selectedServiceIds: string[], catalog: PartnerServiceCategory[]): PartnerServiceCategory[] {
   const selectedIds = new Set(selectedServiceIds);
-  return partnerServiceCatalog
+  return catalog
     .map((category) => ({
       ...category,
       services: category.services.filter((serviceItem) => selectedIds.has(serviceItem.id)),

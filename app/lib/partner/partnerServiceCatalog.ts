@@ -75,6 +75,17 @@ export type PartnerServiceCategory = {
   services: PartnerServiceDefinition[];
 };
 
+export type PartnerServiceCatalogueRuntimeDomain = {
+  id: PartnerServiceDomainId;
+  title: string;
+  description: string;
+  icon: string;
+  displayOrder: number;
+  status: PartnerServiceStatus;
+  serviceCount: number;
+  selectableCount: number;
+};
+
 export type RequestedPartnerServiceFoundation = {
   requestedName: string;
   description?: string;
@@ -356,6 +367,13 @@ export function findPartnerCatalogueItem(serviceId: string): PartnerServiceCatal
   return partnerServiceCatalogue.find((serviceItem) => serviceItem.stableCode === serviceId || serviceItem.id === serviceId);
 }
 
+export function findPartnerCatalogueItemIn(
+  catalogueItems: PartnerServiceCatalogueItem[],
+  serviceId: string
+): PartnerServiceCatalogueItem | undefined {
+  return catalogueItems.find((serviceItem) => serviceItem.stableCode === serviceId || serviceItem.id === serviceId);
+}
+
 export function partnerServiceEligibleForApplication(
   serviceItem: PartnerServiceCatalogueItem,
   countryCodeOrName: string,
@@ -375,13 +393,14 @@ export function partnerServiceEligibleForApplication(
 export function filterEligiblePartnerServiceCatalog(
   catalog: PartnerServiceCategory[],
   countryCodeOrName: string,
-  businessType: string
+  businessType: string,
+  catalogueItems: PartnerServiceCatalogueItem[] = partnerServiceCatalogue
 ): PartnerServiceCategory[] {
   return catalog
     .map((category) => ({
       ...category,
       services: category.services.filter((service) => {
-        const item = findPartnerCatalogueItem(service.id);
+        const item = findPartnerCatalogueItemIn(catalogueItems, service.id);
         return item ? partnerServiceEligibleForApplication(item, countryCodeOrName, businessType) : false;
       }),
     }))
@@ -408,11 +427,11 @@ export function filterPartnerServiceCatalog(query: string, catalog = partnerServ
 export function getEligiblePartnerServiceDomainOptions(
   countryCodeOrName: string,
   businessType: string,
-  options: { excludeDomainIds?: PartnerServiceDomainId[]; query?: string } = {}
+  options: { excludeDomainIds?: PartnerServiceDomainId[]; query?: string; catalog?: PartnerServiceCategory[]; catalogueItems?: PartnerServiceCatalogueItem[] } = {}
 ): PartnerServiceCategory[] {
   const excluded = new Set(options.excludeDomainIds ?? []);
   const query = normalizeSearchText(options.query ?? "");
-  return filterEligiblePartnerServiceCatalog(partnerServiceCatalog, countryCodeOrName, businessType)
+  return filterEligiblePartnerServiceCatalog(options.catalog ?? partnerServiceCatalog, countryCodeOrName, businessType, options.catalogueItems ?? partnerServiceCatalogue)
     .filter((category) => !excluded.has(category.id))
     .filter((category) => {
       if (!query) return true;
@@ -424,35 +443,61 @@ export function getEligiblePartnerServicesForDomain(
   domainId: PartnerServiceDomainId,
   countryCodeOrName: string,
   businessType: string,
-  query = ""
+  query = "",
+  catalogueItems: PartnerServiceCatalogueItem[] = partnerServiceCatalogue
 ): PartnerServiceCatalogueItem[] {
   const normalizedQuery = normalizeSearchText(query);
-  return partnerServiceCatalogue
+  return catalogueItems
     .filter((serviceItem) => serviceItem.domain === domainId)
     .filter((serviceItem) => partnerServiceEligibleForApplication(serviceItem, countryCodeOrName, businessType))
     .filter((serviceItem) => {
       if (!normalizedQuery) return true;
-      return normalizeSearchText(`${serviceItem.name} ${serviceItem.shortDescription} ${serviceItem.aliases.join(" ")} ${domains[serviceItem.domain].title}`).includes(normalizedQuery);
+      return normalizeSearchText(`${serviceItem.name} ${serviceItem.shortDescription} ${serviceItem.aliases.join(" ")} ${domainTitleFor(serviceItem.domain)}`).includes(normalizedQuery);
     })
     .sort((a, b) => a.displayOrder - b.displayOrder || a.name.localeCompare(b.name));
 }
 
-export function groupPartnerServiceCodesByDomain(serviceCodes: string[]): Array<{ domainId: PartnerServiceDomainId; title: string; services: PartnerServiceCatalogueItem[] }> {
+export function groupPartnerServiceCodesByDomain(serviceCodes: string[], catalogueItems: PartnerServiceCatalogueItem[] = partnerServiceCatalogue): Array<{ domainId: PartnerServiceDomainId; title: string; services: PartnerServiceCatalogueItem[] }> {
   const groups = new Map<PartnerServiceDomainId, PartnerServiceCatalogueItem[]>();
   for (const code of [...new Set(serviceCodes)]) {
-    const serviceItem = findPartnerCatalogueItem(code);
+    const serviceItem = findPartnerCatalogueItemIn(catalogueItems, code);
     if (!serviceItem) continue;
     groups.set(serviceItem.domain, [...(groups.get(serviceItem.domain) ?? []), serviceItem]);
   }
   return [...groups.entries()].map(([domainId, services]) => ({
     domainId,
-    title: domains[domainId].title,
+    title: domainTitleFor(domainId),
     services,
   }));
 }
 
+export function buildPartnerServiceCatalogFromItems(
+  runtimeDomains: PartnerServiceCatalogueRuntimeDomain[],
+  catalogueItems: PartnerServiceCatalogueItem[]
+): PartnerServiceCategory[] {
+  return runtimeDomains
+    .map((domain) => ({
+      id: domain.id,
+      title: domain.title,
+      description: domain.description,
+      services: catalogueItems
+        .filter((serviceItem) => serviceItem.domain === domain.id && serviceItem.applicationSelectable && serviceItem.published && serviceItem.status === "active")
+        .sort((a, b) => a.displayOrder - b.displayOrder || a.name.localeCompare(b.name))
+        .map((serviceItem) => ({
+          id: serviceItem.stableCode,
+          label: serviceItem.name,
+          keywords: [serviceItem.shortDescription, ...serviceItem.aliases, serviceItem.domain, serviceItem.verificationProfileKey],
+        })),
+    }))
+    .filter((category) => category.services.length > 0);
+}
+
 export function normalizeSearchText(value: string): string {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function domainTitleFor(domainId: PartnerServiceDomainId): string {
+  return domains[domainId]?.title ?? "Service";
 }
 
 function items(

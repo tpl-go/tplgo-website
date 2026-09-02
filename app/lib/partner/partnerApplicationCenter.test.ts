@@ -3,6 +3,7 @@ import { buildPartnerApplicationCenterReadModel } from "./partnerApplicationCent
 import type { PartnerOrganizationBundle, PartnerVerificationStatus } from "./partnerApiClient";
 import { emptyPartnerOrganizationPreviewProfile } from "./partnerOrganizationPreviewProfile";
 import { selectedPartnerServices } from "./partnerPreviewSelection";
+import { partnerServiceCatalogue } from "./partnerServiceCatalog";
 
 test("new partner starts in the application center without fake progress", () => {
   const model = buildPartnerApplicationCenterReadModel({
@@ -25,6 +26,7 @@ test("incomplete partner maps real contact, business, and service progress", () 
     }),
     profile: emptyPartnerOrganizationPreviewProfile,
     selectedServices: selectedPartnerServices(["hotel"]),
+    catalogueItems: partnerServiceCatalogue,
   });
 
   expect(model.steps.find((step) => step.id === "account_contact")?.status).toBe("completed");
@@ -43,6 +45,7 @@ test("legacy service scopes stay readable but do not complete Step 4", () => {
     }),
     profile: emptyPartnerOrganizationPreviewProfile,
     selectedServices: [],
+    catalogueItems: partnerServiceCatalogue,
   });
 
   expect(model.steps.find((step) => step.id === "services")?.status).toBe("locked");
@@ -59,6 +62,7 @@ test("submitted partner shows under review instead of editable-start state", () 
     }),
     profile: emptyPartnerOrganizationPreviewProfile,
     selectedServices: [],
+    catalogueItems: partnerServiceCatalogue,
   });
 
   expect(model.overallStatus).toBe("under-review");
@@ -77,6 +81,7 @@ test("changes required remains actionable and human readable", () => {
     }),
     profile: emptyPartnerOrganizationPreviewProfile,
     selectedServices: [],
+    catalogueItems: partnerServiceCatalogue,
   });
 
   expect(model.overallStatus).toBe("changes-required");
@@ -95,6 +100,7 @@ test("approved partner is detected without exposing the pre-approval center as f
     }),
     profile: emptyPartnerOrganizationPreviewProfile,
     selectedServices: [],
+    catalogueItems: partnerServiceCatalogue,
   });
 
   expect(model.approved).toBe(true);

@@ -1,5 +1,5 @@
 import type { PartnerOrganizationPreviewProfile, PartnerOrganizationType } from "./partnerOrganizationPreviewProfile";
-import type { PartnerServiceDefinition } from "./partnerServiceCatalog";
+import type { PartnerServiceDefinition } from "./partnerServiceCatalogRuntime";
 
 export const PARTNER_VERIFICATION_PREVIEW_STORAGE_KEY = "tpl.partnerPreview.verification.v1";
 

@@ -3,6 +3,7 @@ import {
   filterEligiblePartnerServiceCatalog,
   filterPartnerServiceCatalog,
   findPartnerCatalogueItem,
+  buildPartnerServiceCatalogFromItems,
   getAllPartnerServices,
   getEligiblePartnerServiceDomainOptions,
   getEligiblePartnerServicesForDomain,
@@ -191,6 +192,79 @@ test("selected services summary grouping deduplicates services by stable code an
       services: [expect.objectContaining({ stableCode: "wedding-planner", name: "Wedding Planner" })],
     },
   ]);
+});
+
+test("runtime catalogue helper builds Partner Step 4 categories from backend payload data", () => {
+  const runtimeItems = [
+    {
+      ...partnerServiceCatalogue.find((item) => item.stableCode === "hotel")!,
+      name: "Runtime Hotel",
+      aliases: ["runtime hotel"],
+    },
+    {
+      ...partnerServiceCatalogue.find((item) => item.stableCode === "cab-taxi-operator")!,
+      name: "Runtime Cab",
+      aliases: ["runtime cab"],
+    },
+    {
+      ...partnerServiceCatalogue.find((item) => item.stableCode === "visa-assistance")!,
+      name: "Runtime Visa Assistance",
+      aliases: ["runtime visa"],
+    },
+    {
+      ...partnerServiceCatalogue.find((item) => item.stableCode === "resort")!,
+      stableCode: "runtime-draft-only",
+      id: "svc_runtime-draft-only",
+      name: "Runtime Draft Only",
+      published: false,
+      aliases: ["runtime draft"],
+    },
+  ];
+  const runtimeDomains = [
+    {
+      id: "stay-accommodation" as const,
+      title: "Runtime Stay Domain",
+      description: "Runtime stay description.",
+      icon: "bed",
+      displayOrder: 1,
+      status: "active" as const,
+      serviceCount: 2,
+      selectableCount: 1,
+    },
+    {
+      id: "transport-mobility" as const,
+      title: "Runtime Transport Domain",
+      description: "Runtime transport description.",
+      icon: "car",
+      displayOrder: 2,
+      status: "active" as const,
+      serviceCount: 1,
+      selectableCount: 1,
+    },
+    {
+      id: "travel-documentation-insurance" as const,
+      title: "Runtime Travel Documentation Domain",
+      description: "Runtime visa and insurance description.",
+      icon: "file-shield",
+      displayOrder: 3,
+      status: "active" as const,
+      serviceCount: 1,
+      selectableCount: 1,
+    },
+  ];
+
+  const runtimeCatalog = buildPartnerServiceCatalogFromItems(runtimeDomains, runtimeItems);
+  expect(runtimeCatalog.map((category) => category.title)).toEqual([
+    "Runtime Stay Domain",
+    "Runtime Transport Domain",
+    "Runtime Travel Documentation Domain",
+  ]);
+  expect(runtimeCatalog.flatMap((category) => category.services.map((service) => service.label))).toEqual([
+    "Runtime Hotel",
+    "Runtime Cab",
+    "Runtime Visa Assistance",
+  ]);
+  expect(runtimeCatalog.flatMap((category) => category.services.map((service) => service.label))).not.toContain("Runtime Draft Only");
 });
 
 function assertSearchContains(query: string, labels: string[]) {

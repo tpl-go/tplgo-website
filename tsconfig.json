@@ -32,6 +32,9 @@
   ],
   "exclude": [
     "node_modules",
+    "tmp",
+    ".worktrees",
+    "reports",
     "app/lib/creators/*.test.ts",
     "app/data/packages/generateDetailsIndex.ts",
     "app/data/packages/generatePackageDetails.ts"

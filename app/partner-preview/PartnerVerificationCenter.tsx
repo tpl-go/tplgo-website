@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { BadgeCheck, ChevronDown, ChevronRight, Eye, FileText, Link2, Upload } from "lucide-react";
 import type { PartnerOrganizationPreviewProfile } from "../lib/partner/partnerOrganizationPreviewProfile";
 import type { PartnerDocument, PartnerOrganizationBundle, PartnerRequirement } from "../lib/partner/partnerApiClient";
-import type { PartnerServiceDefinition } from "../lib/partner/partnerServiceCatalog";
+import type { PartnerServiceDefinition } from "../lib/partner/partnerServiceCatalogRuntime";
 import {
   addPreviewDocumentForRequirement,
   buildPartnerVerificationRequirements,

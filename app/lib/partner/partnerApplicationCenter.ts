@@ -1,6 +1,6 @@
 import type { PartnerOrganizationBundle, PartnerVerificationStatus } from "./partnerApiClient";
 import type { PartnerOrganizationPreviewProfile } from "./partnerOrganizationPreviewProfile";
-import { findPartnerCatalogueItem, partnerServiceEligibleForApplication, type PartnerServiceDefinition } from "./partnerServiceCatalog";
+import { findPartnerCatalogueItemIn, partnerServiceEligibleForApplication, type PartnerServiceCatalogueItem, type PartnerServiceDefinition } from "./partnerServiceCatalogRuntime";
 
 export type PartnerApplicationStepId =
   | "account_contact"
@@ -54,8 +54,9 @@ export function buildPartnerApplicationCenterReadModel(input: {
   bundle?: PartnerOrganizationBundle | null;
   profile: PartnerOrganizationPreviewProfile;
   selectedServices: PartnerServiceDefinition[];
+  catalogueItems?: PartnerServiceCatalogueItem[];
 }): PartnerApplicationCenterReadModel {
-  const { bundle, profile, selectedServices } = input;
+  const { bundle, profile, selectedServices, catalogueItems = [] } = input;
   const organizationName = getOrganizationName(bundle, profile);
   const reviewStatus = bundle?.review?.status ?? "NOT_SUBMITTED";
   const approved = Boolean(bundle && (bundle.organization.status === "active" || reviewStatus === "VERIFIED"));
@@ -63,7 +64,7 @@ export function buildPartnerApplicationCenterReadModel(input: {
   const contactDone = Boolean(metadataApplication.stepCompletion.account_contact) || (hasVerifiedContact(bundle, "mobile", profile) && hasVerifiedContact(bundle, "email", profile));
   const businessDone = Boolean(metadataApplication.stepCompletion.business_identity) || hasBusinessInformation(bundle, profile);
   const locationDone = Boolean(metadataApplication.stepCompletion.business_location);
-  const servicesDone = hasEligibleApplicationService(bundle, selectedServices);
+  const servicesDone = hasEligibleApplicationService(bundle, selectedServices, catalogueItems);
   const documentsDone = hasDocumentsReady(bundle);
   const payoutDone = Boolean(metadataApplication.stepCompletion.payout_tax);
   const agreementDone = Boolean(metadataApplication.stepCompletion.partner_agreement);
@@ -187,7 +188,8 @@ function hasDocumentsReady(bundle: PartnerOrganizationBundle | null | undefined)
 
 function hasEligibleApplicationService(
   bundle: PartnerOrganizationBundle | null | undefined,
-  selectedServices: PartnerServiceDefinition[]
+  selectedServices: PartnerServiceDefinition[],
+  catalogueItems: PartnerServiceCatalogueItem[]
 ): boolean {
   const country = bundle?.organization.country ?? "IN";
   const businessType = bundle?.organization.organizationType ?? "";
@@ -196,7 +198,7 @@ function hasEligibleApplicationService(
     .map((scope) => scope.serviceCode);
   const serviceCodes = scopeCodes?.length ? scopeCodes : selectedServices.map((service) => service.id);
   return serviceCodes.some((code) => {
-    const item = findPartnerCatalogueItem(code);
+    const item = findPartnerCatalogueItemIn(catalogueItems, code);
     return item ? partnerServiceEligibleForApplication(item, country, businessType) : false;
   });
 }

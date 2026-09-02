@@ -1,6 +1,6 @@
 import { tplApiRequest, type TplApiResult } from "../api/tplApiClient";
 import type { PartnerOrganizationPreviewProfile } from "./partnerOrganizationPreviewProfile";
-import type { PartnerServiceDefinition } from "./partnerServiceCatalog";
+import type { PartnerServiceCatalogueItem, PartnerServiceCatalogueRuntimeDomain, PartnerServiceDefinition } from "./partnerServiceCatalogRuntime";
 
 export type PartnerVerificationStatus =
   | "NOT_SUBMITTED"
@@ -243,8 +243,22 @@ export type PartnerServicesDraftInput = {
   requestedServices?: PartnerRequestedServiceInput[];
 };
 
+export type PartnerServiceCatalogueRuntimeResponse = {
+  version: number;
+  updatedAt: string;
+  source: "published_config" | "initialized_default";
+  domains: PartnerServiceCatalogueRuntimeDomain[];
+  items: PartnerServiceCatalogueItem[];
+};
+
 export function fetchPartnerApplicationDraft(): Promise<TplApiResult<PartnerOrganizationBundle | null>> {
   return tplApiRequest<PartnerOrganizationBundle | null>("/api/v1/partner/application/draft");
+}
+
+export function fetchPartnerServiceCatalogue(): Promise<TplApiResult<PartnerServiceCatalogueRuntimeResponse>> {
+  return tplApiRequest<PartnerServiceCatalogueRuntimeResponse>("/api/v1/partner/service-catalogue", {
+    fallbackOnError: false,
+  });
 }
 
 export function savePartnerAccountContactDraft(input: PartnerAccountContactDraftInput): Promise<TplApiResult<PartnerOrganizationBundle>> {

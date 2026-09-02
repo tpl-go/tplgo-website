@@ -28,6 +28,7 @@ import {
 import { useAuth } from "../hooks/useAuth";
 import {
   fetchPartnerApplicationDraft,
+  fetchPartnerServiceCatalogue,
   requestPartnerEmailVerification,
   requestPartnerMobileVerification,
   savePartnerAccountContactDraft,
@@ -42,12 +43,14 @@ import {
 } from "../lib/partner/partnerApiClient";
 import {
   filterEligiblePartnerServiceCatalog,
-  findPartnerCatalogueItem,
-  partnerServiceCatalog,
+  buildPartnerServiceCatalogFromItems,
+  findPartnerCatalogueItemIn,
   partnerServiceEligibleForApplication,
+  type PartnerServiceCategory,
   type PartnerServiceCatalogueItem,
+  type PartnerServiceCatalogueRuntimeDomain,
   type PartnerServiceDomainId,
-} from "../lib/partner/partnerServiceCatalog";
+} from "../lib/partner/partnerServiceCatalogRuntime";
 import {
   buildPartnerApplicationCenterReadModel,
   type PartnerApplicationStepId,
@@ -136,6 +139,14 @@ type ServicesForm = {
 };
 
 type ServicesFormUpdate = Partial<ServicesForm> | ((current: ServicesForm) => Partial<ServicesForm>);
+
+type RuntimeCatalogueState = {
+  status: "loading" | "ready" | "error";
+  version: number | null;
+  updatedAt: string | null;
+  domains: PartnerServiceCatalogueRuntimeDomain[];
+  items: PartnerServiceCatalogueItem[];
+};
 
 const workspaceSteps: Array<{
   id: WorkspaceStepId;
@@ -477,14 +488,28 @@ export default function PartnerApplicationWorkspaceClient({
   const [emailOtp, setEmailOtp] = useState("");
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [qaVerifiedContacts, setQaVerifiedContacts] = useState({ mobile: false, email: false });
+  const [serviceCatalogueState, setServiceCatalogueState] = useState<RuntimeCatalogueState>({
+    status: "loading",
+    version: null,
+    updatedAt: null,
+    domains: [],
+    items: [],
+  });
 
   const previewBundle = useMemo(() => qaPreviewEnabled ? buildPartnerQaPreviewBundle(qaPreviewState) : null, [qaPreviewEnabled, qaPreviewState]);
   const activeBundle = qaPreviewEnabled ? previewBundle : bundle;
+  const runtimeServiceCatalog = useMemo(
+    () => buildPartnerServiceCatalogFromItems(serviceCatalogueState.domains, serviceCatalogueState.items),
+    [serviceCatalogueState.domains, serviceCatalogueState.items]
+  );
   const selectedServices = useMemo(() => servicesForm.selectedServiceCodes.map((code) => {
-    const item = findPartnerCatalogueItem(code);
+    const item = findPartnerCatalogueItemIn(serviceCatalogueState.items, code);
     return { id: code, label: item?.name ?? code, keywords: item ? [item.shortDescription, ...item.aliases] : [] };
-  }), [servicesForm.selectedServiceCodes]);
-  const readModel = useMemo(() => buildPartnerApplicationCenterReadModel({ bundle: activeBundle, profile: minimalProfile(form), selectedServices }), [activeBundle, form, selectedServices]);
+  }), [serviceCatalogueState.items, servicesForm.selectedServiceCodes]);
+  const readModel = useMemo(
+    () => buildPartnerApplicationCenterReadModel({ bundle: activeBundle, profile: minimalProfile(form), selectedServices, catalogueItems: serviceCatalogueState.items }),
+    [activeBundle, form, selectedServices, serviceCatalogueState.items]
+  );
   const isSubmittedState = readModel.overallStatus === "under-review" || readModel.overallStatus === "changes-required" || readModel.overallStatus === "rejected";
   const isApprovedState = readModel.overallStatus === "approved";
   const mobileVerified = qaPreviewEnabled ? qaVerifiedContacts.mobile || contactVerified(activeBundle, "mobile", normalizedMobile(form.businessMobile, form.countryCode)) : contactVerified(activeBundle, "mobile", normalizedMobile(form.businessMobile, form.countryCode));
@@ -504,7 +529,7 @@ export default function PartnerApplicationWorkspaceClient({
     businessForm.description.trim().length >= 20 &&
     businessForm.description.length <= 500;
   const canCompleteStepThree = isBusinessLocationComplete(locationForm);
-  const canCompleteStepFour = isServicesComplete(servicesForm, locationForm.primaryLocation.countryCode, businessForm.organizationType);
+  const canCompleteStepFour = serviceCatalogueState.status === "ready" && isServicesComplete(servicesForm, locationForm.primaryLocation.countryCode, businessForm.organizationType, serviceCatalogueState.items);
 
   useEffect(() => {
     formRef.current = form;
@@ -523,6 +548,36 @@ export default function PartnerApplicationWorkspaceClient({
   }, [servicesForm]);
 
   useEffect(() => {
+    let cancelled = false;
+    setServiceCatalogueState((current) => ({ ...current, status: "loading" }));
+    fetchPartnerServiceCatalogue().then((result) => {
+      if (cancelled) return;
+      if (result.ok) {
+        setServiceCatalogueState({
+          status: "ready",
+          version: result.data.version,
+          updatedAt: result.data.updatedAt,
+          domains: result.data.domains,
+          items: result.data.items,
+        });
+      } else {
+        setServiceCatalogueState({ status: "error", version: null, updatedAt: null, domains: [], items: [] });
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (serviceCatalogueState.status !== "ready") return;
+    setActiveServiceDomainIds((current) => {
+      const fromSavedCodes = serviceDomainIdsFromCodes(servicesFormRef.current.selectedServiceCodes, serviceCatalogueState.items);
+      return [...new Set([...current, ...fromSavedCodes])];
+    });
+  }, [serviceCatalogueState.items, serviceCatalogueState.status]);
+
+  useEffect(() => {
     if (qaPreviewEnabled) {
       const qaBundle = buildPartnerQaPreviewBundle(qaPreviewState);
       const savedPreview = readQaDraft();
@@ -535,7 +590,7 @@ export default function PartnerApplicationWorkspaceClient({
       setBusinessForm(nextBusinessForm);
       setLocationForm(nextLocationForm);
       setServicesForm(nextServicesForm);
-      setActiveServiceDomainIds(serviceDomainIdsFromCodes(nextServicesForm.selectedServiceCodes));
+      setActiveServiceDomainIds(serviceDomainIdsFromCodes(nextServicesForm.selectedServiceCodes, serviceCatalogueState.items));
       setQaVerifiedContacts(savedForState?.verified ?? {
         mobile: contactVerified(qaBundle, "mobile", normalizedMobile(nextForm.businessMobile, nextForm.countryCode)),
         email: contactVerified(qaBundle, "email", normalizeEmail(nextForm.businessEmail)),
@@ -560,7 +615,7 @@ export default function PartnerApplicationWorkspaceClient({
         setLocationForm(locationFormFromBundle(result.data));
         const nextServicesForm = servicesFormFromBundle(result.data);
         setServicesForm(nextServicesForm);
-        setActiveServiceDomainIds(serviceDomainIdsFromCodes(nextServicesForm.selectedServiceCodes));
+        setActiveServiceDomainIds(serviceDomainIdsFromCodes(nextServicesForm.selectedServiceCodes, serviceCatalogueState.items));
         setLastSavedAt(readLastSaved(result.data));
         setActiveStep(resolveActiveStep(result.data));
         setLoadStatus("ready");
@@ -572,7 +627,7 @@ export default function PartnerApplicationWorkspaceClient({
     return () => {
       cancelled = true;
     };
-  }, [initialQaStep, isAuthenticated, qaPreviewEnabled, qaPreviewState, user]);
+  }, [initialQaStep, isAuthenticated, qaPreviewEnabled, qaPreviewState, serviceCatalogueState.items, user]);
 
   useEffect(() => {
     if (qaPreviewEnabled || !isAuthenticated || loadStatus !== "ready") return;
@@ -653,7 +708,7 @@ export default function PartnerApplicationWorkspaceClient({
   function removeSelectedService(service: PartnerServiceCatalogueItem) {
     updateServicesForm((current) => {
       const remainingCodes = current.selectedServiceCodes.filter((code) => code !== service.stableCode);
-      const domainStillSelected = remainingCodes.some((code) => findPartnerCatalogueItem(code)?.domain === service.domain);
+      const domainStillSelected = remainingCodes.some((code) => findPartnerCatalogueItemIn(serviceCatalogueState.items, code)?.domain === service.domain);
       if (!domainStillSelected) {
         setActiveServiceDomainIds((domains) => domains.filter((domainId) => domainId !== service.domain));
       }
@@ -663,7 +718,7 @@ export default function PartnerApplicationWorkspaceClient({
 
   function removeSelectedServiceDomain(domainId: PartnerServiceDomainId) {
     updateServicesForm((current) => ({
-      selectedServiceCodes: current.selectedServiceCodes.filter((code) => findPartnerCatalogueItem(code)?.domain !== domainId),
+      selectedServiceCodes: current.selectedServiceCodes.filter((code) => findPartnerCatalogueItemIn(serviceCatalogueState.items, code)?.domain !== domainId),
     }));
     setActiveServiceDomainIds((current) => current.filter((id) => id !== domainId));
   }
@@ -1007,7 +1062,7 @@ export default function PartnerApplicationWorkspaceClient({
     if (activeStep === "services") {
       const saved = await saveServicesDraft({ continueAfter: true });
       if (!saved) return;
-      if (isServicesComplete(servicesFormFromBundle(saved), locationForm.primaryLocation.countryCode, businessForm.organizationType)) {
+      if (isServicesComplete(servicesFormFromBundle(saved), locationForm.primaryLocation.countryCode, businessForm.organizationType, serviceCatalogueState.items)) {
         setActiveStep("documents_compliance");
       } else {
         setMessage({ tone: "warning", text: "Choose at least one service before continuing." });
@@ -1035,7 +1090,7 @@ export default function PartnerApplicationWorkspaceClient({
     setBusinessForm(nextBusinessForm);
     setLocationForm(nextLocationForm);
     setServicesForm(nextServicesForm);
-    setActiveServiceDomainIds(serviceDomainIdsFromCodes(nextServicesForm.selectedServiceCodes));
+    setActiveServiceDomainIds(serviceDomainIdsFromCodes(nextServicesForm.selectedServiceCodes, serviceCatalogueState.items));
     setQaVerifiedContacts({
       mobile: contactVerified(qaBundle, "mobile", normalizedMobile(nextForm.businessMobile, nextForm.countryCode)),
       email: contactVerified(qaBundle, "email", normalizeEmail(nextForm.businessEmail)),
@@ -1171,6 +1226,9 @@ export default function PartnerApplicationWorkspaceClient({
                 businessType={businessForm.organizationType}
                 countryCode={locationForm.primaryLocation.countryCode}
                 canComplete={canCompleteStepFour}
+                catalogueStatus={serviceCatalogueState.status}
+                serviceCatalog={runtimeServiceCatalog}
+                serviceCatalogueItems={serviceCatalogueState.items}
                 qaPreviewEnabled={qaPreviewEnabled}
                 legacyScopes={activeBundle?.serviceScopes ?? []}
                 activeDomainIds={activeServiceDomainIds}
@@ -1192,6 +1250,8 @@ export default function PartnerApplicationWorkspaceClient({
                 headingId="selected-services-summary-desktop"
                 countryCode={locationForm.primaryLocation.countryCode}
                 businessType={businessForm.organizationType}
+                serviceCatalogueItems={serviceCatalogueState.items}
+                serviceCatalog={runtimeServiceCatalog}
                 legacyScopes={activeBundle?.serviceScopes ?? []}
                 onRemoveService={removeSelectedService}
                 onRemoveDomain={removeSelectedServiceDomain}
@@ -1781,6 +1841,9 @@ function ServicesStep({
   businessType,
   countryCode,
   canComplete,
+  catalogueStatus,
+  serviceCatalog,
+  serviceCatalogueItems,
   qaPreviewEnabled,
   legacyScopes,
   activeDomainIds,
@@ -1794,6 +1857,9 @@ function ServicesStep({
   businessType: string;
   countryCode: string;
   canComplete: boolean;
+  catalogueStatus: RuntimeCatalogueState["status"];
+  serviceCatalog: PartnerServiceCategory[];
+  serviceCatalogueItems: PartnerServiceCatalogueItem[];
   qaPreviewEnabled: boolean;
   legacyScopes: PartnerOrganizationBundle["serviceScopes"];
   activeDomainIds: PartnerServiceDomainId[];
@@ -1804,8 +1870,8 @@ function ServicesStep({
   onChange: (next: ServicesFormUpdate) => void;
 }) {
   const [serviceFilters, setServiceFilters] = useState<Record<string, string>>({});
-  const eligibleCatalog = useMemo(() => filterEligiblePartnerServiceCatalog(partnerServiceCatalog, countryCode, businessType), [businessType, countryCode]);
-  const selectedItems = useMemo(() => form.selectedServiceCodes.map((code) => findPartnerCatalogueItem(code)).filter(Boolean) as PartnerServiceCatalogueItem[], [form.selectedServiceCodes]);
+  const eligibleCatalog = useMemo(() => filterEligiblePartnerServiceCatalog(serviceCatalog, countryCode, businessType, serviceCatalogueItems), [businessType, countryCode, serviceCatalog, serviceCatalogueItems]);
+  const selectedItems = useMemo(() => form.selectedServiceCodes.map((code) => findPartnerCatalogueItemIn(serviceCatalogueItems, code)).filter(Boolean) as PartnerServiceCatalogueItem[], [form.selectedServiceCodes, serviceCatalogueItems]);
   const selectedCodes = useMemo(() => new Set(form.selectedServiceCodes), [form.selectedServiceCodes]);
   const selectedDomainIds = useMemo(() => {
     const domains = selectedItems.map((item) => item.domain);
@@ -1819,7 +1885,7 @@ function ServicesStep({
   const selectedUnavailable = selectedItems.filter((item) => !partnerServiceEligibleForApplication(item, countryCode, businessType));
   const staleScopes = legacyScopes.filter((scope) => {
     if (scope.status === "disabled") return false;
-    const item = findPartnerCatalogueItem(scope.serviceCode);
+    const item = findPartnerCatalogueItemIn(serviceCatalogueItems, scope.serviceCode);
     return !item || !partnerServiceEligibleForApplication(item, countryCode, businessType);
   });
   const requestedComplete = form.requestedServices.some((request) => request.requestedName.trim().length >= 2 && request.description.trim().length >= 10);
@@ -1835,7 +1901,7 @@ function ServicesStep({
       const removing = currentCodes.has(service.stableCode);
       if (removing) {
         const remainingCodes = current.selectedServiceCodes.filter((code) => code !== service.stableCode);
-        const domainStillSelected = remainingCodes.some((code) => findPartnerCatalogueItem(code)?.domain === service.domain);
+        const domainStillSelected = remainingCodes.some((code) => findPartnerCatalogueItemIn(serviceCatalogueItems, code)?.domain === service.domain);
         if (!domainStillSelected) {
           onActiveDomainIdsChange((domains) => domains.filter((domainId) => domainId !== service.domain));
         }
@@ -1887,7 +1953,7 @@ function ServicesStep({
               onChange={(event) => {
                 const selected = qaServicesExamples.find((example) => example.key === event.target.value);
                 if (selected) {
-                  onActiveDomainIdsChange(serviceDomainIdsFromCodes(selected.values.selectedServiceCodes));
+                  onActiveDomainIdsChange(serviceDomainIdsFromCodes(selected.values.selectedServiceCodes, serviceCatalogueItems));
                   onChange(selected.values);
                 }
               }}
@@ -1905,6 +1971,8 @@ function ServicesStep({
             headingId="selected-services-summary-mobile"
             countryCode={countryCode}
             businessType={businessType}
+            serviceCatalogueItems={serviceCatalogueItems}
+            serviceCatalog={serviceCatalog}
             legacyScopes={legacyScopes}
             onRemoveService={onRemoveSelectedService}
             onRemoveDomain={removeDomainGroup}
@@ -1932,7 +2000,7 @@ function ServicesStep({
           </div>
           {eligibleCatalog.length ? null : (
             <div className="mt-4 rounded-xl border border-amber-400/30 bg-amber-400/10 p-3 text-sm font-bold text-amber-100">
-              No service areas are available for this country and business type yet.
+              {catalogueStatus === "loading" ? "Loading services..." : catalogueStatus === "error" ? "Service catalogue unavailable. Retry after the catalogue is available." : "No service areas are available for this country and business type yet."}
             </div>
           )}
         </section>
@@ -1952,7 +2020,7 @@ function ServicesStep({
             {activeDomains.length ? activeDomains.map((category, index) => {
               const filter = serviceFilters[category.id] ?? "";
               const services = category.services.filter((service) => {
-                const item = findPartnerCatalogueItem(service.id);
+                const item = findPartnerCatalogueItemIn(serviceCatalogueItems, service.id);
                 if (!item) return false;
                 return matchesServiceSearch(`${item.name} ${item.shortDescription} ${item.aliases.join(" ")} ${category.title}`, filter);
               });
@@ -1992,7 +2060,7 @@ function ServicesStep({
 
                   <div className="mt-3 grid gap-2 md:grid-cols-2">
                     {services.length ? services.map((service) => {
-                      const item = findPartnerCatalogueItem(service.id);
+                      const item = findPartnerCatalogueItemIn(serviceCatalogueItems, service.id);
                       if (!item) return null;
                       const selected = selectedCodes.has(item.stableCode);
                       return (
@@ -2082,7 +2150,7 @@ function ServicesStep({
                       <span className="text-xs font-black uppercase tracking-[0.1em] text-slate-300">Closest Domain <span className="text-slate-500">Optional</span></span>
                       <select value={request.closestDomain} onChange={(event) => updateRequest(request.id, { closestDomain: event.target.value as PartnerServiceDomainId | "" })} className="h-11 w-full rounded-xl border border-white/10 bg-[#11141a] px-3 text-sm font-semibold text-white outline-none focus:border-[#f97316] focus:ring-2 focus:ring-[#f97316]/25">
                         <option value="">Not sure</option>
-                        {partnerServiceCatalog.map((category) => <option key={category.id} value={category.id}>{category.title}</option>)}
+                        {serviceCatalog.map((category) => <option key={category.id} value={category.id}>{category.title}</option>)}
                       </select>
                     </label>
                     <label className="grid min-w-0 gap-2 md:col-span-2">
@@ -2110,6 +2178,8 @@ function SelectedServicesSummary({
   headingId,
   countryCode,
   businessType,
+  serviceCatalogueItems,
+  serviceCatalog,
   legacyScopes,
   onRemoveService,
   onRemoveDomain,
@@ -2119,22 +2189,24 @@ function SelectedServicesSummary({
   headingId: string;
   countryCode: string;
   businessType: string;
+  serviceCatalogueItems: PartnerServiceCatalogueItem[];
+  serviceCatalog: PartnerServiceCategory[];
   legacyScopes: PartnerOrganizationBundle["serviceScopes"];
   onRemoveService: (service: PartnerServiceCatalogueItem) => void;
   onRemoveDomain: (domainId: PartnerServiceDomainId) => void;
   onEditDomain: (domainId: PartnerServiceDomainId) => void;
 }) {
-  const selectedItems = form.selectedServiceCodes.map((code) => findPartnerCatalogueItem(code)).filter(Boolean) as PartnerServiceCatalogueItem[];
-  const selectedDomainIds = serviceDomainIdsFromCodes(form.selectedServiceCodes);
+  const selectedItems = form.selectedServiceCodes.map((code) => findPartnerCatalogueItemIn(serviceCatalogueItems, code)).filter(Boolean) as PartnerServiceCatalogueItem[];
+  const selectedDomainIds = serviceDomainIdsFromCodes(form.selectedServiceCodes, serviceCatalogueItems);
   const selectedItemsByDomain = selectedDomainIds.map((domainId) => ({
     domainId,
-    title: domainTitleFor(domainId),
+    title: domainTitleFor(domainId, serviceCatalog),
     items: selectedItems.filter((item) => item.domain === domainId),
   }));
   const selectedUnavailable = selectedItems.filter((item) => !partnerServiceEligibleForApplication(item, countryCode, businessType));
   const staleScopes = legacyScopes.filter((scope) => {
     if (scope.status === "disabled") return false;
-    const item = findPartnerCatalogueItem(scope.serviceCode);
+    const item = findPartnerCatalogueItemIn(serviceCatalogueItems, scope.serviceCode);
     return !item || !partnerServiceEligibleForApplication(item, countryCode, businessType);
   });
 
@@ -2714,10 +2786,10 @@ function locationFormFromBundle(bundle: PartnerOrganizationBundle | null): Busin
 function servicesFormFromBundle(bundle: PartnerOrganizationBundle | null): ServicesForm {
   const servicesDraft = readServicesDraft(bundle);
   const selectedFromDraft = Array.isArray(servicesDraft.selectedServiceCodes)
-    ? servicesDraft.selectedServiceCodes.map(String).filter((code) => findPartnerCatalogueItem(code))
+    ? servicesDraft.selectedServiceCodes.map(String).filter(Boolean)
     : [];
   const selectedFromScopes = bundle?.serviceScopes
-    .filter((scope) => scope.status !== "disabled" && findPartnerCatalogueItem(scope.serviceCode))
+    .filter((scope) => scope.status !== "disabled" && scope.serviceCode)
     .map((scope) => scope.serviceCode) ?? [];
   const requestedServices = Array.isArray(servicesDraft.requestedServices)
     ? servicesDraft.requestedServices.map((item, index) => requestedServiceFromRecord(asClientRecord(item), index)).filter((request) => request.requestedName || request.description)
@@ -2783,7 +2855,7 @@ function requestedServiceFromRecord(record: Record<string, unknown>, index: numb
     id: String(record.id || `request-${index + 1}`),
     requestedName: String(record.requestedName || ""),
     description: String(record.description || ""),
-    closestDomain: partnerServiceCatalog.some((category) => category.id === closestDomain) ? closestDomain as PartnerServiceDomainId : "",
+    closestDomain: closestDomain ? closestDomain as PartnerServiceDomainId : "",
   };
 }
 
@@ -2941,20 +3013,24 @@ function hasMeaningfulStepFourInput(form: ServicesForm): boolean {
   return Boolean(form.selectedServiceCodes.length || form.requestedServices.some((request) => request.requestedName.trim() || request.description.trim()));
 }
 
-function isServicesComplete(form: ServicesForm, countryCode: string, businessType: string): boolean {
+function isServicesComplete(form: ServicesForm, countryCode: string, businessType: string, catalogueItems: PartnerServiceCatalogueItem[]): boolean {
   return form.selectedServiceCodes.some((code) => {
-    const item = findPartnerCatalogueItem(code);
+    const item = findPartnerCatalogueItemIn(catalogueItems, code);
     return item ? partnerServiceEligibleForApplication(item, countryCode, businessType) : false;
   });
 }
 
-function domainTitleFor(domainId: PartnerServiceDomainId): string {
-  return partnerServiceCatalog.find((category) => category.id === domainId)?.title ?? "Service";
+function domainTitleFor(domainId: PartnerServiceDomainId, serviceCatalog: PartnerServiceCategory[]): string {
+  return serviceCatalog.find((category) => category.id === domainId)?.title ?? titleFromDomainId(domainId);
 }
 
-function serviceDomainIdsFromCodes(serviceCodes: string[]): PartnerServiceDomainId[] {
+function titleFromDomainId(domainId: string): string {
+  return domainId.split("-").filter(Boolean).map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" ");
+}
+
+function serviceDomainIdsFromCodes(serviceCodes: string[], catalogueItems: PartnerServiceCatalogueItem[]): PartnerServiceDomainId[] {
   const domainIds = serviceCodes
-    .map((code) => findPartnerCatalogueItem(code)?.domain)
+    .map((code) => findPartnerCatalogueItemIn(catalogueItems, code)?.domain)
     .filter(Boolean) as PartnerServiceDomainId[];
   return [...new Set(domainIds)];
 }
@@ -2970,7 +3046,7 @@ function serviceExample(key: string, label: string, selectedServiceCodes: string
     key,
     label,
     values: {
-      selectedServiceCodes: selectedServiceCodes.filter((code) => Boolean(findPartnerCatalogueItem(code))),
+      selectedServiceCodes,
       requestedServices: [],
       requestPanelOpen: false,
     },
@@ -3130,7 +3206,7 @@ function mergeLocationForm(input: Partial<BusinessLocationForm>): BusinessLocati
 
 function mergeServicesForm(input: Partial<ServicesForm>): ServicesForm {
   const selectedServiceCodes = Array.isArray(input.selectedServiceCodes)
-    ? [...new Set(input.selectedServiceCodes.map(String).filter((code) => findPartnerCatalogueItem(code)))]
+    ? [...new Set(input.selectedServiceCodes.map(String).filter(Boolean))]
     : [];
   const requestedServices = Array.isArray(input.requestedServices)
     ? input.requestedServices.map((request, index) => requestedServiceFromRecord(asClientRecord(request), index)).filter((request) => request.requestedName || request.description)

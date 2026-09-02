@@ -18,7 +18,7 @@ import {
   type PartnerOrganizationProfileErrors,
 } from "../lib/partner/partnerOrganizationPreviewProfile";
 import { selectedServicesLabel } from "../lib/partner/partnerPreviewSelection";
-import type { PartnerServiceDefinition } from "../lib/partner/partnerServiceCatalog";
+import type { PartnerServiceDefinition } from "../lib/partner/partnerServiceCatalogRuntime";
 import {
   getPhoneCountry,
   isNationalPhoneValid,
