@@ -27,6 +27,7 @@ test("service catalogue includes all required Partner domains", () => {
     "Film, Shooting & OTT",
     "Marketplace & Local Commerce",
     "Professional & Local Services",
+    "Travel Documentation & Insurance",
   ]);
 });
 
@@ -57,6 +58,9 @@ test("service catalogue includes required service modules", () => {
     "Shooting Location",
     "Permissions / Facilitation",
     "Photographer",
+    "Visa Assistance",
+    "Travel Insurance Provider",
+    "International Travel Medical Insurance",
   ]) {
     expect(labels, `${requiredLabel} should be visible`).toContain(requiredLabel);
   }
@@ -73,6 +77,9 @@ test("service catalogue carries future capability and verification profile metad
   expect(findPartnerCatalogueItem("paragliding")?.verificationProfileKey).toBe("adventure_air_individual");
   expect(findPartnerCatalogueItem("yatra-operator-organizer")?.verificationProfileKey).toBe("travel_yatra_operator");
   expect(findPartnerCatalogueItem("marketplace-seller")?.capabilities.includes("orders")).toBe(true);
+  expect(findPartnerCatalogueItem("visa-assistance")?.verificationProfileKey).toBe("travel_documentation_provider");
+  expect(findPartnerCatalogueItem("travel-insurance-distributor-agent")?.verificationProfileKey).toBe("insurance_intermediary");
+  expect(findPartnerCatalogueItem("insurance-claim-assistance")?.capabilities).toContain("claim_assistance_request");
 });
 
 test("search surfaces packages, yatra, healthcare, wedding, shooting, and commerce services", () => {
@@ -84,6 +91,30 @@ test("search surfaces packages, yatra, healthcare, wedding, shooting, and commer
   assertSearchContains("wedding", ["Wedding Planner", "Wedding Venue"]);
   assertSearchContains("shoot", ["Shooting Location", "Production Support"]);
   assertSearchContains("food", ["Local Food Seller", "Restaurant"]);
+  assertSearchContains("visa", ["Visa Assistance", "Tourist Visa Assistance"]);
+  assertSearchContains("insurance", ["Travel Insurance Provider", "Medical Insurance Provider"]);
+  assertSearchContains("claim assistance", ["Insurance Claim Assistance"]);
+});
+
+test("travel documentation and insurance hierarchy uses non-selectable category parents", () => {
+  const domain = partnerServiceCatalog.find((category) => category.id === "travel-documentation-insurance");
+  expect(domain?.title).toBe("Travel Documentation & Insurance");
+  expect(domain?.services.map((service) => service.label)).toContain("Visa Assistance");
+  expect(domain?.services.map((service) => service.label)).not.toContain("Visa & Travel Documentation");
+
+  for (const code of ["visa-travel-documentation", "travel-insurance", "medical-travel-health-insurance"]) {
+    expect(findPartnerCatalogueItem(code)).toMatchObject({
+      domain: "travel-documentation-insurance",
+      applicationSelectable: false,
+      serviceApprovalRequired: true,
+    });
+  }
+
+  expect(findPartnerCatalogueItem("medical-tourism-insurance-assistance")).toMatchObject({
+    parentCode: "medical-travel-health-insurance",
+    verificationProfileKey: "health_insurance_business",
+    serviceApprovalRequired: true,
+  });
 });
 
 test("eligibility hides non-selectable request foundation while keeping it readable", () => {
@@ -119,6 +150,7 @@ test("eligible domain dropdown options can be searched and exclude already-open 
   expect(remaining).not.toContain("Wedding & Events");
   expect(remaining).not.toContain("Transport & Mobility");
   expect(remaining).toContain("Stay & Accommodation");
+  expect(remaining).toContain("Travel Documentation & Insurance");
 });
 
 test("selected domain service options are scoped to that domain and searchable by alias", () => {

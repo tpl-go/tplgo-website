@@ -10,6 +10,7 @@ export type PartnerServiceDomainId =
   | "film-shooting-ott"
   | "marketplace-local-commerce"
   | "professional-local-services"
+  | "travel-documentation-insurance"
   | "other-emerging";
 
 export type PartnerServiceStatus = "active" | "inactive" | "archived";
@@ -30,6 +31,14 @@ export type PartnerServiceCapability =
   | "service_packages"
   | "products"
   | "orders"
+  | "document_checklist"
+  | "appointment_assistance"
+  | "application_tracking"
+  | "customer_communication"
+  | "plan_catalogue"
+  | "quote_request_handoff"
+  | "policy_assistance"
+  | "claim_assistance_request"
   | "project_enquiries";
 
 export type PartnerServiceCatalogueItem = {
@@ -87,6 +96,7 @@ const domains: Record<PartnerServiceDomainId, { title: string; description: stri
   "film-shooting-ott": { title: "Film, Shooting & OTT", description: "Locations, permissions, and production support services.", icon: "clapperboard" },
   "marketplace-local-commerce": { title: "Marketplace & Local Commerce", description: "Local sellers, food, products, and travel essentials.", icon: "shopping-bag" },
   "professional-local-services": { title: "Professional & Local Services", description: "Professionals and local support services for travellers and events.", icon: "user-check" },
+  "travel-documentation-insurance": { title: "Travel Documentation & Insurance", description: "Visa, travel documentation and travel insurance assistance services.", icon: "file-shield" },
   "other-emerging": { title: "Other / Emerging", description: "Controlled requests for services not yet in the catalogue.", icon: "plus-circle" },
 };
 
@@ -312,6 +322,7 @@ export const partnerServiceCatalogue: PartnerServiceCatalogueItem[] = [
     ["local-facilitator", "Local Facilitator", "Local facilitator services."],
     ["other-professional-service", "Other Professional Service", "Professional service not listed above."],
   ]),
+  ...travelDocumentationInsuranceItems(),
   ...items("other-emerging", "manual_review", ["project_enquiries"], true, [
     ["other-service-request", "Request another service", "Request a service not currently listed."],
   ]),
@@ -471,6 +482,107 @@ function items(
     capabilities,
     aliases: [alias, name, shortDescription, domain].filter(Boolean) as string[],
   }));
+}
+
+function travelDocumentationInsuranceItems(): PartnerServiceCatalogueItem[] {
+  const domain: PartnerServiceDomainId = "travel-documentation-insurance";
+  const offset = Object.keys(domains).indexOf(domain) * 1000;
+  const category = (stableCode: string, name: string, index: number): PartnerServiceCatalogueItem => ({
+    id: `svc_${stableCode}`,
+    stableCode,
+    name,
+    shortDescription: `${name} grouping for travel documentation and insurance services.`,
+    domain,
+    icon: domains[domain].icon,
+    displayOrder: offset + index,
+    status: "active",
+    published: true,
+    countries: ["IN", "AE", "US", "CA", "GB", "AU", "SG", "TH", "NP", "BT"],
+    individualAllowed: false,
+    organizationAllowed: true,
+    applicationSelectable: false,
+    serviceApprovalRequired: true,
+    verificationProfileKey: "manual_review",
+    capabilities: ["project_enquiries"],
+    aliases: [name, domains[domain].title],
+  });
+  const service = (
+    parentCode: string,
+    stableCode: string,
+    name: string,
+    shortDescription: string,
+    displayOrder: number,
+    verificationProfileKey: string,
+    capabilities: PartnerServiceCapability[],
+    aliases: string[],
+    individualAllowed = false
+  ): PartnerServiceCatalogueItem => ({
+    id: `svc_${stableCode}`,
+    stableCode,
+    name,
+    shortDescription,
+    domain,
+    parentCode,
+    icon: domains[domain].icon,
+    displayOrder: offset + displayOrder,
+    status: "active",
+    published: true,
+    countries: ["IN", "AE", "US", "CA", "GB", "AU", "SG", "TH", "NP", "BT"],
+    individualAllowed,
+    organizationAllowed: true,
+    applicationSelectable: true,
+    serviceApprovalRequired: true,
+    verificationProfileKey,
+    capabilities,
+    aliases: [name, domains[domain].title, ...aliases],
+  });
+  const visa = "visa-travel-documentation";
+  const travelInsurance = "travel-insurance";
+  const healthInsurance = "medical-travel-health-insurance";
+  return [
+    category(visa, "Visa & Travel Documentation", 1),
+    service(visa, "visa-assistance", "Visa Assistance", "Assistance with visa application preparation and travel documentation coordination; government or embassy approval remains authoritative.", 11, "travel_documentation_provider", ["project_enquiries", "document_checklist", "customer_communication"], ["visa", "visa agent", "visa consultant", "travel documentation"], true),
+    service(visa, "tourist-visa-assistance", "Tourist Visa Assistance", "Tourist visa document guidance and application facilitation; approval decisions remain with the relevant authority.", 12, "visa_assistance_business", ["project_enquiries", "document_checklist", "application_tracking", "customer_communication"], ["visa", "tourist visa", "visa consultant"], true),
+    service(visa, "business-visa-assistance", "Business Visa Assistance", "Business travel visa documentation support and application facilitation.", 13, "visa_assistance_business", ["project_enquiries", "document_checklist", "application_tracking", "customer_communication"], ["visa", "business visa", "embassy appointment"]),
+    service(visa, "medical-visa-assistance", "Medical Visa Assistance", "Medical travel visa documentation assistance and coordination; medical treatment approval is separate.", 14, "visa_assistance_business", ["project_enquiries", "document_checklist", "application_tracking", "customer_communication"], ["visa", "medical visa", "medical travel"]),
+    service(visa, "student-visa-assistance", "Student Visa Assistance", "Student visa documentation assistance and appointment coordination.", 15, "visa_assistance_business", ["project_enquiries", "document_checklist", "appointment_assistance", "customer_communication"], ["visa", "student visa", "overseas education"]),
+    service(visa, "transit-visa-assistance", "Transit Visa Assistance", "Transit visa document guidance and facilitation where required by itinerary.", 16, "visa_assistance_business", ["project_enquiries", "document_checklist", "customer_communication"], ["visa", "transit visa"]),
+    service(visa, "pilgrimage-religious-travel-visa-assistance", "Pilgrimage / Religious Travel Visa Assistance", "Pilgrimage or religious travel visa documentation assistance where applicable.", 17, "visa_assistance_business", ["project_enquiries", "document_checklist", "appointment_assistance", "customer_communication"], ["visa", "pilgrimage visa", "religious travel visa", "yatra"]),
+    service(visa, "travel-documentation-assistance", "Travel Documentation Assistance", "Travel document checklist, preparation and coordination support.", 18, "travel_documentation_provider", ["project_enquiries", "document_checklist", "customer_communication"], ["travel documentation", "passport assistance"]),
+    service(visa, "passport-documentation-assistance", "Passport Documentation Assistance", "Passport documentation guidance and facilitation support where permitted.", 19, "travel_documentation_provider", ["project_enquiries", "document_checklist", "appointment_assistance", "customer_communication"], ["passport assistance", "travel documentation"]),
+    service(visa, "embassy-application-facilitation", "Embassy / Application Facilitation", "Embassy or application-centre appointment and submission facilitation; authority decisions remain external.", 20, "travel_documentation_provider", ["project_enquiries", "appointment_assistance", "application_tracking", "customer_communication"], ["embassy appointment", "visa appointment", "application tracking"]),
+    service(visa, "visa-appointment-assistance", "Visa Appointment Assistance", "Visa appointment scheduling assistance and applicant coordination.", 21, "visa_assistance_business", ["project_enquiries", "appointment_assistance", "customer_communication"], ["visa appointment", "embassy appointment"]),
+    service(visa, "visa-document-translation-attestation-assistance", "Visa Document Translation / Attestation Assistance", "Document translation and attestation assistance for travel applications where applicable.", 22, "travel_documentation_provider", ["project_enquiries", "document_checklist", "customer_communication"], ["document translation", "attestation", "visa documentation"]),
+    service(visa, "other-visa-travel-documentation-service", "Other Visa & Travel Documentation Service", "Visa or travel documentation assistance service not listed above.", 23, "travel_documentation_provider", ["project_enquiries", "document_checklist", "customer_communication"], ["visa", "travel documentation"]),
+    category(travelInsurance, "Travel Insurance", 100),
+    service(travelInsurance, "travel-insurance-provider", "Travel Insurance Provider", "Licensed travel insurance provider services subject to applicable jurisdiction and regulatory verification.", 111, "insurance_provider", ["project_enquiries", "plan_catalogue", "policy_assistance", "customer_communication"], ["travel insurance", "trip insurance"]),
+    service(travelInsurance, "travel-insurance-distributor-agent", "Travel Insurance Distributor / Agent", "Authorized travel insurance distribution or intermediary services where permitted.", 112, "insurance_intermediary", ["project_enquiries", "quote_request_handoff", "policy_assistance", "customer_communication"], ["travel insurance", "insurance agent", "trip insurance"]),
+    service(travelInsurance, "domestic-travel-insurance", "Domestic Travel Insurance", "Domestic travel insurance plan presentation or assistance subject to provider authorization.", 113, "travel_insurance_business", ["project_enquiries", "plan_catalogue", "quote_request_handoff", "policy_assistance"], ["domestic travel insurance", "trip insurance"]),
+    service(travelInsurance, "international-travel-insurance", "International Travel Insurance", "International travel insurance plan presentation or assistance subject to provider authorization.", 114, "travel_insurance_business", ["project_enquiries", "plan_catalogue", "quote_request_handoff", "policy_assistance"], ["international travel insurance", "overseas insurance", "trip insurance"]),
+    service(travelInsurance, "single-trip-travel-insurance", "Single-trip Travel Insurance", "Single-trip travel insurance assistance for one journey.", 115, "travel_insurance_business", ["project_enquiries", "quote_request_handoff", "policy_assistance"], ["single trip insurance", "trip insurance"]),
+    service(travelInsurance, "multi-trip-travel-insurance", "Multi-trip Travel Insurance", "Multi-trip travel insurance assistance for frequent travel.", 116, "travel_insurance_business", ["project_enquiries", "quote_request_handoff", "policy_assistance"], ["multi trip insurance", "annual travel insurance"]),
+    service(travelInsurance, "student-travel-insurance", "Student Travel Insurance", "Student travel insurance assistance for study-related journeys.", 117, "travel_insurance_business", ["project_enquiries", "quote_request_handoff", "policy_assistance"], ["student travel insurance", "overseas insurance"]),
+    service(travelInsurance, "senior-citizen-travel-insurance", "Senior Citizen Travel Insurance", "Senior citizen travel insurance assistance subject to plan and jurisdiction rules.", 118, "travel_insurance_business", ["project_enquiries", "quote_request_handoff", "policy_assistance"], ["senior citizen travel insurance"]),
+    service(travelInsurance, "adventure-travel-insurance", "Adventure Travel Insurance", "Adventure travel insurance assistance subject to plan coverage and exclusions.", 119, "travel_insurance_business", ["project_enquiries", "quote_request_handoff", "policy_assistance"], ["adventure travel insurance", "trip insurance"]),
+    service(travelInsurance, "trip-cancellation-interruption-insurance", "Trip Cancellation / Interruption Insurance", "Trip cancellation or interruption insurance assistance subject to policy terms.", 120, "travel_insurance_business", ["project_enquiries", "quote_request_handoff", "policy_assistance"], ["trip cancellation insurance", "trip interruption insurance"]),
+    service(travelInsurance, "baggage-loss-delay-insurance-assistance", "Baggage / Loss / Delay Insurance Assistance", "Baggage loss or delay insurance assistance subject to policy terms.", 121, "insurance_claim_assistance", ["project_enquiries", "policy_assistance", "claim_assistance_request", "customer_communication"], ["baggage insurance", "loss delay insurance", "claim assistance"]),
+    service(travelInsurance, "flight-delay-missed-connection-insurance-assistance", "Flight Delay / Missed Connection Insurance Assistance", "Flight delay or missed connection insurance assistance subject to policy terms.", 122, "insurance_claim_assistance", ["project_enquiries", "policy_assistance", "claim_assistance_request", "customer_communication"], ["flight delay insurance", "missed connection insurance", "claim assistance"]),
+    service(travelInsurance, "other-travel-insurance-service", "Other Travel Insurance Service", "Travel insurance service not listed above.", 123, "travel_insurance_business", ["project_enquiries", "quote_request_handoff", "policy_assistance"], ["travel insurance", "trip insurance"]),
+    category(healthInsurance, "Medical & Travel Health Insurance", 200),
+    service(healthInsurance, "international-travel-medical-insurance", "International Travel Medical Insurance", "International travel medical insurance assistance subject to insurer authorization and policy terms.", 211, "health_insurance_business", ["project_enquiries", "plan_catalogue", "quote_request_handoff", "policy_assistance"], ["medical insurance", "travel medical cover", "overseas insurance"]),
+    service(healthInsurance, "domestic-travel-medical-insurance", "Domestic Travel Medical Insurance", "Domestic travel medical insurance assistance subject to plan and jurisdiction rules.", 212, "health_insurance_business", ["project_enquiries", "plan_catalogue", "quote_request_handoff", "policy_assistance"], ["medical insurance", "health insurance"]),
+    service(healthInsurance, "medical-tourism-insurance-assistance", "Medical Tourism Insurance Assistance", "Insurance assistance for medical tourism travel; this is not a medical-treatment provider service.", 213, "health_insurance_business", ["project_enquiries", "quote_request_handoff", "policy_assistance", "customer_communication"], ["medical tourism", "medical insurance", "travel medical cover"]),
+    service(healthInsurance, "overseas-health-insurance", "Overseas Health Insurance", "Overseas health insurance assistance subject to applicable insurer and country rules.", 214, "health_insurance_business", ["project_enquiries", "plan_catalogue", "quote_request_handoff", "policy_assistance"], ["overseas insurance", "health insurance"]),
+    service(healthInsurance, "student-overseas-health-insurance", "Student Overseas Health Insurance", "Student overseas health insurance assistance for international education travel.", 215, "health_insurance_business", ["project_enquiries", "quote_request_handoff", "policy_assistance"], ["student overseas insurance", "health insurance"]),
+    service(healthInsurance, "emergency-medical-travel-cover", "Emergency Medical Travel Cover", "Emergency medical travel cover assistance subject to policy terms.", 216, "health_insurance_business", ["project_enquiries", "quote_request_handoff", "policy_assistance"], ["emergency medical cover", "travel medical cover"]),
+    service(healthInsurance, "medical-evacuation-repatriation-cover-assistance", "Medical Evacuation / Repatriation Cover Assistance", "Medical evacuation or repatriation cover assistance subject to policy terms.", 217, "insurance_claim_assistance", ["project_enquiries", "policy_assistance", "claim_assistance_request", "customer_communication"], ["medical evacuation", "repatriation cover", "claim assistance"]),
+    service(healthInsurance, "visitor-health-insurance", "Visitor Health Insurance", "Visitor health insurance assistance for inbound or outbound travel.", 218, "health_insurance_business", ["project_enquiries", "quote_request_handoff", "policy_assistance"], ["visitor insurance", "health insurance"]),
+    service(healthInsurance, "senior-citizen-travel-medical-insurance", "Senior Citizen Travel Medical Insurance", "Senior citizen travel medical insurance assistance subject to plan terms.", 219, "health_insurance_business", ["project_enquiries", "quote_request_handoff", "policy_assistance"], ["senior citizen medical insurance", "travel medical cover"]),
+    service(healthInsurance, "medical-insurance-provider", "Medical Insurance Provider", "Licensed medical insurance provider services subject to applicable jurisdiction and regulatory verification.", 220, "insurance_provider", ["project_enquiries", "plan_catalogue", "policy_assistance", "customer_communication"], ["medical insurance", "health insurance"]),
+    service(healthInsurance, "medical-insurance-distributor-agent", "Medical Insurance Distributor / Agent", "Authorized medical insurance distribution or intermediary services where permitted.", 221, "insurance_intermediary", ["project_enquiries", "quote_request_handoff", "policy_assistance", "customer_communication"], ["medical insurance", "health insurance", "insurance agent"]),
+    service(healthInsurance, "insurance-claim-assistance", "Insurance Claim Assistance", "Insurance claim assistance and customer coordination subject to policy and insurer process.", 222, "insurance_claim_assistance", ["project_enquiries", "claim_assistance_request", "customer_communication"], ["claim assistance", "insurance assistance"]),
+    service(healthInsurance, "other-medical-health-insurance-service", "Other Medical / Health Insurance Service", "Medical or health insurance service not listed above.", 223, "health_insurance_business", ["project_enquiries", "quote_request_handoff", "policy_assistance"], ["medical insurance", "health insurance"]),
+  ];
 }
 
 function normalizeCountryCode(countryCodeOrName: string): string {
