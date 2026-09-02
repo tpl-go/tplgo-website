@@ -462,6 +462,7 @@ export default function PartnerApplicationWorkspaceClient({
   const [businessForm, setBusinessForm] = useState<BusinessIdentityForm>(() => emptyBusinessForm());
   const [locationForm, setLocationForm] = useState<BusinessLocationForm>(() => emptyLocationForm());
   const [servicesForm, setServicesForm] = useState<ServicesForm>(() => emptyServicesForm());
+  const [activeServiceDomainIds, setActiveServiceDomainIds] = useState<PartnerServiceDomainId[]>([]);
   const formRef = useRef(form);
   const businessFormRef = useRef(businessForm);
   const locationFormRef = useRef(locationForm);
@@ -534,6 +535,7 @@ export default function PartnerApplicationWorkspaceClient({
       setBusinessForm(nextBusinessForm);
       setLocationForm(nextLocationForm);
       setServicesForm(nextServicesForm);
+      setActiveServiceDomainIds(serviceDomainIdsFromCodes(nextServicesForm.selectedServiceCodes));
       setQaVerifiedContacts(savedForState?.verified ?? {
         mobile: contactVerified(qaBundle, "mobile", normalizedMobile(nextForm.businessMobile, nextForm.countryCode)),
         email: contactVerified(qaBundle, "email", normalizeEmail(nextForm.businessEmail)),
@@ -556,7 +558,9 @@ export default function PartnerApplicationWorkspaceClient({
         setForm(formFromBundle(result.data, user));
         setBusinessForm(businessFormFromBundle(result.data));
         setLocationForm(locationFormFromBundle(result.data));
-        setServicesForm(servicesFormFromBundle(result.data));
+        const nextServicesForm = servicesFormFromBundle(result.data);
+        setServicesForm(nextServicesForm);
+        setActiveServiceDomainIds(serviceDomainIdsFromCodes(nextServicesForm.selectedServiceCodes));
         setLastSavedAt(readLastSaved(result.data));
         setActiveStep(resolveActiveStep(result.data));
         setLoadStatus("ready");
@@ -644,6 +648,28 @@ export default function PartnerApplicationWorkspaceClient({
       return resolved;
     });
     setSaveStatus("idle");
+  }
+
+  function removeSelectedService(service: PartnerServiceCatalogueItem) {
+    updateServicesForm((current) => {
+      const remainingCodes = current.selectedServiceCodes.filter((code) => code !== service.stableCode);
+      const domainStillSelected = remainingCodes.some((code) => findPartnerCatalogueItem(code)?.domain === service.domain);
+      if (!domainStillSelected) {
+        setActiveServiceDomainIds((domains) => domains.filter((domainId) => domainId !== service.domain));
+      }
+      return { selectedServiceCodes: remainingCodes };
+    });
+  }
+
+  function removeSelectedServiceDomain(domainId: PartnerServiceDomainId) {
+    updateServicesForm((current) => ({
+      selectedServiceCodes: current.selectedServiceCodes.filter((code) => findPartnerCatalogueItem(code)?.domain !== domainId),
+    }));
+    setActiveServiceDomainIds((current) => current.filter((id) => id !== domainId));
+  }
+
+  function openSelectedServiceDomain(domainId: PartnerServiceDomainId) {
+    setActiveServiceDomainIds((current) => current.includes(domainId) ? current : [...current, domainId]);
   }
 
   function changeQaPreviewState(state: PartnerQaPreviewState) {
@@ -1009,6 +1035,7 @@ export default function PartnerApplicationWorkspaceClient({
     setBusinessForm(nextBusinessForm);
     setLocationForm(nextLocationForm);
     setServicesForm(nextServicesForm);
+    setActiveServiceDomainIds(serviceDomainIdsFromCodes(nextServicesForm.selectedServiceCodes));
     setQaVerifiedContacts({
       mobile: contactVerified(qaBundle, "mobile", normalizedMobile(nextForm.businessMobile, nextForm.countryCode)),
       email: contactVerified(qaBundle, "email", normalizeEmail(nextForm.businessEmail)),
@@ -1146,13 +1173,32 @@ export default function PartnerApplicationWorkspaceClient({
                 canComplete={canCompleteStepFour}
                 qaPreviewEnabled={qaPreviewEnabled}
                 legacyScopes={activeBundle?.serviceScopes ?? []}
+                activeDomainIds={activeServiceDomainIds}
+                onActiveDomainIdsChange={setActiveServiceDomainIds}
+                onRemoveSelectedService={removeSelectedService}
+                onRemoveSelectedServiceDomain={removeSelectedServiceDomain}
+                onOpenSelectedServiceDomain={openSelectedServiceDomain}
                 onChange={updateServicesForm}
               />
             ) : (
               <PlaceholderStep step={workspaceSteps.find((step) => step.id === activeStep) ?? workspaceSteps[1]!} />
             )}
           </section>
-          <HelpPanel activeStep={activeStep} />
+          <HelpPanel
+            activeStep={activeStep}
+            servicesSummary={activeStep === "services" ? (
+              <SelectedServicesSummary
+                form={servicesForm}
+                headingId="selected-services-summary-desktop"
+                countryCode={locationForm.primaryLocation.countryCode}
+                businessType={businessForm.organizationType}
+                legacyScopes={activeBundle?.serviceScopes ?? []}
+                onRemoveService={removeSelectedService}
+                onRemoveDomain={removeSelectedServiceDomain}
+                onEditDomain={openSelectedServiceDomain}
+              />
+            ) : null}
+          />
         </div>
 
         <footer className="sticky bottom-0 z-30 border-t border-white/10 bg-[#11141a]/95 px-4 py-3 backdrop-blur">
@@ -1737,6 +1783,11 @@ function ServicesStep({
   canComplete,
   qaPreviewEnabled,
   legacyScopes,
+  activeDomainIds,
+  onActiveDomainIdsChange,
+  onRemoveSelectedService,
+  onRemoveSelectedServiceDomain,
+  onOpenSelectedServiceDomain,
   onChange,
 }: {
   form: ServicesForm;
@@ -1745,10 +1796,13 @@ function ServicesStep({
   canComplete: boolean;
   qaPreviewEnabled: boolean;
   legacyScopes: PartnerOrganizationBundle["serviceScopes"];
+  activeDomainIds: PartnerServiceDomainId[];
+  onActiveDomainIdsChange: (next: PartnerServiceDomainId[] | ((current: PartnerServiceDomainId[]) => PartnerServiceDomainId[])) => void;
+  onRemoveSelectedService: (service: PartnerServiceCatalogueItem) => void;
+  onRemoveSelectedServiceDomain: (domainId: PartnerServiceDomainId) => void;
+  onOpenSelectedServiceDomain: (domainId: PartnerServiceDomainId) => void;
   onChange: (next: ServicesFormUpdate) => void;
 }) {
-  const [domainQuery, setDomainQuery] = useState("");
-  const [activeDomainIds, setActiveDomainIds] = useState<PartnerServiceDomainId[]>([]);
   const [serviceFilters, setServiceFilters] = useState<Record<string, string>>({});
   const eligibleCatalog = useMemo(() => filterEligiblePartnerServiceCatalog(partnerServiceCatalog, countryCode, businessType), [businessType, countryCode]);
   const selectedItems = useMemo(() => form.selectedServiceCodes.map((code) => findPartnerCatalogueItem(code)).filter(Boolean) as PartnerServiceCatalogueItem[], [form.selectedServiceCodes]);
@@ -1757,17 +1811,11 @@ function ServicesStep({
     const domains = selectedItems.map((item) => item.domain);
     return [...new Set(domains)];
   }, [selectedItems]);
-  const selectedItemsByDomain = selectedDomainIds.map((domainId) => ({
-    domainId,
-    title: domainTitleFor(domainId),
-    items: selectedItems.filter((item) => item.domain === domainId),
-  }));
   const visibleDomainIds = [...new Set([...activeDomainIds, ...selectedDomainIds])];
   const activeDomains = visibleDomainIds
     .map((domainId) => eligibleCatalog.find((category) => category.id === domainId))
     .filter(Boolean) as typeof eligibleCatalog;
   const remainingDomains = eligibleCatalog.filter((category) => !visibleDomainIds.includes(category.id));
-  const domainOptions = eligibleCatalog.filter((category) => matchesServiceSearch(category.title, domainQuery) || matchesServiceSearch(category.description, domainQuery));
   const selectedUnavailable = selectedItems.filter((item) => !partnerServiceEligibleForApplication(item, countryCode, businessType));
   const staleScopes = legacyScopes.filter((scope) => {
     if (scope.status === "disabled") return false;
@@ -1778,8 +1826,7 @@ function ServicesStep({
 
   function addDomainBlock(domainId: PartnerServiceDomainId | "") {
     if (!domainId) return;
-    setActiveDomainIds((current) => current.includes(domainId) ? current : [...current, domainId]);
-    setDomainQuery("");
+    onActiveDomainIdsChange((current) => current.includes(domainId) ? current : [...current, domainId]);
   }
 
   function toggleService(service: PartnerServiceCatalogueItem) {
@@ -1790,7 +1837,7 @@ function ServicesStep({
         const remainingCodes = current.selectedServiceCodes.filter((code) => code !== service.stableCode);
         const domainStillSelected = remainingCodes.some((code) => findPartnerCatalogueItem(code)?.domain === service.domain);
         if (!domainStillSelected) {
-          setActiveDomainIds((domains) => domains.filter((domainId) => domainId !== service.domain));
+          onActiveDomainIdsChange((domains) => domains.filter((domainId) => domainId !== service.domain));
         }
         return { selectedServiceCodes: remainingCodes };
       }
@@ -1801,14 +1848,11 @@ function ServicesStep({
   }
 
   function removeDomainGroup(domainId: PartnerServiceDomainId) {
-    onChange((current) => ({
-      selectedServiceCodes: current.selectedServiceCodes.filter((code) => findPartnerCatalogueItem(code)?.domain !== domainId),
-    }));
-    setActiveDomainIds((current) => current.filter((id) => id !== domainId));
+    onRemoveSelectedServiceDomain(domainId);
   }
 
   function editDomainGroup(domainId: PartnerServiceDomainId) {
-    setActiveDomainIds((current) => current.includes(domainId) ? current : [...current, domainId]);
+    onOpenSelectedServiceDomain(domainId);
   }
 
   function updateRequest(id: string, next: Partial<RequestedServiceForm>) {
@@ -1842,7 +1886,10 @@ function ServicesStep({
               defaultValue=""
               onChange={(event) => {
                 const selected = qaServicesExamples.find((example) => example.key === event.target.value);
-                if (selected) onChange(selected.values);
+                if (selected) {
+                  onActiveDomainIdsChange(serviceDomainIdsFromCodes(selected.values.selectedServiceCodes));
+                  onChange(selected.values);
+                }
               }}
               className="h-10 rounded-xl border border-[#f97316]/30 bg-[#11141a] px-3 text-sm font-bold text-white outline-none focus:border-[#f97316] focus:ring-2 focus:ring-[#f97316]/25"
             >
@@ -1852,229 +1899,177 @@ function ServicesStep({
           </div>
         ) : null}
 
-        <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
-          <div className="grid min-w-0 gap-5">
-            <section className="rounded-xl border border-white/10 bg-[#11141a] p-4" aria-labelledby="select-your-services-heading">
-              <div className="flex flex-col gap-4">
-                <SectionHeading title="Select Your Services" detail="Start with a service area, then choose the exact services you provide." />
-                <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(220px,320px)]">
-                  <label className="grid min-w-0 gap-2">
-                    <span id="select-your-services-heading" className="text-xs font-black uppercase tracking-[0.1em] text-slate-300">Please select a service</span>
-                    <select
-                      data-primary-service-dropdown="true"
-                      value=""
-                      onChange={(event) => addDomainBlock(event.target.value as PartnerServiceDomainId | "")}
-                      className="h-12 w-full rounded-xl border border-white/10 bg-[#0f1217] px-3 text-sm font-bold text-white outline-none focus:border-[#38bdf8] focus:ring-2 focus:ring-[#38bdf8]/25"
-                    >
-                      <option value="">Choose a service area</option>
-                      {domainOptions.map((category) => (
-                        <option key={category.id} value={category.id}>{category.title}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="relative grid min-w-0 gap-2">
-                    <span className="text-xs font-black uppercase tracking-[0.1em] text-slate-300">Search service areas</span>
-                    <Search className="pointer-events-none absolute left-3 top-[39px] text-slate-500" size={17} aria-hidden="true" />
-                    <input
-                      data-domain-search="true"
-                      value={domainQuery}
-                      onChange={(event) => setDomainQuery(event.target.value)}
-                      placeholder="Search domains"
-                      className="h-12 w-full rounded-xl border border-white/10 bg-[#0f1217] pl-10 pr-10 text-sm font-semibold text-white outline-none placeholder:text-slate-500 focus:border-[#38bdf8] focus:ring-2 focus:ring-[#38bdf8]/25"
-                    />
-                    {domainQuery ? (
-                      <button type="button" onClick={() => setDomainQuery("")} className="absolute right-3 top-[39px] text-slate-400 hover:text-white" aria-label="Clear service area search">
-                        <X size={16} aria-hidden="true" />
-                      </button>
-                    ) : null}
-                  </label>
-                </div>
-                {eligibleCatalog.length ? null : (
-                  <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 p-3 text-sm font-bold text-amber-100">
-                    No service areas are available for this country and business type yet.
-                  </div>
-                )}
-              </div>
-            </section>
+        <div className="xl:hidden">
+          <SelectedServicesSummary
+            form={form}
+            headingId="selected-services-summary-mobile"
+            countryCode={countryCode}
+            businessType={businessType}
+            legacyScopes={legacyScopes}
+            onRemoveService={onRemoveSelectedService}
+            onRemoveDomain={removeDomainGroup}
+            onEditDomain={editDomainGroup}
+          />
+        </div>
 
-            <section className="rounded-xl border border-white/10 bg-[#11141a] p-4" aria-labelledby="available-services-heading">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <h2 id="available-services-heading" className="text-sm font-black text-white">Available Services</h2>
-                  <p className="mt-1 text-xs font-semibold text-slate-400">Only services from your selected service area are shown here.</p>
-                </div>
-                <span className="rounded-full border border-[#38bdf8]/30 bg-[#38bdf8]/10 px-3 py-1 text-xs font-black text-[#bae6fd]">
-                  {activeDomains.length} service area{activeDomains.length === 1 ? "" : "s"} open
-                </span>
-              </div>
+        <section className="rounded-xl border border-white/10 bg-[#11141a] p-4" aria-labelledby="select-your-services-heading">
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(260px,360px)] lg:items-end">
+            <SectionHeading title="Select Your Services" detail="Start with a service area, then choose the exact services you provide." />
+            <label className="grid min-w-0 gap-2">
+              <span id="select-your-services-heading" className="text-xs font-black uppercase tracking-[0.1em] text-slate-300">Please select a service area</span>
+              <select
+                data-primary-service-dropdown="true"
+                value=""
+                onChange={(event) => addDomainBlock(event.target.value as PartnerServiceDomainId | "")}
+                className="h-12 w-full appearance-auto rounded-xl border border-white/10 bg-[#0f1217] px-3 text-sm font-bold text-white outline-none focus:border-[#38bdf8] focus:ring-2 focus:ring-[#38bdf8]/25"
+              >
+                <option value="">Select a service area</option>
+                {eligibleCatalog.map((category) => (
+                  <option key={category.id} value={category.id}>{category.title}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+          {eligibleCatalog.length ? null : (
+            <div className="mt-4 rounded-xl border border-amber-400/30 bg-amber-400/10 p-3 text-sm font-bold text-amber-100">
+              No service areas are available for this country and business type yet.
+            </div>
+          )}
+        </section>
 
-              <div className="mt-4 grid gap-4">
-                {activeDomains.length ? activeDomains.map((category, index) => {
-                  const filter = serviceFilters[category.id] ?? "";
-                  const services = category.services.filter((service) => {
-                    const item = findPartnerCatalogueItem(service.id);
-                    if (!item) return false;
-                    return matchesServiceSearch(`${item.name} ${item.shortDescription} ${item.aliases.join(" ")} ${category.title}`, filter);
-                  });
-                  const selectedCount = category.services.filter((service) => selectedCodes.has(service.id)).length;
-                  return (
-                    <div key={category.id} className="rounded-xl border border-[#38bdf8]/20 bg-[#0f1217] p-3">
-                      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                        <div className="min-w-0">
-                          <p className="text-[11px] font-black uppercase tracking-[0.14em] text-[#38bdf8]">Service area {index + 1}</p>
-                          <h3 className="mt-1 text-base font-black text-white">{category.title}</h3>
-                          <p className="mt-1 text-xs font-semibold leading-5 text-slate-400">{category.description}</p>
-                        </div>
-                        <div className="flex shrink-0 items-center gap-2">
-                          <span className="rounded-full border border-[#f97316]/30 bg-[#f97316]/10 px-3 py-1 text-xs font-black text-[#fed7aa]">{selectedCount} selected</span>
-                          <button type="button" onClick={() => removeDomainGroup(category.id)} className="rounded-lg border border-white/10 px-3 py-2 text-xs font-black text-slate-300 hover:border-[#f97316]/40 hover:text-[#fed7aa]">
-                            Remove
-                          </button>
-                        </div>
-                      </div>
-
-                      <label className="relative mt-3 block">
-                        <span className="sr-only">Search services in {category.title}</span>
-                        <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} aria-hidden="true" />
-                        <input
-                          data-services-search="true"
-                          value={filter}
-                          onChange={(event) => setServiceFilters((current) => ({ ...current, [category.id]: event.target.value }))}
-                          placeholder={`Search ${category.title}`}
-                          className="h-11 w-full rounded-xl border border-white/10 bg-[#151922] pl-10 pr-10 text-sm font-semibold text-white outline-none placeholder:text-slate-500 focus:border-[#f97316] focus:ring-2 focus:ring-[#f97316]/25"
-                        />
-                        {filter ? (
-                          <button type="button" onClick={() => setServiceFilters((current) => ({ ...current, [category.id]: "" }))} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white" aria-label={`Clear ${category.title} service search`}>
-                            <X size={16} aria-hidden="true" />
-                          </button>
-                        ) : null}
-                      </label>
-
-                      <div className="mt-3 grid gap-2">
-                        {services.length ? services.map((service) => {
-                          const item = findPartnerCatalogueItem(service.id);
-                          if (!item) return null;
-                          const selected = selectedCodes.has(item.stableCode);
-                          return (
-                            <button
-                              key={item.stableCode}
-                              type="button"
-                              data-service-option={item.stableCode}
-                              aria-pressed={selected}
-                              onClick={() => toggleService(item)}
-                              className={`grid min-h-[68px] grid-cols-[1fr_auto] items-start gap-3 rounded-xl border p-3 text-left transition focus:outline-none focus:ring-2 focus:ring-[#38bdf8]/35 ${selected ? "border-[#f97316]/70 bg-[#f97316]/12 shadow-[0_0_0_1px_rgba(249,115,22,0.2)]" : "border-white/10 bg-[#151922] hover:border-[#38bdf8]/35"}`}
-                            >
-                              <span className="min-w-0">
-                                <span className="block text-sm font-black text-white">{item.name}</span>
-                                <span className="mt-1 block text-xs font-semibold leading-5 text-slate-400">{item.shortDescription}</span>
-                              </span>
-                              <span className={`flex h-6 min-w-6 items-center justify-center rounded-full border text-[11px] font-black ${selected ? "border-[#f97316] bg-[#f97316] text-white" : "border-white/20 text-slate-500"}`}>
-                                {selected ? <Check size={14} aria-hidden="true" /> : "+"}
-                              </span>
-                            </button>
-                          );
-                        }) : (
-                          <div className="rounded-xl border border-white/10 bg-[#151922] p-4 text-sm font-semibold text-slate-300">
-                            No matching services in this service area.
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                }) : (
-                  <div className="rounded-xl border border-dashed border-white/15 bg-[#0f1217] p-5 text-sm font-semibold text-slate-300">
-                    Select a service area above to see available service options.
-                  </div>
-                )}
-              </div>
-
-              {selectedItems.length ? (
-                <div className="mt-4 rounded-xl border border-white/10 bg-[#0f1217] p-3">
-                  <label className="grid gap-2">
-                    <span className="text-xs font-black uppercase tracking-[0.1em] text-slate-300">Add another service</span>
-                    <select
-                      data-add-service-dropdown="true"
-                      value=""
-                      onChange={(event) => addDomainBlock(event.target.value as PartnerServiceDomainId | "")}
-                      disabled={!remainingDomains.length}
-                      className="h-11 w-full rounded-xl border border-white/10 bg-[#151922] px-3 text-sm font-bold text-white outline-none disabled:cursor-not-allowed disabled:text-slate-500 focus:border-[#f97316] focus:ring-2 focus:ring-[#f97316]/25"
-                    >
-                      <option value="">{remainingDomains.length ? "Choose another service area" : "All eligible service areas are open"}</option>
-                      {remainingDomains.map((category) => (
-                        <option key={category.id} value={category.id}>{category.title}</option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
-              ) : null}
-            </section>
+        <section className="rounded-xl border border-white/10 bg-[#11141a] p-4" aria-labelledby="available-services-heading">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h2 id="available-services-heading" className="text-sm font-black text-white">Available Services</h2>
+              <p className="mt-1 text-xs font-semibold text-slate-400">Only services from your selected service area are shown here.</p>
+            </div>
+            <span className="w-fit rounded-full border border-[#38bdf8]/30 bg-[#38bdf8]/10 px-3 py-1 text-xs font-black text-[#bae6fd]">
+              {activeDomains.length} service area{activeDomains.length === 1 ? "" : "s"} open
+            </span>
           </div>
 
-          <section className="min-w-0 rounded-xl border border-white/10 bg-[#11141a] p-4 xl:sticky xl:top-4 xl:self-start" aria-labelledby="selected-services-summary-heading">
-            <div className="flex flex-col gap-3">
-              <div>
-                <h2 id="selected-services-summary-heading" className="text-sm font-black text-white">Selected Services Summary</h2>
-                <p className="mt-1 text-xs font-semibold text-slate-400">Your selected services are grouped by service area.</p>
-              </div>
-              <span className="w-fit rounded-full border border-[#f97316]/30 bg-[#f97316]/10 px-3 py-1 text-xs font-black text-[#fed7aa]">
-                {selectedItems.length} selected
-              </span>
-            </div>
-
-            <div className="mt-4 grid gap-3">
-              {selectedItemsByDomain.length ? selectedItemsByDomain.map((group) => (
-                <div key={group.domainId} className="rounded-xl border border-white/10 bg-[#0f1217] p-3">
-                  <div className="flex items-start justify-between gap-3">
+          <div className="mt-4 grid gap-4">
+            {activeDomains.length ? activeDomains.map((category, index) => {
+              const filter = serviceFilters[category.id] ?? "";
+              const services = category.services.filter((service) => {
+                const item = findPartnerCatalogueItem(service.id);
+                if (!item) return false;
+                return matchesServiceSearch(`${item.name} ${item.shortDescription} ${item.aliases.join(" ")} ${category.title}`, filter);
+              });
+              const selectedCount = category.services.filter((service) => selectedCodes.has(service.id)).length;
+              return (
+                <div key={category.id} className="rounded-xl border border-white/10 bg-[#0f1217] p-3">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
-                      <h3 className="text-sm font-black text-white">{group.title}</h3>
-                      <p className="mt-1 text-xs font-semibold text-slate-500">{group.items.length} selected</p>
+                      <p className="text-[11px] font-black uppercase tracking-[0.14em] text-[#38bdf8]">Service area {index + 1}</p>
+                      <h3 className="mt-1 text-sm font-black text-white">{category.title}</h3>
+                      <p className="mt-1 text-xs font-semibold leading-5 text-slate-400">{category.description}</p>
                     </div>
-                    <div className="flex shrink-0 gap-2">
-                      <button type="button" onClick={() => editDomainGroup(group.domainId)} className="rounded-lg border border-[#38bdf8]/30 bg-[#38bdf8]/10 px-2 py-1 text-[11px] font-black text-[#bae6fd]">
-                        Edit
-                      </button>
-                      <button type="button" onClick={() => removeDomainGroup(group.domainId)} className="rounded-lg border border-white/10 px-2 py-1 text-[11px] font-black text-slate-300 hover:border-[#f97316]/40 hover:text-[#fed7aa]">
+                    <div className="flex shrink-0 items-center gap-2">
+                      <span className="rounded-full border border-[#f97316]/30 bg-[#f97316]/10 px-3 py-1 text-xs font-black text-[#fed7aa]">{selectedCount} selected</span>
+                      <button type="button" onClick={() => removeDomainGroup(category.id)} className="rounded-lg border border-white/10 px-3 py-2 text-xs font-black text-slate-300 hover:border-[#f97316]/40 hover:text-[#fed7aa]">
                         Remove
                       </button>
                     </div>
                   </div>
-                  <div className="mt-3 grid gap-2">
-                    {group.items.map((item) => (
-                      <div key={item.stableCode} data-selected-service={item.stableCode} className="grid grid-cols-[1fr_auto] items-center gap-2 rounded-lg border border-white/10 bg-[#151922] px-3 py-2">
-                        <div className="min-w-0">
-                          <p className="truncate text-xs font-black text-white">{item.name}</p>
-                          <p className="truncate text-[11px] font-bold text-slate-500">{group.title}</p>
-                        </div>
-                        <button type="button" onClick={() => toggleService(item)} aria-label={`Remove ${item.name}`} className="rounded-md p-1 text-slate-400 hover:bg-white/10 hover:text-[#fed7aa]">
-                          <X size={14} aria-hidden="true" />
+
+                  <label className="relative mt-3 block">
+                    <span className="sr-only">Search services in {category.title}</span>
+                    <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} aria-hidden="true" />
+                    <input
+                      data-services-search="true"
+                      value={filter}
+                      onChange={(event) => setServiceFilters((current) => ({ ...current, [category.id]: event.target.value }))}
+                      placeholder="Search services"
+                      className="h-11 w-full rounded-xl border border-white/10 bg-[#151922] pl-10 pr-10 text-sm font-semibold text-white outline-none placeholder:text-slate-500 focus:border-[#f97316] focus:ring-2 focus:ring-[#f97316]/25"
+                    />
+                    {filter ? (
+                      <button type="button" onClick={() => setServiceFilters((current) => ({ ...current, [category.id]: "" }))} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white" aria-label={`Clear ${category.title} service search`}>
+                        <X size={16} aria-hidden="true" />
+                      </button>
+                    ) : null}
+                  </label>
+
+                  <div className="mt-3 grid gap-2 md:grid-cols-2">
+                    {services.length ? services.map((service) => {
+                      const item = findPartnerCatalogueItem(service.id);
+                      if (!item) return null;
+                      const selected = selectedCodes.has(item.stableCode);
+                      return (
+                        <button
+                          key={item.stableCode}
+                          type="button"
+                          data-service-option={item.stableCode}
+                          aria-pressed={selected}
+                          onClick={() => toggleService(item)}
+                          className={`min-h-[82px] rounded-xl border p-3 text-left transition focus:outline-none focus:ring-2 focus:ring-[#38bdf8]/35 ${selected ? "border-[#f97316]/70 bg-[#f97316]/12 shadow-[0_0_0_1px_rgba(249,115,22,0.22)]" : "border-white/10 bg-[#151922] hover:border-[#f97316]/35"}`}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="text-sm font-black text-white">{item.name}</p>
+                              <p className="mt-1 line-clamp-2 text-xs font-semibold leading-5 text-slate-400">{item.shortDescription}</p>
+                              <p className="mt-2 text-[11px] font-black uppercase tracking-[0.1em] text-slate-500">{category.title}</p>
+                            </div>
+                            <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${selected ? "border-[#f97316] bg-[#f97316] text-white" : "border-white/20 text-transparent"}`}>
+                              <Check size={13} aria-hidden="true" />
+                            </span>
+                          </div>
                         </button>
+                      );
+                    }) : (
+                      <div className="rounded-xl border border-white/10 bg-[#151922] p-4 text-sm font-semibold text-slate-300 md:col-span-2">
+                        No matching services in this service area.
                       </div>
-                    ))}
+                    )}
                   </div>
                 </div>
-              )) : (
-                <div className="rounded-xl border border-dashed border-white/15 bg-[#0f1217] p-4 text-sm font-semibold text-slate-400">
-                  No services selected yet.
-                </div>
-              )}
-            </div>
+              );
+            }) : (
+              <div className="rounded-xl border border-dashed border-white/15 bg-[#0f1217] p-4 text-sm font-semibold text-slate-300">
+                Select a service area above to see available service options.
+              </div>
+            )}
+          </div>
+        </section>
 
-            <button type="button" onClick={addRequest} className="mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-[#f97316]/40 bg-[#f97316]/10 px-3 text-xs font-black text-[#fed7aa] hover:border-[#f97316]">
+        {selectedItems.length ? (
+          <section className="rounded-xl border border-white/10 bg-[#11141a] p-4">
+            <label className="grid max-w-xl gap-2">
+              <span className="text-xs font-black uppercase tracking-[0.1em] text-slate-300">Add another service</span>
+              <select
+                data-add-service-dropdown="true"
+                value=""
+                onChange={(event) => addDomainBlock(event.target.value as PartnerServiceDomainId | "")}
+                disabled={!remainingDomains.length}
+                className="h-11 w-full appearance-auto rounded-xl border border-white/10 bg-[#0f1217] px-3 text-sm font-bold text-white outline-none disabled:cursor-not-allowed disabled:text-slate-500 focus:border-[#f97316] focus:ring-2 focus:ring-[#f97316]/25"
+              >
+                <option value="">{remainingDomains.length ? "Select a service area" : "All eligible service areas are open"}</option>
+                {remainingDomains.map((category) => (
+                  <option key={category.id} value={category.id}>{category.title}</option>
+                ))}
+              </select>
+            </label>
+          </section>
+        ) : null}
+
+        <section className="rounded-xl border border-white/10 bg-[#11141a] p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <SectionHeading title="Can't Find Your Service?" detail="Tell us what you provide. This request does not publish or approve a new service automatically." />
+            <button type="button" onClick={addRequest} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#f97316]/40 bg-[#f97316]/10 px-3 text-xs font-black text-[#fed7aa] hover:border-[#f97316] focus:outline-none focus:ring-2 focus:ring-[#f97316]/30">
               <Plus size={15} aria-hidden="true" />
               Request another service
             </button>
+          </div>
+        </section>
 
-            {staleScopes.length || selectedUnavailable.length ? (
-              <div className="mt-4 rounded-xl border border-amber-400/30 bg-amber-400/10 p-3 text-xs font-bold leading-5 text-amber-100">
-                Some saved services need attention because they are no longer available for new selection. They are preserved in your draft history and are not counted for completion.
-              </div>
-            ) : null}
-          </section>
-        </div>
+        {staleScopes.length || selectedUnavailable.length ? (
+          <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 p-3 text-xs font-bold leading-5 text-amber-100">
+            Some saved services need attention because they are no longer available for new selection. They are preserved in your draft history and are not counted for completion.
+          </div>
+        ) : null}
 
         {form.requestPanelOpen || form.requestedServices.length ? (
           <section className="rounded-xl border border-white/10 bg-[#11141a] p-4">
-            <SectionHeading title="Can't Find Your Service?" detail="Tell us what you provide. This request does not publish or approve a new service automatically." />
             <div className="mt-4 grid gap-3">
               {(form.requestedServices.length ? form.requestedServices : [emptyRequestedService()]).map((request) => (
                 <div key={request.id} className="rounded-xl border border-white/10 bg-[#0f1217] p-3">
@@ -2107,6 +2102,98 @@ function ServicesStep({
         </div>
       </div>
     </div>
+  );
+}
+
+function SelectedServicesSummary({
+  form,
+  headingId,
+  countryCode,
+  businessType,
+  legacyScopes,
+  onRemoveService,
+  onRemoveDomain,
+  onEditDomain,
+}: {
+  form: ServicesForm;
+  headingId: string;
+  countryCode: string;
+  businessType: string;
+  legacyScopes: PartnerOrganizationBundle["serviceScopes"];
+  onRemoveService: (service: PartnerServiceCatalogueItem) => void;
+  onRemoveDomain: (domainId: PartnerServiceDomainId) => void;
+  onEditDomain: (domainId: PartnerServiceDomainId) => void;
+}) {
+  const selectedItems = form.selectedServiceCodes.map((code) => findPartnerCatalogueItem(code)).filter(Boolean) as PartnerServiceCatalogueItem[];
+  const selectedDomainIds = serviceDomainIdsFromCodes(form.selectedServiceCodes);
+  const selectedItemsByDomain = selectedDomainIds.map((domainId) => ({
+    domainId,
+    title: domainTitleFor(domainId),
+    items: selectedItems.filter((item) => item.domain === domainId),
+  }));
+  const selectedUnavailable = selectedItems.filter((item) => !partnerServiceEligibleForApplication(item, countryCode, businessType));
+  const staleScopes = legacyScopes.filter((scope) => {
+    if (scope.status === "disabled") return false;
+    const item = findPartnerCatalogueItem(scope.serviceCode);
+    return !item || !partnerServiceEligibleForApplication(item, countryCode, businessType);
+  });
+
+  return (
+    <section className="min-w-0 rounded-xl border border-white/10 bg-[#11141a] p-4 xl:border-0 xl:bg-transparent xl:p-0" aria-labelledby={headingId} data-selected-services-summary="true">
+      <div className="flex flex-col gap-3">
+        <div>
+          <h2 id={headingId} className="text-sm font-black text-white">Selected Services Summary</h2>
+          <p className="mt-1 text-xs font-semibold text-slate-400">Your selected services are grouped by service area.</p>
+        </div>
+        <span className="w-fit rounded-full border border-[#f97316]/30 bg-[#f97316]/10 px-3 py-1 text-xs font-black text-[#fed7aa]" aria-label={`${selectedItems.length} selected services`}>
+          {selectedItems.length} selected
+        </span>
+      </div>
+
+      <div className="mt-4 grid gap-3">
+        {selectedItemsByDomain.length ? selectedItemsByDomain.map((group) => (
+          <div key={group.domainId} className="rounded-xl border border-white/10 bg-[#0f1217] p-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h3 className="text-sm font-black text-white">{group.title}</h3>
+                <p className="mt-1 text-xs font-semibold text-slate-500">{group.items.length} selected</p>
+              </div>
+              <div className="flex shrink-0 gap-2">
+                <button type="button" onClick={() => onEditDomain(group.domainId)} className="rounded-lg border border-[#38bdf8]/30 bg-[#38bdf8]/10 px-2 py-1 text-[11px] font-black text-[#bae6fd] focus:outline-none focus:ring-2 focus:ring-[#38bdf8]/35">
+                  Edit
+                </button>
+                <button type="button" onClick={() => onRemoveDomain(group.domainId)} className="rounded-lg border border-white/10 px-2 py-1 text-[11px] font-black text-slate-300 hover:border-[#f97316]/40 hover:text-[#fed7aa] focus:outline-none focus:ring-2 focus:ring-[#f97316]/30">
+                  Remove
+                </button>
+              </div>
+            </div>
+            <div className="mt-3 grid gap-2">
+              {group.items.map((item) => (
+                <div key={item.stableCode} data-selected-service={item.stableCode} className="grid grid-cols-[1fr_auto] items-center gap-2 rounded-lg border border-white/10 bg-[#151922] px-3 py-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-black text-white">{item.name}</p>
+                    <p className="truncate text-[11px] font-bold text-slate-500">{group.title}</p>
+                  </div>
+                  <button type="button" onClick={() => onRemoveService(item)} aria-label={`Remove ${item.name}`} className="rounded-md p-1 text-slate-400 hover:bg-white/10 hover:text-[#fed7aa] focus:outline-none focus:ring-2 focus:ring-[#f97316]/30">
+                    <X size={14} aria-hidden="true" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )) : (
+          <div className="rounded-xl border border-dashed border-white/15 bg-[#0f1217] p-4 text-sm font-semibold text-slate-400">
+            No services selected yet.
+          </div>
+        )}
+      </div>
+
+      {staleScopes.length || selectedUnavailable.length ? (
+        <div className="mt-4 rounded-xl border border-amber-400/30 bg-amber-400/10 p-3 text-xs font-bold leading-5 text-amber-100">
+          Some saved services need attention because they are no longer available for new selection. They are preserved in your draft history and are not counted for completion.
+        </div>
+      ) : null}
+    </section>
   );
 }
 
@@ -2336,14 +2423,18 @@ function TopProgress({
   );
 }
 
-function HelpPanel({ activeStep }: { activeStep: WorkspaceStepId }) {
+function HelpPanel({ activeStep, servicesSummary }: { activeStep: WorkspaceStepId; servicesSummary?: ReactNode }) {
   return (
     <aside className="hidden xl:block">
       <div className="sticky top-28 rounded-2xl border border-white/10 bg-[#171a20] p-5 shadow-2xl">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#f97316]/12 text-[#fb923c]">
-          <ShieldCheck size={19} aria-hidden="true" />
-        </div>
-        {activeStep === "account_contact" ? (
+        {activeStep === "services" && servicesSummary ? (
+          servicesSummary
+        ) : (
+          <>
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#f97316]/12 text-[#fb923c]">
+              <ShieldCheck size={19} aria-hidden="true" />
+            </div>
+            {activeStep === "account_contact" ? (
           <>
             <h2 className="mt-4 text-lg font-black">Why we need this</h2>
             <ul className="mt-3 grid gap-2 text-sm font-semibold leading-6 text-slate-300">
@@ -2387,6 +2478,8 @@ function HelpPanel({ activeStep }: { activeStep: WorkspaceStepId }) {
             <p className="mt-2 text-sm font-semibold leading-6 text-slate-300">
               This step opens in the next approved development batch.
             </p>
+          </>
+            )}
           </>
         )}
       </div>
@@ -2857,6 +2950,13 @@ function isServicesComplete(form: ServicesForm, countryCode: string, businessTyp
 
 function domainTitleFor(domainId: PartnerServiceDomainId): string {
   return partnerServiceCatalog.find((category) => category.id === domainId)?.title ?? "Service";
+}
+
+function serviceDomainIdsFromCodes(serviceCodes: string[]): PartnerServiceDomainId[] {
+  const domainIds = serviceCodes
+    .map((code) => findPartnerCatalogueItem(code)?.domain)
+    .filter(Boolean) as PartnerServiceDomainId[];
+  return [...new Set(domainIds)];
 }
 
 function matchesServiceSearch(value: string, query: string): boolean {
