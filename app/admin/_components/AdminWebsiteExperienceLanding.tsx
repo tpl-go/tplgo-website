@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
-  ArrowLeft,
   BookOpen,
   Car,
   Compass,
@@ -24,6 +23,7 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react";
+import { AdminBackButton } from "./AdminBackButton";
 import {
   getAdminWebsiteExperienceLoginSignup,
   type AdminApiError,
@@ -152,6 +152,7 @@ export function AdminWebsiteExperienceLanding({ view = "root" }: { view?: Landin
 
   return (
     <div className="space-y-6">
+      <AdminBackButton href="/admin" label="Back to Admin" />
       <section className="overflow-hidden rounded-2xl border border-sky-300/15 bg-[radial-gradient(circle_at_top_left,rgba(56,189,248,0.22),transparent_34%),linear-gradient(135deg,#06101e,#0b1f3d_52%,#1f2937)] p-5 shadow-2xl shadow-sky-950/30 md:p-7">
         <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
           <div>
@@ -200,10 +201,7 @@ function buildLoginSignupSummary(contexts: WebsiteExperienceAdminContext[]) {
 function DrilldownShell({ eyebrow, title, detail, backHref, backLabel, children }: { eyebrow: string; title: string; detail: string; backHref: string; backLabel: string; children: React.ReactNode }) {
   return (
     <section className="space-y-4 rounded-2xl border border-sky-300/10 bg-[#0b1628]/95 p-5 shadow-xl shadow-black/20">
-      <Link href={backHref} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-sky-300/15 bg-white/[0.04] px-3 text-sm font-black text-slate-200 hover:border-sky-300/40 focus:outline-none focus:ring-2 focus:ring-sky-300">
-        <ArrowLeft className="h-4 w-4" />
-        {backLabel}
-      </Link>
+      <AdminBackButton href={backHref} label={backLabel} />
       <div>
         <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-200">{eyebrow}</p>
         <h3 className="mt-1 text-2xl font-black text-cyan-100">{title}</h3>

@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
-  ArrowLeft,
   ArrowRight,
   BadgeCheck,
   CalendarClock,
@@ -23,6 +22,7 @@ import {
   XCircle,
   type LucideIcon,
 } from "lucide-react";
+import { AdminBackButton } from "./AdminBackButton";
 import {
   cancelAdminWebsiteExperienceSchedule,
   getAdminWebsiteExperienceLoginSignup,
@@ -218,6 +218,15 @@ export function WebsiteExperienceManager({
     <section className="space-y-5">
       <div className="rounded border border-slate-200 bg-white p-5 shadow-sm">
         <Breadcrumbs mode={mode} activeContext={contextLabels[activeContext]} activeBlock={blocks.find((block) => block.key === activeBlock)?.label ?? "Brand"} />
+        {mode !== "partner-application" || !partnerApplicationNodeId ? (
+        <div className="mt-4">
+          <AdminBackButton
+            href={mode === "partner-application" ? "/admin/website-experience/pages/partner" : "/admin/website-experience/global"}
+            label={mode === "partner-application" ? "Back to Partner" : "Back to Global Experience"}
+            className="border-slate-300 bg-slate-950 text-sky-100"
+          />
+        </div>
+        ) : null}
         <div className="mt-4 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase text-amber-700">{mode === "partner-application" ? "Pages / Partner" : "Global Experience / Login & Signup"}</p>
@@ -620,10 +629,7 @@ function PartnerApplicationTreeEditor({
   if (!selectedNode) {
     return (
       <EditorSection title="Partner Application" detail="The requested Partner Application section was not found.">
-        <Link href="/admin/website-experience/pages/partner/application" className="inline-flex h-10 items-center gap-2 rounded border border-slate-200 px-3 text-sm font-semibold text-slate-700">
-          <ArrowLeft className="h-4 w-4" />
-          Back to Partner Application
-        </Link>
+        <AdminBackButton href="/admin/website-experience/pages/partner/application" label="Back to Partner Application" className="border-slate-300 bg-slate-950 text-sky-100" />
       </EditorSection>
     );
   }
@@ -633,10 +639,7 @@ function PartnerApplicationTreeEditor({
       <div className="rounded border border-blue-100 bg-blue-50 p-3 text-sm text-blue-900">
         Website Experience &gt; Pages &gt; Partner &gt; Partner Application &gt; {selectedNode.label}
       </div>
-      <Link href="/admin/website-experience/pages/partner/application" className="inline-flex h-10 items-center gap-2 rounded border border-slate-200 px-3 text-sm font-semibold text-slate-700">
-        <ArrowLeft className="h-4 w-4" />
-        Back to Partner Application
-      </Link>
+      <AdminBackButton href="/admin/website-experience/pages/partner/application" label="Back to Partner Application" className="border-slate-300 bg-slate-950 text-sky-100" />
       <div className="space-y-3">
         {[selectedNode].map((node) => (
           <section key={node.id} className="rounded border border-slate-200 bg-slate-50 p-3">

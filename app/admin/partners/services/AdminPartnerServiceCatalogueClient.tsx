@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import {
   Archive,
-  ArrowLeft,
   CheckCircle2,
   ChevronRight,
   Clock3,
@@ -22,6 +21,7 @@ import {
   X,
   XCircle,
 } from "lucide-react";
+import { AdminBackButton } from "../../_components/AdminBackButton";
 import {
   changeAdminPartnerServiceCatalogueLifecycle,
   deleteAdminPartnerServiceCatalogueDraftItem,
@@ -463,7 +463,7 @@ function DomainDetailView(props: {
   return (
     <section className="mt-5 space-y-4">
       <div className="rounded-2xl border border-white/10 bg-[#0b1628]/95 p-4 shadow-lg shadow-black/20">
-        <button type="button" onClick={props.onBack} className="premiumButton secondary"><ArrowLeft size={16} /> Back to all Domains</button>
+        <AdminBackButton onClick={props.onBack} label="Back to Service Catalogue" />
         <div className="mt-4 flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
           <div>
             <p className="text-xs font-black uppercase text-slate-500">Service Catalogue <ChevronRight className="inline h-3 w-3" /> {props.domain.title}</p>
@@ -589,7 +589,7 @@ function ServiceFocusedView(props: {
   return (
     <section className="mt-5 space-y-4">
       <div className="rounded-2xl border border-white/10 bg-[#0b1628]/95 p-4 shadow-lg shadow-black/20">
-        <button type="button" onClick={props.onBack} className="premiumButton secondary"><ArrowLeft size={16} /> Back to Domain</button>
+        <AdminBackButton onClick={props.onBack} label={`Back to ${props.domain.title}`} />
         <div className="mt-4 flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
           <div>
             <p className="text-xs font-black uppercase text-slate-500">Service Catalogue <ChevronRight className="inline h-3 w-3" /> {props.domain.title} <ChevronRight className="inline h-3 w-3" /> {props.item.name}</p>
@@ -729,7 +729,7 @@ function RequestedServicesView({ data, services, note, busy, onBack, onNote, onR
 }) {
   return (
     <section className="mt-5 rounded-2xl border border-white/10 bg-[#0d1b31] p-4">
-      <button type="button" onClick={onBack} className="premiumButton secondary"><ArrowLeft size={16} /> Back to Domains</button>
+      <AdminBackButton onClick={onBack} label="Back to Service Catalogue" />
       <div className="mt-4">
         <p className="text-xs font-black uppercase text-orange-300">Service Catalogue</p>
         <h3 className="mt-1 text-2xl font-black text-orange-100">Requested Services</h3>
@@ -762,7 +762,7 @@ function RequestedServicesView({ data, services, note, busy, onBack, onNote, onR
 function VersionsAuditView({ data, onBack }: { data: AdminPartnerServiceCatalogueResponse; onBack: () => void }) {
   return (
     <section className="mt-5 rounded-2xl border border-white/10 bg-[#0d1b31] p-4">
-      <button type="button" onClick={onBack} className="premiumButton secondary"><ArrowLeft size={16} /> Back to Domains</button>
+      <AdminBackButton onClick={onBack} label="Back to Service Catalogue" />
       <h3 className="mt-4 text-2xl font-black text-cyan-100">Versions & Audit</h3>
       <div className="mt-3 space-y-3">
         {data.versions.slice(0, 6).map((version) => <div key={version.id} className="rounded-xl border border-white/10 bg-[#07111f] p-3 text-sm"><b className="text-slate-100">v{version.version}</b> <span className="text-slate-400">{version.status}</span><div className="text-xs text-slate-500">{version.createdAt}</div></div>)}
