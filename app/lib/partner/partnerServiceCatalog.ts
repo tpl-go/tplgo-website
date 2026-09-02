@@ -394,6 +394,52 @@ export function filterPartnerServiceCatalog(query: string, catalog = partnerServ
     .filter((category) => category.services.length > 0);
 }
 
+export function getEligiblePartnerServiceDomainOptions(
+  countryCodeOrName: string,
+  businessType: string,
+  options: { excludeDomainIds?: PartnerServiceDomainId[]; query?: string } = {}
+): PartnerServiceCategory[] {
+  const excluded = new Set(options.excludeDomainIds ?? []);
+  const query = normalizeSearchText(options.query ?? "");
+  return filterEligiblePartnerServiceCatalog(partnerServiceCatalog, countryCodeOrName, businessType)
+    .filter((category) => !excluded.has(category.id))
+    .filter((category) => {
+      if (!query) return true;
+      return normalizeSearchText(`${category.title} ${category.description}`).includes(query);
+    });
+}
+
+export function getEligiblePartnerServicesForDomain(
+  domainId: PartnerServiceDomainId,
+  countryCodeOrName: string,
+  businessType: string,
+  query = ""
+): PartnerServiceCatalogueItem[] {
+  const normalizedQuery = normalizeSearchText(query);
+  return partnerServiceCatalogue
+    .filter((serviceItem) => serviceItem.domain === domainId)
+    .filter((serviceItem) => partnerServiceEligibleForApplication(serviceItem, countryCodeOrName, businessType))
+    .filter((serviceItem) => {
+      if (!normalizedQuery) return true;
+      return normalizeSearchText(`${serviceItem.name} ${serviceItem.shortDescription} ${serviceItem.aliases.join(" ")} ${domains[serviceItem.domain].title}`).includes(normalizedQuery);
+    })
+    .sort((a, b) => a.displayOrder - b.displayOrder || a.name.localeCompare(b.name));
+}
+
+export function groupPartnerServiceCodesByDomain(serviceCodes: string[]): Array<{ domainId: PartnerServiceDomainId; title: string; services: PartnerServiceCatalogueItem[] }> {
+  const groups = new Map<PartnerServiceDomainId, PartnerServiceCatalogueItem[]>();
+  for (const code of [...new Set(serviceCodes)]) {
+    const serviceItem = findPartnerCatalogueItem(code);
+    if (!serviceItem) continue;
+    groups.set(serviceItem.domain, [...(groups.get(serviceItem.domain) ?? []), serviceItem]);
+  }
+  return [...groups.entries()].map(([domainId, services]) => ({
+    domainId,
+    title: domains[domainId].title,
+    services,
+  }));
+}
+
 export function normalizeSearchText(value: string): string {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
 }

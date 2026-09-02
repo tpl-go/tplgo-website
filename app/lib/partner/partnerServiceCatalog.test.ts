@@ -4,6 +4,9 @@ import {
   filterPartnerServiceCatalog,
   findPartnerCatalogueItem,
   getAllPartnerServices,
+  getEligiblePartnerServiceDomainOptions,
+  getEligiblePartnerServicesForDomain,
+  groupPartnerServiceCodesByDomain,
   partnerServiceEligibleForApplication,
   partnerServiceCatalogue,
   partnerServiceCatalog,
@@ -103,6 +106,59 @@ test("search aliases keep duplicate display labels in distinct domain context", 
 
   expect(contexts).toContain("Wedding & Events");
   expect(contexts).toContain("Professional & Local Services");
+});
+
+test("eligible domain dropdown options can be searched and exclude already-open domains", () => {
+  const searched = getEligiblePartnerServiceDomainOptions("IN", "Private Limited Company", { query: "wedding" });
+  expect(searched.map((domain) => domain.title)).toEqual(["Wedding & Events"]);
+
+  const remaining = getEligiblePartnerServiceDomainOptions("IN", "Private Limited Company", {
+    excludeDomainIds: ["wedding-events", "transport-mobility"],
+  }).map((domain) => domain.title);
+
+  expect(remaining).not.toContain("Wedding & Events");
+  expect(remaining).not.toContain("Transport & Mobility");
+  expect(remaining).toContain("Stay & Accommodation");
+});
+
+test("selected domain service options are scoped to that domain and searchable by alias", () => {
+  const stayServices = getEligiblePartnerServicesForDomain("stay-accommodation", "IN", "Private Limited Company");
+  const stayLabels = stayServices.map((serviceItem) => serviceItem.name);
+
+  expect(stayLabels).toContain("Hotel");
+  expect(stayLabels).toContain("Homestay");
+  expect(stayLabels).not.toContain("Cab / Taxi Operator");
+
+  const cabSearch = getEligiblePartnerServicesForDomain("transport-mobility", "IN", "Private Limited Company", "taxi");
+  expect(cabSearch.map((serviceItem) => serviceItem.name)).toContain("Cab / Taxi Operator");
+});
+
+test("selected services summary grouping deduplicates services by stable code and ignores legacy codes", () => {
+  const groups = groupPartnerServiceCodesByDomain([
+    "hotel",
+    "hotel",
+    "cab-taxi-operator",
+    "legacy-service-code",
+    "wedding-planner",
+  ]);
+
+  expect(groups).toEqual([
+    {
+      domainId: "stay-accommodation",
+      title: "Stay & Accommodation",
+      services: [expect.objectContaining({ stableCode: "hotel", name: "Hotel" })],
+    },
+    {
+      domainId: "transport-mobility",
+      title: "Transport & Mobility",
+      services: [expect.objectContaining({ stableCode: "cab-taxi-operator", name: "Cab / Taxi Operator" })],
+    },
+    {
+      domainId: "wedding-events",
+      title: "Wedding & Events",
+      services: [expect.objectContaining({ stableCode: "wedding-planner", name: "Wedding Planner" })],
+    },
+  ]);
 });
 
 function assertSearchContains(query: string, labels: string[]) {
