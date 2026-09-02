@@ -37,6 +37,7 @@ import { partnerServiceCatalog } from "../../../lib/partner/partnerServiceCatalo
 type Tone = "blue" | "cyan" | "orange" | "slate" | "violet" | "green" | "red";
 type ItemKind = "category" | "service" | "sub-service";
 type DialogMode = "add-domain" | "edit-domain" | "add-category" | "edit-category" | "add-service" | "edit-service" | "add-sub-service" | "edit-sub-service" | "delete";
+type CatalogueView = "domains" | "requested" | "audit";
 
 const domainIcons: Record<string, string> = {
   "stay-accommodation": "bed",
@@ -59,6 +60,8 @@ export function AdminPartnerServiceCatalogueClient() {
   const [busy, setBusy] = useState("");
   const [message, setMessage] = useState<{ tone: "success" | "error" | "info"; text: string } | null>(null);
   const [selectedDomain, setSelectedDomain] = useState("");
+  const [selectedItemCode, setSelectedItemCode] = useState("");
+  const [catalogueView, setCatalogueView] = useState<CatalogueView>("domains");
   const [query, setQuery] = useState("");
   const [domainQuery, setDomainQuery] = useState("");
   const [status, setStatus] = useState("");
@@ -86,11 +89,25 @@ export function AdminPartnerServiceCatalogueClient() {
     void loadCatalogue();
   }, []);
 
+  useEffect(() => {
+    const syncFromUrl = () => {
+      const params = new URLSearchParams(window.location.search);
+      const view = params.get("view");
+      setCatalogueView(view === "requested" || view === "audit" ? view : "domains");
+      setSelectedDomain(params.get("domain") ?? "");
+      setSelectedItemCode(params.get("service") ?? "");
+    };
+    syncFromUrl();
+    window.addEventListener("popstate", syncFromUrl);
+    return () => window.removeEventListener("popstate", syncFromUrl);
+  }, []);
+
   const items = useMemo(() => data?.draft.items ?? [], [data]);
   const publishedCodes = useMemo(() => new Set((data?.published.items ?? []).map((item) => item.stableCode)), [data]);
   const domains = useMemo(() => buildDomainRows(items, publishedCodes), [items, publishedCodes]);
   const activeDomain = useMemo(() => domains.find((domain) => domain.id === selectedDomain), [domains, selectedDomain]);
   const scopedItems = useMemo(() => items.filter((item) => item.domain === selectedDomain), [items, selectedDomain]);
+  const selectedItem = useMemo(() => scopedItems.find((item) => item.stableCode === selectedItemCode), [scopedItems, selectedItemCode]);
   const filteredDomains = useMemo(() => {
     const q = normalize(domainQuery);
     return domains.filter((domain) => {
@@ -110,6 +127,21 @@ export function AdminPartnerServiceCatalogueClient() {
   function closeDialog() {
     setDialog(null);
     setDraft(null);
+  }
+
+  function navigate(next: { view?: CatalogueView; domain?: string; service?: string }) {
+    const view = next.view ?? "domains";
+    const domain = next.domain ?? "";
+    const service = next.service ?? "";
+    setCatalogueView(view);
+    setSelectedDomain(domain);
+    setSelectedItemCode(service);
+    const params = new URLSearchParams();
+    if (view !== "domains") params.set("view", view);
+    if (domain) params.set("domain", domain);
+    if (service) params.set("service", service);
+    const url = params.toString() ? `${window.location.pathname}?${params.toString()}` : window.location.pathname;
+    window.history.pushState(null, "", url);
   }
 
   function updateDraft(next: Partial<AdminPartnerServiceCatalogueItem>) {
@@ -201,10 +233,43 @@ export function AdminPartnerServiceCatalogueClient() {
   return (
     <div data-admin-service-catalogue="true" className="min-h-screen rounded-2xl border border-sky-300/10 bg-[#07111f] p-4 text-slate-100 shadow-2xl shadow-sky-950/30 lg:p-6">
       <PremiumStyles />
-      <CatalogueHeader data={data} domains={domains} onPublish={publishDraft} publishing={busy === "publishing"} />
+      <CatalogueHeader data={data} domains={domains} activeView={catalogueView} onNavigate={navigate} onPublish={publishDraft} publishing={busy === "publishing"} />
       {message ? <Message tone={message.tone} text={message.text} /> : null}
 
-      {!activeDomain ? (
+      {catalogueView === "requested" ? (
+        <RequestedServicesView
+          data={data}
+          services={items}
+          note={resolutionNote}
+          busy={busy}
+          onBack={() => navigate({ view: "domains" })}
+          onNote={setResolutionNote}
+          onResolve={resolveRequest}
+          onCreateDraft={(request) => {
+            const requestDomain = request.closestDomain ?? "";
+            const domain = domains.some((item) => item.id === requestDomain) ? requestDomain : selectedDomain || domains[0]?.id || "other-emerging";
+            const item = draftForMode("add-service", domain, undefined, undefined, items);
+            setDialog({ mode: "add-service", domain });
+            setDraft({ ...item, name: request.requestedName, shortDescription: request.description || item.shortDescription, stableCode: uniqueStableCode(slugify(request.requestedName) || "requested-service", items), id: `svc_${uniqueStableCode(slugify(request.requestedName) || "requested-service", items)}` });
+          }}
+        />
+      ) : catalogueView === "audit" ? (
+        <VersionsAuditView data={data} onBack={() => navigate({ view: "domains" })} />
+      ) : selectedItem && activeDomain ? (
+        <ServiceFocusedView
+          item={selectedItem}
+          domain={activeDomain}
+          allDomainItems={scopedItems}
+          canManage={data.permissions.canManage}
+          busy={busy}
+          onBack={() => navigate({ view: "domains", domain: activeDomain.id })}
+          onEdit={(item) => openDialog(itemKind(item, scopedItems) === "sub-service" ? "edit-sub-service" : itemKind(item, scopedItems) === "category" ? "edit-category" : "edit-service", item)}
+          onAddSubService={(item) => openDialog("add-sub-service", undefined, item)}
+          onArchive={(item) => lifecycle(item, "archive")}
+          onReactivate={(item) => lifecycle(item, "reactivate")}
+          onDelete={(item) => openDialog("delete", item)}
+        />
+      ) : !activeDomain ? (
         <AllDomainsView
           domains={filteredDomains}
           query={domainQuery}
@@ -212,7 +277,7 @@ export function AdminPartnerServiceCatalogueClient() {
           canManage={data.permissions.canManage}
           onAddDomain={() => openDialog("add-domain")}
           onOpen={(domain) => {
-            setSelectedDomain(domain.id);
+            navigate({ view: "domains", domain: domain.id });
             setQuery("");
             setStatus("");
             setItemType("");
@@ -237,7 +302,7 @@ export function AdminPartnerServiceCatalogueClient() {
           setSelectable={setSelectable}
           canManage={data.permissions.canManage}
           busy={busy}
-          onBack={() => setSelectedDomain("")}
+          onBack={() => navigate({ view: "domains" })}
           onAddCategory={() => openDialog("add-category")}
           onAddService={() => openDialog("add-service")}
           onEditDomain={() => openDialog("edit-domain", firstItemForDomain(items, activeDomain.id))}
@@ -246,24 +311,9 @@ export function AdminPartnerServiceCatalogueClient() {
           onArchive={(item) => lifecycle(item, "archive")}
           onReactivate={(item) => lifecycle(item, "reactivate")}
           onDelete={(item) => openDialog("delete", item)}
+          onOpenItem={(item) => navigate({ view: "domains", domain: activeDomain.id, service: item.stableCode })}
         />
       )}
-
-      <RequestedAndAudit
-        data={data}
-        services={items}
-        note={resolutionNote}
-        busy={busy}
-        onNote={setResolutionNote}
-        onResolve={resolveRequest}
-        onCreateDraft={(request) => {
-          const requestDomain = request.closestDomain ?? "";
-          const domain = domains.some((item) => item.id === requestDomain) ? requestDomain : selectedDomain || domains[0]?.id || "other-emerging";
-          const item = draftForMode("add-service", domain, undefined, undefined, items);
-          setDialog({ mode: "add-service", domain });
-          setDraft({ ...item, name: request.requestedName, shortDescription: request.description || item.shortDescription, stableCode: uniqueStableCode(slugify(request.requestedName) || "requested-service", items), id: `svc_${uniqueStableCode(slugify(request.requestedName) || "requested-service", items)}` });
-        }}
-      />
 
       {dialog ? (
         <CatalogueDialog
@@ -283,7 +333,7 @@ export function AdminPartnerServiceCatalogueClient() {
   );
 }
 
-function CatalogueHeader({ data, domains, onPublish, publishing }: { data: AdminPartnerServiceCatalogueResponse; domains: DomainRow[]; onPublish: () => void; publishing: boolean }) {
+function CatalogueHeader({ data, domains, activeView, onNavigate, onPublish, publishing }: { data: AdminPartnerServiceCatalogueResponse; domains: DomainRow[]; activeView: CatalogueView; onNavigate: (next: { view?: CatalogueView; domain?: string; service?: string }) => void; onPublish: () => void; publishing: boolean }) {
   return (
     <section className="overflow-hidden rounded-2xl border border-sky-300/15 bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.35),transparent_34%),linear-gradient(135deg,#0a1930,#111827_55%,#1c1917)] p-5 shadow-xl shadow-black/20">
       <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
@@ -297,11 +347,19 @@ function CatalogueHeader({ data, domains, onPublish, publishing }: { data: Admin
           <button type="button" disabled={!data.permissions.canPublish || publishing} onClick={onPublish} className="premiumButton publish">{publishing ? <Loader2 className="animate-spin" size={16} /> : <Send size={16} />} Publish</button>
         </div>
       </div>
-      <div className="mt-6 grid gap-3 md:grid-cols-4">
-        <Metric tone="blue" label="Domains" value={domains.length} />
-        <Metric tone="cyan" label="Categories" value={domains.reduce((sum, domain) => sum + domain.categoryCount, 0)} />
-        <Metric tone="orange" label="Services" value={domains.reduce((sum, domain) => sum + domain.serviceCount, 0)} />
-        <Metric tone="violet" label="Requests" value={data.requestedServices.length} />
+      <div className="mt-5 space-y-2">
+        <button type="button" onClick={() => onNavigate({ view: "domains" })} className={`catalogueNavRow ${activeView === "domains" ? "active" : ""}`}>
+          <span><Layers3 size={16} /> Domains</span>
+          <span>{domains.length} domains <ChevronRight size={15} /></span>
+        </button>
+        <button type="button" onClick={() => onNavigate({ view: "requested" })} className={`catalogueNavRow ${activeView === "requested" ? "active" : ""}`}>
+          <span><FilePenLine size={16} /> Requested Services</span>
+          <span>{data.requestedServices.length} requests <ChevronRight size={15} /></span>
+        </button>
+        <button type="button" onClick={() => onNavigate({ view: "audit" })} className={`catalogueNavRow ${activeView === "audit" ? "active" : ""}`}>
+          <span><Clock3 size={16} /> Versions & Audit</span>
+          <span>{data.versions.length + data.audit.length} records <ChevronRight size={15} /></span>
+        </button>
       </div>
       <div className="mt-4 flex flex-wrap gap-2">
         <WorkflowChip icon={FilePenLine} label={`Draft v${data.draftVersion}`} tone="cyan" />
@@ -340,31 +398,33 @@ function AllDomainsView(props: {
         </div>
       </label>
       {props.domains.length === 0 ? <Empty label="No Domains match these filters." /> : (
-        <div className="mt-4 grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
+        <div className="mt-4 space-y-3">
           {props.domains.map((domain, index) => (
             <article key={domain.id} className="rounded-2xl border border-white/10 bg-[#0d1b31] p-4 shadow-lg shadow-black/20">
-              <div className="flex items-start justify-between gap-3">
+              <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                 <div>
                   <p className={`text-xs font-black uppercase ${index % 3 === 0 ? "text-cyan-300" : index % 3 === 1 ? "text-sky-300" : "text-orange-300"}`}>Domain</p>
                   <h4 className="mt-2 text-lg font-black text-slate-100">{domain.title}</h4>
                   <p className="mt-2 text-sm leading-5 text-slate-400">{domain.description}</p>
+                  <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                    <MetricMini label="Categories" value={domain.categoryCount} />
+                    <MetricMini label="Services" value={domain.serviceCount} />
+                    <MetricMini label="Selectable" value={domain.selectableCount} />
+                    <MetricMini label="Draft" value={domain.draftCount} />
+                  </div>
                 </div>
-                <StatusChip label={domain.status} tone={domain.status === "active" ? "cyan" : domain.status === "archived" ? "orange" : "slate"} />
-              </div>
-              <div className="mt-4 grid grid-cols-2 gap-2 text-center text-xs sm:grid-cols-4">
-                <MetricMini label="Categories" value={domain.categoryCount} />
-                <MetricMini label="Services" value={domain.serviceCount} />
-                <MetricMini label="Selectable" value={domain.selectableCount} />
-                <MetricMini label="Draft" value={domain.draftCount} />
-              </div>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <button type="button" onClick={() => props.onOpen(domain)} className="premiumButton primary"><Layers3 size={16} /> Open / Manage</button>
-                <button type="button" disabled={!props.canManage} onClick={() => props.onEdit(domain)} className="premiumButton secondary"><FilePenLine size={16} /> Edit Domain</button>
-                {domain.status === "archived" ? (
-                  <button type="button" disabled={!props.canManage} onClick={() => props.onReactivate(domain)} className="premiumButton secondary"><RotateCcw size={16} /> Reactivate Domain</button>
-                ) : (
-                  <button type="button" disabled={!props.canManage} onClick={() => props.onArchive(domain)} className="premiumButton danger"><Archive size={16} /> Archive Domain</button>
-                )}
+                <div className="flex shrink-0 flex-col gap-2 xl:items-end">
+                  <StatusChip label={domain.status} tone={domain.status === "active" ? "cyan" : domain.status === "archived" ? "orange" : "slate"} />
+                  <div className="flex flex-wrap gap-2 xl:justify-end">
+                    <button type="button" onClick={() => props.onOpen(domain)} className="premiumButton primary"><Layers3 size={16} /> Open / Manage</button>
+                    <button type="button" disabled={!props.canManage} onClick={() => props.onEdit(domain)} className="premiumButton secondary"><FilePenLine size={16} /> Edit Domain</button>
+                    {domain.status === "archived" ? (
+                      <button type="button" disabled={!props.canManage} onClick={() => props.onReactivate(domain)} className="premiumButton secondary"><RotateCcw size={16} /> Reactivate Domain</button>
+                    ) : (
+                      <button type="button" disabled={!props.canManage} onClick={() => props.onArchive(domain)} className="premiumButton danger"><Archive size={16} /> Archive Domain</button>
+                    )}
+                  </div>
+                </div>
               </div>
             </article>
           ))}
@@ -397,6 +457,7 @@ function DomainDetailView(props: {
   onArchive: (item: AdminPartnerServiceCatalogueItem) => void;
   onReactivate: (item: AdminPartnerServiceCatalogueItem) => void;
   onDelete: (item: AdminPartnerServiceCatalogueItem) => void;
+  onOpenItem: (item: AdminPartnerServiceCatalogueItem) => void;
 }) {
   const tree = buildHierarchy(props.items, props.allDomainItems);
   return (
@@ -451,6 +512,7 @@ function DomainDetailView(props: {
                 onArchive={props.onArchive}
                 onReactivate={props.onReactivate}
                 onDelete={props.onDelete}
+                onOpenItem={props.onOpenItem}
               />
             ))}
           </div>
@@ -460,7 +522,7 @@ function DomainDetailView(props: {
   );
 }
 
-function HierarchyRow({ node, canManage, busy, onEdit, onAddSubService, onArchive, onReactivate, onDelete }: {
+function HierarchyRow({ node, canManage, busy, onEdit, onAddSubService, onArchive, onReactivate, onDelete, onOpenItem }: {
   node: HierarchyNode;
   canManage: boolean;
   busy: string;
@@ -469,6 +531,7 @@ function HierarchyRow({ node, canManage, busy, onEdit, onAddSubService, onArchiv
   onArchive: (item: AdminPartnerServiceCatalogueItem) => void;
   onReactivate: (item: AdminPartnerServiceCatalogueItem) => void;
   onDelete: (item: AdminPartnerServiceCatalogueItem) => void;
+  onOpenItem?: (item: AdminPartnerServiceCatalogueItem) => void;
 }) {
   const kind = node.kind;
   return (
@@ -486,6 +549,7 @@ function HierarchyRow({ node, canManage, busy, onEdit, onAddSubService, onArchiv
           <p className="mt-2 text-xs text-slate-500">Parent: {node.parentLabel || domainTitle(node.item.domain)} · Children: {node.children.length}</p>
         </div>
         <div className="flex flex-wrap gap-2 xl:justify-end">
+          {onOpenItem ? <button type="button" onClick={() => onOpenItem(node.item)} className="premiumButton compact primary"><ChevronRight size={14} /> Open</button> : null}
           <button type="button" disabled={!canManage} onClick={() => onEdit(node.item)} className="premiumButton compact secondary"><FilePenLine size={14} /> Edit {titleKind(kind)}</button>
           {kind !== "sub-service" ? <button type="button" disabled={!canManage} onClick={() => onAddSubService(node.item)} className="premiumButton compact primary"><Plus size={14} /> Add Sub-service</button> : null}
           {node.item.status === "archived" ? (
@@ -499,11 +563,90 @@ function HierarchyRow({ node, canManage, busy, onEdit, onAddSubService, onArchiv
       {node.children.length > 0 ? (
         <div className="mt-3 space-y-3">
           {node.children.map((child) => (
-            <HierarchyRow key={child.item.stableCode} node={child} canManage={canManage} busy={busy} onEdit={onEdit} onAddSubService={onAddSubService} onArchive={onArchive} onReactivate={onReactivate} onDelete={onDelete} />
+            <HierarchyRow key={child.item.stableCode} node={child} canManage={canManage} busy={busy} onEdit={onEdit} onAddSubService={onAddSubService} onArchive={onArchive} onReactivate={onReactivate} onDelete={onDelete} onOpenItem={onOpenItem} />
           ))}
         </div>
       ) : null}
     </article>
+  );
+}
+
+function ServiceFocusedView(props: {
+  item: AdminPartnerServiceCatalogueItem;
+  domain: DomainRow;
+  allDomainItems: AdminPartnerServiceCatalogueItem[];
+  canManage: boolean;
+  busy: string;
+  onBack: () => void;
+  onEdit: (item: AdminPartnerServiceCatalogueItem) => void;
+  onAddSubService: (item: AdminPartnerServiceCatalogueItem) => void;
+  onArchive: (item: AdminPartnerServiceCatalogueItem) => void;
+  onReactivate: (item: AdminPartnerServiceCatalogueItem) => void;
+  onDelete: (item: AdminPartnerServiceCatalogueItem) => void;
+}) {
+  const children = props.allDomainItems.filter((item) => item.parentCode === props.item.stableCode).sort(sortItems);
+  const kind = itemKind(props.item, props.allDomainItems);
+  return (
+    <section className="mt-5 space-y-4">
+      <div className="rounded-2xl border border-white/10 bg-[#0b1628]/95 p-4 shadow-lg shadow-black/20">
+        <button type="button" onClick={props.onBack} className="premiumButton secondary"><ArrowLeft size={16} /> Back to Domain</button>
+        <div className="mt-4 flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+          <div>
+            <p className="text-xs font-black uppercase text-slate-500">Service Catalogue <ChevronRight className="inline h-3 w-3" /> {props.domain.title} <ChevronRight className="inline h-3 w-3" /> {props.item.name}</p>
+            <h3 className="mt-1 text-3xl font-black text-cyan-100">{props.item.name}</h3>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">{props.item.shortDescription}</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" disabled={!props.canManage} onClick={() => props.onEdit(props.item)} className="premiumButton primary"><FilePenLine size={16} /> Edit {titleKind(kind)}</button>
+            {kind !== "sub-service" ? <button type="button" disabled={!props.canManage} onClick={() => props.onAddSubService(props.item)} className="premiumButton secondary"><Plus size={16} /> Add Sub-service</button> : null}
+            {props.item.status === "archived" ? (
+              <button type="button" disabled={!props.canManage || props.busy !== ""} onClick={() => props.onReactivate(props.item)} className="premiumButton secondary"><RotateCcw size={16} /> Reactivate</button>
+            ) : (
+              <button type="button" disabled={!props.canManage || props.busy !== ""} onClick={() => props.onArchive(props.item)} className="premiumButton danger"><Archive size={16} /> Archive</button>
+            )}
+            <button type="button" disabled={!props.canManage || !canDeleteDraft(props.item, children.map((child) => ({ item: child, kind: itemKind(child, props.allDomainItems), depth: 1, parentLabel: props.item.name, children: [] }))) || props.busy !== ""} onClick={() => props.onDelete(props.item)} className="premiumButton danger"><Trash2 size={16} /> Safe Delete</button>
+          </div>
+        </div>
+      </div>
+
+      <section className="rounded-2xl border border-white/10 bg-[#0d1b31] p-4 shadow-xl shadow-black/20">
+        <h4 className="text-xl font-black text-sky-100">Service Details</h4>
+        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <Detail label="Type" value={titleKind(kind)} />
+          <Detail label="Status" value={props.item.status} />
+          <Detail label="Parent" value={props.item.parentCode ? props.allDomainItems.find((item) => item.stableCode === props.item.parentCode)?.name ?? props.item.parentCode : props.domain.title} />
+          <Detail label="Countries" value={props.item.countries.join(", ") || "All configured"} />
+          <Detail label="Eligibility" value={`${props.item.individualAllowed ? "Individual" : ""}${props.item.individualAllowed && props.item.organizationAllowed ? " / " : ""}${props.item.organizationAllowed ? "Organization" : ""}` || "Not configured"} />
+          <Detail label="Application selectable" value={props.item.applicationSelectable ? "Selectable" : "Not selectable"} />
+          <Detail label="Verification Profile" value={props.item.verificationProfileKey || "None"} />
+          <Detail label="Capabilities" value={props.item.capabilities.join(", ") || "None"} />
+          <Detail label="Aliases / Search Terms" value={props.item.aliases.join(", ") || "None"} />
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-white/10 bg-[#0b1628] p-4 shadow-xl shadow-black/20">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <h4 className="text-xl font-black text-orange-100">Sub-services</h4>
+          {kind !== "sub-service" ? <button type="button" disabled={!props.canManage} onClick={() => props.onAddSubService(props.item)} className="premiumButton primary"><Plus size={16} /> Add Sub-service</button> : null}
+        </div>
+        {children.length === 0 ? <Empty label="No Sub-services are configured for this item." /> : (
+          <div className="mt-4 space-y-3">
+            {children.map((child) => (
+              <article key={child.stableCode} className="rounded-2xl border border-white/10 bg-[#07111f] p-4">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                  <div>
+                    <StatusChip label={child.status} tone={child.status === "active" ? "cyan" : child.status === "archived" ? "orange" : "slate"} />
+                    <h5 className="mt-2 text-base font-black text-slate-100">{child.name}</h5>
+                    <p className="mt-1 text-sm text-slate-400">{child.shortDescription}</p>
+                  </div>
+                  <button type="button" disabled={!props.canManage} onClick={() => props.onEdit(child)} className="premiumButton compact secondary"><FilePenLine size={14} /> Edit Sub-service</button>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+    </section>
   );
 }
 
@@ -574,19 +717,24 @@ function CatalogueDialog(props: {
   );
 }
 
-function RequestedAndAudit({ data, services, note, busy, onNote, onResolve, onCreateDraft }: {
+function RequestedServicesView({ data, services, note, busy, onBack, onNote, onResolve, onCreateDraft }: {
   data: AdminPartnerServiceCatalogueResponse;
   services: AdminPartnerServiceCatalogueItem[];
   note: string;
   busy: string;
+  onBack: () => void;
   onNote: (value: string) => void;
   onResolve: (requestKey: string, resolutionType: "mapped_to_existing" | "draft_service_created" | "closed", mappedServiceCode?: string) => void;
   onCreateDraft: (row: AdminPartnerServiceCatalogueResponse["requestedServices"][number]) => void;
 }) {
   return (
-    <section className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1fr)_420px]">
-      <div className="rounded-2xl border border-white/10 bg-[#0d1b31] p-4">
-        <h3 className="text-xl font-black text-orange-100">Requested Services</h3>
+    <section className="mt-5 rounded-2xl border border-white/10 bg-[#0d1b31] p-4">
+      <button type="button" onClick={onBack} className="premiumButton secondary"><ArrowLeft size={16} /> Back to Domains</button>
+      <div className="mt-4">
+        <p className="text-xs font-black uppercase text-orange-300">Service Catalogue</p>
+        <h3 className="mt-1 text-2xl font-black text-orange-100">Requested Services</h3>
+      </div>
+      <div className="mt-4">
         <Textarea label="Resolution note" value={note} onChange={onNote} />
         {data.requestedServices.length === 0 ? <Empty label="No requested services are waiting for review." /> : data.requestedServices.map((row) => (
           <div key={row.requestKey} className="mt-3 rounded-2xl border border-white/10 bg-[#07111f] p-4">
@@ -607,21 +755,21 @@ function RequestedAndAudit({ data, services, note, busy, onNote, onResolve, onCr
           </div>
         ))}
       </div>
-      <VersionsAudit data={data} />
     </section>
   );
 }
 
-function VersionsAudit({ data }: { data: AdminPartnerServiceCatalogueResponse }) {
+function VersionsAuditView({ data, onBack }: { data: AdminPartnerServiceCatalogueResponse; onBack: () => void }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-[#0d1b31] p-4">
-      <h3 className="text-xl font-black text-cyan-100">Versions & Audit</h3>
+    <section className="mt-5 rounded-2xl border border-white/10 bg-[#0d1b31] p-4">
+      <button type="button" onClick={onBack} className="premiumButton secondary"><ArrowLeft size={16} /> Back to Domains</button>
+      <h3 className="mt-4 text-2xl font-black text-cyan-100">Versions & Audit</h3>
       <div className="mt-3 space-y-3">
         {data.versions.slice(0, 6).map((version) => <div key={version.id} className="rounded-xl border border-white/10 bg-[#07111f] p-3 text-sm"><b className="text-slate-100">v{version.version}</b> <span className="text-slate-400">{version.status}</span><div className="text-xs text-slate-500">{version.createdAt}</div></div>)}
         {data.audit.slice(0, 8).map((event) => <div key={event.id} className="rounded-xl border border-white/10 bg-[#07111f] p-3 text-sm"><b className="text-slate-100">{event.action}</b><div className="text-xs text-slate-400">{event.changeSummary || event.entityId}</div><div className="text-xs text-slate-500">{event.createdAt}</div></div>)}
         {data.versions.length === 0 && data.audit.length === 0 ? <p className="text-sm text-slate-400">No version or audit records yet.</p> : null}
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -722,7 +870,7 @@ function draftForMode(mode: DialogMode, domain: string, item: AdminPartnerServic
   };
 }
 
-function canDeleteDraft(item: AdminPartnerServiceCatalogueItem, children: HierarchyNode[]) {
+function canDeleteDraft(item: AdminPartnerServiceCatalogueItem, children: { length: number }) {
   return !item.published && children.length === 0;
 }
 
@@ -804,16 +952,21 @@ function WorkflowChip({ icon: Icon, label, tone }: { icon: typeof FilePenLine; l
   return <div className={`inline-flex h-11 items-center gap-2 rounded-xl border px-3 text-sm font-black ${toneClass(tone)}`}><Icon size={16} />{label}</div>;
 }
 
-function Metric({ label, value, tone }: { label: string; value: number; tone: Tone }) {
-  return <div className={`rounded-2xl border p-4 ${toneClass(tone)}`}><div className="text-2xl font-black">{value}</div><div className="mt-1 text-xs font-black uppercase opacity-80">{label}</div></div>;
-}
-
 function MetricMini({ label, value }: { label: string; value: number }) {
   return <div className="rounded-lg bg-white/[0.05] p-2"><div className="font-black text-sky-100">{value}</div><div className="text-slate-400">{label}</div></div>;
 }
 
 function StatusChip({ label, tone }: { label: string; tone: Tone }) {
   return <span className={`inline-flex items-center rounded-full border px-2 py-1 text-xs font-black capitalize ${toneClass(tone)}`}>{label}</span>;
+}
+
+function Detail({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-white/10 bg-[#07111f] p-3">
+      <p className="text-[11px] font-black uppercase text-slate-500">{label}</p>
+      <p className="mt-1 break-words text-sm font-bold text-slate-200">{value}</p>
+    </div>
+  );
 }
 
 function Select({ label, value, options, onChange, disabled }: { label: string; value: string; options: string[][]; onChange: (value: string) => void; disabled?: boolean }) {
@@ -873,6 +1026,25 @@ function PremiumStyles() {
       .premiumButton.publish { background: linear-gradient(135deg, #f97316, #2563eb); color: #fff7ed; box-shadow: 0 14px 30px rgba(249,115,22,0.20); }
       .premiumButton.danger { background: rgba(154,52,18,0.22); color: #fed7aa; border-color: rgba(251,146,60,0.30); }
       .premiumButton.compact { min-height: 2.25rem; padding: 0.45rem 0.625rem; font-size: 0.75rem; }
+      .catalogueNavRow {
+        display: flex;
+        min-height: 3.25rem;
+        width: 100%;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        border-radius: 0.875rem;
+        border: 1px solid rgba(125,211,252,0.14);
+        background: rgba(8,20,39,0.78);
+        padding: 0.75rem 0.875rem;
+        text-align: left;
+        color: #dbeafe;
+        font-size: 0.875rem;
+        font-weight: 900;
+      }
+      .catalogueNavRow > span { display: inline-flex; align-items: center; gap: 0.5rem; }
+      .catalogueNavRow.active, .catalogueNavRow:hover { border-color: rgba(56,189,248,0.45); background: rgba(14,116,144,0.18); }
+      .catalogueNavRow:focus-visible { outline: 2px solid rgb(125,211,252); outline-offset: 2px; }
     `}</style>
   );
 }

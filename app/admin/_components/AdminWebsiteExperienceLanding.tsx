@@ -4,9 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
-  BadgeCheck,
+  ArrowLeft,
   BookOpen,
-  CalendarClock,
   Car,
   Compass,
   FilePenLine,
@@ -32,6 +31,8 @@ import {
   type WebsiteExperienceAdminResponse,
 } from "../../lib/admin/adminApiClient";
 
+type LandingView = "root" | "global" | "pages" | "partner";
+
 type LoadState =
   | { status: "loading"; data: null; error: null }
   | { status: "ready"; data: WebsiteExperienceAdminResponse; error: null }
@@ -55,7 +56,7 @@ const pageModules = [
   { label: "Cab", path: "/cab/result", icon: Car, sections: ["Search", "Results", "Booking"], status: "Static route" },
 ];
 
-export function AdminWebsiteExperienceLanding() {
+export function AdminWebsiteExperienceLanding({ view = "root" }: { view?: LandingView }) {
   const [state, setState] = useState<LoadState>({ status: "loading", data: null, error: null });
   const [search, setSearch] = useState("");
 
@@ -76,6 +77,78 @@ export function AdminWebsiteExperienceLanding() {
     const query = search.trim().toLowerCase();
     return pageModules.filter((page) => !query || page.label.toLowerCase().includes(query) || page.path.toLowerCase().includes(query) || page.sections.some((section) => section.toLowerCase().includes(query)));
   }, [search]);
+
+  if (view === "global") {
+    return (
+      <DrilldownShell
+        eyebrow="Website Experience"
+        title="Global Experience"
+        detail="Shared Website Experience modules used across TPL GO."
+        backHref="/admin/website-experience"
+        backLabel="Back to Website Experience"
+      >
+        <VerticalEntry
+          icon={MonitorCog}
+          title="Login & Signup"
+          detail="User Login, Partner Login, and Partner Registration presentation content."
+          count="3 contexts"
+          href="/admin/website-experience/login-signup"
+        />
+        {futureGlobalModules.map((item) => (
+          <VerticalEntry key={item.label} icon={item.icon} title={item.label} detail="Registered global module. Dynamic editing is not configured for this module yet." count="Future" disabled />
+        ))}
+      </DrilldownShell>
+    );
+  }
+
+  if (view === "pages") {
+    return (
+      <DrilldownShell
+        eyebrow="Website Experience"
+        title="Pages"
+        detail="Open one registered page at a time."
+        backHref="/admin/website-experience"
+        backLabel="Back to Website Experience"
+      >
+        <label className="relative block">
+          <Search className="absolute left-3 top-3 h-4 w-4 text-slate-500" />
+          <input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search pages or routes"
+            className="h-11 w-full rounded-xl border border-sky-300/15 bg-[#081427] pl-9 pr-3 text-sm font-medium text-slate-100 outline-none placeholder:text-slate-500 focus:border-sky-300"
+          />
+        </label>
+        {visiblePages.map((page) => (
+          <VerticalEntry
+            key={page.label}
+            icon={page.icon}
+            title={page.label}
+            detail={page.path}
+            count={`${page.sections.length} sections`}
+            href={page.label === "Partner" ? "/admin/website-experience/pages/partner" : undefined}
+            disabled={page.label !== "Partner"}
+          />
+        ))}
+      </DrilldownShell>
+    );
+  }
+
+  if (view === "partner") {
+    return (
+      <DrilldownShell
+        eyebrow="Website Experience > Pages"
+        title="Partner"
+        detail="Open Partner page content, Partner Application content, or the authoritative Service Catalogue."
+        backHref="/admin/website-experience/pages"
+        backLabel="Back to Pages"
+      >
+        <VerticalEntry icon={Users} title="Partner Page" detail="Existing Partner landing/page safe presentation content." count="Foundation" disabled />
+        <VerticalEntry icon={FilePenLine} title="Partner Application" detail="Application Shell and Steps 1-8 safe presentation fields." count={partnerContext ? `Draft v${partnerContext.draftVersion}` : "Loading"} href="/admin/website-experience/pages/partner/application" />
+        <VerticalEntry icon={Tags} title="Service Catalogue" detail="Domains, Services, Requested Services, versions and audit." count="Management" href="/admin/website-experience/pages/partner/service-catalogue" />
+      </DrilldownShell>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -105,63 +178,9 @@ export function AdminWebsiteExperienceLanding() {
         <section className="rounded-xl border border-orange-300/35 bg-orange-500/10 p-4 text-sm font-semibold text-orange-100">{state.error.message}</section>
       ) : null}
 
-      <section className="grid gap-5 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
-        <HubPanel eyebrow="Global Experience" title="Shared Website Experiences" detail="Global modules used across TPL GO. Login & Signup remains here.">
-          <div className="rounded-2xl border border-orange-300/20 bg-orange-400/10 p-4">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-              <div>
-                <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-orange-300/15 text-orange-200 ring-1 ring-orange-300/25">
-                  <MonitorCog className="h-5 w-5" />
-                </div>
-                <p className="mt-3 text-xs font-black uppercase tracking-[0.12em] text-orange-200">Global Experience</p>
-                <h3 className="mt-1 text-lg font-black text-sky-50">Login & Signup</h3>
-                <p className="mt-1 text-sm leading-6 text-slate-300">User Login, Partner Login, and Partner Registration presentation content.</p>
-              </div>
-              <Link href="/admin/website-experience/login-signup" className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-sky-500 px-4 text-sm font-black text-[#06101e] hover:bg-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200">
-                Manage
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </div>
-            <div className="mt-4 grid gap-3 md:grid-cols-3">
-              <StatusTile icon={BadgeCheck} label="Published" value={summary.publishedLabel} detail="Public login reads published content" />
-              <StatusTile icon={FilePenLine} label="Draft" value={summary.draftLabel} detail="Private until publish or schedule" />
-              <StatusTile icon={CalendarClock} label="Scheduled" value={summary.scheduledLabel} detail="Future effective versions" />
-            </div>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {futureGlobalModules.map((item) => <FutureModule key={item.label} label={item.label} icon={item.icon} />)}
-          </div>
-        </HubPanel>
-
-        <HubPanel eyebrow="Pages" title="Page-Specific Experience" detail="Browse registered pages and open Partner application or catalogue management from the Partner page.">
-          <label className="relative block">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-slate-500" />
-            <input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search pages or routes"
-              className="h-10 w-full rounded-xl border border-sky-300/15 bg-[#081427] pl-9 pr-3 text-sm font-medium text-slate-100 outline-none placeholder:text-slate-500 focus:border-sky-300"
-            />
-          </label>
-          <div className="grid gap-3">
-            {visiblePages.map((page) => <PageCard key={page.label} page={page} partnerContext={partnerContext} />)}
-          </div>
-        </HubPanel>
-      </section>
-
-      <section className="rounded-2xl border border-white/10 bg-[#0b1628]/95 p-5 shadow-lg shadow-black/20">
-        <div className="flex items-center gap-2">
-          <LayoutTemplate className="h-4 w-4 text-cyan-300" />
-          <h3 className="text-sm font-black text-cyan-100">Hierarchy Model</h3>
-        </div>
-        <div className="mt-4 grid gap-3 md:grid-cols-5">
-          {["Website Experience", "Global Experience / Pages", "Page or Module", "Section or Context", "Block / Fields"].map((item, index) => (
-            <div key={item} className="rounded-xl border border-sky-300/10 bg-white/[0.04] p-3">
-              <p className="text-[11px] font-black uppercase text-slate-500">Level {index + 1}</p>
-              <p className="mt-1 text-sm font-black text-slate-200">{item}</p>
-            </div>
-          ))}
-        </div>
+      <section className="space-y-3">
+        <VerticalEntry icon={MonitorCog} title="Global Experience" detail="Shared Website Experience modules used across TPL GO." count={`${summary.publishedLabel} published`} href="/admin/website-experience/global" />
+        <VerticalEntry icon={LayoutTemplate} title="Pages" detail="Registered page-specific experiences and Partner management entries." count={`${pageModules.length} pages`} href="/admin/website-experience/pages" />
       </section>
     </div>
   );
@@ -178,87 +197,44 @@ function buildLoginSignupSummary(contexts: WebsiteExperienceAdminContext[]) {
   };
 }
 
-function HubPanel({ eyebrow, title, detail, children }: { eyebrow: string; title: string; detail: string; children: React.ReactNode }) {
+function DrilldownShell({ eyebrow, title, detail, backHref, backLabel, children }: { eyebrow: string; title: string; detail: string; backHref: string; backLabel: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-2xl border border-sky-300/10 bg-[#0b1628]/95 p-5 shadow-xl shadow-black/20">
-      <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-200">{eyebrow}</p>
-      <h3 className="mt-1 text-xl font-black text-cyan-100">{title}</h3>
-      <p className="mt-1 text-sm leading-6 text-slate-400">{detail}</p>
-      <div className="mt-5 space-y-4">{children}</div>
+    <section className="space-y-4 rounded-2xl border border-sky-300/10 bg-[#0b1628]/95 p-5 shadow-xl shadow-black/20">
+      <Link href={backHref} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-sky-300/15 bg-white/[0.04] px-3 text-sm font-black text-slate-200 hover:border-sky-300/40 focus:outline-none focus:ring-2 focus:ring-sky-300">
+        <ArrowLeft className="h-4 w-4" />
+        {backLabel}
+      </Link>
+      <div>
+        <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-200">{eyebrow}</p>
+        <h3 className="mt-1 text-2xl font-black text-cyan-100">{title}</h3>
+        <p className="mt-1 text-sm leading-6 text-slate-400">{detail}</p>
+      </div>
+      <div className="space-y-3">{children}</div>
     </section>
   );
 }
 
-function StatusTile({ icon: Icon, label, value, detail }: { icon: LucideIcon; label: string; value: string; detail: string }) {
-  return (
-    <div className="rounded-xl border border-white/10 bg-[#0a1424] p-3">
-      <div className="flex items-center gap-2 text-[11px] font-black uppercase text-slate-400">
-        <Icon className="h-3.5 w-3.5 text-orange-200" />
-        {label}
-      </div>
-      <p className="mt-1 text-xl font-black text-sky-100">{value}</p>
-      <p className="mt-1 text-xs leading-5 text-slate-500">{detail}</p>
-    </div>
-  );
-}
-
-function FutureModule({ label, icon: Icon }: { label: string; icon: LucideIcon }) {
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-xl border border-dashed border-sky-300/15 bg-white/[0.03] px-3 py-3 text-sm text-slate-400">
-      <span className="flex items-center gap-2">
-        <Icon className="h-4 w-4 text-slate-500" />
-        {label}
+function VerticalEntry({ icon: Icon, title, detail, count, href, disabled = false }: { icon: LucideIcon; title: string; detail: string; count: string; href?: string; disabled?: boolean }) {
+  const body = (
+    <>
+      <span className="flex min-w-0 items-start gap-3">
+        <span className="mt-1 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-400/10 text-cyan-200 ring-1 ring-sky-300/20">
+          <Icon className="h-5 w-5" />
+        </span>
+        <span className="min-w-0">
+          <span className="block text-base font-black text-sky-50">{title}</span>
+          <span className="mt-1 block text-sm leading-6 text-slate-400">{detail}</span>
+        </span>
       </span>
-      <span className="rounded-full border border-slate-600/50 bg-slate-800/80 px-2 py-1 text-[10px] font-black uppercase text-slate-400">Future</span>
-    </div>
-  );
-}
-
-function PageCard({ page, partnerContext }: { page: typeof pageModules[number]; partnerContext?: WebsiteExperienceAdminContext }) {
-  const Icon = page.icon;
-  const isPartner = page.label === "Partner";
-  return (
-    <div className="rounded-2xl border border-sky-300/10 bg-[#081427] p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="flex items-center gap-2 text-sm font-black text-sky-50">
-            <Icon className="h-4 w-4 text-cyan-300" />
-            {page.label}
-          </p>
-          <p className="mt-1 truncate text-xs text-slate-500">{page.path}</p>
-        </div>
-        <span className="rounded-full border border-sky-300/15 bg-white/[0.04] px-2 py-1 text-[10px] font-black uppercase text-slate-400">{page.status}</span>
-      </div>
-      <div className="mt-3 flex flex-wrap gap-2">
-        {page.sections.map((section) => <span key={section} className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-[11px] font-bold text-slate-300">{section}</span>)}
-      </div>
-      {isPartner ? (
-        <div className="mt-4 grid gap-2 sm:grid-cols-3">
-          <PartnerEntry label="Partner Page" href="/partner-preview" disabled />
-          <PartnerEntry label="Partner Application" href="/admin/website-experience/pages/partner/application" detail={partnerContext ? `Draft v${partnerContext.draftVersion}` : "Loading"} />
-          <PartnerEntry label="Service Catalogue" href="/admin/website-experience/pages/partner/service-catalogue" detail="Domains / Services" />
-        </div>
-      ) : (
-        <p className="mt-3 text-xs leading-5 text-slate-500">Dynamic editing is not configured for this page in UI.1E.4.</p>
-      )}
-    </div>
-  );
-}
-
-function PartnerEntry({ label, href, detail, disabled = false }: { label: string; href: string; detail?: string; disabled?: boolean }) {
-  const className = "flex min-h-16 flex-col justify-between rounded-xl border border-sky-300/15 bg-white/[0.04] p-3 text-left text-sm font-black text-slate-200 hover:border-sky-300/45 focus:outline-none focus:ring-2 focus:ring-sky-300";
-  if (disabled) {
-    return (
-      <span className={`${className} cursor-not-allowed opacity-70`}>
-        <span>{label}</span>
-        <span className="text-[11px] font-bold text-slate-500">Foundation</span>
+      <span className="flex shrink-0 items-center gap-3">
+        <span className="rounded-full border border-orange-300/20 bg-orange-400/10 px-3 py-1 text-xs font-black text-orange-100">{count}</span>
+        <ArrowRight className="h-4 w-4 text-sky-200" />
       </span>
-    );
+    </>
+  );
+  const className = "flex min-h-20 w-full items-center justify-between gap-4 rounded-2xl border border-sky-300/10 bg-[#081427] p-4 text-left shadow-lg shadow-black/10 transition hover:border-sky-300/35 hover:bg-[#0b1b33] focus:outline-none focus:ring-2 focus:ring-sky-300";
+  if (!href || disabled) {
+    return <div className={`${className} opacity-75`}>{body}</div>;
   }
-  return (
-    <Link href={href} className={className}>
-      <span>{label}</span>
-      <span className="text-[11px] font-bold text-orange-200">{detail}</span>
-    </Link>
-  );
+  return <Link href={href} className={className}>{body}</Link>;
 }

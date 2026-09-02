@@ -1,7 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
+  ArrowLeft,
+  ArrowRight,
   BadgeCheck,
   CalendarClock,
   Clock3,
@@ -76,8 +79,10 @@ const contextLabels: Record<WebsiteExperienceContext, string> = {
 
 export function WebsiteExperienceManager({
   mode = "login-signup",
+  partnerApplicationNodeId,
 }: {
   mode?: "login-signup" | "partner-application";
+  partnerApplicationNodeId?: string;
 }) {
   const [state, setState] = useState<LoadState>({ status: "loading", data: null, error: null });
   const [activeContext, setActiveContext] = useState<WebsiteExperienceContext>(mode === "partner-application" ? "partner_application" : "user_login");
@@ -286,6 +291,7 @@ export function WebsiteExperienceManager({
             <BlockEditor
               block={activeBlock}
               content={activeDraft}
+              partnerApplicationNodeId={partnerApplicationNodeId}
               canWrite={canWrite}
               canPublish={canPublish}
               schedule={schedule}
@@ -335,6 +341,7 @@ function Breadcrumbs({ mode, activeContext, activeBlock }: { mode: "login-signup
 function BlockEditor({
   block,
   content,
+  partnerApplicationNodeId,
   canWrite,
   canPublish,
   schedule,
@@ -352,6 +359,7 @@ function BlockEditor({
 }: {
   block: BlockKey;
   content: WebsiteExperienceContent;
+  partnerApplicationNodeId?: string;
   canWrite: boolean;
   canPublish: boolean;
   schedule: typeof defaultSchedule;
@@ -371,6 +379,7 @@ function BlockEditor({
     return (
       <PartnerApplicationTreeEditor
         content={content}
+        selectedNodeId={partnerApplicationNodeId}
         canWrite={canWrite}
         canPublish={canPublish}
         schedule={schedule}
@@ -520,6 +529,7 @@ function BlockEditor({
 
 function PartnerApplicationTreeEditor({
   content,
+  selectedNodeId,
   canWrite,
   canPublish,
   schedule,
@@ -534,6 +544,7 @@ function PartnerApplicationTreeEditor({
   onCancelSchedule,
 }: {
   content: WebsiteExperienceContent;
+  selectedNodeId?: string;
   canWrite: boolean;
   canPublish: boolean;
   schedule: typeof defaultSchedule;
@@ -567,13 +578,67 @@ function PartnerApplicationTreeEditor({
     });
   };
   const stepFour = tree?.children.find((node) => node.id === "step-4-services");
+  const selectedNode = selectedNodeId ? tree?.children.find((node) => node.id === selectedNodeId) : undefined;
+  if (!selectedNodeId) {
+    return (
+      <EditorSection title="Partner Application" detail="Open one application section at a time.">
+        <div className="rounded border border-blue-100 bg-blue-50 p-3 text-sm text-blue-900">
+          Website Experience &gt; Pages &gt; Partner &gt; Partner Application
+        </div>
+        <div className="space-y-3">
+          {(tree?.children ?? []).map((node) => (
+            <Link
+              key={node.id}
+              href={`/admin/website-experience/pages/partner/application/${node.id}`}
+              className="flex min-h-16 items-center justify-between gap-4 rounded border border-slate-200 bg-slate-50 p-4 text-left hover:border-blue-300 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            >
+              <span>
+                <span className="block text-sm font-semibold text-slate-950">{node.label}</span>
+                <span className="mt-1 block text-xs leading-5 text-slate-600">{node.editableFields.length} editable fields</span>
+              </span>
+              <ArrowRight className="h-4 w-4 text-blue-700" />
+            </Link>
+          ))}
+        </div>
+        <WorkflowActions
+          canWrite={canWrite}
+          canPublish={canPublish}
+          schedule={schedule}
+          activeRow={activeRow}
+          busyAction={busyAction}
+          message={message}
+          onScheduleChange={onScheduleChange}
+          onSaveDraft={onSaveDraft}
+          onPublish={onPublish}
+          onSchedule={onSchedule}
+          onCancelSchedule={onCancelSchedule}
+        />
+      </EditorSection>
+    );
+  }
+
+  if (!selectedNode) {
+    return (
+      <EditorSection title="Partner Application" detail="The requested Partner Application section was not found.">
+        <Link href="/admin/website-experience/pages/partner/application" className="inline-flex h-10 items-center gap-2 rounded border border-slate-200 px-3 text-sm font-semibold text-slate-700">
+          <ArrowLeft className="h-4 w-4" />
+          Back to Partner Application
+        </Link>
+      </EditorSection>
+    );
+  }
+
   return (
-    <EditorSection title="Partner Application" detail="Persist safe Partner Application presentation copy in the existing Website Experience content engine.">
+    <EditorSection title={selectedNode.label} detail="Edit only this Partner Application section's safe presentation fields.">
       <div className="rounded border border-blue-100 bg-blue-50 p-3 text-sm text-blue-900">
-        Website Experience &gt; Pages &gt; Partner &gt; Partner Application &gt; Application Shell &gt; Step 1-8
+        Website Experience &gt; Pages &gt; Partner &gt; Partner Application &gt; {selectedNode.label}
       </div>
-      <div className="grid gap-3 xl:grid-cols-2">
-        {(tree?.children ?? []).map((node) => (
+      <Link href="/admin/website-experience/pages/partner/application" className="inline-flex h-10 items-center gap-2 rounded border border-slate-200 px-3 text-sm font-semibold text-slate-700">
+        <ArrowLeft className="h-4 w-4" />
+        Back to Partner Application
+      </Link>
+      <div className="space-y-3">
+        {[selectedNode].map((node) => (
           <section key={node.id} className="rounded border border-slate-200 bg-slate-50 p-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h4 className="text-sm font-semibold text-slate-950">{node.label}</h4>
