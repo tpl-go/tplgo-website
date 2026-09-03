@@ -1,6 +1,8 @@
 .tmp/
+.worktrees/
 artifacts/
 outputs/
+tmp/
 reports/
 *.log
 *_REPORT.md
