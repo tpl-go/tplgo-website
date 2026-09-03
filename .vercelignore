@@ -1,6 +1,8 @@
 .tmp/
 .worktrees/
+.next/
 artifacts/
+node_modules/
 outputs/
 tmp/
 reports/
