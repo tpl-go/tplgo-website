@@ -53,8 +53,8 @@ export function AdminPartnerServiceCatalogueClient() {
   const [loadState, setLoadState] = useState<"loading" | "ready" | "error">("loading");
   const [busy, setBusy] = useState("");
   const [message, setMessage] = useState<{ tone: "success" | "error" | "info"; text: string } | null>(null);
-  const [selectedDomain, setSelectedDomain] = useState("");
-  const [selectedItemCode, setSelectedItemCode] = useState("");
+  const [selectedDomain, setSelectedDomain] = useState(() => initialQueryParam("domain"));
+  const [selectedItemCode, setSelectedItemCode] = useState(() => initialQueryParam("service"));
   const [query, setQuery] = useState("");
   const [domainQuery, setDomainQuery] = useState("");
   const [domainStatus, setDomainStatus] = useState("");
@@ -99,6 +99,7 @@ export function AdminPartnerServiceCatalogueClient() {
   const domains = useMemo(() => buildDomainRows(items, publishedCodes), [items, publishedCodes]);
   const activeDomain = useMemo(() => domains.find((domain) => domain.id === selectedDomain), [domains, selectedDomain]);
   const scopedItems = useMemo(() => items.filter((item) => item.domain === selectedDomain), [items, selectedDomain]);
+  const visibleScopedItems = useMemo(() => activeDomain ? scopedItems.filter((item) => !isDomainRootItem(item, activeDomain)) : scopedItems, [activeDomain, scopedItems]);
   const selectedItem = useMemo(() => scopedItems.find((item) => item.stableCode === selectedItemCode), [scopedItems, selectedItemCode]);
   const filteredDomains = useMemo(() => {
     const q = normalize(domainQuery);
@@ -108,7 +109,7 @@ export function AdminPartnerServiceCatalogueClient() {
       return normalize([domain.title, domain.description, domain.aliases.join(" ")].join(" ")).includes(q);
     });
   }, [domainQuery, domainStatus, domains]);
-  const filteredScopedItems = useMemo(() => filterDomainItems(scopedItems, { query, status, itemType, selectable }), [itemType, query, scopedItems, selectable, status]);
+  const filteredScopedItems = useMemo(() => filterDomainItems(visibleScopedItems, scopedItems, { query, status, itemType, selectable }), [itemType, query, scopedItems, selectable, status, visibleScopedItems]);
 
   function openDialog(mode: DialogMode, item?: AdminPartnerServiceCatalogueItem, parent?: AdminPartnerServiceCatalogueItem) {
     const domain = item?.domain ?? parent?.domain ?? selectedDomain;
@@ -183,16 +184,40 @@ export function AdminPartnerServiceCatalogueClient() {
     setMessage({ tone: "success", text: "Draft deleted. Published catalogue content remains unchanged." });
   }
 
-  if (loadState === "loading") return <StatePanel icon={Loader2} spin title="Loading service catalogue..." text="Preparing the catalogue home." />;
-  if (loadState === "error" || !data) return <StatePanel icon={XCircle} title="We couldn't load the service catalogue." text="Please try again." action={<button type="button" onClick={loadCatalogue} className="premiumButton secondary"><RefreshCcw size={16} /> Retry</button>} />;
+  const hasDetailContext = Boolean(selectedDomain || selectedItemCode);
+
+  if (loadState === "loading") {
+    return (
+      <>
+        {hasDetailContext ? <HideCatalogueRouteChrome /> : null}
+        <StatePanel icon={Loader2} spin title={hasDetailContext ? "Loading domain..." : "Loading service catalogue..."} text={hasDetailContext ? "Preparing this domain." : "Preparing the catalogue home."} />
+      </>
+    );
+  }
+  if (loadState === "error" || !data) {
+    return (
+      <>
+        {hasDetailContext ? <HideCatalogueRouteChrome /> : null}
+        <StatePanel
+          icon={XCircle}
+          title={hasDetailContext ? "We couldn't load this domain." : "We couldn't load the service catalogue."}
+          text="Please try again."
+          action={<div className="flex flex-wrap gap-2"><AdminBackButton href="/admin/website-experience/pages/partner/service-catalogue" label="Back to Service Catalogue" /><button type="button" onClick={loadCatalogue} className="premiumButton secondary"><RefreshCcw size={16} /> Retry</button></div>}
+        />
+      </>
+    );
+  }
+
+  const showCatalogueHomeHeader = !selectedDomain && !selectedItem;
 
   return (
     <div data-admin-service-catalogue="true" className="min-h-screen rounded-2xl border border-sky-300/10 bg-[#07111f] p-4 text-slate-100 shadow-2xl shadow-sky-950/30 lg:p-6">
       <PremiumStyles />
-      <CatalogueHeader
+      {!showCatalogueHomeHeader ? <HideCatalogueRouteChrome /> : null}
+      {showCatalogueHomeHeader ? <CatalogueHeader
         data={data}
         domains={domains}
-      />
+      /> : null}
       {message ? <Message tone={message.tone} text={message.text} /> : null}
 
       {selectedItem && activeDomain ? (
@@ -245,6 +270,10 @@ export function AdminPartnerServiceCatalogueClient() {
           onAddCategory={() => openDialog("add-category")}
           onAddService={() => openDialog("add-service")}
           onEditDomain={() => openDialog("edit-domain", firstItemForDomain(items, activeDomain.id))}
+          onArchiveDomain={() => {
+            const item = firstItemForDomain(items, activeDomain.id);
+            if (item) void lifecycle(item, "archive");
+          }}
           onEdit={(item) => openDialog(itemKind(item, scopedItems) === "sub-service" ? "edit-sub-service" : itemKind(item, scopedItems) === "category" ? "edit-category" : "edit-service", item)}
           onAddSubService={(item) => openDialog("add-sub-service", undefined, item)}
           onArchive={(item) => lifecycle(item, "archive")}
@@ -394,6 +423,7 @@ function DomainDetailView(props: {
   onAddCategory: () => void;
   onAddService: () => void;
   onEditDomain: () => void;
+  onArchiveDomain: () => void;
   onEdit: (item: AdminPartnerServiceCatalogueItem) => void;
   onAddSubService: (item: AdminPartnerServiceCatalogueItem) => void;
   onArchive: (item: AdminPartnerServiceCatalogueItem) => void;
@@ -402,58 +432,74 @@ function DomainDetailView(props: {
   onOpenItem: (item: AdminPartnerServiceCatalogueItem) => void;
 }) {
   const tree = buildHierarchy(props.items, props.allDomainItems);
+  const directItems = props.allDomainItems.filter((item) => !item.parentCode);
+  const pendingChanges = props.domain.draftCount;
+  const statusLabel = props.domain.statusLabel;
+  const categoryCount = props.domain.categoryCount;
+  const serviceCount = props.domain.serviceCount;
   return (
-    <section className="mt-5 space-y-4">
-      <div className="rounded-2xl border border-white/10 bg-[#0b1628]/95 p-4 shadow-lg shadow-black/20">
-        <AdminBackButton onClick={props.onBack} label="Back to Service Catalogue" />
+    <section className="space-y-4">
+      <div className="rounded-2xl border border-white/10 bg-[#0b1628]/95 p-4 shadow-lg shadow-black/15">
+        <AdminBackButton href="/admin/website-experience/pages/partner/service-catalogue" label="Back to Service Catalogue" />
+        <DomainBreadcrumb domainName={props.domain.title} />
         <div className="mt-4 flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-          <div>
-            <p className="text-xs font-black uppercase text-slate-500">Service Catalogue <ChevronRight className="inline h-3 w-3" /> {props.domain.title}</p>
-            <h3 className="mt-1 text-3xl font-black text-cyan-100">{props.domain.title}</h3>
+          <div className="min-w-0">
+            <h3 className="text-3xl font-black text-cyan-100">{props.domain.title}</h3>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">{props.domain.description}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <StatusChip label={statusLabel} tone={statusTone(statusLabel)} />
+              <SummaryChip label={serviceCount === 1 ? "Service" : "Services"} value={String(serviceCount)} />
+              {categoryCount > 0 ? <SummaryChip label={categoryCount === 1 ? "Category" : "Categories"} value={String(categoryCount)} /> : null}
+              {pendingChanges > 0 ? <SummaryChip label={pendingChanges === 1 ? "Pending Change" : "Pending Changes"} value={String(pendingChanges)} highlight /> : null}
+            </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <button type="button" disabled={!props.canManage} onClick={props.onAddCategory} className="premiumButton primary"><Plus size={16} /> Add Category</button>
+          <div className="flex shrink-0 flex-wrap gap-2">
             <button type="button" disabled={!props.canManage} onClick={props.onAddService} className="premiumButton primary"><Plus size={16} /> Add Service</button>
             <button type="button" disabled={!props.canManage} onClick={props.onEditDomain} className="premiumButton secondary"><FilePenLine size={16} /> Edit Domain</button>
+            <details className="relative">
+              <summary className="premiumButton secondary cursor-pointer list-none">More Actions</summary>
+              <div className="absolute right-0 z-20 mt-2 w-52 rounded-xl border border-sky-300/15 bg-[#07111f] p-2 shadow-2xl shadow-black/40">
+                <button type="button" disabled={!props.canManage} onClick={props.onAddCategory} className="w-full rounded-lg px-3 py-2 text-left text-sm font-bold text-slate-200 hover:bg-sky-400/10 focus:outline-none focus:ring-2 focus:ring-sky-300">Add Category</button>
+                <Link href="/admin/website-experience/versions-audit?source=service_catalogue" className="block rounded-lg px-3 py-2 text-sm font-bold text-slate-200 hover:bg-sky-400/10 focus:outline-none focus:ring-2 focus:ring-sky-300">Version History</Link>
+                <button type="button" disabled={!props.canManage || props.busy !== "" || !directItems.length} onClick={props.onArchiveDomain} className="w-full rounded-lg px-3 py-2 text-left text-sm font-bold text-orange-100 hover:bg-orange-400/10 focus:outline-none focus:ring-2 focus:ring-orange-200 disabled:cursor-not-allowed disabled:opacity-50">Start Archive</button>
+              </div>
+            </details>
           </div>
         </div>
       </div>
 
-      <section className="rounded-2xl border border-white/10 bg-[#0d1b31] p-4 shadow-lg shadow-black/20">
-        <div className="mb-3 flex items-center gap-2 text-sm font-black text-cyan-100"><Filter size={16} /> Searching within {props.domain.title}</div>
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <section className="rounded-2xl border border-white/10 bg-[#0d1b31] p-4 shadow-lg shadow-black/15">
+        <div className="mb-3 flex items-center gap-2 text-sm font-black text-cyan-100"><Filter size={16} /> Filters</div>
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_14rem_14rem]">
           <label className="block md:col-span-2">
-            <span className="text-xs font-black uppercase text-slate-400">Search</span>
+            <span className="text-xs font-black uppercase text-slate-400">Search services</span>
             <div className="mt-1 flex h-11 items-center gap-2 rounded-xl border border-sky-300/15 bg-[#07111f] px-3 focus-within:border-sky-300 focus-within:ring-2 focus:ring-sky-500/20">
               <Search size={16} className="text-sky-300" />
-              <input data-admin-service-search="true" value={props.query} onChange={(event) => props.setQuery(event.target.value)} className="min-w-0 flex-1 bg-transparent text-sm text-slate-100 outline-none placeholder:text-slate-500" placeholder="Search current Domain" />
+              <input data-admin-service-search="true" value={props.query} onChange={(event) => props.setQuery(event.target.value)} className="min-w-0 flex-1 bg-transparent text-sm text-slate-100 outline-none placeholder:text-slate-500" placeholder="Search services" />
             </div>
           </label>
-          <Select label="Item Type" value={props.itemType} onChange={props.setItemType} options={[["category", "Category"], ["service", "Service"], ["sub-service", "Sub-service"]]} />
-          <Select label="Status" value={props.status} onChange={props.setStatus} options={[["active", "Active"], ["inactive", "Inactive"], ["archived", "Archived"]]} />
-          <Select label="Selectable" value={props.selectable} onChange={props.setSelectable} options={[["true", "Application selectable"], ["false", "Not selectable"]]} />
+          <Select label="Type" value={props.itemType} onChange={props.setItemType} options={[["category", "Category"], ["service", "Service"], ["sub-service", "Sub-service"]]} />
+          <Select label="Status" value={props.status} onChange={props.setStatus} options={[["inactive", "Draft"], ["active", "Published"], ["archived", "Archived"]]} />
+          <details className="md:col-span-2 xl:col-span-3">
+            <summary className="inline-flex h-10 cursor-pointer items-center rounded-xl border border-sky-300/15 bg-[#07111f] px-3 text-xs font-black text-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-300">More Filters</summary>
+            <div className="mt-3 max-w-sm">
+              <Select label="Application availability" value={props.selectable} onChange={props.setSelectable} options={[["true", "Available"], ["false", "Not available"]]} />
+            </div>
+          </details>
         </div>
       </section>
 
-      <section className="rounded-2xl border border-white/10 bg-[#0b1628] p-4 shadow-xl shadow-black/20">
+      <section className="rounded-2xl border border-white/10 bg-[#0b1628] p-4 shadow-lg shadow-black/15">
         <div className="flex flex-col gap-1">
-          <p className="text-xs font-black uppercase text-orange-300">Level 2 - Domain Detail</p>
-          <h4 className="text-xl font-black text-sky-100">Categories, Services and Sub-services</h4>
+          <h4 className="text-xl font-black text-sky-100">Services</h4>
+          <p className="text-sm leading-6 text-slate-400">Manage categories and services in this domain.</p>
         </div>
-        {tree.length === 0 ? <Empty label="No Categories, Services or Sub-services match these filters." /> : (
+        {tree.length === 0 ? <Empty label={props.query || props.status || props.itemType || props.selectable ? "No matching services found." : "No services have been added to this domain yet."} /> : (
           <div className="mt-4 space-y-3">
             {tree.map((node) => (
               <HierarchyRow
                 key={node.item.stableCode}
                 node={node}
-                canManage={props.canManage}
-                busy={props.busy}
-                onEdit={props.onEdit}
-                onAddSubService={props.onAddSubService}
-                onArchive={props.onArchive}
-                onReactivate={props.onReactivate}
-                onDelete={props.onDelete}
                 onOpenItem={props.onOpenItem}
               />
             ))}
@@ -464,48 +510,39 @@ function DomainDetailView(props: {
   );
 }
 
-function HierarchyRow({ node, canManage, busy, onEdit, onAddSubService, onArchive, onReactivate, onDelete, onOpenItem }: {
+function HierarchyRow({ node, onOpenItem }: {
   node: HierarchyNode;
-  canManage: boolean;
-  busy: string;
-  onEdit: (item: AdminPartnerServiceCatalogueItem) => void;
-  onAddSubService: (item: AdminPartnerServiceCatalogueItem) => void;
-  onArchive: (item: AdminPartnerServiceCatalogueItem) => void;
-  onReactivate: (item: AdminPartnerServiceCatalogueItem) => void;
-  onDelete: (item: AdminPartnerServiceCatalogueItem) => void;
   onOpenItem?: (item: AdminPartnerServiceCatalogueItem) => void;
 }) {
   const kind = node.kind;
   return (
-    <article className={`rounded-2xl border border-white/10 bg-[#0d1b31] p-4 ${node.depth > 0 ? "ml-0 border-l-4 border-l-cyan-300/50 md:ml-6" : ""}`}>
-      <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <StatusChip label={kind} tone={kind === "category" ? "violet" : kind === "sub-service" ? "orange" : "blue"} />
-            <StatusChip label={node.item.status} tone={node.item.status === "active" ? "cyan" : node.item.status === "archived" ? "orange" : "slate"} />
-            <StatusChip label={node.item.published ? "Published" : "Draft"} tone={node.item.published ? "green" : "slate"} />
-            {node.item.applicationSelectable ? <StatusChip label="Selectable" tone="cyan" /> : <StatusChip label="Not selectable" tone="slate" />}
-          </div>
-          <h5 className="mt-2 text-lg font-black text-slate-100">{node.item.name}</h5>
-          <p className="mt-1 max-w-3xl text-sm leading-5 text-slate-400">{node.item.shortDescription}</p>
-          <p className="mt-2 text-xs text-slate-500">Parent: {node.parentLabel || domainTitle(node.item.domain)} · Children: {node.children.length}</p>
-        </div>
-        <div className="flex flex-wrap gap-2 xl:justify-end">
-          {onOpenItem ? <button type="button" onClick={() => onOpenItem(node.item)} className="premiumButton compact primary"><ChevronRight size={14} /> Open</button> : null}
-          <button type="button" disabled={!canManage} onClick={() => onEdit(node.item)} className="premiumButton compact secondary"><FilePenLine size={14} /> Edit {titleKind(kind)}</button>
-          {kind !== "sub-service" ? <button type="button" disabled={!canManage} onClick={() => onAddSubService(node.item)} className="premiumButton compact primary"><Plus size={14} /> Add Sub-service</button> : null}
-          {node.item.status === "archived" ? (
-            <button type="button" disabled={!canManage || busy !== ""} onClick={() => onReactivate(node.item)} className="premiumButton compact secondary"><RotateCcw size={14} /> Reactivate</button>
-          ) : (
-            <button type="button" disabled={!canManage || busy !== ""} onClick={() => onArchive(node.item)} className="premiumButton compact danger"><Archive size={14} /> Archive</button>
-          )}
-          <button type="button" disabled={!canManage || !canDeleteDraft(node.item, node.children) || busy !== ""} onClick={() => onDelete(node.item)} className="premiumButton compact danger"><Trash2 size={14} /> Safe Delete</button>
-        </div>
-      </div>
+    <article className={`${node.depth > 0 ? "ml-0 md:ml-5" : ""}`}>
+      <button type="button" onClick={() => onOpenItem?.(node.item)} className="flex min-h-20 w-full flex-col justify-between gap-3 rounded-xl border border-white/10 bg-[#0d1b31] p-3 text-left shadow-md shadow-black/10 transition hover:border-sky-300/30 hover:bg-[#10213b] focus:outline-none focus:ring-2 focus:ring-sky-300 lg:flex-row lg:items-center">
+        <span className="flex min-w-0 items-start gap-3">
+          <span className="mt-1 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sky-400/10 text-cyan-200 ring-1 ring-sky-300/15">
+            <Layers3 className="h-5 w-5" />
+          </span>
+          <span className="min-w-0">
+            <span className="flex flex-wrap items-center gap-2">
+              <span className="block text-base font-black text-slate-100">{node.item.name}</span>
+              <StatusChip label={titleKind(kind)} tone={kind === "category" ? "violet" : kind === "sub-service" ? "orange" : "blue"} />
+            </span>
+            <span className="mt-1 block text-sm leading-5 text-slate-400">{node.item.shortDescription}</span>
+            <span className="mt-2 flex flex-wrap gap-2 text-xs">
+              {node.children.length > 0 ? <span className="rounded-full border border-sky-300/10 bg-white/[0.04] px-3 py-1 font-black text-slate-300">{node.children.length} {node.children.length === 1 ? "item" : "items"}</span> : null}
+              {!node.item.published ? <span className="rounded-full border border-amber-300/25 bg-amber-400/10 px-3 py-1 font-black text-amber-100">Pending Change</span> : null}
+            </span>
+          </span>
+        </span>
+        <span className="flex shrink-0 items-center gap-3 lg:justify-end">
+          <StatusChip label={itemStatusLabel(node.item)} tone={itemStatusTone(node.item)} />
+          <ChevronRight className="h-4 w-4 text-sky-200" />
+        </span>
+      </button>
       {node.children.length > 0 ? (
         <div className="mt-3 space-y-3">
           {node.children.map((child) => (
-            <HierarchyRow key={child.item.stableCode} node={child} canManage={canManage} busy={busy} onEdit={onEdit} onAddSubService={onAddSubService} onArchive={onArchive} onReactivate={onReactivate} onDelete={onDelete} onOpenItem={onOpenItem} />
+            <HierarchyRow key={child.item.stableCode} node={child} onOpenItem={onOpenItem} />
           ))}
         </div>
       ) : null}
@@ -745,18 +782,20 @@ function buildDomainRows(items: AdminPartnerServiceCatalogueItem[], publishedCod
   const domainIds = [...new Set([...partnerServiceCatalog.map((domain) => domain.id), ...items.map((item) => item.domain)])];
   return domainIds.map((id) => {
     const domainItems = items.filter((item) => item.domain === id);
+    const domain = { id, title: domainTitle(id) };
+    const visibleItems = domainItems.filter((item) => !isDomainRootItem(item, domain));
     const statuses = domainItems.map((item) => item.status);
     const draftCount = domainItems.filter((item) => !item.published && !publishedCodes.has(item.stableCode)).length;
     const hasPublishedContent = domainItems.some((item) => item.published || publishedCodes.has(item.stableCode));
     const status = domainItems.length === 0 ? "inactive" : statuses.includes("active") ? "active" : statuses.includes("inactive") ? "inactive" : "archived";
     return {
       id,
-      title: domainTitle(id),
+      title: domain.title,
       description: domainDescription(id),
       status,
       statusLabel: domainStatusLabel(status, draftCount, hasPublishedContent),
-      categoryCount: domainItems.filter((item) => itemKind(item, domainItems) === "category").length,
-      serviceCount: domainItems.filter((item) => itemKind(item, domainItems) !== "category").length,
+      categoryCount: visibleItems.filter((item) => itemKind(item, domainItems) === "category").length,
+      serviceCount: visibleItems.filter((item) => itemKind(item, domainItems) !== "category").length,
       selectableCount: domainItems.filter((item) => item.applicationSelectable).length,
       draftCount,
       hasPublishedContent,
@@ -774,8 +813,9 @@ function domainStatusLabel(status: AdminPartnerServiceCatalogueItem["status"], d
 
 function buildHierarchy(items: AdminPartnerServiceCatalogueItem[], allDomainItems: AdminPartnerServiceCatalogueItem[]): HierarchyNode[] {
   const byParent = new Map<string, AdminPartnerServiceCatalogueItem[]>();
+  const visibleCodes = new Set(items.map((item) => item.stableCode));
   for (const item of items) {
-    const parent = item.parentCode ?? "__root__";
+    const parent = item.parentCode && visibleCodes.has(item.parentCode) ? item.parentCode : "__root__";
     byParent.set(parent, [...(byParent.get(parent) ?? []), item]);
   }
   const createNode = (item: AdminPartnerServiceCatalogueItem, depth: number): HierarchyNode => ({
@@ -788,22 +828,36 @@ function buildHierarchy(items: AdminPartnerServiceCatalogueItem[], allDomainItem
   return (byParent.get("__root__") ?? []).sort(sortItems).map((item) => createNode(item, 0));
 }
 
-function filterDomainItems(items: AdminPartnerServiceCatalogueItem[], filter: { query: string; status: string; itemType: string; selectable: string }) {
+function filterDomainItems(items: AdminPartnerServiceCatalogueItem[], allDomainItems: AdminPartnerServiceCatalogueItem[], filter: { query: string; status: string; itemType: string; selectable: string }) {
   const q = normalize(filter.query);
   return items.filter((item) => {
     if (filter.status && item.status !== filter.status) return false;
     if (filter.selectable && String(item.applicationSelectable) !== filter.selectable) return false;
-    if (filter.itemType && itemKind(item, items) !== filter.itemType) return false;
+    if (filter.itemType && itemKind(item, allDomainItems) !== filter.itemType) return false;
     if (!q) return true;
-    return normalize([item.name, item.shortDescription, item.stableCode, item.verificationProfileKey, item.aliases.join(" ")].join(" ")).includes(q);
+    return normalize([item.name, item.shortDescription, item.aliases.join(" ")].join(" ")).includes(q);
   });
 }
 
 function itemKind(item: AdminPartnerServiceCatalogueItem, domainItems: AdminPartnerServiceCatalogueItem[]): ItemKind {
   const hasChildren = domainItems.some((candidate) => candidate.parentCode === item.stableCode);
+  const parent = item.parentCode ? domainItems.find((candidate) => candidate.stableCode === item.parentCode) : undefined;
+  if (parent && isDomainRootItem(parent, { id: item.domain, title: domainTitle(item.domain) })) {
+    if (hasChildren && !item.applicationSelectable) return "category";
+    return "service";
+  }
+  if (parent) {
+    const parentHasChildren = domainItems.some((candidate) => candidate.parentCode === parent.stableCode);
+    if (!parent.applicationSelectable && parentHasChildren) return "service";
+    return "sub-service";
+  }
   if (item.parentCode) return "sub-service";
   if (hasChildren && !item.applicationSelectable) return "category";
   return "service";
+}
+
+function isDomainRootItem(item: AdminPartnerServiceCatalogueItem, domain: { id: string; title: string }) {
+  return !item.parentCode && !item.applicationSelectable && (item.stableCode === `${domain.id}-root` || normalize(item.name) === normalize(domain.title));
 }
 
 function draftForMode(mode: DialogMode, domain: string, item: AdminPartnerServiceCatalogueItem | undefined, parent: AdminPartnerServiceCatalogueItem | undefined, items: AdminPartnerServiceCatalogueItem[]): AdminPartnerServiceCatalogueItem {
@@ -871,6 +925,11 @@ function normalize(value: string) {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
+function initialQueryParam(key: string) {
+  if (typeof window === "undefined") return "";
+  return new URLSearchParams(window.location.search).get(key) ?? "";
+}
+
 function domainTitle(id: string) {
   return partnerServiceCatalog.find((domain) => domain.id === id)?.title ?? id.split("-").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" ");
 }
@@ -885,6 +944,18 @@ function domainIcon(id: string) {
 
 function titleKind(kind: ItemKind) {
   return kind.split("-").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" ");
+}
+
+function itemStatusLabel(item: AdminPartnerServiceCatalogueItem) {
+  if (item.status === "archived") return "Archived";
+  if (!item.published) return "Draft";
+  return "Published";
+}
+
+function itemStatusTone(item: AdminPartnerServiceCatalogueItem): Tone {
+  if (item.status === "archived") return "slate";
+  if (!item.published) return "orange";
+  return "green";
 }
 
 function workflowTitle(state: string) {
@@ -933,12 +1004,40 @@ function Message({ tone, text }: { tone: "success" | "error" | "info"; text: str
   return <div role="status" className={`mt-4 rounded-xl border p-3 text-sm font-bold ${tone === "success" ? "border-emerald-300/30 bg-emerald-400/10 text-emerald-100" : tone === "error" ? "border-orange-300/40 bg-orange-500/10 text-orange-100" : "border-sky-300/30 bg-sky-400/10 text-sky-100"}`}>{text}</div>;
 }
 
+function HideCatalogueRouteChrome() {
+  return <style>{`.catalogueRouteChrome { display: none; }`}</style>;
+}
+
 function SummaryChip({ label, value, highlight = false }: { label: string; value: string; highlight?: boolean }) {
   return (
     <span className={`inline-flex min-h-9 items-center gap-2 rounded-full border px-3 text-xs font-black ${highlight ? "border-amber-300/25 bg-amber-400/10 text-amber-100" : "border-sky-300/10 bg-white/[0.04] text-slate-300"}`}>
       <span className="text-sky-100">{value}</span>
       <span>{label}</span>
     </span>
+  );
+}
+
+function DomainBreadcrumb({ domainName }: { domainName: string }) {
+  return (
+    <nav className="mt-4 flex flex-wrap items-center gap-2 text-xs font-black text-slate-400" aria-label="Website Experience breadcrumbs">
+      <Link href="/admin/website-experience" className="rounded text-sky-200 hover:text-orange-100 focus:outline-none focus:ring-2 focus:ring-sky-300">
+        Website Experience
+      </Link>
+      <span aria-hidden="true" className="text-slate-600">&gt;</span>
+      <Link href="/admin/website-experience/pages" className="rounded text-sky-200 hover:text-orange-100 focus:outline-none focus:ring-2 focus:ring-sky-300">
+        Pages
+      </Link>
+      <span aria-hidden="true" className="text-slate-600">&gt;</span>
+      <Link href="/admin/website-experience/pages/partner" className="rounded text-sky-200 hover:text-orange-100 focus:outline-none focus:ring-2 focus:ring-sky-300">
+        Partner
+      </Link>
+      <span aria-hidden="true" className="text-slate-600">&gt;</span>
+      <Link href="/admin/website-experience/pages/partner/service-catalogue" className="rounded text-sky-200 hover:text-orange-100 focus:outline-none focus:ring-2 focus:ring-sky-300">
+        Service Catalogue
+      </Link>
+      <span aria-hidden="true" className="text-slate-600">&gt;</span>
+      <span aria-current="page" className="text-cyan-100">{domainName}</span>
+    </nav>
   );
 }
 

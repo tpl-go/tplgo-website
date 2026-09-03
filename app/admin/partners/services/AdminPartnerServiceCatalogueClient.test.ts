@@ -87,8 +87,8 @@ test("Service Catalogue home derives truthful statuses without per-domain workfl
 });
 
 test("Service Catalogue loading and error states are employee-facing", () => {
-  expect(clientSource).toContain('title="Loading service catalogue..."');
-  expect(clientSource).toContain("title=\"We couldn't load the service catalogue.\"");
+  expect(clientSource).toContain('title={hasDetailContext ? "Loading domain..." : "Loading service catalogue..."}');
+  expect(clientSource).toContain('title={hasDetailContext ? "We couldn\'t load this domain." : "We couldn\'t load the service catalogue."}');
   expect(clientSource).toContain("Retry");
   expect(clientSource).not.toContain("staging API");
   expect(clientSource).not.toContain("API health");
@@ -129,4 +129,90 @@ test("Partner listing remains unchanged for Service Catalogue destination and co
   expect(partnerListingSource).toContain('detail="Choose a Partner area to manage."');
   expect(partnerListingSource).toContain('title="Service Catalogue" detail="Manage Partner service domains and services."');
   expect(partnerListingSource).toContain('href="/admin/website-experience/pages/partner/service-catalogue"');
+});
+
+test("Domain Detail hides Catalogue Home chrome and keeps explicit Back to Service Catalogue", () => {
+  const detailStart = clientSource.indexOf("function DomainDetailView");
+  const serviceStart = clientSource.indexOf("function ServiceFocusedView");
+  const detailSource = clientSource.slice(detailStart, serviceStart);
+
+  expect(clientSource).toContain("const showCatalogueHomeHeader = !selectedDomain && !selectedItem;");
+  expect(clientSource).toContain("!showCatalogueHomeHeader ? <HideCatalogueRouteChrome /> : null");
+  expect(routeSource).toContain("catalogueRouteChrome");
+  expect(detailSource).toContain('href="/admin/website-experience/pages/partner/service-catalogue" label="Back to Service Catalogue"');
+  expect(detailSource).not.toContain("Back to Partner");
+  expect(detailSource).toContain("<DomainBreadcrumb domainName={props.domain.title} />");
+});
+
+test("Domain Detail uses complete clickable breadcrumbs without technical identifiers", () => {
+  const breadcrumbStart = clientSource.indexOf("function DomainBreadcrumb");
+  const statusStart = clientSource.indexOf("function StatusChip");
+  const breadcrumbSource = clientSource.slice(breadcrumbStart, statusStart);
+
+  expect(breadcrumbSource).toContain('href="/admin/website-experience"');
+  expect(breadcrumbSource).toContain('href="/admin/website-experience/pages"');
+  expect(breadcrumbSource).toContain('href="/admin/website-experience/pages/partner"');
+  expect(breadcrumbSource).toContain('href="/admin/website-experience/pages/partner/service-catalogue"');
+  expect(breadcrumbSource).toContain('aria-current="page"');
+  expect(breadcrumbSource).not.toContain("stableCode");
+  expect(breadcrumbSource).not.toContain("domain.id");
+});
+
+test("Domain Detail prioritizes actions and moves secondary actions under More Actions", () => {
+  const detailStart = clientSource.indexOf("function DomainDetailView");
+  const serviceStart = clientSource.indexOf("function ServiceFocusedView");
+  const detailSource = clientSource.slice(detailStart, serviceStart);
+
+  expect(detailSource).toContain("Add Service");
+  expect(detailSource).toContain("Edit Domain");
+  expect(detailSource).toContain("More Actions");
+  expect(detailSource).toContain("Add Category");
+  expect(detailSource).toContain("Version History");
+  expect(detailSource).toContain("Start Archive");
+  expect(detailSource).not.toContain("Delete Domain");
+});
+
+test("Domain Detail filters use human labels and keep search inside current domain", () => {
+  const detailStart = clientSource.indexOf("function DomainDetailView");
+  const serviceStart = clientSource.indexOf("function ServiceFocusedView");
+  const detailSource = clientSource.slice(detailStart, serviceStart);
+
+  expect(detailSource).toContain("Search services");
+  expect(detailSource).toContain('placeholder="Search services"');
+  expect(detailSource).toContain('Select label="Type"');
+  expect(detailSource).toContain('Select label="Status"');
+  expect(detailSource).toContain("More Filters");
+  expect(detailSource).toContain("Application availability");
+  expect(detailSource).not.toContain('Select label="Selectable"');
+  expect(clientSource).toContain('normalize([item.name, item.shortDescription, item.aliases.join(" ")].join(" "))');
+  expect(clientSource).not.toContain("item.stableCode, item.verificationProfileKey");
+});
+
+test("Domain Detail service rows are vertical full-row targets without row action clutter", () => {
+  const rowStart = clientSource.indexOf("function HierarchyRow");
+  const serviceStart = clientSource.indexOf("function ServiceFocusedView");
+  const rowSource = clientSource.slice(rowStart, serviceStart);
+
+  expect(clientSource).toContain("const visibleScopedItems = useMemo(() => activeDomain ? scopedItems.filter((item) => !isDomainRootItem(item, activeDomain)) : scopedItems");
+  expect(clientSource).toContain('function isDomainRootItem(item: AdminPartnerServiceCatalogueItem, domain: { id: string; title: string })');
+  expect(clientSource).toContain('item.stableCode === `${domain.id}-root`');
+  expect(clientSource).toContain('const parent = item.parentCode ? domainItems.find((candidate) => candidate.stableCode === item.parentCode) : undefined;');
+  expect(rowSource).toContain("flex min-h-20 w-full flex-col");
+  expect(rowSource).toContain("onClick={() => onOpenItem?.(node.item)}");
+  expect(rowSource).toContain("titleKind(kind)");
+  expect(rowSource).toContain("itemStatusLabel(node.item)");
+  expect(rowSource).not.toContain("Edit Service");
+  expect(rowSource).not.toContain("Add Sub-service");
+  expect(rowSource).not.toContain("Archive");
+  expect(rowSource).not.toContain("Safe Delete");
+  expect(rowSource).not.toContain("Parent:");
+  expect(rowSource).not.toContain("Selectable");
+});
+
+test("Domain Detail loading empty and error states are human-friendly", () => {
+  expect(clientSource).toContain('title={hasDetailContext ? "Loading domain..." : "Loading service catalogue..."}');
+  expect(clientSource).toContain('title={hasDetailContext ? "We couldn\'t load this domain." : "We couldn\'t load the service catalogue."}');
+  expect(clientSource).toContain("No services have been added to this domain yet.");
+  expect(clientSource).toContain("No matching services found.");
+  expect(clientSource).toContain("Retry");
 });
