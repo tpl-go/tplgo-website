@@ -242,7 +242,7 @@ export function AdminPartnerServiceCatalogueClient() {
           status={domainStatus}
           setStatus={setDomainStatus}
           canManage={data.permissions.canManage}
-          onAddDomain={() => openDialog("add-domain")}
+          addDomainHref="/admin/website-experience/pages/partner/service-catalogue/domains/new"
           onOpen={(domain) => {
              navigate({ domain: domain.id });
             setQuery("");
@@ -269,7 +269,7 @@ export function AdminPartnerServiceCatalogueClient() {
            onBack={() => navigate({})}
           onAddCategory={() => openDialog("add-category")}
           onAddService={() => openDialog("add-service")}
-          onEditDomain={() => openDialog("edit-domain", firstItemForDomain(items, activeDomain.id))}
+          editDomainHref={`/admin/website-experience/pages/partner/service-catalogue/domains/${encodeURIComponent(activeDomain.id)}/edit`}
           onArchiveDomain={() => {
             const item = firstItemForDomain(items, activeDomain.id);
             if (item) void lifecycle(item, "archive");
@@ -349,7 +349,7 @@ function AllDomainsView(props: {
   status: string;
   setStatus: Dispatch<SetStateAction<string>>;
   canManage: boolean;
-  onAddDomain: () => void;
+  addDomainHref: string;
   onOpen: (domain: DomainRow) => void;
 }) {
   return (
@@ -359,7 +359,7 @@ function AllDomainsView(props: {
           <h3 className="text-2xl font-black text-sky-100">Domains</h3>
           <p className="mt-1 text-sm text-slate-400">Manage service domains and their services.</p>
         </div>
-        {props.canManage ? <button type="button" onClick={props.onAddDomain} className="premiumButton primary"><Plus size={16} /> Add Domain</button> : null}
+        {props.canManage ? <Link href={props.addDomainHref} className="premiumButton primary"><Plus size={16} /> Add Domain</Link> : null}
       </div>
       <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_16rem]">
         <label className="block">
@@ -422,7 +422,7 @@ function DomainDetailView(props: {
   onBack: () => void;
   onAddCategory: () => void;
   onAddService: () => void;
-  onEditDomain: () => void;
+  editDomainHref: string;
   onArchiveDomain: () => void;
   onEdit: (item: AdminPartnerServiceCatalogueItem) => void;
   onAddSubService: (item: AdminPartnerServiceCatalogueItem) => void;
@@ -455,7 +455,11 @@ function DomainDetailView(props: {
           </div>
           <div className="flex shrink-0 flex-wrap gap-2">
             <button type="button" disabled={!props.canManage} onClick={props.onAddService} className="premiumButton primary"><Plus size={16} /> Add Service</button>
-            <button type="button" disabled={!props.canManage} onClick={props.onEditDomain} className="premiumButton secondary"><FilePenLine size={16} /> Edit Domain</button>
+            {props.canManage ? (
+              <Link href={props.editDomainHref} className="premiumButton secondary"><FilePenLine size={16} /> Edit Domain</Link>
+            ) : (
+              <button type="button" disabled className="premiumButton secondary"><FilePenLine size={16} /> Edit Domain</button>
+            )}
             <details className="relative">
               <summary className="premiumButton secondary cursor-pointer list-none">More Actions</summary>
               <div className="absolute right-0 z-20 mt-2 w-52 rounded-xl border border-sky-300/15 bg-[#07111f] p-2 shadow-2xl shadow-black/40">

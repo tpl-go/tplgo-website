@@ -800,6 +800,13 @@ export type AdminPartnerServiceCatalogueResponse = {
   workflowState?: "draft" | "in_review" | "changes_requested" | "approved" | "published" | "archived";
   review?: {
     state?: "draft" | "in_review" | "changes_requested" | "approved" | "published" | "archived";
+    scopeType?: "catalogue" | "domain" | "item";
+    domainId?: string;
+    domainName?: string;
+    itemCode?: string;
+    itemName?: string;
+    changedByAdminId?: string;
+    changedAt?: string;
     submittedByAdminId?: string;
     submittedAt?: string;
     reviewedByAdminId?: string;

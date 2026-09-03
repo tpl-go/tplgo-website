@@ -51,8 +51,9 @@ test("Service Catalogue domain home has one Add Domain entry point and no row ac
 
   expect(allDomainsSource).toContain("Add Domain");
   expect(allDomainsSource.match(/Add Domain/g)?.length).toBe(1);
-  expect(allDomainsSource).toContain("props.canManage ? <button");
-  expect(allDomainsSource).toContain("onClick={props.onAddDomain}");
+  expect(allDomainsSource).toContain("props.canManage ? <Link");
+  expect(allDomainsSource).toContain("props.addDomainHref");
+  expect(clientSource).toContain('addDomainHref="/admin/website-experience/pages/partner/service-catalogue/domains/new"');
   expect(allDomainsSource).toContain("onClick={() => props.onOpen(domain)}");
   expect(allDomainsSource).toContain("flex min-h-20 w-full flex-col");
   expect(allDomainsSource).not.toContain("Edit Domain");
@@ -165,6 +166,7 @@ test("Domain Detail prioritizes actions and moves secondary actions under More A
 
   expect(detailSource).toContain("Add Service");
   expect(detailSource).toContain("Edit Domain");
+  expect(detailSource).toContain("props.editDomainHref");
   expect(detailSource).toContain("More Actions");
   expect(detailSource).toContain("Add Category");
   expect(detailSource).toContain("Version History");

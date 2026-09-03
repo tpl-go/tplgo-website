@@ -33,6 +33,7 @@ import {
   approveAdminWebsiteExperienceDraft,
   archiveAdminWebsiteExperienceContext,
   deleteAdminWebsiteExperienceDraft,
+  getAdminPartnerServiceCatalogue,
   getAdminWebsiteExperienceLoginSignup,
   publishAdminWebsiteExperienceContext,
   requestAdminWebsiteExperienceChanges,
@@ -42,6 +43,7 @@ import {
   submitAdminWebsiteExperienceApproval,
   uploadAdminWebsiteExperienceMedia,
   type AdminApiError,
+  type AdminPartnerServiceCatalogueResponse,
   type PartnerRegistrationIntakeView,
   type WebsiteExperienceAdminContext,
   type WebsiteExperienceAdminResponse,
@@ -54,6 +56,11 @@ type LoadState =
   | { status: "loading"; data: WebsiteExperienceAdminResponse | null; error: null }
   | { status: "ready"; data: WebsiteExperienceAdminResponse; error: null }
   | { status: "error"; data: WebsiteExperienceAdminResponse | null; error: AdminApiError };
+
+type CatalogueQueueState =
+  | { status: "idle"; data: AdminPartnerServiceCatalogueResponse | null }
+  | { status: "ready"; data: AdminPartnerServiceCatalogueResponse }
+  | { status: "error"; data: null };
 
 type BlockKey = "brand" | "hero" | "copy" | "benefits" | "trust";
 type PreviewDevice = "desktop" | "tablet" | "mobile";
@@ -114,6 +121,7 @@ export function WebsiteExperienceManager({
 }) {
   const initialWorkflowView = readInitialWorkflowView();
   const [state, setState] = useState<LoadState>({ status: "loading", data: null, error: null });
+  const [catalogueState, setCatalogueState] = useState<CatalogueQueueState>({ status: "idle", data: null });
   const [activeContext, setActiveContext] = useState<WebsiteExperienceContext>(mode === "partner-application" ? "partner_application" : "user_login");
   const [activeBlock, setActiveBlock] = useState<BlockKey | null>(partnerApplicationNodeId ? "copy" : null);
   const [editorView, setEditorView] = useState<EditorView>(initialWorkflowView ? "workflow" : mode === "partner-application" ? "blocks" : "contexts");
@@ -128,7 +136,11 @@ export function WebsiteExperienceManager({
   const [bypassReason, setBypassReason] = useState("");
 
   const load = useCallback(async () => {
-    const result = await getAdminWebsiteExperienceLoginSignup();
+    const [result, catalogueResult] = await Promise.all([
+      getAdminWebsiteExperienceLoginSignup(),
+      getAdminPartnerServiceCatalogue(),
+    ]);
+    setCatalogueState(catalogueResult.ok ? { status: "ready", data: catalogueResult.data } : { status: "error", data: null });
     if (!result.ok) {
       setState({ status: "error", data: null, error: result.error });
       return;
@@ -299,6 +311,7 @@ export function WebsiteExperienceManager({
       <WorkflowQueueView
         view={workflowView}
         data={state.data}
+        catalogue={catalogueState.data}
         onOpen={openDraft}
         onPreview={openDraft}
       />
@@ -632,16 +645,20 @@ function ItemStatusStrip({ activeRow }: { activeRow: WebsiteExperienceAdminConte
 function WorkflowQueueView({
   view,
   data,
+  catalogue,
   onOpen,
   onPreview,
 }: {
   view: WorkflowView;
   data: WebsiteExperienceAdminResponse;
+  catalogue?: AdminPartnerServiceCatalogueResponse | null;
   onOpen: (context: WebsiteExperienceContext, origin?: WorkflowView) => void;
   onPreview: (context: WebsiteExperienceContext, origin?: WorkflowView) => void;
 }) {
   const selected = workflowViews.find((item) => item.key === view) ?? workflowViews[0];
   const rows = workflowRowsForView(data, view);
+  const catalogueRow = catalogueWorkflowRow(catalogue, view);
+  const hasRows = rows.length > 0 || Boolean(catalogueRow);
   return (
     <ContentListShell
       eyebrow={`Website Experience > ${selected.label}`}
@@ -651,6 +668,31 @@ function WorkflowQueueView({
       backLabel="Back to Website Experience"
       backHref="/admin/website-experience"
     >
+      {catalogueRow ? (
+        <div className="rounded-2xl border border-sky-300/10 bg-[#081427] p-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-base font-black text-sky-50">Service Catalogue</h3>
+                <StatusChip label={workflowLabel(catalogueRow.workflowState)} tone={workflowTone(catalogueRow.workflowState)} />
+              </div>
+              <p className="mt-1 text-sm leading-6 text-slate-400">{catalogueRow.title}</p>
+              <p className="mt-1 text-xs font-semibold text-slate-500">{catalogueRow.detail}</p>
+              {catalogue?.review?.note ? <p className="mt-2 rounded border border-orange-300/20 bg-orange-400/10 p-2 text-xs font-semibold text-orange-100">Review note: {catalogue.review.note}</p> : null}
+            </div>
+            <div className="flex shrink-0 flex-wrap gap-2">
+              <Link href={`${catalogueRow.href}?preview=1`} className="inline-flex h-9 items-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-400/10 px-3 text-xs font-black text-cyan-100">
+                <Eye className="h-4 w-4" />
+                {view === "approved" ? "Preview Approved Version" : "Preview Draft"}
+              </Link>
+              <Link href={catalogueRow.href} className="inline-flex h-9 items-center gap-2 rounded-xl border border-orange-300/20 bg-orange-400/10 px-3 text-xs font-black text-orange-100">
+                <Pencil className="h-4 w-4" />
+                Open/Edit
+              </Link>
+            </div>
+          </div>
+        </div>
+      ) : null}
       {rows.length ? rows.map((row) => (
         <div key={`${view}:${row.context}`} className="rounded-2xl border border-sky-300/10 bg-[#081427] p-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
@@ -675,9 +717,9 @@ function WorkflowQueueView({
             </div>
           </div>
         </div>
-      )) : (
+      )) : !hasRows ? (
         <p className="rounded-2xl border border-sky-300/10 bg-[#081427] p-4 text-sm font-semibold text-slate-300">No {selected.label.toLowerCase()} items.</p>
-      )}
+      ) : null}
     </ContentListShell>
   );
 }
@@ -1660,6 +1702,29 @@ function workflowRowsForView(data: WebsiteExperienceAdminResponse, view: Workflo
     if (view === "archive") return state === "archived";
     return state === view;
   });
+}
+
+function catalogueWorkflowRow(catalogue: AdminPartnerServiceCatalogueResponse | null | undefined, view: WorkflowView) {
+  const record = catalogue?.workflowRecord;
+  if (!catalogue || !record) return null;
+  const state = record.workflowState;
+  const matches =
+    view === "drafts" ? catalogue.hasUnpublishedChanges && (state === "draft" || state === "changes_requested")
+    : view === "in_review" ? state === "in_review"
+    : view === "approved" ? state === "approved"
+    : false;
+  if (!matches) return null;
+  const domainId = record.sourceRecordId && record.sourceRecordId !== "default" ? record.sourceRecordId : catalogue.review?.domainId;
+  const href = domainId
+    ? `/admin/website-experience/pages/partner/service-catalogue/domains/${encodeURIComponent(domainId)}/edit`
+    : "/admin/website-experience/pages/partner/service-catalogue";
+  const changedAt = record.changedAt ? formatDateTime(record.changedAt) : "not available";
+  return {
+    workflowState: state,
+    href,
+    title: `${record.sectionDomain} · Domain changes`,
+    detail: `Draft v${record.draftVersion} - Published v${record.publishedVersion} - Changed ${changedAt}`,
+  };
 }
 
 function readInitialWorkflowView(): WorkflowView | null {
