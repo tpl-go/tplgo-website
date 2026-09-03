@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -18,7 +18,6 @@ import {
   PanelTop,
   Plane,
   Search,
-  ShieldCheck,
   ShoppingBag,
   Sparkles,
   Tags,
@@ -73,27 +72,35 @@ export function AdminWebsiteExperienceLanding({ view = "root" }: { view?: Landin
   const [catalogueState, setCatalogueState] = useState<CatalogueLoadState>({ status: "loading", data: null });
   const [search, setSearch] = useState("");
 
-  useEffect(() => {
-    let active = true;
+  const loadWebsiteExperience = useCallback((active: { current: boolean }) => {
     void getAdminWebsiteExperienceLoginSignup().then((result) => {
-      if (!active) return;
+      if (!active.current) return;
       setState(result.ok ? { status: "ready", data: result.data, error: null } : { status: "error", data: null, error: result.error });
     });
-    return () => {
-      active = false;
-    };
+  }, []);
+
+  const loadCatalogueSummary = useCallback((active: { current: boolean }) => {
+    void getAdminPartnerServiceCatalogue().then((result) => {
+      if (!active.current) return;
+      setCatalogueState(result.ok ? { status: "ready", data: result.data } : { status: "error", data: null });
+    });
   }, []);
 
   useEffect(() => {
-    let active = true;
-    void getAdminPartnerServiceCatalogue().then((result) => {
-      if (!active) return;
-      setCatalogueState(result.ok ? { status: "ready", data: result.data } : { status: "error", data: null });
-    });
+    const active = { current: true };
+    loadWebsiteExperience(active);
     return () => {
-      active = false;
+      active.current = false;
     };
-  }, []);
+  }, [loadWebsiteExperience]);
+
+  useEffect(() => {
+    const active = { current: true };
+    loadCatalogueSummary(active);
+    return () => {
+      active.current = false;
+    };
+  }, [loadCatalogueSummary]);
 
   const summary = useMemo(() => buildLoginSignupSummary(state.status === "ready" ? state.data.contexts.filter((context) => context.context !== "partner_application") : []), [state]);
   const workflowSummary = useMemo(() => mergeWorkflowSummary(summary, catalogueState.status === "ready" ? catalogueState.data : null), [catalogueState, summary]);
@@ -176,47 +183,55 @@ export function AdminWebsiteExperienceLanding({ view = "root" }: { view?: Landin
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <AdminBackButton href="/admin" label="Back to Admin" />
-      <section className="overflow-hidden rounded-2xl border border-sky-300/15 bg-[radial-gradient(circle_at_top_left,rgba(56,189,248,0.22),transparent_34%),linear-gradient(135deg,#06101e,#0b1f3d_52%,#1f2937)] p-5 shadow-2xl shadow-sky-950/30 md:p-7">
-        <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-orange-300/20 bg-orange-400/10 px-3 py-1 text-xs font-black uppercase tracking-[0.16em] text-orange-200">
-              <MonitorCog className="h-4 w-4" />
-              Website Experience
-            </div>
-            <h2 className="mt-4 text-3xl font-black tracking-normal text-sky-100 md:text-4xl">Global Experience / Pages</h2>
-            <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-300">
-              Manage central presentation experiences while security, service policy, payments, providers, and private storage stay outside content editing.
-            </p>
+      <section className="rounded-2xl border border-sky-300/10 bg-[#0b1628] p-5 shadow-xl shadow-black/20">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="min-w-0">
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-200">Website Experience</p>
+            <h2 className="mt-2 text-3xl font-black tracking-normal text-sky-100">Website Experience</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-300">Manage website content and publishing.</p>
           </div>
-          <div className="rounded-2xl border border-sky-300/15 bg-white/[0.04] px-4 py-3 text-sm text-blue-50 shadow-sm backdrop-blur">
-            <div className="flex items-center gap-2 font-semibold text-sky-100">
-              <ShieldCheck className="h-4 w-4 text-orange-200" />
-              Presentation only
-            </div>
-            <p className="mt-1 max-w-xs text-xs leading-5 text-slate-300">Draft, Preview, Schedule, Publish, media, versions, and audit remain in the certified Website Experience engine.</p>
-          </div>
+          <StatusSummary summary={workflowSummary} loading={state.status === "loading" || catalogueState.status === "loading"} />
         </div>
       </section>
 
-      {state.status === "error" ? (
-        <section className="rounded-xl border border-orange-300/35 bg-orange-500/10 p-4 text-sm font-semibold text-orange-100">{state.error.message}</section>
+      {state.status === "error" || catalogueState.status === "error" ? (
+        <section className="flex flex-col gap-3 rounded-xl border border-orange-300/35 bg-orange-500/10 p-4 text-sm font-semibold text-orange-100 sm:flex-row sm:items-center sm:justify-between">
+          <span>Some counts could not load. Navigation is still available.</span>
+          <button
+            type="button"
+            onClick={() => {
+              const active = { current: true };
+              setState({ status: "loading", data: null, error: null });
+              setCatalogueState({ status: "loading", data: null });
+              loadWebsiteExperience(active);
+              loadCatalogueSummary(active);
+            }}
+            className="inline-flex h-10 items-center justify-center rounded-xl border border-orange-200/40 px-4 text-sm font-black text-orange-50 hover:bg-orange-300/10 focus:outline-none focus:ring-2 focus:ring-orange-200"
+          >
+            Retry
+          </button>
+        </section>
       ) : null}
 
       <section className="space-y-3">
-        <SectionLabel title="Content" detail="Open one hierarchy branch at a time." />
-        <VerticalEntry icon={MonitorCog} title="Global Experience" detail="Shared Website Experience modules used across TPL GO." count={`${summary.publishedLabel} published`} href="/admin/website-experience/global" />
-        <VerticalEntry icon={LayoutTemplate} title="Pages" detail="Registered page-specific experiences and Partner management entries." count={`${pageModules.length} pages`} href="/admin/website-experience/pages" />
+        <SectionLabel title="Content" detail="Choose what you want to manage." />
+        <VerticalEntry icon={MonitorCog} title="Global Experience" detail="Shared content used across the website." count={`${summary.publishedLabel} published`} href="/admin/website-experience/global" />
+        <VerticalEntry icon={LayoutTemplate} title="Pages" detail="Manage page-specific content." count={`${pageModules.length} pages`} href="/admin/website-experience/pages" />
       </section>
 
       <section className="space-y-3">
-        <SectionLabel title="Workflow" detail="Open a focused workflow queue. Counts include Website Experience content and the Service Catalogue when authorized." />
-        <VerticalEntry icon={FilePenLine} title="Drafts" detail="Saved unpublished changes." count={workflowSummary.draftLabel} href="/admin/website-experience/login-signup?workflow=drafts" />
-        <VerticalEntry icon={Send} title="In Review" detail="Submitted drafts waiting for approval." count={workflowSummary.reviewLabel} href="/admin/website-experience/login-signup?workflow=in_review" />
-        <VerticalEntry icon={CheckCircle2} title="Approved" detail="Approved drafts ready to publish or schedule." count={workflowSummary.approvedLabel} href="/admin/website-experience/login-signup?workflow=approved" />
-        <VerticalEntry icon={CalendarClock} title="Scheduled" detail="Approved changes scheduled for publication." count={workflowSummary.scheduledLabel} href="/admin/website-experience/login-signup?workflow=scheduled" />
-        <VerticalEntry icon={Globe2} title="Published" detail="Live Website Experience content." count={workflowSummary.publishedLabel} href="/admin/website-experience/login-signup?workflow=published" />
+        <SectionLabel title="Work Queue" detail="Continue or review pending changes." />
+        <VerticalEntry icon={FilePenLine} title="Drafts" detail="Continue editing saved changes." count={formatCountLabel(workflowSummary.draftLabel, "Draft")} href="/admin/website-experience/login-signup?workflow=drafts" highlight={isPendingCount(workflowSummary.draftLabel)} />
+        <VerticalEntry icon={Send} title="Needs Approval" detail="Review changes waiting for approval." count={formatCountLabel(workflowSummary.reviewLabel, "Needs Approval")} href="/admin/website-experience/login-signup?workflow=in_review" highlight={isPendingCount(workflowSummary.reviewLabel)} />
+        <VerticalEntry icon={CheckCircle2} title="Ready to Publish" detail="Publish or schedule approved changes." count={formatCountLabel(workflowSummary.approvedLabel, "Ready")} href="/admin/website-experience/login-signup?workflow=approved" highlight={isPendingCount(workflowSummary.approvedLabel)} />
+        <VerticalEntry icon={CalendarClock} title="Scheduled" detail="View upcoming publications." count={formatCountLabel(workflowSummary.scheduledLabel, "Scheduled")} href="/admin/website-experience/login-signup?workflow=scheduled" highlight={isPendingCount(workflowSummary.scheduledLabel)} />
+      </section>
+
+      <section className="space-y-3">
+        <SectionLabel title="Records" detail="View published content and change history." />
+        <VerticalEntry icon={Globe2} title="Published Content" detail="View content currently published." count={workflowSummary.publishedLabel} href="/admin/website-experience/login-signup?workflow=published" />
         <VerticalEntry icon={Archive} title="Archive" detail="Archived content and restore workflow." count={workflowSummary.archiveLabel} href="/admin/website-experience/login-signup?workflow=archive" />
         <VerticalEntry icon={Clock3} title="Versions & Audit" detail="Human-readable content history." count={state.status === "ready" ? String(state.data.recentAudit.length) : "Loading"} href="/admin/website-experience/login-signup?workflow=versions" />
       </section>
@@ -264,6 +279,31 @@ function SectionLabel({ title, detail }: { title: string; detail: string }) {
   );
 }
 
+function StatusSummary({ summary, loading }: { summary: ReturnType<typeof mergeWorkflowSummary>; loading: boolean }) {
+  const chips = [
+    { label: "Drafts", value: summary.draftLabel, countLabel: formatCountLabel(summary.draftLabel, "Draft"), href: "/admin/website-experience/login-signup?workflow=drafts" },
+    { label: "Needs Approval", value: summary.reviewLabel, countLabel: formatCountLabel(summary.reviewLabel, "Needs Approval", "Needs Approval"), href: "/admin/website-experience/login-signup?workflow=in_review" },
+    { label: "Scheduled", value: summary.scheduledLabel, countLabel: formatCountLabel(summary.scheduledLabel, "Scheduled", "Scheduled"), href: "/admin/website-experience/login-signup?workflow=scheduled" },
+  ];
+  return (
+    <div className="flex flex-wrap gap-2" aria-label={loading ? "Workflow counts loading" : "Workflow status summary"}>
+      {chips.map((chip) => (
+        <Link
+          key={chip.label}
+          href={chip.href}
+          className={`inline-flex min-h-10 items-center gap-2 rounded-full border px-3 text-xs font-black transition focus:outline-none focus:ring-2 focus:ring-sky-300 ${
+            isPendingCount(chip.value)
+              ? "border-orange-300/30 bg-orange-400/10 text-orange-100 hover:bg-orange-400/15"
+              : "border-sky-300/10 bg-white/[0.04] text-slate-300 hover:border-sky-300/25"
+          }`}
+        >
+          <span>{chip.countLabel}</span>
+        </Link>
+      ))}
+    </div>
+  );
+}
+
 function DrilldownShell({ eyebrow, title, detail, backHref, backLabel, children }: { eyebrow: string; title: string; detail: string; backHref: string; backLabel: string; children: React.ReactNode }) {
   return (
     <section className="space-y-4 rounded-2xl border border-sky-300/10 bg-[#0b1628]/95 p-5 shadow-xl shadow-black/20">
@@ -278,7 +318,7 @@ function DrilldownShell({ eyebrow, title, detail, backHref, backLabel, children 
   );
 }
 
-function VerticalEntry({ icon: Icon, title, detail, count, href, disabled = false }: { icon: LucideIcon; title: string; detail: string; count: string; href?: string; disabled?: boolean }) {
+function VerticalEntry({ icon: Icon, title, detail, count, href, disabled = false, highlight = false }: { icon: LucideIcon; title: string; detail: string; count: string; href?: string; disabled?: boolean; highlight?: boolean }) {
   const body = (
     <>
       <span className="flex min-w-0 items-start gap-3">
@@ -291,14 +331,26 @@ function VerticalEntry({ icon: Icon, title, detail, count, href, disabled = fals
         </span>
       </span>
       <span className="flex shrink-0 items-center gap-3">
-        <span className="rounded-full border border-orange-300/20 bg-orange-400/10 px-3 py-1 text-xs font-black text-orange-100">{count}</span>
+        <span className={`rounded-full border px-3 py-1 text-xs font-black ${highlight ? "border-orange-300/25 bg-orange-400/10 text-orange-100" : "border-sky-300/10 bg-white/[0.04] text-slate-300"}`}>{count}</span>
         <ArrowRight className="h-4 w-4 text-sky-200" />
       </span>
     </>
   );
-  const className = "flex min-h-20 w-full items-center justify-between gap-4 rounded-2xl border border-sky-300/10 bg-[#081427] p-4 text-left shadow-lg shadow-black/10 transition hover:border-sky-300/35 hover:bg-[#0b1b33] focus:outline-none focus:ring-2 focus:ring-sky-300";
+  const className = "flex min-h-20 w-full flex-col justify-between gap-4 rounded-2xl border border-sky-300/10 bg-[#081427] p-4 text-left shadow-lg shadow-black/10 transition hover:border-sky-300/35 hover:bg-[#0b1b33] focus:outline-none focus:ring-2 focus:ring-sky-300 sm:flex-row sm:items-center";
   if (!href || disabled) {
     return <div className={`${className} opacity-75`}>{body}</div>;
   }
   return <Link href={href} className={className}>{body}</Link>;
+}
+
+function formatCountLabel(value: string, singular: string, plural = `${singular}s`) {
+  if (value === "Loading") return "Loading";
+  const count = Number(value);
+  if (!Number.isFinite(count)) return value;
+  return `${count} ${count === 1 ? singular : plural}`;
+}
+
+function isPendingCount(value: string) {
+  const count = Number(value);
+  return Number.isFinite(count) && count > 0;
 }
