@@ -7,6 +7,7 @@ import {
   BadgeCheck,
   CalendarClock,
   Clock3,
+  Archive,
   Eye,
   FileText,
   Globe2,
@@ -18,6 +19,7 @@ import {
   ShieldCheck,
   Smartphone,
   Tablet,
+  Trash2,
   Upload,
   XCircle,
   type LucideIcon,
@@ -25,10 +27,16 @@ import {
 import { AdminBackButton } from "./AdminBackButton";
 import {
   cancelAdminWebsiteExperienceSchedule,
+  approveAdminWebsiteExperienceDraft,
+  archiveAdminWebsiteExperienceContext,
+  deleteAdminWebsiteExperienceDraft,
   getAdminWebsiteExperienceLoginSignup,
   publishAdminWebsiteExperienceContext,
+  requestAdminWebsiteExperienceChanges,
+  restoreAdminWebsiteExperienceContext,
   saveAdminWebsiteExperienceDraft,
   scheduleAdminWebsiteExperienceContext,
+  submitAdminWebsiteExperienceApproval,
   uploadAdminWebsiteExperienceMedia,
   type AdminApiError,
   type PartnerRegistrationIntakeView,
@@ -92,6 +100,8 @@ export function WebsiteExperienceManager({
   const [schedule, setSchedule] = useState(defaultSchedule);
   const [message, setMessage] = useState("");
   const [busyAction, setBusyAction] = useState("");
+  const [reviewNote, setReviewNote] = useState("");
+  const [bypassReason, setBypassReason] = useState("");
 
   const load = useCallback(async () => {
     const result = await getAdminWebsiteExperienceLoginSignup();
@@ -164,13 +174,33 @@ export function WebsiteExperienceManager({
   const publish = async () => {
     setBusyAction("publish");
     setMessage("");
-    const result = await publishAdminWebsiteExperienceContext(activeContext);
+    const result = await publishAdminWebsiteExperienceContext(activeContext, bypassReason ? { reason: bypassReason } : undefined);
     setBusyAction("");
     if (!result.ok) {
       setMessage(result.error.message);
       return;
     }
     setMessage(mode === "partner-application" ? "Published now. Partner Application presentation uses this version." : "Published now. The public Login & Signup content uses this version.");
+    void load();
+  };
+
+  const workflowAction = async (action: "submit" | "approve" | "request-changes" | "delete-draft" | "archive" | "restore") => {
+    setBusyAction(action);
+    setMessage("");
+    const result =
+      action === "submit" ? await submitAdminWebsiteExperienceApproval(activeContext, reviewNote)
+      : action === "approve" ? await approveAdminWebsiteExperienceDraft(activeContext, reviewNote)
+      : action === "request-changes" ? await requestAdminWebsiteExperienceChanges(activeContext, reviewNote)
+      : action === "delete-draft" ? await deleteAdminWebsiteExperienceDraft(activeContext)
+      : action === "archive" ? await archiveAdminWebsiteExperienceContext(activeContext, reviewNote)
+      : await restoreAdminWebsiteExperienceContext(activeContext, reviewNote);
+    setBusyAction("");
+    if (!result.ok) {
+      setMessage(result.error.message);
+      return;
+    }
+    setMessage(statusMessage(action));
+    setReviewNote("");
     void load();
   };
 
@@ -187,6 +217,7 @@ export function WebsiteExperienceManager({
       publishAt,
       ...(endAt ? { endAt } : {}),
       timezone: schedule.timezone,
+      ...(bypassReason ? { reason: bypassReason } : {}),
     });
     setBusyAction("");
     if (!result.ok) {
@@ -241,9 +272,12 @@ export function WebsiteExperienceManager({
             <StatusChip label={`Draft v${activeRow.draftVersion}`} tone="draft" />
             <StatusChip label={`Published v${activeRow.publishedVersion}`} tone="published" />
             {activeRow.scheduledFor ? <StatusChip label={`Scheduled ${formatDateTime(activeRow.scheduledFor)}`} tone="scheduled" /> : null}
+            <StatusChip label={workflowLabel(activeRow.workflowState ?? activeRow.status)} tone={workflowTone(activeRow.workflowState ?? activeRow.status)} />
           </div>
         </div>
       </div>
+
+      <WorkflowWorkspace data={state.data} />
 
       <div className={mode === "partner-application" ? "grid gap-5 2xl:grid-cols-[minmax(0,1fr)_28rem]" : "grid gap-5 2xl:grid-cols-[18rem_minmax(0,1fr)_28rem] xl:grid-cols-[16rem_minmax(0,1fr)]"}>
         {mode === "login-signup" ? <aside className="space-y-4">
@@ -307,6 +341,8 @@ export function WebsiteExperienceManager({
               activeRow={activeRow}
               busyAction={busyAction}
               message={message}
+              reviewNote={reviewNote}
+              bypassReason={bypassReason}
               onContentChange={updateDraft}
               onBenefitChange={updateBenefit}
               onUploaded={applyUploadedMedia}
@@ -315,6 +351,9 @@ export function WebsiteExperienceManager({
               onPublish={publish}
               onSchedule={schedulePublish}
               onCancelSchedule={cancelSchedule}
+              onReviewNoteChange={setReviewNote}
+              onBypassReasonChange={setBypassReason}
+              onWorkflowAction={workflowAction}
             />
           </section>
 
@@ -365,6 +404,11 @@ function BlockEditor({
   onPublish,
   onSchedule,
   onCancelSchedule,
+  reviewNote,
+  bypassReason,
+  onReviewNoteChange,
+  onBypassReasonChange,
+  onWorkflowAction,
 }: {
   block: BlockKey;
   content: WebsiteExperienceContent;
@@ -375,6 +419,8 @@ function BlockEditor({
   activeRow: WebsiteExperienceAdminContext;
   busyAction: string;
   message: string;
+  reviewNote: string;
+  bypassReason: string;
   onContentChange: (patch: Partial<WebsiteExperienceContent>) => void;
   onBenefitChange: (index: number, patch: Partial<WebsiteExperienceBenefit>) => void;
   onUploaded: (media: { slot: string; url: string; altText?: string }) => void;
@@ -383,6 +429,9 @@ function BlockEditor({
   onPublish: () => void;
   onSchedule: () => void;
   onCancelSchedule: () => void;
+  onReviewNoteChange: (value: string) => void;
+  onBypassReasonChange: (value: string) => void;
+  onWorkflowAction: (action: "submit" | "approve" | "request-changes" | "delete-draft" | "archive" | "restore") => void;
 }) {
   if (content.context === "partner_application") {
     return (
@@ -401,6 +450,11 @@ function BlockEditor({
         onPublish={onPublish}
         onSchedule={onSchedule}
         onCancelSchedule={onCancelSchedule}
+        reviewNote={reviewNote}
+        bypassReason={bypassReason}
+        onReviewNoteChange={onReviewNoteChange}
+        onBypassReasonChange={onBypassReasonChange}
+        onWorkflowAction={onWorkflowAction}
       />
     );
   }
@@ -490,48 +544,25 @@ function BlockEditor({
   }
 
   return (
-    <EditorSection title="Workflow" detail="Save a private draft, publish immediately, or schedule the draft for a future time.">
-      <div className="grid gap-3 md:grid-cols-3">
-        <WorkflowCard label="Draft" value={`v${activeRow.draftVersion}`} detail="Editable working version" />
-        <WorkflowCard label="Published" value={`v${activeRow.publishedVersion}`} detail={activeRow.publishedAt ? formatDateTime(activeRow.publishedAt) : "Default content"} />
-        <WorkflowCard label="Scheduled" value={activeRow.scheduledVersion ? `v${activeRow.scheduledVersion}` : "None"} detail={activeRow.scheduledFor ? `${formatDateTime(activeRow.scheduledFor)} ${activeRow.scheduledTimezone || ""}` : "No future publish"} />
-      </div>
-      <div className="flex flex-wrap items-center gap-3">
-        <button type="button" disabled={!canWrite || busyAction === "save"} onClick={onSaveDraft} className="inline-flex h-10 items-center gap-2 rounded bg-slate-900 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300">
-          <Save className="h-4 w-4" />
-          Save Draft
-        </button>
-        <button type="button" disabled={!canPublish || busyAction === "publish"} onClick={onPublish} className="inline-flex h-10 items-center gap-2 rounded bg-blue-600 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-blue-200">
-          <Send className="h-4 w-4" />
-          Publish Now
-        </button>
-      </div>
-      <div className="rounded border border-amber-200 bg-amber-50 p-4">
-        <div className="flex items-center gap-2 text-sm font-semibold text-amber-900">
-          <CalendarClock className="h-4 w-4" />
-          Schedule
-        </div>
-        <div className="mt-3 grid gap-3 md:grid-cols-3">
-          <ScheduleField label="Publish date" type="date" value={schedule.date} onChange={(date) => onScheduleChange({ ...schedule, date })} />
-          <ScheduleField label="Publish time" type="time" value={schedule.time} onChange={(time) => onScheduleChange({ ...schedule, time })} />
-          <Field label="Timezone" value={schedule.timezone} maxLength={64} onChange={(timezone) => onScheduleChange({ ...schedule, timezone })} />
-          <ScheduleField label="Optional end date" type="date" value={schedule.endDate} onChange={(endDate) => onScheduleChange({ ...schedule, endDate })} />
-          <ScheduleField label="Optional end time" type="time" value={schedule.endTime} onChange={(endTime) => onScheduleChange({ ...schedule, endTime })} />
-        </div>
-        <div className="mt-3 flex flex-wrap gap-3">
-          <button type="button" disabled={!canPublish || busyAction === "schedule"} onClick={onSchedule} className="inline-flex h-10 items-center gap-2 rounded bg-amber-600 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-amber-200">
-            <Clock3 className="h-4 w-4" />
-            Schedule
-          </button>
-          {activeRow.scheduledFor ? (
-            <button type="button" disabled={!canPublish || busyAction === "cancel-schedule"} onClick={onCancelSchedule} className="inline-flex h-10 items-center gap-2 rounded border border-amber-300 bg-white px-4 text-sm font-semibold text-amber-800 disabled:cursor-not-allowed disabled:opacity-50">
-              <XCircle className="h-4 w-4" />
-              Cancel Schedule
-            </button>
-          ) : null}
-        </div>
-      </div>
-      {message ? <p className="rounded border border-slate-200 bg-slate-50 p-3 text-sm font-semibold text-slate-700">{message}</p> : null}
+      <EditorSection title="Workflow" detail="Save a private draft, publish immediately, or schedule the draft for a future time.">
+      <WorkflowActions
+        canWrite={canWrite}
+        canPublish={canPublish}
+        schedule={schedule}
+        activeRow={activeRow}
+        busyAction={busyAction}
+        message={message}
+        reviewNote={reviewNote}
+        bypassReason={bypassReason}
+        onScheduleChange={onScheduleChange}
+        onSaveDraft={onSaveDraft}
+        onPublish={onPublish}
+        onSchedule={onSchedule}
+        onCancelSchedule={onCancelSchedule}
+        onReviewNoteChange={onReviewNoteChange}
+        onBypassReasonChange={onBypassReasonChange}
+        onWorkflowAction={onWorkflowAction}
+      />
     </EditorSection>
   );
 }
@@ -551,6 +582,11 @@ function PartnerApplicationTreeEditor({
   onPublish,
   onSchedule,
   onCancelSchedule,
+  reviewNote,
+  bypassReason,
+  onReviewNoteChange,
+  onBypassReasonChange,
+  onWorkflowAction,
 }: {
   content: WebsiteExperienceContent;
   selectedNodeId?: string;
@@ -560,12 +596,17 @@ function PartnerApplicationTreeEditor({
   activeRow: WebsiteExperienceAdminContext;
   busyAction: string;
   message: string;
+  reviewNote: string;
+  bypassReason: string;
   onContentChange: (patch: Partial<WebsiteExperienceContent>) => void;
   onScheduleChange: (value: typeof defaultSchedule) => void;
   onSaveDraft: () => void;
   onPublish: () => void;
   onSchedule: () => void;
   onCancelSchedule: () => void;
+  onReviewNoteChange: (value: string) => void;
+  onBypassReasonChange: (value: string) => void;
+  onWorkflowAction: (action: "submit" | "approve" | "request-changes" | "delete-draft" | "archive" | "restore") => void;
 }) {
   const tree = content.applicationTree;
   const updateNode = (nodeId: string, patch: Record<string, string>) => {
@@ -616,11 +657,16 @@ function PartnerApplicationTreeEditor({
           activeRow={activeRow}
           busyAction={busyAction}
           message={message}
+          reviewNote={reviewNote}
+          bypassReason={bypassReason}
           onScheduleChange={onScheduleChange}
           onSaveDraft={onSaveDraft}
           onPublish={onPublish}
           onSchedule={onSchedule}
           onCancelSchedule={onCancelSchedule}
+          onReviewNoteChange={onReviewNoteChange}
+          onBypassReasonChange={onBypassReasonChange}
+          onWorkflowAction={onWorkflowAction}
         />
       </EditorSection>
     );
@@ -678,13 +724,71 @@ function PartnerApplicationTreeEditor({
         activeRow={activeRow}
         busyAction={busyAction}
         message={message}
+        reviewNote={reviewNote}
+        bypassReason={bypassReason}
         onScheduleChange={onScheduleChange}
         onSaveDraft={onSaveDraft}
         onPublish={onPublish}
         onSchedule={onSchedule}
         onCancelSchedule={onCancelSchedule}
+        onReviewNoteChange={onReviewNoteChange}
+        onBypassReasonChange={onBypassReasonChange}
+        onWorkflowAction={onWorkflowAction}
       />
     </EditorSection>
+  );
+}
+
+function WorkflowWorkspace({ data }: { data: WebsiteExperienceAdminResponse }) {
+  const workflow = data.workflow;
+  const drafts = workflow?.drafts ?? data.contexts.filter((context) => context.hasUnpublishedChanges).map((context) => ({
+    context: context.context,
+    label: context.label,
+    status: (context.workflowState ?? "draft") as NonNullable<WebsiteExperienceAdminContext["workflowState"]>,
+    draftVersion: context.draftVersion,
+    publishedVersion: context.publishedVersion,
+    changedAt: context.updatedAt,
+    changedByAdminId: context.review?.submittedByAdminId,
+    scheduledFor: context.scheduledFor,
+    publishScope: context.context === "partner_application" ? "Publish Partner Application content" : `Publish ${context.label} changes`,
+  }));
+  return (
+    <section className="rounded border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase text-cyan-700">Content workflow</p>
+          <h3 className="mt-1 text-lg font-semibold text-slate-950">Draft workspace</h3>
+          <p className="mt-1 text-sm leading-6 text-slate-600">Review saved unpublished changes by exact publish scope. Live content, draft preview, and unsaved local preview remain separate.</p>
+        </div>
+        <div className="rounded border border-orange-200 bg-orange-50 px-4 py-3 text-sm font-semibold text-orange-950">
+          Unpublished changes: {workflow?.unpublishedChanges ?? drafts.length}
+        </div>
+      </div>
+      {workflow?.byArea?.length ? (
+        <div className="mt-4 flex flex-wrap gap-2">
+          {workflow.byArea.map((item) => <span key={item.area} className="rounded border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700">{item.area}: {item.count}</span>)}
+        </div>
+      ) : null}
+      <div className="mt-4 space-y-2">
+        {drafts.length ? drafts.map((draft) => (
+          <div key={draft.context} className="flex flex-col gap-3 rounded border border-slate-200 bg-slate-50 p-3 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm font-semibold text-slate-950">{draft.label}</span>
+                <StatusChip label={workflowLabel(draft.status)} tone={workflowTone(draft.status)} />
+              </div>
+              <p className="mt-1 text-xs leading-5 text-slate-600">{draft.publishScope} · Draft v{draft.draftVersion} · Published v{draft.publishedVersion}{draft.scheduledFor ? ` · Scheduled ${formatDateTime(draft.scheduledFor)}` : ""}</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <a href={draft.context === "partner_application" ? "/admin/website-experience/pages/partner/application" : "/admin/website-experience/login-signup"} className="rounded border border-blue-200 bg-white px-3 py-2 text-xs font-semibold text-blue-800">Open/Edit</a>
+              <a href={draft.context === "partner_application" ? "/admin/website-experience/pages/partner/application" : "/admin/website-experience/login-signup"} className="rounded border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs font-semibold text-cyan-900">Preview</a>
+            </div>
+          </div>
+        )) : (
+          <p className="rounded border border-slate-200 bg-slate-50 p-3 text-sm font-semibold text-slate-600">No saved unpublished changes.</p>
+        )}
+      </div>
+    </section>
   );
 }
 
@@ -695,11 +799,16 @@ function WorkflowActions({
   activeRow,
   busyAction,
   message,
+  reviewNote,
+  bypassReason,
   onScheduleChange,
   onSaveDraft,
   onPublish,
   onSchedule,
   onCancelSchedule,
+  onReviewNoteChange,
+  onBypassReasonChange,
+  onWorkflowAction,
 }: {
   canWrite: boolean;
   canPublish: boolean;
@@ -707,29 +816,75 @@ function WorkflowActions({
   activeRow: WebsiteExperienceAdminContext;
   busyAction: string;
   message: string;
+  reviewNote: string;
+  bypassReason: string;
   onScheduleChange: (value: typeof defaultSchedule) => void;
   onSaveDraft: () => void;
   onPublish: () => void;
   onSchedule: () => void;
   onCancelSchedule: () => void;
+  onReviewNoteChange: (value: string) => void;
+  onBypassReasonChange: (value: string) => void;
+  onWorkflowAction: (action: "submit" | "approve" | "request-changes" | "delete-draft" | "archive" | "restore") => void;
 }) {
+  const workflowState = activeRow.workflowState ?? activeRow.status;
   return (
     <>
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className="grid gap-3 md:grid-cols-4">
+        <WorkflowCard label="Status" value={workflowLabel(workflowState)} detail={activeRow.hasUnpublishedChanges ? "Unpublished changes exist" : "No saved draft changes"} />
         <WorkflowCard label="Draft" value={`v${activeRow.draftVersion}`} detail="Editable working version" />
         <WorkflowCard label="Published" value={`v${activeRow.publishedVersion}`} detail={activeRow.publishedAt ? formatDateTime(activeRow.publishedAt) : "Default content"} />
         <WorkflowCard label="Scheduled" value={activeRow.scheduledVersion ? `v${activeRow.scheduledVersion}` : "None"} detail={activeRow.scheduledFor ? `${formatDateTime(activeRow.scheduledFor)} ${activeRow.scheduledTimezone || ""}` : "No future publish"} />
       </div>
+      {activeRow.review?.note ? (
+        <div className="rounded border border-orange-200 bg-orange-50 p-3 text-sm font-semibold text-orange-900">
+          Review note: {activeRow.review.note}
+        </div>
+      ) : null}
+      <Field label="Review note / bypass reason" value={reviewNote} maxLength={500} onChange={onReviewNoteChange} />
       <div className="flex flex-wrap items-center gap-3">
         <button type="button" disabled={!canWrite || busyAction === "save"} onClick={onSaveDraft} className="inline-flex h-10 items-center gap-2 rounded bg-slate-900 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300">
           <Save className="h-4 w-4" />
           Save Draft
+        </button>
+        <button type="button" disabled={!canWrite || busyAction === "submit"} onClick={() => onWorkflowAction("submit")} className="inline-flex h-10 items-center gap-2 rounded border border-cyan-300 bg-cyan-50 px-4 text-sm font-semibold text-cyan-900 disabled:cursor-not-allowed disabled:opacity-50">
+          <Send className="h-4 w-4" />
+          Send for Approval
+        </button>
+        <button type="button" disabled={!canPublish || busyAction === "approve"} onClick={() => onWorkflowAction("approve")} className="inline-flex h-10 items-center gap-2 rounded bg-emerald-600 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-emerald-200">
+          <BadgeCheck className="h-4 w-4" />
+          Approve
+        </button>
+        <button type="button" disabled={!canPublish || busyAction === "request-changes"} onClick={() => onWorkflowAction("request-changes")} className="inline-flex h-10 items-center gap-2 rounded border border-orange-300 bg-orange-50 px-4 text-sm font-semibold text-orange-900 disabled:cursor-not-allowed disabled:opacity-50">
+          <XCircle className="h-4 w-4" />
+          Request Changes
         </button>
         <button type="button" disabled={!canPublish || busyAction === "publish"} onClick={onPublish} className="inline-flex h-10 items-center gap-2 rounded bg-blue-600 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-blue-200">
           <Send className="h-4 w-4" />
           Publish Now
         </button>
       </div>
+      <details className="rounded border border-slate-200 bg-slate-50 p-4">
+        <summary className="cursor-pointer text-sm font-semibold text-slate-900">Super Admin bypass and More Actions</summary>
+        <div className="mt-3 space-y-3">
+          <Field label="Super Admin bypass reason" value={bypassReason} maxLength={500} onChange={onBypassReasonChange} />
+          <p className="text-xs leading-5 text-slate-600">Delete Draft removes only the draft. Published content remains unchanged. Archive hides a context according to the current Website Experience active flag. Restore returns an archived context to Draft.</p>
+          <div className="flex flex-wrap gap-3">
+            <button type="button" disabled={!canWrite || busyAction === "delete-draft"} onClick={() => window.confirm("This removes only the draft. Published content remains unchanged.") && onWorkflowAction("delete-draft")} className="inline-flex h-10 items-center gap-2 rounded border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50">
+              <Trash2 className="h-4 w-4" />
+              Delete Draft
+            </button>
+            <button type="button" disabled={!canPublish || busyAction === "archive"} onClick={() => window.confirm("Archive this Website Experience context? Historical versions and audit remain preserved.") && onWorkflowAction("archive")} className="inline-flex h-10 items-center gap-2 rounded border border-orange-300 bg-orange-50 px-4 text-sm font-semibold text-orange-900 disabled:cursor-not-allowed disabled:opacity-50">
+              <Archive className="h-4 w-4" />
+              Archive
+            </button>
+            <button type="button" disabled={!canWrite || busyAction === "restore"} onClick={() => onWorkflowAction("restore")} className="inline-flex h-10 items-center gap-2 rounded border border-emerald-300 bg-emerald-50 px-4 text-sm font-semibold text-emerald-900 disabled:cursor-not-allowed disabled:opacity-50">
+              <BadgeCheck className="h-4 w-4" />
+              Restore to Draft
+            </button>
+          </div>
+        </div>
+      </details>
       <div className="rounded border border-amber-200 bg-amber-50 p-4">
         <div className="flex items-center gap-2 text-sm font-semibold text-amber-900">
           <CalendarClock className="h-4 w-4" />
@@ -889,7 +1044,7 @@ function PreviewPanel({ content, device, onDeviceChange }: { content: WebsiteExp
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
           <Eye className="h-4 w-4 text-blue-700" />
-          <h4 className="text-sm font-semibold text-slate-950">Live Draft Preview</h4>
+          <h4 className="text-sm font-semibold text-slate-950">Draft Preview</h4>
         </div>
         <div className="flex rounded border border-slate-200 bg-slate-50 p-1">
           {deviceOptions.map((option) => {
@@ -908,6 +1063,7 @@ function PreviewPanel({ content, device, onDeviceChange }: { content: WebsiteExp
           })}
         </div>
       </div>
+      <p className="mt-2 text-xs font-semibold text-slate-600">Preview Changes shows the current editor draft and never publishes content.</p>
       <div className="mt-4 rounded bg-slate-100 p-3">
         <div className={`mx-auto overflow-hidden rounded border border-slate-300 bg-white ${frameClass}`}>
           <PromoPreview content={content} compact={device !== "desktop"} />
@@ -1040,13 +1196,44 @@ function WorkflowCard({ label, value, detail }: { label: string; value: string; 
   );
 }
 
-function StatusChip({ label, tone }: { label: string; tone: "draft" | "published" | "scheduled" }) {
+function StatusChip({ label, tone }: { label: string; tone: "draft" | "published" | "scheduled" | "review" | "changes" | "archived" }) {
   const className = tone === "published"
     ? "border-emerald-200 bg-emerald-50 text-emerald-700"
     : tone === "scheduled"
       ? "border-amber-200 bg-amber-50 text-amber-700"
+      : tone === "review"
+        ? "border-cyan-200 bg-cyan-50 text-cyan-800"
+        : tone === "changes"
+          ? "border-orange-200 bg-orange-50 text-orange-800"
+          : tone === "archived"
+            ? "border-slate-300 bg-slate-100 text-slate-700"
       : "border-blue-200 bg-blue-50 text-blue-700";
   return <span className={`inline-flex h-8 items-center rounded-full border px-3 text-xs font-semibold ${className}`}>{label}</span>;
+}
+
+function workflowLabel(status: string) {
+  if (status === "in_review") return "In Review";
+  if (status === "changes_requested") return "Changes Requested";
+  if (status === "working_changes") return "Working Changes";
+  return status.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function workflowTone(status: string): "draft" | "published" | "scheduled" | "review" | "changes" | "archived" {
+  if (status === "published" || status === "approved") return "published";
+  if (status === "scheduled") return "scheduled";
+  if (status === "in_review") return "review";
+  if (status === "changes_requested") return "changes";
+  if (status === "archived") return "archived";
+  return "draft";
+}
+
+function statusMessage(action: "submit" | "approve" | "request-changes" | "delete-draft" | "archive" | "restore") {
+  if (action === "submit") return "Sent for approval. Publish and Schedule remain controlled by authorized users.";
+  if (action === "approve") return "Approved. Publish Now or Schedule can use this approved draft.";
+  if (action === "request-changes") return "Changes requested. The draft returned to the editor workflow.";
+  if (action === "delete-draft") return "Draft deleted. Published content remains unchanged.";
+  if (action === "archive") return "Archived. History and audit remain preserved.";
+  return "Restored to Draft. Publish is still required before live content changes.";
 }
 
 function PanelNotice({ text, tone = "default" }: { text: string; tone?: "default" | "danger" }) {

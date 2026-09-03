@@ -705,6 +705,18 @@ export type WebsiteExperienceAdminContext = {
   scheduledEndAt?: string;
   scheduledTimezone?: string;
   status: string;
+  workflowState?: "working_changes" | "draft" | "in_review" | "changes_requested" | "approved" | "scheduled" | "published" | "archived";
+  review?: {
+    submittedByAdminId?: string;
+    submittedAt?: string;
+    reviewedByAdminId?: string;
+    reviewedAt?: string;
+    decision?: "approved" | "changes_requested";
+    note?: string;
+    bypassedBySuperAdmin?: boolean;
+    bypassReason?: string;
+  };
+  hasUnpublishedChanges?: boolean;
   active: boolean;
   updatedAt?: string;
   publishedAt?: string;
@@ -824,6 +836,21 @@ export type WebsiteExperienceAdminResponse = {
     allowedMediaTypes: string[];
     maxBenefits: number;
     maxMediaBytes: number;
+  };
+  workflow?: {
+    unpublishedChanges: number;
+    byArea: Array<{ area: string; count: number }>;
+    drafts: Array<{
+      context: WebsiteExperienceContext;
+      label: string;
+      status: NonNullable<WebsiteExperienceAdminContext["workflowState"]>;
+      draftVersion: number;
+      publishedVersion: number;
+      changedAt?: string;
+      changedByAdminId?: string;
+      scheduledFor?: string;
+      publishScope: string;
+    }>;
   };
   recentMedia: WebsiteExperienceMediaView[];
   recentAudit: WebsiteExperienceAuditView[];
@@ -2464,19 +2491,80 @@ export async function saveAdminWebsiteExperienceDraft(
 }
 
 export async function publishAdminWebsiteExperienceContext(
-  context: WebsiteExperienceContext
+  context: WebsiteExperienceContext,
+  input?: { reason?: string }
 ): Promise<AdminApiResult<WebsiteExperienceAdminContext>> {
   return adminApiRequest<WebsiteExperienceAdminContext>(
     `/api/v1/admin/content/website-experience/login-signup/${encodeURIComponent(context)}/publish`,
     {
       method: "POST",
+      ...(input ? { body: JSON.stringify(input) } : {}),
     }
+  );
+}
+
+export async function submitAdminWebsiteExperienceApproval(
+  context: WebsiteExperienceContext,
+  note?: string
+): Promise<AdminApiResult<WebsiteExperienceAdminContext>> {
+  return adminApiRequest<WebsiteExperienceAdminContext>(
+    `/api/v1/admin/content/website-experience/login-signup/${encodeURIComponent(context)}/approval/submit`,
+    { method: "POST", body: JSON.stringify({ note }) }
+  );
+}
+
+export async function approveAdminWebsiteExperienceDraft(
+  context: WebsiteExperienceContext,
+  note?: string
+): Promise<AdminApiResult<WebsiteExperienceAdminContext>> {
+  return adminApiRequest<WebsiteExperienceAdminContext>(
+    `/api/v1/admin/content/website-experience/login-signup/${encodeURIComponent(context)}/approval/approve`,
+    { method: "POST", body: JSON.stringify({ note }) }
+  );
+}
+
+export async function requestAdminWebsiteExperienceChanges(
+  context: WebsiteExperienceContext,
+  note?: string
+): Promise<AdminApiResult<WebsiteExperienceAdminContext>> {
+  return adminApiRequest<WebsiteExperienceAdminContext>(
+    `/api/v1/admin/content/website-experience/login-signup/${encodeURIComponent(context)}/approval/request-changes`,
+    { method: "POST", body: JSON.stringify({ note }) }
+  );
+}
+
+export async function deleteAdminWebsiteExperienceDraft(
+  context: WebsiteExperienceContext
+): Promise<AdminApiResult<WebsiteExperienceAdminContext>> {
+  return adminApiRequest<WebsiteExperienceAdminContext>(
+    `/api/v1/admin/content/website-experience/login-signup/${encodeURIComponent(context)}/draft/delete`,
+    { method: "POST" }
+  );
+}
+
+export async function archiveAdminWebsiteExperienceContext(
+  context: WebsiteExperienceContext,
+  note?: string
+): Promise<AdminApiResult<WebsiteExperienceAdminContext>> {
+  return adminApiRequest<WebsiteExperienceAdminContext>(
+    `/api/v1/admin/content/website-experience/login-signup/${encodeURIComponent(context)}/archive`,
+    { method: "POST", body: JSON.stringify({ note }) }
+  );
+}
+
+export async function restoreAdminWebsiteExperienceContext(
+  context: WebsiteExperienceContext,
+  note?: string
+): Promise<AdminApiResult<WebsiteExperienceAdminContext>> {
+  return adminApiRequest<WebsiteExperienceAdminContext>(
+    `/api/v1/admin/content/website-experience/login-signup/${encodeURIComponent(context)}/restore`,
+    { method: "POST", body: JSON.stringify({ note }) }
   );
 }
 
 export async function scheduleAdminWebsiteExperienceContext(
   context: WebsiteExperienceContext,
-  input: { publishAt: string; endAt?: string; timezone: string }
+  input: { publishAt: string; endAt?: string; timezone: string; reason?: string }
 ): Promise<AdminApiResult<WebsiteExperienceAdminContext>> {
   return adminApiRequest<WebsiteExperienceAdminContext>(
     `/api/v1/admin/content/website-experience/login-signup/${encodeURIComponent(context)}/schedule`,
