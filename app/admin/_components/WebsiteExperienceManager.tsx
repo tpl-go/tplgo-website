@@ -70,10 +70,10 @@ const blocks: Array<{ key: BlockKey; label: string; detail: string; icon: Lucide
 
 const workflowViews: Array<{ key: WorkflowView; label: string; detail: string; icon: LucideIcon }> = [
   { key: "drafts", label: "Drafts", detail: "Saved unpublished changes waiting for submission.", icon: FileText },
-  { key: "in_review", label: "In Review", detail: "Submitted drafts waiting for approval.", icon: Send },
-  { key: "approved", label: "Approved", detail: "Approved drafts ready to publish or schedule.", icon: CheckCircle2 },
+  { key: "in_review", label: "Needs Approval", detail: "Changes waiting for review.", icon: Send },
+  { key: "approved", label: "Ready to Publish", detail: "Approved changes ready to publish or schedule.", icon: CheckCircle2 },
   { key: "scheduled", label: "Scheduled", detail: "Approved changes scheduled for publication.", icon: CalendarClock },
-  { key: "published", label: "Published", detail: "Currently live Website Experience content.", icon: Globe2 },
+  { key: "published", label: "Published Content", detail: "Content currently published.", icon: Globe2 },
   { key: "archive", label: "Archive", detail: "Archived contexts and restore-to-draft actions.", icon: Archive },
   { key: "versions", label: "Versions & Audit", detail: "Human-readable version and audit history.", icon: Clock3 },
 ];
@@ -112,6 +112,7 @@ export function WebsiteExperienceManager({
   const [activeBlock, setActiveBlock] = useState<BlockKey | null>(partnerApplicationNodeId ? "copy" : null);
   const [editorView, setEditorView] = useState<EditorView>(initialWorkflowView ? "workflow" : mode === "partner-application" ? "blocks" : "contexts");
   const [workflowView, setWorkflowView] = useState<WorkflowView | null>(initialWorkflowView);
+  const [workflowOrigin, setWorkflowOrigin] = useState<WorkflowView | null>(initialWorkflowView);
   const [previewDevice, setPreviewDevice] = useState<PreviewDevice>("desktop");
   const [drafts, setDrafts] = useState<Partial<Record<WebsiteExperienceContext, WebsiteExperienceContent>>>({});
   const [schedule, setSchedule] = useState(defaultSchedule);
@@ -268,23 +269,27 @@ export function WebsiteExperienceManager({
     setActiveContext(context);
     setActiveBlock(null);
     setWorkflowView(null);
+    setWorkflowOrigin(null);
     setEditorView("blocks");
   };
 
   const selectBlock = (block: BlockKey) => {
     setActiveBlock(block);
     setWorkflowView(null);
+    setWorkflowOrigin(null);
     setEditorView("editor");
   };
 
   const openWorkflow = (view: WorkflowView) => {
     setWorkflowView(view);
+    setWorkflowOrigin(view);
     setEditorView("workflow");
   };
 
-  const openDraft = (context: WebsiteExperienceContext) => {
+  const openDraft = (context: WebsiteExperienceContext, origin?: WorkflowView) => {
     setActiveContext(context);
     setActiveBlock("copy");
+    setWorkflowOrigin(origin ?? null);
     setWorkflowView(null);
     setEditorView("editor");
   };
@@ -294,10 +299,6 @@ export function WebsiteExperienceManager({
       <WorkflowQueueView
         view={workflowView}
         data={state.data}
-        onBack={() => {
-          setWorkflowView(null);
-          setEditorView(mode === "partner-application" ? "blocks" : "contexts");
-        }}
         onOpen={openDraft}
         onPreview={openDraft}
       />
@@ -395,12 +396,15 @@ export function WebsiteExperienceManager({
   return (
     <section className="space-y-5">
       <div className="rounded-2xl border border-sky-300/15 bg-[#081427] p-5 shadow-xl shadow-black/20">
-        <Breadcrumbs mode={mode} activeContext={contextLabels[activeContext]} activeBlock={mode === "partner-application" ? partnerApplicationNodeLabel(activeDraft, partnerApplicationNodeId) : blocks.find((block) => block.key === activeBlock)?.label ?? "Editable Item"} />
+        <Breadcrumbs mode={mode} workflowOrigin={workflowOrigin} activeContext={contextLabels[activeContext]} activeBlock={mode === "partner-application" ? partnerApplicationNodeLabel(activeDraft, partnerApplicationNodeId) : blocks.find((block) => block.key === activeBlock)?.label ?? "Editable Item"} />
         <div className="mt-4">
           <AdminBackButton
             href={mode === "partner-application" ? "/admin/website-experience/pages/partner/application" : undefined}
-            onClick={mode === "partner-application" ? undefined : () => setEditorView("blocks")}
-            label={mode === "partner-application" ? "Back to Partner Application" : `Back to ${contextLabels[activeContext]}`}
+            onClick={mode === "partner-application" ? undefined : workflowOrigin ? () => {
+              setWorkflowView(workflowOrigin);
+              setEditorView("workflow");
+            } : () => setEditorView("blocks")}
+            label={mode === "partner-application" ? "Back to Partner Application" : workflowOrigin ? `Back to ${workflowViewLabel(workflowOrigin)}` : `Back to ${contextLabels[activeContext]}`}
           />
         </div>
         <div className="mt-4 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
@@ -481,7 +485,23 @@ export function WebsiteExperienceManager({
   );
 }
 
-function Breadcrumbs({ mode, activeContext, activeBlock }: { mode: "login-signup" | "partner-application"; activeContext: string; activeBlock: string }) {
+function Breadcrumbs({ mode, workflowOrigin, activeContext, activeBlock }: { mode: "login-signup" | "partner-application"; workflowOrigin?: WorkflowView | null; activeContext: string; activeBlock: string }) {
+  if (workflowOrigin && mode === "login-signup") {
+    const originLabel = workflowViewLabel(workflowOrigin);
+    return (
+      <nav className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-400" aria-label="Website Experience breadcrumbs">
+        <Link href="/admin/website-experience" className="rounded text-sky-200 hover:text-orange-100 focus:outline-none focus:ring-2 focus:ring-sky-300">
+          Website Experience
+        </Link>
+        <span aria-hidden="true" className="text-slate-600">&gt;</span>
+        <Link href={`/admin/website-experience/login-signup?workflow=${workflowOrigin}`} className="rounded text-sky-200 hover:text-orange-100 focus:outline-none focus:ring-2 focus:ring-sky-300">
+          {originLabel}
+        </Link>
+        <span aria-hidden="true" className="text-slate-600">&gt;</span>
+        <span aria-current="page" className="text-cyan-100">{activeContext}</span>
+      </nav>
+    );
+  }
   const items = mode === "partner-application"
     ? ["Website Experience", "Pages", "Partner", "Partner Application", activeContext]
     : ["Website Experience", "Global Experience", "Login & Signup", activeContext, activeBlock];
@@ -499,6 +519,7 @@ function Breadcrumbs({ mode, activeContext, activeBlock }: { mode: "login-signup
 
 function ContentListShell({
   eyebrow,
+  breadcrumb,
   title,
   detail,
   backHref,
@@ -507,6 +528,7 @@ function ContentListShell({
   children,
 }: {
   eyebrow: string;
+  breadcrumb?: React.ReactNode;
   title: string;
   detail: string;
   backHref?: string;
@@ -518,7 +540,7 @@ function ContentListShell({
     <section className="space-y-4 rounded-2xl border border-sky-300/10 bg-[#0b1628]/95 p-5 shadow-xl shadow-black/20">
       <AdminBackButton href={backHref} onClick={onBack} label={backLabel} />
       <div>
-        <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-200">{eyebrow}</p>
+        {breadcrumb ?? <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-200">{eyebrow}</p>}
         <h2 className="mt-1 text-2xl font-black text-cyan-100">{title}</h2>
         <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-400">{detail}</p>
       </div>
@@ -623,25 +645,24 @@ function WorkflowShortcutGrid({ data, onOpen }: { data: WebsiteExperienceAdminRe
 function WorkflowQueueView({
   view,
   data,
-  onBack,
   onOpen,
   onPreview,
 }: {
   view: WorkflowView;
   data: WebsiteExperienceAdminResponse;
-  onBack: () => void;
-  onOpen: (context: WebsiteExperienceContext) => void;
-  onPreview: (context: WebsiteExperienceContext) => void;
+  onOpen: (context: WebsiteExperienceContext, origin?: WorkflowView) => void;
+  onPreview: (context: WebsiteExperienceContext, origin?: WorkflowView) => void;
 }) {
   const selected = workflowViews.find((item) => item.key === view) ?? workflowViews[0];
   const rows = workflowRowsForView(data, view);
   return (
     <ContentListShell
-      eyebrow="Website Experience > Workflow"
+      eyebrow={`Website Experience > ${selected.label}`}
+      breadcrumb={<WorkflowBreadcrumb current={selected.label} />}
       title={selected.label}
       detail={selected.detail}
       backLabel="Back to Website Experience"
-      onBack={onBack}
+      backHref="/admin/website-experience"
     >
       {rows.length ? rows.map((row) => (
         <div key={`${view}:${row.context}`} className="rounded-2xl border border-sky-300/10 bg-[#081427] p-4">
@@ -656,11 +677,11 @@ function WorkflowQueueView({
               {row.review?.note ? <p className="mt-2 rounded border border-orange-300/20 bg-orange-400/10 p-2 text-xs font-semibold text-orange-100">Review note: {row.review.note}</p> : null}
             </div>
             <div className="flex shrink-0 flex-wrap gap-2">
-              <button type="button" onClick={() => onPreview(row.context)} className="inline-flex h-9 items-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-400/10 px-3 text-xs font-black text-cyan-100">
+              <button type="button" onClick={() => onPreview(row.context, view)} className="inline-flex h-9 items-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-400/10 px-3 text-xs font-black text-cyan-100">
                 <Eye className="h-4 w-4" />
                 {view === "approved" ? "Preview Approved Version" : "Preview Draft"}
               </button>
-              <button type="button" onClick={() => onOpen(row.context)} className="inline-flex h-9 items-center gap-2 rounded-xl border border-orange-300/20 bg-orange-400/10 px-3 text-xs font-black text-orange-100">
+              <button type="button" onClick={() => onOpen(row.context, view)} className="inline-flex h-9 items-center gap-2 rounded-xl border border-orange-300/20 bg-orange-400/10 px-3 text-xs font-black text-orange-100">
                 <Pencil className="h-4 w-4" />
                 Open/Edit
               </button>
@@ -671,6 +692,18 @@ function WorkflowQueueView({
         <p className="rounded-2xl border border-sky-300/10 bg-[#081427] p-4 text-sm font-semibold text-slate-300">No {selected.label.toLowerCase()} items.</p>
       )}
     </ContentListShell>
+  );
+}
+
+function WorkflowBreadcrumb({ current }: { current: string }) {
+  return (
+    <nav className="flex flex-wrap items-center gap-2 text-xs font-black text-slate-400" aria-label="Website Experience breadcrumbs">
+      <Link href="/admin/website-experience" className="rounded text-sky-200 hover:text-orange-100 focus:outline-none focus:ring-2 focus:ring-sky-300">
+        Website Experience
+      </Link>
+      <span aria-hidden="true" className="text-slate-600">&gt;</span>
+      <span aria-current="page" className="text-slate-300">{current}</span>
+    </nav>
   );
 }
 
@@ -1658,6 +1691,10 @@ function readInitialWorkflowView(): WorkflowView | null {
   if (typeof window === "undefined") return null;
   const view = new URLSearchParams(window.location.search).get("workflow") as WorkflowView | null;
   return view && workflowViews.some((item) => item.key === view) ? view : null;
+}
+
+function workflowViewLabel(view: WorkflowView) {
+  return workflowViews.find((item) => item.key === view)?.label ?? "Website Experience";
 }
 
 function statusMessage(action: "submit" | "approve" | "request-changes" | "delete-draft" | "archive" | "restore") {
