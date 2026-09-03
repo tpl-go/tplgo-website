@@ -23,25 +23,25 @@ test("Service Catalogue home uses compact human header and summary chips", () =>
   expect(clientSource).toContain('aria-label="Catalogue summary"');
   expect(clientSource).toContain('<SummaryChip label="Domains" value={String(domains.length)} />');
   expect(clientSource).toContain('<SummaryChip label="Services" value={String(totalServices)} />');
-  expect(clientSource).toContain('<SummaryChip label="Pending Changes" value={String(pendingChanges)} highlight={pendingChanges > 0} />');
-  expect(clientSource).toContain("catalogueStatusLabel(state, Boolean(data.hasUnpublishedChanges && data.published.items.length))");
+  expect(clientSource).toContain('pendingChanges > 0 ? <SummaryChip label={pendingChanges === 1 ? "Pending Change" : "Pending Changes"} value={String(pendingChanges)} highlight /> : null');
+  expect(clientSource).toContain("catalogueStatusLabel(state, pendingChanges, Boolean(data.published.items.length))");
   expect(clientSource).not.toContain("Draft v${data.draftVersion}");
   expect(clientSource).not.toContain("Published v${data.publishedVersion}");
 });
 
-test("Service Catalogue home keeps three vertical navigation rows with human descriptions", () => {
+test("Service Catalogue home removes duplicate request and audit navigation rows", () => {
   const headerStart = clientSource.indexOf("function CatalogueHeader");
   const domainsStart = clientSource.indexOf("function AllDomainsView");
   const headerSource = clientSource.slice(headerStart, domainsStart);
 
-  expect(headerSource).toContain("catalogueNavRow");
-  expect(headerSource).toContain("Domains");
-  expect(headerSource).toContain("Manage service domains and their services.");
-  expect(headerSource).toContain("Requested Services");
-  expect(headerSource).toContain("Review services requested by Partners.");
-  expect(headerSource).toContain("Versions & Audit");
-  expect(headerSource).toContain("View catalogue versions and activity history.");
+  expect(headerSource).not.toContain("catalogueNavRow");
+  expect(headerSource).not.toContain("Requested Services");
+  expect(headerSource).not.toContain("Versions & Audit");
   expect(headerSource).not.toContain("grid-cols-3");
+  expect(clientSource).not.toContain("function RequestedServicesView");
+  expect(clientSource).not.toContain("function VersionsAuditView");
+  expect(clientSource).toContain('href="/admin/website-experience/service-requests"');
+  expect(clientSource).toContain('href="/admin/website-experience/versions-audit?source=service_catalogue"');
 });
 
 test("Service Catalogue domain home has one Add Domain entry point and no row action clusters", () => {
@@ -54,7 +54,7 @@ test("Service Catalogue domain home has one Add Domain entry point and no row ac
   expect(allDomainsSource).toContain("props.canManage ? <button");
   expect(allDomainsSource).toContain("onClick={props.onAddDomain}");
   expect(allDomainsSource).toContain("onClick={() => props.onOpen(domain)}");
-  expect(allDomainsSource).toContain("flex min-h-24 w-full flex-col");
+  expect(allDomainsSource).toContain("flex min-h-20 w-full flex-col");
   expect(allDomainsSource).not.toContain("Edit Domain");
   expect(allDomainsSource).not.toContain("Archive Domain");
   expect(allDomainsSource).not.toContain("Reactivate Domain");
@@ -66,7 +66,7 @@ test("Service Catalogue domain search and filter use human-safe fields and empty
   expect(clientSource).toContain('placeholder="Search domains"');
   expect(clientSource).toContain("Status Filter");
   expect(clientSource).toContain("domainStatusOptions");
-  expect(clientSource).toContain('"Published · Draft Changes"');
+  expect(clientSource).toContain('"Published with Draft Changes"');
   expect(clientSource).toContain("No matching domains");
   expect(clientSource).toContain("No domains have been added yet.");
   expect(clientSource).toContain('normalize([domain.title, domain.description, domain.aliases.join(" ")].join(" "))');
@@ -74,11 +74,13 @@ test("Service Catalogue domain search and filter use human-safe fields and empty
 });
 
 test("Service Catalogue home derives truthful statuses without per-domain workflow fabrication", () => {
-  expect(clientSource).toContain('type DomainStatusLabel = "Draft" | "In Review" | "Changes Requested" | "Approved" | "Scheduled" | "Published" | "Published · Draft Changes" | "Archived";');
+  expect(clientSource).toContain('type DomainStatusLabel = "Draft" | "In Review" | "Changes Requested" | "Approved" | "Scheduled" | "Published" | "Published with Draft Changes" | "Archived";');
   expect(clientSource).toContain('if (status === "archived") return "Archived";');
-  expect(clientSource).toContain('if (draftCount > 0 && hasPublishedContent) return "Published · Draft Changes";');
+  expect(clientSource).toContain('if (draftCount > 0 && hasPublishedContent) return "Published with Draft Changes";');
   expect(clientSource).toContain('return hasPublishedContent ? "Published" : "Draft";');
   expect(clientSource).toContain('const status = domainItems.length === 0 ? "inactive"');
+  expect(clientSource).toContain('if (pendingChanges > 0 && hasPublishedContent) return "Published with Draft Changes";');
+  expect(clientSource).toContain('return state === "draft" && pendingChanges > 0 ? "Draft" : "Published";');
   expect(clientSource).not.toContain("sectionDomain");
   expect(clientSource).not.toContain("exactScope");
   expect(clientSource).not.toContain("Draft-only service Domain");

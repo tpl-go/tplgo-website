@@ -10,6 +10,7 @@ test("AdminWebsiteExperienceLanding uses the approved compact home sections", ()
   expect(source).toContain('title="Pages"');
   expect(source).toContain("Work Queue");
   expect(source).toContain('title="Drafts"');
+  expect(source).toContain('title="Service Requests"');
   expect(source).toContain('title="Needs Approval"');
   expect(source).toContain('title="Ready to Publish"');
   expect(source).toContain('title="Scheduled"');
@@ -36,8 +37,11 @@ test("AdminWebsiteExperienceLanding preserves existing destination mapping from 
   expect(source).toContain('href="/admin/website-experience/login-signup?workflow=in_review"');
   expect(source).toContain('title="Ready to Publish"');
   expect(source).toContain('href="/admin/website-experience/login-signup?workflow=approved"');
+  expect(source).toContain('title="Service Requests"');
+  expect(source).toContain('href="/admin/website-experience/service-requests"');
   expect(source).toContain('title="Published Content"');
   expect(source).toContain('href="/admin/website-experience/login-signup?workflow=published"');
+  expect(source).toContain('href="/admin/website-experience/versions-audit"');
 });
 
 test("AdminWebsiteExperienceLanding keeps navigation rows vertical and full-width instead of a grid", () => {

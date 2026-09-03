@@ -24,6 +24,7 @@ import {
   Archive,
   Clock3,
   Send,
+  ClipboardList,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -219,6 +220,7 @@ export function AdminWebsiteExperienceLanding({ view = "root" }: { view?: Landin
       <section className="space-y-3">
         <SectionLabel title="Work Queue" detail="Continue or review pending changes." />
         <VerticalEntry icon={FilePenLine} title="Drafts" detail="Continue editing saved changes." count={formatCountLabel(workflowSummary.draftLabel, "Draft")} href="/admin/website-experience/login-signup?workflow=drafts" highlight={isPendingCount(workflowSummary.draftLabel)} />
+        <VerticalEntry icon={ClipboardList} title="Service Requests" detail="Review services requested by Partners." count={formatCountLabel(workflowSummary.serviceRequestLabel, "Service Request")} href="/admin/website-experience/service-requests" highlight={isPendingCount(workflowSummary.serviceRequestLabel)} />
         <VerticalEntry icon={Send} title="Needs Approval" detail="Review changes waiting for approval." count={formatCountLabel(workflowSummary.reviewLabel, "Needs Approval")} href="/admin/website-experience/login-signup?workflow=in_review" highlight={isPendingCount(workflowSummary.reviewLabel)} />
         <VerticalEntry icon={CheckCircle2} title="Ready to Publish" detail="Publish or schedule approved changes." count={formatCountLabel(workflowSummary.approvedLabel, "Ready")} href="/admin/website-experience/login-signup?workflow=approved" highlight={isPendingCount(workflowSummary.approvedLabel)} />
         <VerticalEntry icon={CalendarClock} title="Scheduled" detail="View upcoming publications." count={formatCountLabel(workflowSummary.scheduledLabel, "Scheduled")} href="/admin/website-experience/login-signup?workflow=scheduled" highlight={isPendingCount(workflowSummary.scheduledLabel)} />
@@ -228,7 +230,7 @@ export function AdminWebsiteExperienceLanding({ view = "root" }: { view?: Landin
         <SectionLabel title="Records" detail="View published content and change history." />
         <VerticalEntry icon={Globe2} title="Published Content" detail="View content currently published." count={workflowSummary.publishedLabel} href="/admin/website-experience/login-signup?workflow=published" />
         <VerticalEntry icon={Archive} title="Archive" detail="Archived content and restore workflow." count={workflowSummary.archiveLabel} href="/admin/website-experience/login-signup?workflow=archive" />
-        <VerticalEntry icon={Clock3} title="Versions & Audit" detail="Human-readable content history." count={state.status === "ready" ? String(state.data.recentAudit.length) : "Loading"} href="/admin/website-experience/login-signup?workflow=versions" />
+        <VerticalEntry icon={Clock3} title="Versions & Audit" detail="Human-readable content history." count={state.status === "ready" ? String(state.data.recentAudit.length + (catalogueState.status === "ready" ? catalogueState.data.audit.length + catalogueState.data.versions.length : 0)) : "Loading"} href="/admin/website-experience/versions-audit" />
       </section>
     </div>
   );
@@ -248,6 +250,7 @@ function buildLoginSignupSummary(contexts: WebsiteExperienceAdminContext[]) {
     approvedLabel: contexts.length ? String(approved) : "Loading",
     scheduledLabel: contexts.length ? String(scheduled) : "Loading",
     archiveLabel: contexts.length ? String(archived) : "Loading",
+    serviceRequestLabel: "Loading",
   };
 }
 
@@ -262,6 +265,7 @@ function mergeWorkflowSummary(summary: ReturnType<typeof buildLoginSignupSummary
     approvedLabel: add(summary.approvedLabel, catalogueState === "approved" ? 1 : 0),
     scheduledLabel: summary.scheduledLabel,
     archiveLabel: add(summary.archiveLabel, catalogueState === "archived" ? 1 : 0),
+    serviceRequestLabel: String(catalogue.requestedServices.filter((request) => !request.resolution && !["closed", "rejected", "mapped", "draft_created"].includes(request.status)).length),
   };
 }
 
@@ -312,6 +316,7 @@ function BreadcrumbTrail({ current, parent }: { current: "Global Experience" | "
 function StatusSummary({ summary, loading }: { summary: ReturnType<typeof mergeWorkflowSummary>; loading: boolean }) {
   const chips = [
     { label: "Drafts", value: summary.draftLabel, countLabel: formatCountLabel(summary.draftLabel, "Draft"), href: "/admin/website-experience/login-signup?workflow=drafts" },
+    { label: "Service Requests", value: summary.serviceRequestLabel, countLabel: formatCountLabel(summary.serviceRequestLabel, "Service Request"), href: "/admin/website-experience/service-requests" },
     { label: "Needs Approval", value: summary.reviewLabel, countLabel: formatCountLabel(summary.reviewLabel, "Needs Approval", "Needs Approval"), href: "/admin/website-experience/login-signup?workflow=in_review" },
     { label: "Scheduled", value: summary.scheduledLabel, countLabel: formatCountLabel(summary.scheduledLabel, "Scheduled", "Scheduled"), href: "/admin/website-experience/login-signup?workflow=scheduled" },
   ];
