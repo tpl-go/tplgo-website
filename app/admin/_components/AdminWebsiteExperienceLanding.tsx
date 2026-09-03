@@ -170,7 +170,7 @@ export function AdminWebsiteExperienceLanding({ view = "root" }: { view?: Landin
         title="Partner"
         detail="Choose a Partner area to manage."
       >
-        <VerticalEntry icon={Users} title="Partner Page" detail="Manage Partner page content." count="Available soon" disabled />
+        <VerticalEntry icon={Users} title="Partner Page" detail="Management for this area will be available soon." count="Available soon" disabled disabledHelp="Management for this area will be available soon." />
         <VerticalEntry icon={FilePenLine} title="Partner Application" detail="Manage Partner onboarding content." count={partnerContext ? `Draft v${partnerContext.draftVersion}` : "Loading"} href="/admin/website-experience/pages/partner/application" />
         <VerticalEntry icon={Tags} title="Service Catalogue" detail="Manage Partner service domains and services." count="Management" href="/admin/website-experience/pages/partner/service-catalogue" />
       </ListingShell>
@@ -334,7 +334,25 @@ function StatusSummary({ summary, loading }: { summary: ReturnType<typeof mergeW
   );
 }
 
-function VerticalEntry({ icon: Icon, title, detail, count, href, disabled = false, highlight = false }: { icon: LucideIcon; title: string; detail: string; count: string; href?: string; disabled?: boolean; highlight?: boolean }) {
+function VerticalEntry({
+  icon: Icon,
+  title,
+  detail,
+  count,
+  href,
+  disabled = false,
+  disabledHelp = "Editing for this area will be available soon.",
+  highlight = false,
+}: {
+  icon: LucideIcon;
+  title: string;
+  detail: string;
+  count: string;
+  href?: string;
+  disabled?: boolean;
+  disabledHelp?: string;
+  highlight?: boolean;
+}) {
   const body = (
     <>
       <span className="flex min-w-0 items-start gap-3">
@@ -355,8 +373,8 @@ function VerticalEntry({ icon: Icon, title, detail, count, href, disabled = fals
   const className = "flex min-h-20 w-full flex-col justify-between gap-4 rounded-2xl border border-sky-300/10 bg-[#081427] p-4 text-left shadow-lg shadow-black/10 transition hover:border-sky-300/35 hover:bg-[#0b1b33] focus:outline-none focus:ring-2 focus:ring-sky-300 sm:flex-row sm:items-center";
   if (!href || disabled) {
     return (
-      <div className={`${className} opacity-75 hover:border-sky-300/10 hover:bg-[#081427]`} aria-disabled="true" title="Editing for this area will be available soon.">
-        <span className="sr-only">Editing for this area will be available soon.</span>
+      <div className={`${className} opacity-75 hover:border-sky-300/10 hover:bg-[#081427]`} aria-disabled="true" title={disabledHelp}>
+        <span className="sr-only">{disabledHelp}</span>
         {body}
       </div>
     );

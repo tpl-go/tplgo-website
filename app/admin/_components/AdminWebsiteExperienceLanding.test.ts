@@ -97,7 +97,8 @@ test("AdminWebsiteExperienceLanding pages listing uses human descriptions and pr
 
 test("AdminWebsiteExperienceLanding disabled listing rows are unavailable without active navigation affordance", () => {
   expect(source).toContain('aria-disabled="true"');
-  expect(source).toContain('title="Editing for this area will be available soon."');
+  expect(source).toContain('disabledHelp = "Editing for this area will be available soon."');
+  expect(source).toContain('title={disabledHelp}');
   expect(source).toContain("disabled ? null : <ArrowRight");
 });
 
@@ -106,12 +107,72 @@ test("AdminWebsiteExperienceLanding Partner third-level screen uses immediate-pa
   expect(source).toContain('parent={{ label: "Pages", href: "/admin/website-experience/pages" }}');
   expect(source).toContain('title="Partner"');
   expect(source).toContain('detail="Choose a Partner area to manage."');
-  expect(source).toContain('title="Partner Page" detail="Manage Partner page content."');
+  expect(source).toContain('title="Partner Page" detail="Management for this area will be available soon." count="Available soon" disabled disabledHelp="Management for this area will be available soon."');
   expect(source).toContain('title="Partner Application" detail="Manage Partner onboarding content."');
   expect(source).toContain('title="Service Catalogue" detail="Manage Partner service domains and services."');
+  expect(source).toContain('href="/admin/website-experience/pages/partner/application"');
+  expect(source).toContain('href="/admin/website-experience/pages/partner/service-catalogue"');
   expect(source).not.toContain("authoritative Service Catalogue");
   expect(source).not.toContain("safe presentation fields");
   expect(source).not.toContain("Existing Partner landing/page safe presentation content.");
+});
+
+test("AdminWebsiteExperienceLanding Partner back and breadcrumbs use explicit clickable parent routes", () => {
+  expect(source).toContain('const backTarget = parent ?? { label: "Website Experience", href: "/admin/website-experience" };');
+  expect(source).toContain('<AdminBackButton href={backTarget.href} label={`Back to ${backTarget.label}`} />');
+  expect(source).toContain('<BreadcrumbTrail current={current} parent={parent} />');
+  expect(source).toContain('href="/admin/website-experience" className="rounded text-sky-200');
+  expect(source).toContain('<Link href={parent.href} className="rounded text-sky-200');
+  expect(source).toContain('<span aria-current="page" className="text-slate-300">{current}</span>');
+  expect(source).not.toContain("router.back");
+});
+
+test("AdminWebsiteExperienceLanding Partner listing removes developer-facing language from rendered copy", () => {
+  const forbiddenTerms = [
+    "registered page",
+    "registered Partner module",
+    "Partner preview route",
+    "runtime catalogue authority",
+    "backend",
+    "source",
+    "schema",
+    "dynamic configuration",
+    "policy engine",
+    "stable IDs",
+    "stable service IDs",
+    "DB-backed",
+    "implementation batch",
+    "API source",
+    "frontend route",
+    "/partner-preview",
+    "staging fingerprint",
+    "Future",
+    "Not configured",
+    "Missing module",
+    "Editor unavailable",
+    "Unsupported",
+    "Development pending",
+  ];
+
+  const partnerBlock = source.slice(source.indexOf('if (view === "partner")'), source.indexOf('if (view === "root"'));
+  for (const term of forbiddenTerms) {
+    expect(partnerBlock).not.toContain(term);
+  }
+});
+
+test("AdminWebsiteExperienceLanding disabled Partner items have no active navigation affordance", () => {
+  expect(source).toContain('aria-disabled="true"');
+  expect(source).toContain('title={disabledHelp}');
+  expect(source).toContain('<span className="sr-only">{disabledHelp}</span>');
+  expect(source).toContain("disabled ? null : <ArrowRight");
+  expect(source).not.toContain("tabIndex={0}");
+});
+
+test("AdminWebsiteExperienceLanding Partner rows keep the approved vertical full-row layout", () => {
+  expect(source).toContain("flex min-h-20 w-full flex-col justify-between gap-4");
+  expect(source).toContain("sm:flex-row sm:items-center");
+  expect(source).toContain("return <Link href={href} className={className}>{body}</Link>;");
+  expect(source).not.toContain("grid grid-cols");
 });
 
 test("AdminWebsiteExperienceLanding route audit keeps undiscovered page third-level screens out of scope", () => {
