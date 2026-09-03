@@ -50,21 +50,21 @@ type CatalogueLoadState =
   | { status: "error"; data: null };
 
 const futureGlobalModules = [
-  { label: "Header / Navigation", icon: Navigation },
-  { label: "Footer", icon: Tags },
-  { label: "Global Notices", icon: PanelTop },
+  { label: "Header & Navigation", description: "Manage website header and navigation content.", icon: Navigation },
+  { label: "Footer", description: "Manage website footer content.", icon: Tags },
+  { label: "Global Notices", description: "Manage notices displayed across the website.", icon: PanelTop },
 ];
 
 const pageModules = [
-  { label: "Homepage", path: "/", icon: Home, sections: ["Hero", "Search", "Themes", "Offers"], status: "Static route" },
-  { label: "Flights", path: "/flights", icon: Plane, sections: ["Search", "Results", "Review"], status: "Static route" },
-  { label: "Hotels", path: "/hotels/results", icon: Globe2, sections: ["Search", "Results", "Booking"], status: "Static route" },
-  { label: "Partner", path: "/partner-preview", icon: Users, sections: ["Partner Page", "Partner Application", "Service Catalogue"], status: "Foundation" },
-  { label: "Creator", path: "/creators", icon: BookOpen, sections: ["Catalog", "Licensing", "Checkout"], status: "Static route" },
-  { label: "Smart Planner", path: "/smart-planner", icon: Sparkles, sections: ["Planner", "Workspace", "Review"], status: "Static route" },
-  { label: "Marketplace", path: "/local-market", icon: ShoppingBag, sections: ["Catalog", "Seller", "Compliance"], status: "Static route" },
-  { label: "Local Life", path: "/local-life", icon: Compass, sections: ["Experiences", "Creators", "Local"], status: "Static route" },
-  { label: "Cab", path: "/cab/result", icon: Car, sections: ["Search", "Results", "Booking"], status: "Static route" },
+  { label: "Homepage", path: "/", icon: Home, sections: ["Hero", "Search", "Themes", "Offers"], description: "Manage homepage sections." },
+  { label: "Flights", path: "/flights", icon: Plane, sections: ["Search", "Results", "Review"], description: "Manage flight-page content." },
+  { label: "Hotels", path: "/hotels/results", icon: Globe2, sections: ["Search", "Results", "Booking"], description: "Manage hotel-page content." },
+  { label: "Partner", path: "/partner-preview", icon: Users, sections: ["Partner Page", "Partner Application", "Service Catalogue"], description: "Manage Partner experience content." },
+  { label: "Creator", path: "/creators", icon: BookOpen, sections: ["Catalog", "Licensing", "Checkout"], description: "Manage creator-page content." },
+  { label: "Smart Planner", path: "/smart-planner", icon: Sparkles, sections: ["Planner", "Workspace", "Review"], description: "Manage Smart Planner content." },
+  { label: "Marketplace", path: "/local-market", icon: ShoppingBag, sections: ["Catalog", "Seller", "Compliance"], description: "Manage marketplace content." },
+  { label: "Local Life", path: "/local-life", icon: Compass, sections: ["Experiences", "Creators", "Local"], description: "Manage Local Life content." },
+  { label: "Cab", path: "/cab/result", icon: Car, sections: ["Search", "Results", "Booking"], description: "Manage cab-page content." },
 ];
 
 export function AdminWebsiteExperienceLanding({ view = "root" }: { view?: LandingView }) {
@@ -112,42 +112,38 @@ export function AdminWebsiteExperienceLanding({ view = "root" }: { view?: Landin
 
   if (view === "global") {
     return (
-      <DrilldownShell
-        eyebrow="Website Experience"
+      <ListingShell
+        current="Global Experience"
         title="Global Experience"
-        detail="Shared Website Experience modules used across TPL GO."
-        backHref="/admin/website-experience"
-        backLabel="Back to Website Experience"
+        detail="Manage content shared across the website."
       >
         <VerticalEntry
           icon={MonitorCog}
           title="Login & Signup"
-          detail="User Login, Partner Login, and Partner Registration presentation content."
-          count="3 contexts"
+          detail="Manage login and registration content."
+          count="3 experiences"
           href="/admin/website-experience/login-signup"
         />
         {futureGlobalModules.map((item) => (
-          <VerticalEntry key={item.label} icon={item.icon} title={item.label} detail="Registered global module. Dynamic editing is not configured for this module yet." count="Future" disabled />
+          <VerticalEntry key={item.label} icon={item.icon} title={item.label} detail={item.description} count="Available soon" disabled />
         ))}
-      </DrilldownShell>
+      </ListingShell>
     );
   }
 
   if (view === "pages") {
     return (
-      <DrilldownShell
-        eyebrow="Website Experience"
+      <ListingShell
+        current="Pages"
         title="Pages"
-        detail="Open one registered page at a time."
-        backHref="/admin/website-experience"
-        backLabel="Back to Website Experience"
+        detail="Choose a page to manage its content."
       >
         <label className="relative block">
           <Search className="absolute left-3 top-3 h-4 w-4 text-slate-500" />
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search pages or routes"
+            placeholder="Search pages"
             className="h-11 w-full rounded-xl border border-sky-300/15 bg-[#081427] pl-9 pr-3 text-sm font-medium text-slate-100 outline-none placeholder:text-slate-500 focus:border-sky-300"
           />
         </label>
@@ -156,13 +152,13 @@ export function AdminWebsiteExperienceLanding({ view = "root" }: { view?: Landin
             key={page.label}
             icon={page.icon}
             title={page.label}
-            detail={page.path}
+            detail={page.description}
             count={`${page.sections.length} sections`}
             href={page.label === "Partner" ? "/admin/website-experience/pages/partner" : undefined}
             disabled={page.label !== "Partner"}
           />
         ))}
-      </DrilldownShell>
+      </ListingShell>
     );
   }
 
@@ -279,6 +275,32 @@ function SectionLabel({ title, detail }: { title: string; detail: string }) {
   );
 }
 
+function ListingShell({ current, title, detail, children }: { current: "Global Experience" | "Pages"; title: string; detail: string; children: React.ReactNode }) {
+  return (
+    <section className="space-y-4 rounded-2xl border border-sky-300/10 bg-[#0b1628]/95 p-5 shadow-xl shadow-black/20">
+      <AdminBackButton href="/admin/website-experience" label="Back to Website Experience" />
+      <BreadcrumbTrail current={current} />
+      <div>
+        <h3 className="text-2xl font-black text-cyan-100">{title}</h3>
+        <p className="mt-1 text-sm leading-6 text-slate-400">{detail}</p>
+      </div>
+      <div className="space-y-3">{children}</div>
+    </section>
+  );
+}
+
+function BreadcrumbTrail({ current }: { current: "Global Experience" | "Pages" }) {
+  return (
+    <nav className="flex flex-wrap items-center gap-2 text-xs font-black text-slate-400" aria-label="Website Experience breadcrumbs">
+      <Link href="/admin/website-experience" className="rounded text-sky-200 hover:text-orange-100 focus:outline-none focus:ring-2 focus:ring-sky-300">
+        Website Experience
+      </Link>
+      <span aria-hidden="true" className="text-slate-600">&gt;</span>
+      <span aria-current="page" className="text-slate-300">{current}</span>
+    </nav>
+  );
+}
+
 function StatusSummary({ summary, loading }: { summary: ReturnType<typeof mergeWorkflowSummary>; loading: boolean }) {
   const chips = [
     { label: "Drafts", value: summary.draftLabel, countLabel: formatCountLabel(summary.draftLabel, "Draft"), href: "/admin/website-experience/login-signup?workflow=drafts" },
@@ -332,13 +354,18 @@ function VerticalEntry({ icon: Icon, title, detail, count, href, disabled = fals
       </span>
       <span className="flex shrink-0 items-center gap-3">
         <span className={`rounded-full border px-3 py-1 text-xs font-black ${highlight ? "border-orange-300/25 bg-orange-400/10 text-orange-100" : "border-sky-300/10 bg-white/[0.04] text-slate-300"}`}>{count}</span>
-        <ArrowRight className="h-4 w-4 text-sky-200" />
+        {disabled ? null : <ArrowRight className="h-4 w-4 text-sky-200" />}
       </span>
     </>
   );
   const className = "flex min-h-20 w-full flex-col justify-between gap-4 rounded-2xl border border-sky-300/10 bg-[#081427] p-4 text-left shadow-lg shadow-black/10 transition hover:border-sky-300/35 hover:bg-[#0b1b33] focus:outline-none focus:ring-2 focus:ring-sky-300 sm:flex-row sm:items-center";
   if (!href || disabled) {
-    return <div className={`${className} opacity-75`}>{body}</div>;
+    return (
+      <div className={`${className} opacity-75 hover:border-sky-300/10 hover:bg-[#081427]`} aria-disabled="true" title="Editing for this area will be available soon.">
+        <span className="sr-only">Editing for this area will be available soon.</span>
+        {body}
+      </div>
+    );
   }
   return <Link href={href} className={className}>{body}</Link>;
 }
