@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -119,7 +119,6 @@ export function WebsiteExperienceManager({
   const [busyAction, setBusyAction] = useState("");
   const [reviewNote, setReviewNote] = useState("");
   const [bypassReason, setBypassReason] = useState("");
-  const showStagingFingerprint = useStagingAdminFingerprint();
 
   const load = useCallback(async () => {
     const result = await getAdminWebsiteExperienceLoginSignup();
@@ -438,7 +437,6 @@ export function WebsiteExperienceManager({
               onReviewNoteChange={setReviewNote}
               onBypassReasonChange={setBypassReason}
               onWorkflowAction={workflowAction}
-              showStagingFingerprint={showStagingFingerprint}
               onPreview={() => setMessage(activeRow.hasUnpublishedChanges ? "Draft Preview is shown beside this editor and is not live." : "Unsaved Preview is shown beside this editor and is not live.")}
             />
           </section>
@@ -497,20 +495,6 @@ function Breadcrumbs({ mode, activeContext, activeBlock }: { mode: "login-signup
       ))}
     </nav>
   );
-}
-
-function isStagingAdminHost() {
-  if (typeof window === "undefined") return false;
-  const host = window.location.hostname;
-  return host === "staging.tplgo.com" || host.endsWith(".vercel.app");
-}
-
-function useStagingAdminFingerprint() {
-  return useSyncExternalStore(noopSubscribe, isStagingAdminHost, () => false);
-}
-
-function noopSubscribe() {
-  return () => {};
 }
 
 function ContentListShell({
@@ -1043,7 +1027,6 @@ function WorkflowActionBar({
   onBypassReasonChange,
   onWorkflowAction,
   onPreview,
-  showStagingFingerprint,
 }: {
   canWrite: boolean;
   canPublish: boolean;
@@ -1062,7 +1045,6 @@ function WorkflowActionBar({
   onBypassReasonChange: (value: string) => void;
   onWorkflowAction: (action: "submit" | "approve" | "request-changes" | "delete-draft" | "archive" | "restore") => void;
   onPreview: () => void;
-  showStagingFingerprint: boolean;
 }) {
   const workflowState = activeRow.workflowState ?? activeRow.status;
   const isDraftLike = workflowState === "draft" || workflowState === "working_changes" || workflowState === "changes_requested";
@@ -1078,11 +1060,6 @@ function WorkflowActionBar({
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-200">Item workflow</p>
-          {showStagingFingerprint ? (
-            <div className="mt-2 inline-flex items-center rounded-full border border-cyan-300/25 bg-cyan-400/10 px-3 py-1 text-xs font-black text-cyan-100">
-              S4D6.2 · Editor Workflow
-            </div>
-          ) : null}
           <h3 className="mt-1 text-xl font-black text-cyan-100">{workflowLabel(workflowState)}</h3>
           <p className="mt-1 text-sm leading-6 text-slate-400">{publishScope(activeRow.context)}. Preview is not live content.</p>
         </div>

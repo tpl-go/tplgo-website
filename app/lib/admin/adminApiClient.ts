@@ -797,6 +797,39 @@ export type AdminPartnerServiceCatalogueResponse = {
   draftVersion: number;
   publishedVersion: number;
   status: string;
+  workflowState?: "draft" | "in_review" | "changes_requested" | "approved" | "published" | "archived";
+  review?: {
+    state?: "draft" | "in_review" | "changes_requested" | "approved" | "published" | "archived";
+    submittedByAdminId?: string;
+    submittedAt?: string;
+    reviewedByAdminId?: string;
+    reviewedAt?: string;
+    decision?: "approved" | "changes_requested";
+    note?: string;
+    bypassedBySuperAdmin?: boolean;
+    bypassReason?: string;
+  };
+  hasUnpublishedChanges?: boolean;
+  workflowRecord?: {
+    workflowRecordId: string;
+    sourceType: "service_catalogue";
+    sourceRecordId: string;
+    contentArea: string;
+    pageContext: string;
+    sectionDomain: string;
+    itemService: string;
+    exactScope: string;
+    workflowState: "draft" | "in_review" | "changes_requested" | "approved" | "published" | "archived";
+    draftVersion: number;
+    publishedVersion: number;
+    changedByAdminId?: string;
+    changedAt?: string;
+    submittedByAdminId?: string;
+    submittedAt?: string;
+    reviewedByAdminId?: string;
+    reviewedAt?: string;
+    availableActions: string[];
+  };
   permissions: { canRead: boolean; canManage: boolean; canPublish: boolean };
   scheduling: { supported: boolean; reason: string };
   versions: Array<{ id: string; version: number; status: string; createdByAdminId?: string; publishedByAdminId?: string; createdAt: string; publishedAt?: string }>;
@@ -2684,8 +2717,42 @@ export async function saveAdminPartnerServiceCatalogueDraft(input: {
 export async function publishAdminPartnerServiceCatalogue(input: {
   expectedDraftVersion?: number;
   changeSummary?: string;
+  reason?: string;
 }): Promise<AdminApiResult<AdminPartnerServiceCatalogueResponse>> {
   return adminApiRequest<AdminPartnerServiceCatalogueResponse>("/api/v1/admin/partners/service-catalogue/publish", {
+    method: "POST",
+    body: input,
+  });
+}
+
+export async function submitAdminPartnerServiceCatalogueApproval(input: {
+  expectedDraftVersion?: number;
+  changeSummary?: string;
+  note?: string;
+}): Promise<AdminApiResult<AdminPartnerServiceCatalogueResponse>> {
+  return adminApiRequest<AdminPartnerServiceCatalogueResponse>("/api/v1/admin/partners/service-catalogue/approval/submit", {
+    method: "POST",
+    body: input,
+  });
+}
+
+export async function approveAdminPartnerServiceCatalogueDraft(input: {
+  expectedDraftVersion?: number;
+  changeSummary?: string;
+  note?: string;
+}): Promise<AdminApiResult<AdminPartnerServiceCatalogueResponse>> {
+  return adminApiRequest<AdminPartnerServiceCatalogueResponse>("/api/v1/admin/partners/service-catalogue/approval/approve", {
+    method: "POST",
+    body: input,
+  });
+}
+
+export async function requestAdminPartnerServiceCatalogueChanges(input: {
+  expectedDraftVersion?: number;
+  changeSummary?: string;
+  note?: string;
+}): Promise<AdminApiResult<AdminPartnerServiceCatalogueResponse>> {
+  return adminApiRequest<AdminPartnerServiceCatalogueResponse>("/api/v1/admin/partners/service-catalogue/approval/request-changes", {
     method: "POST",
     body: input,
   });

@@ -27,8 +27,11 @@ import {
   deleteAdminPartnerServiceCatalogueDraftItem,
   getAdminPartnerServiceCatalogue,
   publishAdminPartnerServiceCatalogue,
+  approveAdminPartnerServiceCatalogueDraft,
+  requestAdminPartnerServiceCatalogueChanges,
   resolveAdminPartnerRequestedService,
   saveAdminPartnerServiceCatalogueDraft,
+  submitAdminPartnerServiceCatalogueApproval,
   type AdminPartnerServiceCatalogueItem,
   type AdminPartnerServiceCatalogueResponse,
 } from "../../../lib/admin/adminApiClient";
@@ -70,6 +73,8 @@ export function AdminPartnerServiceCatalogueClient() {
   const [dialog, setDialog] = useState<{ mode: DialogMode; item?: AdminPartnerServiceCatalogueItem; parent?: AdminPartnerServiceCatalogueItem; domain?: string } | null>(null);
   const [draft, setDraft] = useState<AdminPartnerServiceCatalogueItem | null>(null);
   const [resolutionNote, setResolutionNote] = useState("");
+  const [reviewNote, setReviewNote] = useState("");
+  const [previewItem, setPreviewItem] = useState<AdminPartnerServiceCatalogueItem | null>(null);
 
   async function loadCatalogue() {
     setLoadState("loading");
@@ -161,27 +166,77 @@ export function AdminPartnerServiceCatalogueClient() {
     setData(result.data);
     if (draft.domain) setSelectedDomain(draft.domain);
     closeDialog();
-    setMessage({ tone: "success", text: "Draft saved" });
+    setMessage({ tone: "success", text: `Draft saved successfully. Partner Service Catalogue · Draft v${result.data.draftVersion}. Next action: Send for Approval.` });
   }
 
   async function publishDraft() {
     if (!data) return;
     setBusy("publishing");
     setMessage({ tone: "info", text: "Publishing..." });
-    const result = await publishAdminPartnerServiceCatalogue({ expectedDraftVersion: data.draftVersion, changeSummary: "Published Partner Service Catalogue" });
+    const result = await publishAdminPartnerServiceCatalogue({ expectedDraftVersion: data.draftVersion, changeSummary: "Published Partner Service Catalogue", reason: reviewNote });
     setBusy("");
     if (!result.ok) {
       setMessage({ tone: "error", text: result.status === 403 ? "Permission denied" : result.status === 409 ? "Version conflict" : result.error.message || "Publish failed" });
       return;
     }
     setData(result.data);
-    setMessage({ tone: "success", text: "Published" });
+    setReviewNote("");
+    setMessage({ tone: "success", text: `Published successfully. Version ${result.data.publishedVersion} is now live.` });
+  }
+
+  async function submitForApproval() {
+    if (!data) return;
+    setBusy("submit");
+    setMessage({ tone: "info", text: "Sending for approval..." });
+    const result = await submitAdminPartnerServiceCatalogueApproval({ expectedDraftVersion: data.draftVersion, note: reviewNote, changeSummary: "Sent Partner Service Catalogue draft for approval" });
+    setBusy("");
+    if (!result.ok) {
+      setMessage({ tone: "error", text: result.status === 403 ? "Permission denied" : result.status === 409 ? "Version conflict" : result.error.message || "Send for Approval failed" });
+      return;
+    }
+    setData(result.data);
+    setReviewNote("");
+    setMessage({ tone: "success", text: "Sent for approval. The catalogue draft is now in the In Review queue." });
+  }
+
+  async function approveDraft() {
+    if (!data) return;
+    setBusy("approve");
+    setMessage({ tone: "info", text: "Approving draft..." });
+    const result = await approveAdminPartnerServiceCatalogueDraft({ expectedDraftVersion: data.draftVersion, note: reviewNote, changeSummary: "Approved Partner Service Catalogue draft" });
+    setBusy("");
+    if (!result.ok) {
+      setMessage({ tone: "error", text: result.status === 403 ? "Permission denied" : result.status === 409 ? "Version conflict" : result.error.message || "Approve failed" });
+      return;
+    }
+    setData(result.data);
+    setReviewNote("");
+    setMessage({ tone: "success", text: "Approved. Next action: Publish Now." });
+  }
+
+  async function requestChanges() {
+    if (!data) return;
+    if (!reviewNote.trim()) {
+      setMessage({ tone: "error", text: "Request Changes requires a review note." });
+      return;
+    }
+    setBusy("request-changes");
+    setMessage({ tone: "info", text: "Requesting changes..." });
+    const result = await requestAdminPartnerServiceCatalogueChanges({ expectedDraftVersion: data.draftVersion, note: reviewNote, changeSummary: "Requested changes to Partner Service Catalogue draft" });
+    setBusy("");
+    if (!result.ok) {
+      setMessage({ tone: "error", text: result.status === 403 ? "Permission denied" : result.status === 409 ? "Version conflict" : result.error.message || "Request Changes failed" });
+      return;
+    }
+    setData(result.data);
+    setReviewNote("");
+    setMessage({ tone: "success", text: "Changes requested. The review note is visible on the catalogue draft." });
   }
 
   async function lifecycle(item: AdminPartnerServiceCatalogueItem, action: "activate" | "inactivate" | "archive" | "reactivate") {
     if (!data) return;
     setBusy(`${action}:${item.stableCode}`);
-    setMessage({ tone: "info", text: action === "archive" ? "Archiving..." : action === "reactivate" ? "Reactivating..." : "Saving draft..." });
+    setMessage({ tone: "info", text: action === "archive" ? "Creating archive draft..." : action === "reactivate" ? "Creating restore draft..." : "Saving draft..." });
     const result = await changeAdminPartnerServiceCatalogueLifecycle(item.stableCode, action, { expectedDraftVersion: data.draftVersion, changeSummary: `${action} ${item.stableCode}` });
     setBusy("");
     if (!result.ok) {
@@ -189,7 +244,7 @@ export function AdminPartnerServiceCatalogueClient() {
       return;
     }
     setData(result.data);
-    setMessage({ tone: "success", text: action === "archive" ? "Archived" : action === "reactivate" ? "Reactivated" : "Draft saved" });
+    setMessage({ tone: "success", text: action === "archive" ? "Archive draft saved. Preview it, then send it for approval before publishing." : action === "reactivate" ? "Restore draft saved. Preview it, then send it for approval before publishing." : "Draft saved" });
   }
 
   async function deleteDraft() {
@@ -204,7 +259,7 @@ export function AdminPartnerServiceCatalogueClient() {
     }
     setData(result.data);
     closeDialog();
-    setMessage({ tone: "success", text: "Draft deleted" });
+    setMessage({ tone: "success", text: "Draft deleted. Published catalogue content remains unchanged." });
   }
 
   async function resolveRequest(requestKey: string, resolutionType: "mapped_to_existing" | "draft_service_created" | "closed", mappedServiceCode?: string) {
@@ -233,7 +288,20 @@ export function AdminPartnerServiceCatalogueClient() {
   return (
     <div data-admin-service-catalogue="true" className="min-h-screen rounded-2xl border border-sky-300/10 bg-[#07111f] p-4 text-slate-100 shadow-2xl shadow-sky-950/30 lg:p-6">
       <PremiumStyles />
-      <CatalogueHeader data={data} domains={domains} activeView={catalogueView} onNavigate={navigate} onPublish={publishDraft} publishing={busy === "publishing"} />
+      <CatalogueHeader
+        data={data}
+        domains={domains}
+        activeView={catalogueView}
+        reviewNote={reviewNote}
+        busy={busy}
+        onReviewNote={setReviewNote}
+        onNavigate={navigate}
+        onPreview={() => setPreviewItem(selectedItem ?? firstItemForDomain(items, selectedDomain) ?? items[0] ?? null)}
+        onSubmit={submitForApproval}
+        onApprove={approveDraft}
+        onRequestChanges={requestChanges}
+        onPublish={publishDraft}
+      />
       {message ? <Message tone={message.tone} text={message.text} /> : null}
 
       {catalogueView === "requested" ? (
@@ -329,11 +397,46 @@ export function AdminPartnerServiceCatalogueClient() {
           onDelete={deleteDraft}
         />
       ) : null}
+      {previewItem ? <CataloguePreviewModal item={previewItem} data={data} onClose={() => setPreviewItem(null)} onEdit={() => {
+        const item = previewItem;
+        setPreviewItem(null);
+        openDialog(itemKind(item, items.filter((candidate) => candidate.domain === item.domain)) === "sub-service" ? "edit-sub-service" : itemKind(item, items.filter((candidate) => candidate.domain === item.domain)) === "category" ? "edit-category" : "edit-service", item);
+      }} /> : null}
     </div>
   );
 }
 
-function CatalogueHeader({ data, domains, activeView, onNavigate, onPublish, publishing }: { data: AdminPartnerServiceCatalogueResponse; domains: DomainRow[]; activeView: CatalogueView; onNavigate: (next: { view?: CatalogueView; domain?: string; service?: string }) => void; onPublish: () => void; publishing: boolean }) {
+function CatalogueHeader({
+  data,
+  domains,
+  activeView,
+  reviewNote,
+  busy,
+  onReviewNote,
+  onNavigate,
+  onPreview,
+  onSubmit,
+  onApprove,
+  onRequestChanges,
+  onPublish,
+}: {
+  data: AdminPartnerServiceCatalogueResponse;
+  domains: DomainRow[];
+  activeView: CatalogueView;
+  reviewNote: string;
+  busy: string;
+  onReviewNote: (value: string) => void;
+  onNavigate: (next: { view?: CatalogueView; domain?: string; service?: string }) => void;
+  onPreview: () => void;
+  onSubmit: () => void;
+  onApprove: () => void;
+  onRequestChanges: () => void;
+  onPublish: () => void;
+}) {
+  const state = data.workflowState ?? (data.hasUnpublishedChanges ? "draft" : "published");
+  const canSubmit = data.permissions.canManage && data.hasUnpublishedChanges && (state === "draft" || state === "changes_requested");
+  const canReview = data.permissions.canPublish && state === "in_review";
+  const canPublish = data.permissions.canPublish && state === "approved";
   return (
     <section className="overflow-hidden rounded-2xl border border-sky-300/15 bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.35),transparent_34%),linear-gradient(135deg,#0a1930,#111827_55%,#1c1917)] p-5 shadow-xl shadow-black/20">
       <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
@@ -342,9 +445,19 @@ function CatalogueHeader({ data, domains, activeView, onNavigate, onPublish, pub
           <h2 className="mt-2 text-3xl font-black tracking-normal text-sky-100 lg:text-4xl">Service Catalogue</h2>
           <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-300">Manage catalogue Domains, Categories, Services, Sub-services, Requested Services, drafts, previews, publishes, versions and audit from the central Partner page context.</p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={() => alert("Preview uses the current draft catalogue without publishing.")} className="premiumButton secondary"><Eye size={16} /> Preview</button>
-          <button type="button" disabled={!data.permissions.canPublish || publishing} onClick={onPublish} className="premiumButton publish">{publishing ? <Loader2 className="animate-spin" size={16} /> : <Send size={16} />} Publish</button>
+        <div className="flex flex-col gap-2 rounded-2xl border border-sky-300/15 bg-[#07111f]/80 p-3">
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={onPreview} className="premiumButton secondary"><Eye size={16} /> {data.hasUnpublishedChanges ? "Preview Draft" : "Preview Published"}</button>
+            {canSubmit ? <button type="button" disabled={busy === "submit"} onClick={onSubmit} className="premiumButton primary">{busy === "submit" ? <Loader2 className="animate-spin" size={16} /> : <Send size={16} />} Send for Approval</button> : null}
+            {canReview ? <button type="button" disabled={busy === "approve"} onClick={onApprove} className="premiumButton primary">{busy === "approve" ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle2 size={16} />} Approve</button> : null}
+            {canReview ? <button type="button" disabled={busy === "request-changes" || !reviewNote.trim()} onClick={onRequestChanges} className="premiumButton secondary"><XCircle size={16} /> Request Changes</button> : null}
+            {canPublish ? <button type="button" disabled={busy === "publishing"} onClick={onPublish} className="premiumButton publish">{busy === "publishing" ? <Loader2 className="animate-spin" size={16} /> : <Send size={16} />} Publish Now</button> : null}
+          </div>
+          {(canReview || state === "changes_requested") ? <Textarea label={canReview ? "Review note" : "Submission note"} value={reviewNote} onChange={onReviewNote} /> : null}
+          {state === "published" ? <p className="text-xs font-bold text-emerald-100">Published · create or edit a draft to start the next workflow.</p> : null}
+          {state === "in_review" ? <p className="text-xs font-bold text-sky-100">Waiting for review. Publish is hidden until approval.</p> : null}
+          {state === "approved" ? <p className="text-xs font-bold text-emerald-100">Approved · next action is Publish Now.</p> : null}
+          {data.review?.note ? <p className="text-xs font-bold text-orange-100">Review note: {data.review.note}</p> : null}
         </div>
       </div>
       <div className="mt-5 space-y-2">
@@ -364,6 +477,7 @@ function CatalogueHeader({ data, domains, activeView, onNavigate, onPublish, pub
       <div className="mt-4 flex flex-wrap gap-2">
         <WorkflowChip icon={FilePenLine} label={`Draft v${data.draftVersion}`} tone="cyan" />
         <WorkflowChip icon={CheckCircle2} label={`Published v${data.publishedVersion}`} tone="blue" />
+        <WorkflowChip icon={Clock3} label={workflowTitle(state)} tone={state === "approved" || state === "published" ? "green" : state === "in_review" ? "violet" : "orange"} />
         <WorkflowChip icon={Clock3} label={data.scheduling.supported ? "Scheduled" : "No schedule"} tone="orange" />
       </div>
     </section>
@@ -717,6 +831,52 @@ function CatalogueDialog(props: {
   );
 }
 
+function CataloguePreviewModal({ item, data, onClose, onEdit }: { item: AdminPartnerServiceCatalogueItem; data: AdminPartnerServiceCatalogueResponse; onClose: () => void; onEdit: () => void }) {
+  const domainItems = data.preview.items.filter((candidate) => candidate.domain === item.domain);
+  const kind = itemKind(item, domainItems);
+  const state = data.workflowState ?? (data.hasUnpublishedChanges ? "draft" : "published");
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-3 sm:items-center" role="dialog" aria-modal="true" aria-labelledby="catalogue-preview-title">
+      <section className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-2xl border border-cyan-300/20 bg-[#07111f] p-5 text-slate-100 shadow-2xl shadow-black/50">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-xs font-black uppercase text-orange-300">{data.hasUnpublishedChanges ? "Draft Preview" : "Published Preview"} · Not Live Change</p>
+            <h3 id="catalogue-preview-title" className="mt-1 text-2xl font-black text-cyan-100">{item.name}</h3>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">Previewing {domainTitle(item.domain)} / {titleKind(kind)}. This preview never publishes catalogue changes.</p>
+          </div>
+          <button type="button" onClick={onClose} className="premiumButton compact secondary" aria-label="Close preview"><X size={16} /></button>
+        </div>
+        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <Detail label="Workflow" value={workflowTitle(state)} />
+          <Detail label="Draft Version" value={`v${data.draftVersion}`} />
+          <Detail label="Published Version" value={`v${data.publishedVersion}`} />
+          <Detail label="Domain" value={domainTitle(item.domain)} />
+          <Detail label="Type" value={titleKind(kind)} />
+          <Detail label="Status" value={item.status} />
+          <Detail label="Partner Step 4 Visibility" value={item.status === "active" && item.applicationSelectable ? "Eligible after publish and policy filtering" : "Not selectable for new Partner applications"} />
+          <Detail label="Eligibility" value={`${item.individualAllowed ? "Individual" : ""}${item.individualAllowed && item.organizationAllowed ? " / " : ""}${item.organizationAllowed ? "Organization" : ""}` || "Not configured"} />
+          <Detail label="Countries" value={item.countries.join(", ") || "All configured"} />
+        </div>
+        <div className="mt-4 rounded-2xl border border-white/10 bg-[#0d1b31] p-4">
+          <h4 className="text-lg font-black text-sky-100">How this service card will read</h4>
+          <div className="mt-3 rounded-2xl border border-cyan-300/20 bg-[#07111f] p-4">
+            <div className="flex flex-wrap gap-2">
+              <StatusChip label={domainTitle(item.domain)} tone="cyan" />
+              <StatusChip label={item.applicationSelectable ? "Selectable" : "Not selectable"} tone={item.applicationSelectable ? "green" : "slate"} />
+            </div>
+            <h5 className="mt-3 text-xl font-black text-slate-100">{item.name}</h5>
+            <p className="mt-2 text-sm leading-6 text-slate-400">{item.shortDescription}</p>
+          </div>
+        </div>
+        <div className="mt-5 flex flex-wrap justify-end gap-2 border-t border-white/10 pt-4">
+          <button type="button" onClick={onClose} className="premiumButton secondary">Back to Editing</button>
+          {data.permissions.canManage ? <button type="button" onClick={onEdit} className="premiumButton primary"><FilePenLine size={16} /> Edit Service</button> : null}
+        </div>
+      </section>
+    </div>
+  );
+}
+
 function RequestedServicesView({ data, services, note, busy, onBack, onNote, onResolve, onCreateDraft }: {
   data: AdminPartnerServiceCatalogueResponse;
   services: AdminPartnerServiceCatalogueItem[];
@@ -923,6 +1083,10 @@ function domainIcon(id: string) {
 
 function titleKind(kind: ItemKind) {
   return kind.split("-").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" ");
+}
+
+function workflowTitle(state: string) {
+  return state.split("_").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" ");
 }
 
 function dialogEyebrow(mode: DialogMode) {

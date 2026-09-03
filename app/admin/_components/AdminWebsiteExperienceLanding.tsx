@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -31,7 +31,9 @@ import {
 import { AdminBackButton } from "./AdminBackButton";
 import {
   getAdminWebsiteExperienceLoginSignup,
+  getAdminPartnerServiceCatalogue,
   type AdminApiError,
+  type AdminPartnerServiceCatalogueResponse,
   type WebsiteExperienceAdminContext,
   type WebsiteExperienceAdminResponse,
 } from "../../lib/admin/adminApiClient";
@@ -42,6 +44,11 @@ type LoadState =
   | { status: "loading"; data: null; error: null }
   | { status: "ready"; data: WebsiteExperienceAdminResponse; error: null }
   | { status: "error"; data: null; error: AdminApiError };
+
+type CatalogueLoadState =
+  | { status: "loading"; data: null }
+  | { status: "ready"; data: AdminPartnerServiceCatalogueResponse }
+  | { status: "error"; data: null };
 
 const futureGlobalModules = [
   { label: "Header / Navigation", icon: Navigation },
@@ -63,8 +70,8 @@ const pageModules = [
 
 export function AdminWebsiteExperienceLanding({ view = "root" }: { view?: LandingView }) {
   const [state, setState] = useState<LoadState>({ status: "loading", data: null, error: null });
+  const [catalogueState, setCatalogueState] = useState<CatalogueLoadState>({ status: "loading", data: null });
   const [search, setSearch] = useState("");
-  const showStagingFingerprint = useStagingAdminFingerprint();
 
   useEffect(() => {
     let active = true;
@@ -77,7 +84,19 @@ export function AdminWebsiteExperienceLanding({ view = "root" }: { view?: Landin
     };
   }, []);
 
+  useEffect(() => {
+    let active = true;
+    void getAdminPartnerServiceCatalogue().then((result) => {
+      if (!active) return;
+      setCatalogueState(result.ok ? { status: "ready", data: result.data } : { status: "error", data: null });
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const summary = useMemo(() => buildLoginSignupSummary(state.status === "ready" ? state.data.contexts.filter((context) => context.context !== "partner_application") : []), [state]);
+  const workflowSummary = useMemo(() => mergeWorkflowSummary(summary, catalogueState.status === "ready" ? catalogueState.data : null), [catalogueState, summary]);
   const partnerContext = state.status === "ready" ? state.data.contexts.find((context) => context.context === "partner_application") : undefined;
   const visiblePages = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -166,11 +185,6 @@ export function AdminWebsiteExperienceLanding({ view = "root" }: { view?: Landin
               <MonitorCog className="h-4 w-4" />
               Website Experience
             </div>
-            {showStagingFingerprint ? (
-              <div className="mt-3 inline-flex items-center rounded-full border border-cyan-300/25 bg-cyan-400/10 px-3 py-1 text-xs font-black text-cyan-100">
-                S4D6.2 · Website Experience Workflow
-              </div>
-            ) : null}
             <h2 className="mt-4 text-3xl font-black tracking-normal text-sky-100 md:text-4xl">Global Experience / Pages</h2>
             <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-300">
               Manage central presentation experiences while security, service policy, payments, providers, and private storage stay outside content editing.
@@ -197,31 +211,17 @@ export function AdminWebsiteExperienceLanding({ view = "root" }: { view?: Landin
       </section>
 
       <section className="space-y-3">
-        <SectionLabel title="Workflow" detail="Open a focused workflow queue. Counts are based on saved Website Experience state." />
-        <VerticalEntry icon={FilePenLine} title="Drafts" detail="Saved unpublished changes." count={summary.draftLabel} href="/admin/website-experience/login-signup?workflow=drafts" />
-        <VerticalEntry icon={Send} title="In Review" detail="Submitted drafts waiting for approval." count={summary.reviewLabel} href="/admin/website-experience/login-signup?workflow=in_review" />
-        <VerticalEntry icon={CheckCircle2} title="Approved" detail="Approved drafts ready to publish or schedule." count={summary.approvedLabel} href="/admin/website-experience/login-signup?workflow=approved" />
-        <VerticalEntry icon={CalendarClock} title="Scheduled" detail="Approved changes scheduled for publication." count={summary.scheduledLabel} href="/admin/website-experience/login-signup?workflow=scheduled" />
-        <VerticalEntry icon={Globe2} title="Published" detail="Live Website Experience content." count={summary.publishedLabel} href="/admin/website-experience/login-signup?workflow=published" />
-        <VerticalEntry icon={Archive} title="Archive" detail="Archived content and restore workflow." count={summary.archiveLabel} href="/admin/website-experience/login-signup?workflow=archive" />
+        <SectionLabel title="Workflow" detail="Open a focused workflow queue. Counts include Website Experience content and the Service Catalogue when authorized." />
+        <VerticalEntry icon={FilePenLine} title="Drafts" detail="Saved unpublished changes." count={workflowSummary.draftLabel} href="/admin/website-experience/login-signup?workflow=drafts" />
+        <VerticalEntry icon={Send} title="In Review" detail="Submitted drafts waiting for approval." count={workflowSummary.reviewLabel} href="/admin/website-experience/login-signup?workflow=in_review" />
+        <VerticalEntry icon={CheckCircle2} title="Approved" detail="Approved drafts ready to publish or schedule." count={workflowSummary.approvedLabel} href="/admin/website-experience/login-signup?workflow=approved" />
+        <VerticalEntry icon={CalendarClock} title="Scheduled" detail="Approved changes scheduled for publication." count={workflowSummary.scheduledLabel} href="/admin/website-experience/login-signup?workflow=scheduled" />
+        <VerticalEntry icon={Globe2} title="Published" detail="Live Website Experience content." count={workflowSummary.publishedLabel} href="/admin/website-experience/login-signup?workflow=published" />
+        <VerticalEntry icon={Archive} title="Archive" detail="Archived content and restore workflow." count={workflowSummary.archiveLabel} href="/admin/website-experience/login-signup?workflow=archive" />
         <VerticalEntry icon={Clock3} title="Versions & Audit" detail="Human-readable content history." count={state.status === "ready" ? String(state.data.recentAudit.length) : "Loading"} href="/admin/website-experience/login-signup?workflow=versions" />
       </section>
     </div>
   );
-}
-
-function isStagingAdminHost() {
-  if (typeof window === "undefined") return false;
-  const host = window.location.hostname;
-  return host === "staging.tplgo.com" || host.endsWith(".vercel.app");
-}
-
-function useStagingAdminFingerprint() {
-  return useSyncExternalStore(noopSubscribe, isStagingAdminHost, () => false);
-}
-
-function noopSubscribe() {
-  return () => {};
 }
 
 function buildLoginSignupSummary(contexts: WebsiteExperienceAdminContext[]) {
@@ -238,6 +238,20 @@ function buildLoginSignupSummary(contexts: WebsiteExperienceAdminContext[]) {
     approvedLabel: contexts.length ? String(approved) : "Loading",
     scheduledLabel: contexts.length ? String(scheduled) : "Loading",
     archiveLabel: contexts.length ? String(archived) : "Loading",
+  };
+}
+
+function mergeWorkflowSummary(summary: ReturnType<typeof buildLoginSignupSummary>, catalogue: AdminPartnerServiceCatalogueResponse | null) {
+  if (!catalogue) return summary;
+  const catalogueState = catalogue.workflowState ?? (catalogue.hasUnpublishedChanges ? "draft" : "published");
+  const add = (value: string, amount: number) => Number.isFinite(Number(value)) ? String(Number(value) + amount) : value;
+  return {
+    publishedLabel: summary.publishedLabel,
+    draftLabel: add(summary.draftLabel, catalogue.hasUnpublishedChanges && ["draft", "changes_requested"].includes(catalogueState) ? 1 : 0),
+    reviewLabel: add(summary.reviewLabel, catalogueState === "in_review" ? 1 : 0),
+    approvedLabel: add(summary.approvedLabel, catalogueState === "approved" ? 1 : 0),
+    scheduledLabel: summary.scheduledLabel,
+    archiveLabel: add(summary.archiveLabel, catalogueState === "archived" ? 1 : 0),
   };
 }
 
