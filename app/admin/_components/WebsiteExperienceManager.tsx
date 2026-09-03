@@ -8,12 +8,15 @@ import {
   CalendarClock,
   Clock3,
   Archive,
+  CheckCircle2,
   Eye,
   FileText,
   Globe2,
   Image as ImageIcon,
   Layers3,
   Monitor,
+  Pencil,
+  RotateCcw,
   Save,
   Send,
   ShieldCheck,
@@ -52,8 +55,10 @@ type LoadState =
   | { status: "ready"; data: WebsiteExperienceAdminResponse; error: null }
   | { status: "error"; data: WebsiteExperienceAdminResponse | null; error: AdminApiError };
 
-type BlockKey = "brand" | "hero" | "copy" | "benefits" | "trust" | "workflow";
+type BlockKey = "brand" | "hero" | "copy" | "benefits" | "trust";
 type PreviewDevice = "desktop" | "tablet" | "mobile";
+type EditorView = "contexts" | "blocks" | "editor" | "workflow";
+type WorkflowView = "drafts" | "in_review" | "approved" | "scheduled" | "published" | "archive" | "versions";
 
 const blocks: Array<{ key: BlockKey; label: string; detail: string; icon: LucideIcon; tone: string }> = [
   { key: "brand", label: "Brand", detail: "Logo, brand label, and alt text", icon: BadgeCheck, tone: "bg-blue-50 text-blue-700 border-blue-100" },
@@ -61,7 +66,16 @@ const blocks: Array<{ key: BlockKey; label: string; detail: string; icon: Lucide
   { key: "copy", label: "Headline & Copy", detail: "Eyebrow, headline, highlight, subtitle", icon: FileText, tone: "bg-amber-50 text-amber-700 border-amber-100" },
   { key: "benefits", label: "Benefits", detail: "Up to four compact benefit rows", icon: Layers3, tone: "bg-emerald-50 text-emerald-700 border-emerald-100" },
   { key: "trust", label: "Trust / Footer", detail: "Footer line and active status", icon: ShieldCheck, tone: "bg-violet-50 text-violet-700 border-violet-100" },
-  { key: "workflow", label: "Workflow", detail: "Save draft, schedule, publish now", icon: CalendarClock, tone: "bg-slate-50 text-slate-700 border-slate-200" },
+];
+
+const workflowViews: Array<{ key: WorkflowView; label: string; detail: string; icon: LucideIcon }> = [
+  { key: "drafts", label: "Drafts", detail: "Saved unpublished changes waiting for submission.", icon: FileText },
+  { key: "in_review", label: "In Review", detail: "Submitted drafts waiting for approval.", icon: Send },
+  { key: "approved", label: "Approved", detail: "Approved drafts ready to publish or schedule.", icon: CheckCircle2 },
+  { key: "scheduled", label: "Scheduled", detail: "Approved changes scheduled for publication.", icon: CalendarClock },
+  { key: "published", label: "Published", detail: "Currently live Website Experience content.", icon: Globe2 },
+  { key: "archive", label: "Archive", detail: "Archived contexts and restore-to-draft actions.", icon: Archive },
+  { key: "versions", label: "Versions & Audit", detail: "Human-readable version and audit history.", icon: Clock3 },
 ];
 
 const mediaSlots = {
@@ -92,9 +106,12 @@ export function WebsiteExperienceManager({
   mode?: "login-signup" | "partner-application";
   partnerApplicationNodeId?: string;
 }) {
+  const initialWorkflowView = readInitialWorkflowView();
   const [state, setState] = useState<LoadState>({ status: "loading", data: null, error: null });
   const [activeContext, setActiveContext] = useState<WebsiteExperienceContext>(mode === "partner-application" ? "partner_application" : "user_login");
-  const [activeBlock, setActiveBlock] = useState<BlockKey>("brand");
+  const [activeBlock, setActiveBlock] = useState<BlockKey | null>(partnerApplicationNodeId ? "copy" : null);
+  const [editorView, setEditorView] = useState<EditorView>(initialWorkflowView ? "workflow" : mode === "partner-application" ? "blocks" : "contexts");
+  const [workflowView, setWorkflowView] = useState<WorkflowView | null>(initialWorkflowView);
   const [previewDevice, setPreviewDevice] = useState<PreviewDevice>("desktop");
   const [drafts, setDrafts] = useState<Partial<Record<WebsiteExperienceContext, WebsiteExperienceContent>>>({});
   const [schedule, setSchedule] = useState(defaultSchedule);
@@ -168,6 +185,7 @@ export function WebsiteExperienceManager({
       return;
     }
     setMessage(mode === "partner-application" ? "Draft saved. Partner Application presentation stays unchanged until Publish Now or the scheduled time." : "Draft saved. Public Login & Signup stays unchanged until Publish Now or the scheduled time.");
+    setEditorView("editor");
     void load();
   };
 
@@ -201,6 +219,7 @@ export function WebsiteExperienceManager({
     }
     setMessage(statusMessage(action));
     setReviewNote("");
+    setEditorView("editor");
     void load();
   };
 
@@ -245,94 +264,186 @@ export function WebsiteExperienceManager({
   if (state.status === "error") return <PanelNotice tone="danger" text={state.error.message} />;
   if (!state.data || !activeDraft || !activeRow) return null;
 
+  const selectContext = (context: WebsiteExperienceContext) => {
+    setActiveContext(context);
+    setActiveBlock(null);
+    setWorkflowView(null);
+    setEditorView("blocks");
+  };
+
+  const selectBlock = (block: BlockKey) => {
+    setActiveBlock(block);
+    setWorkflowView(null);
+    setEditorView("editor");
+  };
+
+  const openWorkflow = (view: WorkflowView) => {
+    setWorkflowView(view);
+    setEditorView("workflow");
+  };
+
+  const openDraft = (context: WebsiteExperienceContext) => {
+    setActiveContext(context);
+    setActiveBlock("copy");
+    setWorkflowView(null);
+    setEditorView("editor");
+  };
+
+  if (editorView === "workflow" && workflowView) {
+    return (
+      <WorkflowQueueView
+        view={workflowView}
+        data={state.data}
+        onBack={() => {
+          setWorkflowView(null);
+          setEditorView(mode === "partner-application" ? "blocks" : "contexts");
+        }}
+        onOpen={openDraft}
+        onPreview={openDraft}
+      />
+    );
+  }
+
+  if (mode === "login-signup" && editorView === "contexts") {
+    return (
+      <ContentListShell
+        eyebrow="Website Experience > Global Experience"
+        title="Login & Signup"
+        detail="Open one context first, then choose one editable item. Drafts, approvals, publish, archive, and versions are available from the workflow area."
+        backHref="/admin/website-experience/global"
+        backLabel="Back to Global Experience"
+      >
+        <WorkflowShortcutGrid data={state.data} onOpen={openWorkflow} />
+        <VerticalListHeader title="Content" detail="Select the context you want to edit." />
+        {contextRows.map((item) => (
+          <ContentDrilldownRow
+            key={item.context}
+            icon={FileText}
+            title={contextLabels[item.context]}
+            detail={publishScope(item.context)}
+            status={item.workflowState ?? item.status}
+            meta={`Draft v${item.draftVersion} - Published v${item.publishedVersion}${item.updatedAt ? ` - Updated ${formatDateTime(item.updatedAt)}` : ""}`}
+            action="Open"
+            onClick={() => selectContext(item.context)}
+          />
+        ))}
+      </ContentListShell>
+    );
+  }
+
+  if (mode === "login-signup" && editorView === "blocks") {
+    return (
+      <ContentListShell
+        eyebrow="Website Experience > Global Experience > Login & Signup"
+        title={contextLabels[activeContext]}
+        detail="Open one editable item. The item editor contains Preview Changes, Save as Draft, approval, publish, schedule, delete draft, archive, and version history controls."
+        backLabel="Back to Login & Signup"
+        onBack={() => setEditorView("contexts")}
+      >
+        <ItemStatusStrip activeRow={activeRow} />
+        {blocks.map((block) => (
+          <ContentDrilldownRow
+            key={block.key}
+            icon={block.icon}
+            title={block.label}
+            detail={block.detail}
+            status={activeRow.workflowState ?? activeRow.status}
+            meta={`Last modified ${activeRow.updatedAt ? formatDateTime(activeRow.updatedAt) : "not available"}`}
+            action="Edit"
+            onClick={() => selectBlock(block.key)}
+          />
+        ))}
+      </ContentListShell>
+    );
+  }
+
+  if (mode === "partner-application" && !partnerApplicationNodeId && editorView === "blocks") {
+    return (
+      <ContentListShell
+        eyebrow="Website Experience > Pages > Partner"
+        title="Partner Application"
+        detail="Open one application item. Each editor keeps workflow actions visible and scoped to Partner Application content."
+        backHref="/admin/website-experience/pages/partner"
+        backLabel="Back to Partner"
+      >
+        <ItemStatusStrip activeRow={activeRow} />
+        <PartnerApplicationTreeEditor
+          content={activeDraft}
+          selectedNodeId={undefined}
+          canWrite={canWrite}
+          canPublish={canPublish}
+          schedule={schedule}
+          activeRow={activeRow}
+          busyAction={busyAction}
+          message={message}
+          onContentChange={updateDraft}
+          onScheduleChange={setSchedule}
+          onSaveDraft={saveDraft}
+          onPublish={publish}
+          onSchedule={schedulePublish}
+          onCancelSchedule={cancelSchedule}
+          reviewNote={reviewNote}
+          bypassReason={bypassReason}
+          onReviewNoteChange={setReviewNote}
+          onBypassReasonChange={setBypassReason}
+          onWorkflowAction={workflowAction}
+        />
+      </ContentListShell>
+    );
+  }
+
   return (
     <section className="space-y-5">
-      <div className="rounded border border-slate-200 bg-white p-5 shadow-sm">
-        <Breadcrumbs mode={mode} activeContext={contextLabels[activeContext]} activeBlock={blocks.find((block) => block.key === activeBlock)?.label ?? "Brand"} />
-        {mode !== "partner-application" || !partnerApplicationNodeId ? (
+      <div className="rounded-2xl border border-sky-300/15 bg-[#081427] p-5 shadow-xl shadow-black/20">
+        <Breadcrumbs mode={mode} activeContext={contextLabels[activeContext]} activeBlock={mode === "partner-application" ? partnerApplicationNodeLabel(activeDraft, partnerApplicationNodeId) : blocks.find((block) => block.key === activeBlock)?.label ?? "Editable Item"} />
         <div className="mt-4">
           <AdminBackButton
-            href={mode === "partner-application" ? "/admin/website-experience/pages/partner" : "/admin/website-experience/global"}
-            label={mode === "partner-application" ? "Back to Partner" : "Back to Global Experience"}
-            className="border-slate-300 bg-slate-950 text-sky-100"
+            href={mode === "partner-application" ? "/admin/website-experience/pages/partner/application" : undefined}
+            onClick={mode === "partner-application" ? undefined : () => setEditorView("blocks")}
+            label={mode === "partner-application" ? "Back to Partner Application" : `Back to ${contextLabels[activeContext]}`}
           />
         </div>
-        ) : null}
         <div className="mt-4 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase text-amber-700">{mode === "partner-application" ? "Pages / Partner" : "Global Experience / Login & Signup"}</p>
-            <h2 className="mt-1 text-2xl font-semibold text-slate-950">{mode === "partner-application" ? "Partner Application" : "Login & Signup"}</h2>
-            <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-200">{mode === "partner-application" ? "Pages / Partner" : "Global Experience / Login & Signup"}</p>
+            <h2 className="mt-1 text-2xl font-black text-cyan-100">{mode === "partner-application" ? partnerApplicationNodeLabel(activeDraft, partnerApplicationNodeId) : blocks.find((block) => block.key === activeBlock)?.label ?? "Editable Item"}</h2>
+            <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-300">
               {mode === "partner-application"
                 ? "Manage safe Partner Application presentation fields. Eligibility, validation, approval, and service activation stay locked outside this editor."
                 : "Manage shared login presentation used across TPL GO. Auth behavior, OTP, RBAC, and provider settings stay locked outside this editor."}
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <StatusChip label={`Draft v${activeRow.draftVersion}`} tone="draft" />
-            <StatusChip label={`Published v${activeRow.publishedVersion}`} tone="published" />
-            {activeRow.scheduledFor ? <StatusChip label={`Scheduled ${formatDateTime(activeRow.scheduledFor)}`} tone="scheduled" /> : null}
-            <StatusChip label={workflowLabel(activeRow.workflowState ?? activeRow.status)} tone={workflowTone(activeRow.workflowState ?? activeRow.status)} />
-          </div>
+          <ItemStatusStrip activeRow={activeRow} />
         </div>
       </div>
 
-      <WorkflowWorkspace data={state.data} />
-
-      <div className={mode === "partner-application" ? "grid gap-5 2xl:grid-cols-[minmax(0,1fr)_28rem]" : "grid gap-5 2xl:grid-cols-[18rem_minmax(0,1fr)_28rem] xl:grid-cols-[16rem_minmax(0,1fr)]"}>
-        {mode === "login-signup" ? <aside className="space-y-4">
-          <section className="rounded border border-slate-200 bg-white p-3 shadow-sm">
-            <p className="px-2 pb-2 text-xs font-semibold uppercase text-slate-500">Contexts</p>
-            <div className="space-y-2">
-              {contextRows.map((item) => (
-                <button
-                  key={item.context}
-                  type="button"
-                  onClick={() => {
-                    setActiveContext(item.context);
-                    setActiveBlock("brand");
-                  }}
-                  className={`w-full rounded border px-3 py-3 text-left text-sm font-semibold ${
-                    item.context === activeContext ? "border-amber-300 bg-amber-50 text-amber-800" : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-                  }`}
-                >
-                  {contextLabels[item.context]}
-                  <span className="mt-1 block text-xs font-medium text-slate-500">
-                    {item.scheduledFor ? "Scheduled" : item.draftVersion > item.publishedVersion ? "Draft changes" : "Published"}
-                  </span>
-                </button>
-              ))}
-            </div>
+      <div className="grid gap-5 2xl:grid-cols-[minmax(0,1fr)_28rem]">
+        <div className="space-y-4 min-w-0">
+          <section className="rounded-2xl border border-sky-300/15 bg-[#0b1628] p-5 shadow-xl shadow-black/20">
+            <WorkflowActionBar
+              canWrite={canWrite}
+              canPublish={canPublish}
+              schedule={schedule}
+              activeRow={activeRow}
+              busyAction={busyAction}
+              message={message}
+              reviewNote={reviewNote}
+              bypassReason={bypassReason}
+              onScheduleChange={setSchedule}
+              onSaveDraft={saveDraft}
+              onPublish={publish}
+              onSchedule={schedulePublish}
+              onCancelSchedule={cancelSchedule}
+              onReviewNoteChange={setReviewNote}
+              onBypassReasonChange={setBypassReason}
+              onWorkflowAction={workflowAction}
+              onPreview={() => setMessage(activeRow.hasUnpublishedChanges ? "Draft Preview is shown beside this editor and is not live." : "Unsaved Preview is shown beside this editor and is not live.")}
+            />
           </section>
 
-          <section className="rounded border border-slate-200 bg-white p-3 shadow-sm">
-            <p className="px-2 pb-2 text-xs font-semibold uppercase text-slate-500">Blocks</p>
-            <div className="space-y-2">
-              {blocks.map((block) => {
-                const Icon = block.icon;
-                return (
-                  <button
-                    key={block.key}
-                    type="button"
-                    onClick={() => setActiveBlock(block.key)}
-                    className={`w-full rounded border px-3 py-3 text-left ${activeBlock === block.key ? block.tone : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"}`}
-                  >
-                    <span className="flex items-center gap-2 text-sm font-semibold">
-                      <Icon className="h-4 w-4" />
-                      {block.label}
-                    </span>
-                    <span className="mt-1 block text-xs leading-5 opacity-80">{block.detail}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-        </aside> : null}
-
-        <div className="space-y-4">
-          <section className="rounded border border-slate-200 bg-white p-5 shadow-sm">
+          <section className="rounded-2xl border border-sky-300/15 bg-white p-5 shadow-sm">
             <BlockEditor
-              block={activeBlock}
+              block={activeBlock ?? "brand"}
               content={activeDraft}
               partnerApplicationNodeId={partnerApplicationNodeId}
               canWrite={canWrite}
@@ -375,14 +486,191 @@ function Breadcrumbs({ mode, activeContext, activeBlock }: { mode: "login-signup
     ? ["Website Experience", "Pages", "Partner", "Partner Application", activeContext]
     : ["Website Experience", "Global Experience", "Login & Signup", activeContext, activeBlock];
   return (
-    <nav className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-500" aria-label="Website Experience breadcrumbs">
+    <nav className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-400" aria-label="Website Experience breadcrumbs">
       {items.map((item, index) => (
         <span key={`${item}:${index}`} className="flex items-center gap-2">
-          {index > 0 ? <span className="text-slate-300">&gt;</span> : null}
-          <span className={index === 4 ? "text-slate-950" : ""}>{item}</span>
+          {index > 0 ? <span className="text-slate-600">&gt;</span> : null}
+          <span className={index === items.length - 1 ? "text-cyan-100" : ""}>{item}</span>
         </span>
       ))}
     </nav>
+  );
+}
+
+function ContentListShell({
+  eyebrow,
+  title,
+  detail,
+  backHref,
+  backLabel,
+  onBack,
+  children,
+}: {
+  eyebrow: string;
+  title: string;
+  detail: string;
+  backHref?: string;
+  backLabel: string;
+  onBack?: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="space-y-4 rounded-2xl border border-sky-300/10 bg-[#0b1628]/95 p-5 shadow-xl shadow-black/20">
+      <AdminBackButton href={backHref} onClick={onBack} label={backLabel} />
+      <div>
+        <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-200">{eyebrow}</p>
+        <h2 className="mt-1 text-2xl font-black text-cyan-100">{title}</h2>
+        <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-400">{detail}</p>
+      </div>
+      <div className="space-y-3">{children}</div>
+    </section>
+  );
+}
+
+function VerticalListHeader({ title, detail }: { title: string; detail: string }) {
+  return (
+    <div className="pt-2">
+      <h3 className="text-base font-black text-sky-50">{title}</h3>
+      <p className="mt-1 text-sm leading-6 text-slate-400">{detail}</p>
+    </div>
+  );
+}
+
+function ContentDrilldownRow({
+  icon: Icon,
+  title,
+  detail,
+  status,
+  meta,
+  action,
+  onClick,
+}: {
+  icon: LucideIcon;
+  title: string;
+  detail: string;
+  status: string;
+  meta: string;
+  action: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex min-h-20 w-full flex-col gap-3 rounded-2xl border border-sky-300/10 bg-[#081427] p-4 text-left shadow-lg shadow-black/10 transition hover:border-sky-300/35 hover:bg-[#0b1b33] focus:outline-none focus:ring-2 focus:ring-sky-300 md:flex-row md:items-center md:justify-between"
+    >
+      <span className="flex min-w-0 items-start gap-3">
+        <span className="mt-1 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-400/10 text-cyan-200 ring-1 ring-sky-300/20">
+          <Icon className="h-5 w-5" />
+        </span>
+        <span className="min-w-0">
+          <span className="block text-base font-black text-sky-50">{title}</span>
+          <span className="mt-1 block text-sm leading-6 text-slate-400">{detail}</span>
+          <span className="mt-1 block text-xs font-semibold text-slate-500">{meta}</span>
+        </span>
+      </span>
+      <span className="flex shrink-0 flex-wrap items-center gap-2">
+        <StatusChip label={workflowLabel(status)} tone={workflowTone(status)} />
+        <span className="inline-flex h-9 items-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-400/10 px-3 text-xs font-black text-cyan-100">
+          {action}
+          <ArrowRight className="h-4 w-4" />
+        </span>
+      </span>
+    </button>
+  );
+}
+
+function ItemStatusStrip({ activeRow }: { activeRow: WebsiteExperienceAdminContext }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      <StatusChip label={workflowLabel(activeRow.workflowState ?? activeRow.status)} tone={workflowTone(activeRow.workflowState ?? activeRow.status)} />
+      <StatusChip label={`Draft v${activeRow.draftVersion}`} tone="draft" />
+      <StatusChip label={`Published v${activeRow.publishedVersion}`} tone="published" />
+      {activeRow.scheduledFor ? <StatusChip label={`Scheduled ${formatDateTime(activeRow.scheduledFor)}`} tone="scheduled" /> : null}
+      <span className="inline-flex min-h-8 items-center rounded-full border border-slate-600 bg-slate-900 px-3 text-xs font-semibold text-slate-300">
+        Last modified {activeRow.updatedAt ? formatDateTime(activeRow.updatedAt) : "not available"}
+      </span>
+    </div>
+  );
+}
+
+function WorkflowShortcutGrid({ data, onOpen }: { data: WebsiteExperienceAdminResponse; onOpen: (view: WorkflowView) => void }) {
+  const counts = workflowCounts(data);
+  return (
+    <section className="space-y-3 rounded-2xl border border-sky-300/10 bg-[#06101e] p-4">
+      <VerticalListHeader title="Workflow" detail="Open a dedicated workflow list. Counts come from saved Website Experience state." />
+      <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+        {workflowViews.map((view) => {
+          const Icon = view.icon;
+          return (
+            <button key={view.key} type="button" onClick={() => onOpen(view.key)} className="flex min-h-16 items-center justify-between gap-3 rounded-xl border border-sky-300/10 bg-[#0b1628] p-3 text-left hover:border-orange-300/35 focus:outline-none focus:ring-2 focus:ring-orange-300">
+              <span className="flex min-w-0 items-center gap-2">
+                <Icon className="h-4 w-4 shrink-0 text-cyan-200" />
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-black text-sky-50">{view.label}</span>
+                  <span className="block text-xs text-slate-500">{counts[view.key]} items</span>
+                </span>
+              </span>
+              <ArrowRight className="h-4 w-4 shrink-0 text-sky-200" />
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function WorkflowQueueView({
+  view,
+  data,
+  onBack,
+  onOpen,
+  onPreview,
+}: {
+  view: WorkflowView;
+  data: WebsiteExperienceAdminResponse;
+  onBack: () => void;
+  onOpen: (context: WebsiteExperienceContext) => void;
+  onPreview: (context: WebsiteExperienceContext) => void;
+}) {
+  const selected = workflowViews.find((item) => item.key === view) ?? workflowViews[0];
+  const rows = workflowRowsForView(data, view);
+  return (
+    <ContentListShell
+      eyebrow="Website Experience > Workflow"
+      title={selected.label}
+      detail={selected.detail}
+      backLabel="Back to Website Experience"
+      onBack={onBack}
+    >
+      {rows.length ? rows.map((row) => (
+        <div key={`${view}:${row.context}`} className="rounded-2xl border border-sky-300/10 bg-[#081427] p-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-base font-black text-sky-50">{row.label}</h3>
+                <StatusChip label={workflowLabel(row.workflowState ?? row.status)} tone={workflowTone(row.workflowState ?? row.status)} />
+              </div>
+              <p className="mt-1 text-sm leading-6 text-slate-400">{publishScope(row.context)}</p>
+              <p className="mt-1 text-xs font-semibold text-slate-500">Draft v{row.draftVersion} - Published v{row.publishedVersion} - Changed {row.updatedAt ? formatDateTime(row.updatedAt) : "not available"}</p>
+              {row.review?.note ? <p className="mt-2 rounded border border-orange-300/20 bg-orange-400/10 p-2 text-xs font-semibold text-orange-100">Review note: {row.review.note}</p> : null}
+            </div>
+            <div className="flex shrink-0 flex-wrap gap-2">
+              <button type="button" onClick={() => onPreview(row.context)} className="inline-flex h-9 items-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-400/10 px-3 text-xs font-black text-cyan-100">
+                <Eye className="h-4 w-4" />
+                {view === "approved" ? "Preview Approved Version" : "Preview Draft"}
+              </button>
+              <button type="button" onClick={() => onOpen(row.context)} className="inline-flex h-9 items-center gap-2 rounded-xl border border-orange-300/20 bg-orange-400/10 px-3 text-xs font-black text-orange-100">
+                <Pencil className="h-4 w-4" />
+                Open/Edit
+              </button>
+            </div>
+          </div>
+        </div>
+      )) : (
+        <p className="rounded-2xl border border-sky-300/10 bg-[#081427] p-4 text-sm font-semibold text-slate-300">No {selected.label.toLowerCase()} items.</p>
+      )}
+    </ContentListShell>
   );
 }
 
@@ -650,24 +938,6 @@ function PartnerApplicationTreeEditor({
             </Link>
           ))}
         </div>
-        <WorkflowActions
-          canWrite={canWrite}
-          canPublish={canPublish}
-          schedule={schedule}
-          activeRow={activeRow}
-          busyAction={busyAction}
-          message={message}
-          reviewNote={reviewNote}
-          bypassReason={bypassReason}
-          onScheduleChange={onScheduleChange}
-          onSaveDraft={onSaveDraft}
-          onPublish={onPublish}
-          onSchedule={onSchedule}
-          onCancelSchedule={onCancelSchedule}
-          onReviewNoteChange={onReviewNoteChange}
-          onBypassReasonChange={onBypassReasonChange}
-          onWorkflowAction={onWorkflowAction}
-        />
       </EditorSection>
     );
   }
@@ -739,56 +1009,179 @@ function PartnerApplicationTreeEditor({
   );
 }
 
-function WorkflowWorkspace({ data }: { data: WebsiteExperienceAdminResponse }) {
-  const workflow = data.workflow;
-  const drafts = workflow?.drafts ?? data.contexts.filter((context) => context.hasUnpublishedChanges).map((context) => ({
-    context: context.context,
-    label: context.label,
-    status: (context.workflowState ?? "draft") as NonNullable<WebsiteExperienceAdminContext["workflowState"]>,
-    draftVersion: context.draftVersion,
-    publishedVersion: context.publishedVersion,
-    changedAt: context.updatedAt,
-    changedByAdminId: context.review?.submittedByAdminId,
-    scheduledFor: context.scheduledFor,
-    publishScope: context.context === "partner_application" ? "Publish Partner Application content" : `Publish ${context.label} changes`,
-  }));
+function WorkflowActionBar({
+  canWrite,
+  canPublish,
+  schedule,
+  activeRow,
+  busyAction,
+  message,
+  reviewNote,
+  bypassReason,
+  onScheduleChange,
+  onSaveDraft,
+  onPublish,
+  onSchedule,
+  onCancelSchedule,
+  onReviewNoteChange,
+  onBypassReasonChange,
+  onWorkflowAction,
+  onPreview,
+}: {
+  canWrite: boolean;
+  canPublish: boolean;
+  schedule: typeof defaultSchedule;
+  activeRow: WebsiteExperienceAdminContext;
+  busyAction: string;
+  message: string;
+  reviewNote: string;
+  bypassReason: string;
+  onScheduleChange: (value: typeof defaultSchedule) => void;
+  onSaveDraft: () => void;
+  onPublish: () => void;
+  onSchedule: () => void;
+  onCancelSchedule: () => void;
+  onReviewNoteChange: (value: string) => void;
+  onBypassReasonChange: (value: string) => void;
+  onWorkflowAction: (action: "submit" | "approve" | "request-changes" | "delete-draft" | "archive" | "restore") => void;
+  onPreview: () => void;
+}) {
+  const workflowState = activeRow.workflowState ?? activeRow.status;
+  const isDraftLike = workflowState === "draft" || workflowState === "working_changes" || workflowState === "changes_requested";
+  const isInReview = workflowState === "in_review";
+  const isApproved = workflowState === "approved";
+  const isScheduled = workflowState === "scheduled" || Boolean(activeRow.scheduledFor);
+  const isPublished = workflowState === "published" && !activeRow.hasUnpublishedChanges;
+  const isArchived = workflowState === "archived";
+  const previewLabel = activeRow.hasUnpublishedChanges ? "Draft Preview" : "Unsaved Preview";
+
   return (
-    <section className="rounded border border-slate-200 bg-white p-5 shadow-sm">
+    <div className="space-y-4">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase text-cyan-700">Content workflow</p>
-          <h3 className="mt-1 text-lg font-semibold text-slate-950">Draft workspace</h3>
-          <p className="mt-1 text-sm leading-6 text-slate-600">Review saved unpublished changes by exact publish scope. Live content, draft preview, and unsaved local preview remain separate.</p>
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-200">Item workflow</p>
+          <h3 className="mt-1 text-xl font-black text-cyan-100">{workflowLabel(workflowState)}</h3>
+          <p className="mt-1 text-sm leading-6 text-slate-400">{publishScope(activeRow.context)}. Preview is not live content.</p>
         </div>
-        <div className="rounded border border-orange-200 bg-orange-50 px-4 py-3 text-sm font-semibold text-orange-950">
-          Unpublished changes: {workflow?.unpublishedChanges ?? drafts.length}
+        <div className="flex flex-wrap gap-2">
+          <StatusChip label={`Published v${activeRow.publishedVersion}`} tone="published" />
+          <StatusChip label={`Draft v${activeRow.draftVersion}`} tone="draft" />
         </div>
       </div>
-      {workflow?.byArea?.length ? (
-        <div className="mt-4 flex flex-wrap gap-2">
-          {workflow.byArea.map((item) => <span key={item.area} className="rounded border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700">{item.area}: {item.count}</span>)}
+
+      {activeRow.review?.note ? (
+        <div className="rounded-xl border border-orange-300/25 bg-orange-400/10 p-3 text-sm font-semibold text-orange-100">
+          Review note: {activeRow.review.note}
         </div>
       ) : null}
-      <div className="mt-4 space-y-2">
-        {drafts.length ? drafts.map((draft) => (
-          <div key={draft.context} className="flex flex-col gap-3 rounded border border-slate-200 bg-slate-50 p-3 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm font-semibold text-slate-950">{draft.label}</span>
-                <StatusChip label={workflowLabel(draft.status)} tone={workflowTone(draft.status)} />
-              </div>
-              <p className="mt-1 text-xs leading-5 text-slate-600">{draft.publishScope} · Draft v{draft.draftVersion} · Published v{draft.publishedVersion}{draft.scheduledFor ? ` · Scheduled ${formatDateTime(draft.scheduledFor)}` : ""}</p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <a href={draft.context === "partner_application" ? "/admin/website-experience/pages/partner/application" : "/admin/website-experience/login-signup"} className="rounded border border-blue-200 bg-white px-3 py-2 text-xs font-semibold text-blue-800">Open/Edit</a>
-              <a href={draft.context === "partner_application" ? "/admin/website-experience/pages/partner/application" : "/admin/website-experience/login-signup"} className="rounded border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs font-semibold text-cyan-900">Preview</a>
-            </div>
-          </div>
-        )) : (
-          <p className="rounded border border-slate-200 bg-slate-50 p-3 text-sm font-semibold text-slate-600">No saved unpublished changes.</p>
-        )}
+
+      <div className="flex flex-wrap items-center gap-3">
+        <button type="button" onClick={onPreview} className="inline-flex h-10 items-center gap-2 rounded-xl border border-cyan-300/25 bg-cyan-400/10 px-4 text-sm font-black text-cyan-100 hover:border-cyan-200 focus:outline-none focus:ring-2 focus:ring-cyan-300">
+          <Eye className="h-4 w-4" />
+          Preview Changes
+        </button>
+
+        {isDraftLike ? (
+          <button type="button" disabled={!canWrite || busyAction === "save"} onClick={onSaveDraft} className="inline-flex h-10 items-center gap-2 rounded-xl bg-orange-500 px-4 text-sm font-black text-slate-950 disabled:cursor-not-allowed disabled:bg-slate-600 disabled:text-slate-300">
+            <Save className="h-4 w-4" />
+            Save as Draft
+          </button>
+        ) : null}
+
+        {activeRow.hasUnpublishedChanges && isDraftLike ? (
+          <button type="button" disabled={!canWrite || busyAction === "submit"} onClick={() => onWorkflowAction("submit")} className="inline-flex h-10 items-center gap-2 rounded-xl border border-cyan-300/25 bg-sky-500/15 px-4 text-sm font-black text-sky-100 disabled:cursor-not-allowed disabled:opacity-50">
+            <Send className="h-4 w-4" />
+            {workflowState === "changes_requested" ? "Resubmit for Approval" : "Send for Approval"}
+          </button>
+        ) : null}
+
+        {isInReview && canPublish ? (
+          <>
+            <button type="button" disabled={busyAction === "approve"} onClick={() => onWorkflowAction("approve")} className="inline-flex h-10 items-center gap-2 rounded-xl bg-emerald-500 px-4 text-sm font-black text-slate-950 disabled:cursor-not-allowed disabled:opacity-50">
+              <BadgeCheck className="h-4 w-4" />
+              Approve
+            </button>
+            <button type="button" disabled={busyAction === "request-changes" || !reviewNote.trim()} onClick={() => onWorkflowAction("request-changes")} className="inline-flex h-10 items-center gap-2 rounded-xl border border-orange-300/30 bg-orange-400/10 px-4 text-sm font-black text-orange-100 disabled:cursor-not-allowed disabled:opacity-50">
+              <XCircle className="h-4 w-4" />
+              Request Changes
+            </button>
+          </>
+        ) : null}
+
+        {isApproved && canPublish ? (
+          <>
+            <button type="button" disabled={busyAction === "publish"} onClick={onPublish} className="inline-flex h-10 items-center gap-2 rounded-xl bg-orange-500 px-4 text-sm font-black text-slate-950 disabled:cursor-not-allowed disabled:opacity-50">
+              <Send className="h-4 w-4" />
+              Publish Now
+            </button>
+            <button type="button" disabled={busyAction === "schedule"} onClick={onSchedule} className="inline-flex h-10 items-center gap-2 rounded-xl border border-amber-300/30 bg-amber-400/10 px-4 text-sm font-black text-amber-100 disabled:cursor-not-allowed disabled:opacity-50">
+              <CalendarClock className="h-4 w-4" />
+              Schedule
+            </button>
+          </>
+        ) : null}
+
+        {isScheduled && canPublish ? (
+          <button type="button" disabled={busyAction === "cancel-schedule"} onClick={onCancelSchedule} className="inline-flex h-10 items-center gap-2 rounded-xl border border-amber-300/30 bg-amber-400/10 px-4 text-sm font-black text-amber-100 disabled:cursor-not-allowed disabled:opacity-50">
+            <XCircle className="h-4 w-4" />
+            Cancel Schedule
+          </button>
+        ) : null}
+
+        {isPublished ? (
+          <button type="button" onClick={onPreview} className="inline-flex h-10 items-center gap-2 rounded-xl border border-emerald-300/25 bg-emerald-400/10 px-4 text-sm font-black text-emerald-100">
+            <Globe2 className="h-4 w-4" />
+            View Published
+          </button>
+        ) : null}
+
+        {isArchived && canWrite ? (
+          <button type="button" disabled={busyAction === "restore"} onClick={() => onWorkflowAction("restore")} className="inline-flex h-10 items-center gap-2 rounded-xl border border-emerald-300/25 bg-emerald-400/10 px-4 text-sm font-black text-emerald-100 disabled:cursor-not-allowed disabled:opacity-50">
+            <RotateCcw className="h-4 w-4" />
+            Restore as Draft
+          </button>
+        ) : null}
       </div>
-    </section>
+
+      {(isInReview || workflowState === "changes_requested") ? (
+        <Field label={isInReview ? "Review note" : "Submission note"} value={reviewNote} maxLength={500} onChange={onReviewNoteChange} />
+      ) : null}
+
+      {(isApproved || isScheduled) ? (
+        <div className="rounded-xl border border-amber-300/20 bg-amber-400/10 p-4">
+          <div className="grid gap-3 md:grid-cols-3">
+            <ScheduleField label="Publish date" type="date" value={schedule.date} onChange={(date) => onScheduleChange({ ...schedule, date })} />
+            <ScheduleField label="Publish time" type="time" value={schedule.time} onChange={(time) => onScheduleChange({ ...schedule, time })} />
+            <Field label="Timezone" value={schedule.timezone} maxLength={64} onChange={(timezone) => onScheduleChange({ ...schedule, timezone })} />
+          </div>
+          {activeRow.scheduledFor ? <p className="mt-2 text-xs font-semibold text-amber-100">Scheduled for {formatDateTime(activeRow.scheduledFor)} {activeRow.scheduledTimezone || ""}</p> : null}
+        </div>
+      ) : null}
+
+      <details className="rounded-xl border border-slate-700 bg-slate-950/45 p-4">
+        <summary className="cursor-pointer text-sm font-black text-slate-100">More Actions</summary>
+        <div className="mt-3 space-y-3">
+          {canPublish ? <Field label="Super Admin bypass reason" value={bypassReason} maxLength={500} onChange={onBypassReasonChange} /> : null}
+          <div className="flex flex-wrap gap-3">
+            <button type="button" disabled={!canWrite || !activeRow.hasUnpublishedChanges || busyAction === "delete-draft"} onClick={() => window.confirm("This will remove only this unpublished draft. The currently published website content will remain unchanged.") && onWorkflowAction("delete-draft")} className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-600 bg-slate-900 px-4 text-sm font-black text-slate-200 disabled:cursor-not-allowed disabled:opacity-50">
+              <Trash2 className="h-4 w-4" />
+              Delete Draft
+            </button>
+            <button type="button" disabled={!canPublish || busyAction === "archive"} onClick={() => window.confirm("Archive this content through the Website Experience workflow? Historical versions and audit remain preserved.") && onWorkflowAction("archive")} className="inline-flex h-10 items-center gap-2 rounded-xl border border-red-300/25 bg-red-500/10 px-4 text-sm font-black text-red-100 disabled:cursor-not-allowed disabled:opacity-50">
+              <Archive className="h-4 w-4" />
+              Archive
+            </button>
+            <button type="button" onClick={onPreview} className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-600 bg-slate-900 px-4 text-sm font-black text-slate-200">
+              <Clock3 className="h-4 w-4" />
+              Version History
+            </button>
+          </div>
+        </div>
+      </details>
+
+      {message ? <p className="rounded-xl border border-cyan-300/20 bg-cyan-400/10 p-3 text-sm font-semibold text-cyan-100">{message}</p> : null}
+      <p className="text-xs font-semibold text-slate-500">{previewLabel} is available in the preview panel beside this editor. It is not live content.</p>
+    </div>
   );
 }
 
@@ -1225,6 +1618,46 @@ function workflowTone(status: string): "draft" | "published" | "scheduled" | "re
   if (status === "changes_requested") return "changes";
   if (status === "archived") return "archived";
   return "draft";
+}
+
+function publishScope(context: WebsiteExperienceContext) {
+  if (context === "partner_application") return "Publish Partner Application content";
+  return `Publish ${contextLabels[context]} changes`;
+}
+
+function partnerApplicationNodeLabel(content: WebsiteExperienceContent, selectedNodeId?: string) {
+  if (!selectedNodeId) return "Partner Application";
+  return content.applicationTree?.children.find((node) => node.id === selectedNodeId)?.label ?? "Partner Application Item";
+}
+
+function workflowCounts(data: WebsiteExperienceAdminResponse): Record<WorkflowView, number> {
+  return {
+    drafts: workflowRowsForView(data, "drafts").length,
+    in_review: workflowRowsForView(data, "in_review").length,
+    approved: workflowRowsForView(data, "approved").length,
+    scheduled: workflowRowsForView(data, "scheduled").length,
+    published: workflowRowsForView(data, "published").length,
+    archive: workflowRowsForView(data, "archive").length,
+    versions: data.recentAudit.length,
+  };
+}
+
+function workflowRowsForView(data: WebsiteExperienceAdminResponse, view: WorkflowView) {
+  if (view === "versions") return data.contexts;
+  return data.contexts.filter((context) => {
+    const state = context.workflowState ?? context.status;
+    if (view === "drafts") return context.hasUnpublishedChanges && (state === "draft" || state === "working_changes" || state === "changes_requested");
+    if (view === "scheduled") return Boolean(context.scheduledFor) || state === "scheduled";
+    if (view === "published") return context.publishedVersion > 0 && state === "published";
+    if (view === "archive") return state === "archived";
+    return state === view;
+  });
+}
+
+function readInitialWorkflowView(): WorkflowView | null {
+  if (typeof window === "undefined") return null;
+  const view = new URLSearchParams(window.location.search).get("workflow") as WorkflowView | null;
+  return view && workflowViews.some((item) => item.key === view) ? view : null;
 }
 
 function statusMessage(action: "submit" | "approve" | "request-changes" | "delete-draft" | "archive" | "restore") {

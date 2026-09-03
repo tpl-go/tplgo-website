@@ -5,7 +5,9 @@ import Link from "next/link";
 import {
   ArrowRight,
   BookOpen,
+  CalendarClock,
   Car,
+  CheckCircle2,
   Compass,
   FilePenLine,
   Globe2,
@@ -20,6 +22,9 @@ import {
   ShoppingBag,
   Sparkles,
   Tags,
+  Archive,
+  Clock3,
+  Send,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -180,8 +185,20 @@ export function AdminWebsiteExperienceLanding({ view = "root" }: { view?: Landin
       ) : null}
 
       <section className="space-y-3">
+        <SectionLabel title="Content" detail="Open one hierarchy branch at a time." />
         <VerticalEntry icon={MonitorCog} title="Global Experience" detail="Shared Website Experience modules used across TPL GO." count={`${summary.publishedLabel} published`} href="/admin/website-experience/global" />
         <VerticalEntry icon={LayoutTemplate} title="Pages" detail="Registered page-specific experiences and Partner management entries." count={`${pageModules.length} pages`} href="/admin/website-experience/pages" />
+      </section>
+
+      <section className="space-y-3">
+        <SectionLabel title="Workflow" detail="Open a focused workflow queue. Counts are based on saved Website Experience state." />
+        <VerticalEntry icon={FilePenLine} title="Drafts" detail="Saved unpublished changes." count={summary.draftLabel} href="/admin/website-experience/login-signup?workflow=drafts" />
+        <VerticalEntry icon={Send} title="In Review" detail="Submitted drafts waiting for approval." count={summary.reviewLabel} href="/admin/website-experience/login-signup?workflow=in_review" />
+        <VerticalEntry icon={CheckCircle2} title="Approved" detail="Approved drafts ready to publish or schedule." count={summary.approvedLabel} href="/admin/website-experience/login-signup?workflow=approved" />
+        <VerticalEntry icon={CalendarClock} title="Scheduled" detail="Approved changes scheduled for publication." count={summary.scheduledLabel} href="/admin/website-experience/login-signup?workflow=scheduled" />
+        <VerticalEntry icon={Globe2} title="Published" detail="Live Website Experience content." count={summary.publishedLabel} href="/admin/website-experience/login-signup?workflow=published" />
+        <VerticalEntry icon={Archive} title="Archive" detail="Archived content and restore workflow." count={summary.archiveLabel} href="/admin/website-experience/login-signup?workflow=archive" />
+        <VerticalEntry icon={Clock3} title="Versions & Audit" detail="Human-readable content history." count={state.status === "ready" ? String(state.data.recentAudit.length) : "Loading"} href="/admin/website-experience/login-signup?workflow=versions" />
       </section>
     </div>
   );
@@ -191,11 +208,26 @@ function buildLoginSignupSummary(contexts: WebsiteExperienceAdminContext[]) {
   const published = contexts.filter((context) => context.publishedVersion > 0).length;
   const draftChanges = contexts.filter((context) => context.draftVersion > context.publishedVersion).length;
   const scheduled = contexts.filter((context) => context.scheduledFor).length;
+  const review = contexts.filter((context) => context.workflowState === "in_review").length;
+  const approved = contexts.filter((context) => context.workflowState === "approved").length;
+  const archived = contexts.filter((context) => context.workflowState === "archived" || context.status === "archived").length;
   return {
     publishedLabel: contexts.length ? `${published}/${contexts.length}` : "Loading",
     draftLabel: contexts.length ? String(draftChanges) : "Loading",
+    reviewLabel: contexts.length ? String(review) : "Loading",
+    approvedLabel: contexts.length ? String(approved) : "Loading",
     scheduledLabel: contexts.length ? String(scheduled) : "Loading",
+    archiveLabel: contexts.length ? String(archived) : "Loading",
   };
+}
+
+function SectionLabel({ title, detail }: { title: string; detail: string }) {
+  return (
+    <div>
+      <h3 className="text-lg font-black text-cyan-100">{title}</h3>
+      <p className="mt-1 text-sm leading-6 text-slate-400">{detail}</p>
+    </div>
+  );
 }
 
 function DrilldownShell({ eyebrow, title, detail, backHref, backLabel, children }: { eyebrow: string; title: string; detail: string; backHref: string; backLabel: string; children: React.ReactNode }) {
