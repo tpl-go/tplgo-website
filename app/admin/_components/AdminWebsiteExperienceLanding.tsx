@@ -164,17 +164,16 @@ export function AdminWebsiteExperienceLanding({ view = "root" }: { view?: Landin
 
   if (view === "partner") {
     return (
-      <DrilldownShell
-        eyebrow="Website Experience > Pages"
+      <ListingShell
+        current="Partner"
+        parent={{ label: "Pages", href: "/admin/website-experience/pages" }}
         title="Partner"
-        detail="Open Partner page content, Partner Application content, or the authoritative Service Catalogue."
-        backHref="/admin/website-experience/pages"
-        backLabel="Back to Pages"
+        detail="Choose a Partner area to manage."
       >
-        <VerticalEntry icon={Users} title="Partner Page" detail="Existing Partner landing/page safe presentation content." count="Foundation" disabled />
-        <VerticalEntry icon={FilePenLine} title="Partner Application" detail="Application Shell and Steps 1-8 safe presentation fields." count={partnerContext ? `Draft v${partnerContext.draftVersion}` : "Loading"} href="/admin/website-experience/pages/partner/application" />
-        <VerticalEntry icon={Tags} title="Service Catalogue" detail="Domains, Services, Requested Services, versions and audit." count="Management" href="/admin/website-experience/pages/partner/service-catalogue" />
-      </DrilldownShell>
+        <VerticalEntry icon={Users} title="Partner Page" detail="Manage Partner page content." count="Available soon" disabled />
+        <VerticalEntry icon={FilePenLine} title="Partner Application" detail="Manage Partner onboarding content." count={partnerContext ? `Draft v${partnerContext.draftVersion}` : "Loading"} href="/admin/website-experience/pages/partner/application" />
+        <VerticalEntry icon={Tags} title="Service Catalogue" detail="Manage Partner service domains and services." count="Management" href="/admin/website-experience/pages/partner/service-catalogue" />
+      </ListingShell>
     );
   }
 
@@ -275,11 +274,12 @@ function SectionLabel({ title, detail }: { title: string; detail: string }) {
   );
 }
 
-function ListingShell({ current, title, detail, children }: { current: "Global Experience" | "Pages"; title: string; detail: string; children: React.ReactNode }) {
+function ListingShell({ current, parent, title, detail, children }: { current: "Global Experience" | "Pages" | "Partner"; parent?: { label: string; href: string }; title: string; detail: string; children: React.ReactNode }) {
+  const backTarget = parent ?? { label: "Website Experience", href: "/admin/website-experience" };
   return (
     <section className="space-y-4 rounded-2xl border border-sky-300/10 bg-[#0b1628]/95 p-5 shadow-xl shadow-black/20">
-      <AdminBackButton href="/admin/website-experience" label="Back to Website Experience" />
-      <BreadcrumbTrail current={current} />
+      <AdminBackButton href={backTarget.href} label={`Back to ${backTarget.label}`} />
+      <BreadcrumbTrail current={current} parent={parent} />
       <div>
         <h3 className="text-2xl font-black text-cyan-100">{title}</h3>
         <p className="mt-1 text-sm leading-6 text-slate-400">{detail}</p>
@@ -289,13 +289,21 @@ function ListingShell({ current, title, detail, children }: { current: "Global E
   );
 }
 
-function BreadcrumbTrail({ current }: { current: "Global Experience" | "Pages" }) {
+function BreadcrumbTrail({ current, parent }: { current: "Global Experience" | "Pages" | "Partner"; parent?: { label: string; href: string } }) {
   return (
     <nav className="flex flex-wrap items-center gap-2 text-xs font-black text-slate-400" aria-label="Website Experience breadcrumbs">
       <Link href="/admin/website-experience" className="rounded text-sky-200 hover:text-orange-100 focus:outline-none focus:ring-2 focus:ring-sky-300">
         Website Experience
       </Link>
       <span aria-hidden="true" className="text-slate-600">&gt;</span>
+      {parent ? (
+        <>
+          <Link href={parent.href} className="rounded text-sky-200 hover:text-orange-100 focus:outline-none focus:ring-2 focus:ring-sky-300">
+            {parent.label}
+          </Link>
+          <span aria-hidden="true" className="text-slate-600">&gt;</span>
+        </>
+      ) : null}
       <span aria-current="page" className="text-slate-300">{current}</span>
     </nav>
   );
@@ -323,20 +331,6 @@ function StatusSummary({ summary, loading }: { summary: ReturnType<typeof mergeW
         </Link>
       ))}
     </div>
-  );
-}
-
-function DrilldownShell({ eyebrow, title, detail, backHref, backLabel, children }: { eyebrow: string; title: string; detail: string; backHref: string; backLabel: string; children: React.ReactNode }) {
-  return (
-    <section className="space-y-4 rounded-2xl border border-sky-300/10 bg-[#0b1628]/95 p-5 shadow-xl shadow-black/20">
-      <AdminBackButton href={backHref} label={backLabel} />
-      <div>
-        <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-200">{eyebrow}</p>
-        <h3 className="mt-1 text-2xl font-black text-cyan-100">{title}</h3>
-        <p className="mt-1 text-sm leading-6 text-slate-400">{detail}</p>
-      </div>
-      <div className="space-y-3">{children}</div>
-    </section>
   );
 }
 

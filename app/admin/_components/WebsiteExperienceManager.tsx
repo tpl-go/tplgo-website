@@ -99,6 +99,12 @@ const contextLabels: Record<WebsiteExperienceContext, string> = {
   partner_application: "Partner Application",
 };
 
+const contextDescriptions: Partial<Record<WebsiteExperienceContext, string>> = {
+  user_login: "Manage the content shown on the User Login screen.",
+  partner_login: "Manage the content shown on the Partner Login screen.",
+  partner_registration: "Manage Partner registration content.",
+};
+
 export function WebsiteExperienceManager({
   mode = "login-signup",
   partnerApplicationNodeId,
@@ -280,12 +286,6 @@ export function WebsiteExperienceManager({
     setEditorView("editor");
   };
 
-  const openWorkflow = (view: WorkflowView) => {
-    setWorkflowView(view);
-    setWorkflowOrigin(view);
-    setEditorView("workflow");
-  };
-
   const openDraft = (context: WebsiteExperienceContext, origin?: WorkflowView) => {
     setActiveContext(context);
     setActiveBlock("copy");
@@ -309,21 +309,24 @@ export function WebsiteExperienceManager({
     return (
       <ContentListShell
         eyebrow="Website Experience > Global Experience"
+        breadcrumb={<HierarchyBreadcrumb items={[
+          { label: "Website Experience", href: "/admin/website-experience" },
+          { label: "Global Experience", href: "/admin/website-experience/global" },
+          { label: "Login & Signup" },
+        ]} />}
         title="Login & Signup"
-        detail="Open one context first, then choose one editable item. Drafts, approvals, publish, archive, and versions are available from the workflow area."
+        detail="Choose an experience to manage."
         backHref="/admin/website-experience/global"
         backLabel="Back to Global Experience"
       >
-        <WorkflowShortcutGrid data={state.data} onOpen={openWorkflow} />
-        <VerticalListHeader title="Content" detail="Select the context you want to edit." />
         {contextRows.map((item) => (
           <ContentDrilldownRow
             key={item.context}
             icon={FileText}
             title={contextLabels[item.context]}
-            detail={publishScope(item.context)}
+            detail={contextDescriptions[item.context] ?? "Manage this experience content."}
             status={item.workflowState ?? item.status}
-            meta={`Draft v${item.draftVersion} - Published v${item.publishedVersion}${item.updatedAt ? ` - Updated ${formatDateTime(item.updatedAt)}` : ""}`}
+            meta={item.updatedAt ? `Last updated ${formatDateTime(item.updatedAt)}` : "Last updated not available"}
             action="Open"
             onClick={() => selectContext(item.context)}
           />
@@ -517,6 +520,25 @@ function Breadcrumbs({ mode, workflowOrigin, activeContext, activeBlock }: { mod
   );
 }
 
+function HierarchyBreadcrumb({ items }: { items: Array<{ label: string; href?: string }> }) {
+  return (
+    <nav className="flex flex-wrap items-center gap-2 text-xs font-black text-slate-400" aria-label="Website Experience breadcrumbs">
+      {items.map((item, index) => (
+        <span key={`${item.label}:${index}`} className="flex items-center gap-2">
+          {index > 0 ? <span aria-hidden="true" className="text-slate-600">&gt;</span> : null}
+          {item.href ? (
+            <Link href={item.href} className="rounded text-sky-200 hover:text-orange-100 focus:outline-none focus:ring-2 focus:ring-sky-300">
+              {item.label}
+            </Link>
+          ) : (
+            <span aria-current="page" className="text-slate-300">{item.label}</span>
+          )}
+        </span>
+      ))}
+    </nav>
+  );
+}
+
 function ContentListShell({
   eyebrow,
   breadcrumb,
@@ -546,15 +568,6 @@ function ContentListShell({
       </div>
       <div className="space-y-3">{children}</div>
     </section>
-  );
-}
-
-function VerticalListHeader({ title, detail }: { title: string; detail: string }) {
-  return (
-    <div className="pt-2">
-      <h3 className="text-base font-black text-sky-50">{title}</h3>
-      <p className="mt-1 text-sm leading-6 text-slate-400">{detail}</p>
-    </div>
   );
 }
 
@@ -613,32 +626,6 @@ function ItemStatusStrip({ activeRow }: { activeRow: WebsiteExperienceAdminConte
         Last modified {activeRow.updatedAt ? formatDateTime(activeRow.updatedAt) : "not available"}
       </span>
     </div>
-  );
-}
-
-function WorkflowShortcutGrid({ data, onOpen }: { data: WebsiteExperienceAdminResponse; onOpen: (view: WorkflowView) => void }) {
-  const counts = workflowCounts(data);
-  return (
-    <section className="space-y-3 rounded-2xl border border-sky-300/10 bg-[#06101e] p-4">
-      <VerticalListHeader title="Workflow" detail="Open a dedicated workflow list. Counts come from saved Website Experience state." />
-      <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
-        {workflowViews.map((view) => {
-          const Icon = view.icon;
-          return (
-            <button key={view.key} type="button" onClick={() => onOpen(view.key)} className="flex min-h-16 items-center justify-between gap-3 rounded-xl border border-sky-300/10 bg-[#0b1628] p-3 text-left hover:border-orange-300/35 focus:outline-none focus:ring-2 focus:ring-orange-300">
-              <span className="flex min-w-0 items-center gap-2">
-                <Icon className="h-4 w-4 shrink-0 text-cyan-200" />
-                <span className="min-w-0">
-                  <span className="block truncate text-sm font-black text-sky-50">{view.label}</span>
-                  <span className="block text-xs text-slate-500">{counts[view.key]} items</span>
-                </span>
-              </span>
-              <ArrowRight className="h-4 w-4 shrink-0 text-sky-200" />
-            </button>
-          );
-        })}
-      </div>
-    </section>
   );
 }
 
@@ -1661,18 +1648,6 @@ function publishScope(context: WebsiteExperienceContext) {
 function partnerApplicationNodeLabel(content: WebsiteExperienceContent, selectedNodeId?: string) {
   if (!selectedNodeId) return "Partner Application";
   return content.applicationTree?.children.find((node) => node.id === selectedNodeId)?.label ?? "Partner Application Item";
-}
-
-function workflowCounts(data: WebsiteExperienceAdminResponse): Record<WorkflowView, number> {
-  return {
-    drafts: workflowRowsForView(data, "drafts").length,
-    in_review: workflowRowsForView(data, "in_review").length,
-    approved: workflowRowsForView(data, "approved").length,
-    scheduled: workflowRowsForView(data, "scheduled").length,
-    published: workflowRowsForView(data, "published").length,
-    archive: workflowRowsForView(data, "archive").length,
-    versions: data.recentAudit.length,
-  };
 }
 
 function workflowRowsForView(data: WebsiteExperienceAdminResponse, view: WorkflowView) {

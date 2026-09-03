@@ -27,7 +27,7 @@ test("WebsiteExperienceManager workflow lists use explicit Website Experience pa
 
 test("WebsiteExperienceManager preserves workflow record origin for deterministic detail back navigation", () => {
   expect(source).toContain("const [workflowOrigin, setWorkflowOrigin]");
-  expect(source).toContain("setWorkflowOrigin(view)");
+  expect(source).toContain("setWorkflowOrigin(origin ?? null)");
   expect(source).toContain("onOpen(row.context, view)");
   expect(source).toContain("onPreview(row.context, view)");
   expect(source).toContain("Back to ${workflowViewLabel(workflowOrigin)}");
@@ -39,4 +39,20 @@ test("WebsiteExperienceManager queue detail breadcrumbs link to the exact origin
   expect(source).toContain("workflowViewLabel(workflowOrigin)");
   expect(source).toContain('href={`/admin/website-experience/login-signup?workflow=${workflowOrigin}`}');
   expect(source).toContain('aria-current="page"');
+});
+
+test("WebsiteExperienceManager Login & Signup third-level screen uses immediate-parent navigation and human copy", () => {
+  expect(source).toContain('breadcrumb={<HierarchyBreadcrumb items={[');
+  expect(source).toContain('{ label: "Website Experience", href: "/admin/website-experience" }');
+  expect(source).toContain('{ label: "Global Experience", href: "/admin/website-experience/global" }');
+  expect(source).toContain('{ label: "Login & Signup" }');
+  expect(source).toContain('title="Login & Signup"');
+  expect(source).toContain('detail="Choose an experience to manage."');
+  expect(source).toContain('backHref="/admin/website-experience/global"');
+  expect(source).toContain('backLabel="Back to Global Experience"');
+  expect(source).toContain('user_login: "Manage the content shown on the User Login screen."');
+  expect(source).toContain('partner_login: "Manage the content shown on the Partner Login screen."');
+  expect(source).toContain('partner_registration: "Manage Partner registration content."');
+  expect(source).not.toContain("Open one context first");
+  expect(source).not.toContain("workflow area");
 });

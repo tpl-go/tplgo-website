@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "vitest";
 
@@ -56,7 +56,8 @@ test("AdminWebsiteExperienceLanding global listing uses human-friendly copy and 
   expect(source).toContain('current="Global Experience"');
   expect(source).toContain('title="Global Experience"');
   expect(source).toContain('detail="Manage content shared across the website."');
-  expect(source).toContain('href="/admin/website-experience" label="Back to Website Experience"');
+  expect(source).toContain('const backTarget = parent ?? { label: "Website Experience", href: "/admin/website-experience" };');
+  expect(source).toContain('label={`Back to ${backTarget.label}`}');
   expect(source).toContain('href="/admin/website-experience" className="rounded text-sky-200');
   expect(source).toContain('title="Login & Signup"');
   expect(source).toContain('detail="Manage login and registration content."');
@@ -98,4 +99,25 @@ test("AdminWebsiteExperienceLanding disabled listing rows are unavailable withou
   expect(source).toContain('aria-disabled="true"');
   expect(source).toContain('title="Editing for this area will be available soon."');
   expect(source).toContain("disabled ? null : <ArrowRight");
+});
+
+test("AdminWebsiteExperienceLanding Partner third-level screen uses immediate-parent navigation and human copy", () => {
+  expect(source).toContain('current="Partner"');
+  expect(source).toContain('parent={{ label: "Pages", href: "/admin/website-experience/pages" }}');
+  expect(source).toContain('title="Partner"');
+  expect(source).toContain('detail="Choose a Partner area to manage."');
+  expect(source).toContain('title="Partner Page" detail="Manage Partner page content."');
+  expect(source).toContain('title="Partner Application" detail="Manage Partner onboarding content."');
+  expect(source).toContain('title="Service Catalogue" detail="Manage Partner service domains and services."');
+  expect(source).not.toContain("authoritative Service Catalogue");
+  expect(source).not.toContain("safe presentation fields");
+  expect(source).not.toContain("Existing Partner landing/page safe presentation content.");
+});
+
+test("AdminWebsiteExperienceLanding route audit keeps undiscovered page third-level screens out of scope", () => {
+  const pageRouteRoot = join(process.cwd(), "app/admin/website-experience/pages");
+  expect(existsSync(join(pageRouteRoot, "partner/page.tsx"))).toBe(true);
+  expect(existsSync(join(pageRouteRoot, "homepage/page.tsx"))).toBe(false);
+  expect(existsSync(join(pageRouteRoot, "flights/page.tsx"))).toBe(false);
+  expect(existsSync(join(pageRouteRoot, "hotels/page.tsx"))).toBe(false);
 });
