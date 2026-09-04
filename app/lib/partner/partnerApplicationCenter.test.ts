@@ -3,7 +3,7 @@ import { buildPartnerApplicationCenterReadModel } from "./partnerApplicationCent
 import type { PartnerOrganizationBundle, PartnerVerificationStatus } from "./partnerApiClient";
 import { emptyPartnerOrganizationPreviewProfile } from "./partnerOrganizationPreviewProfile";
 import { selectedPartnerServices } from "./partnerPreviewSelection";
-import { partnerServiceCatalogue } from "./partnerServiceCatalog";
+import { getAllPartnerServices, partnerServiceCatalogue } from "./partnerServiceCatalog";
 
 test("new partner starts in the application center without fake progress", () => {
   const model = buildPartnerApplicationCenterReadModel({
@@ -25,7 +25,7 @@ test("incomplete partner maps real contact, business, and service progress", () 
       blockingRequirements: 1,
     }),
     profile: emptyPartnerOrganizationPreviewProfile,
-    selectedServices: selectedPartnerServices(["hotel"]),
+    selectedServices: selectedPartnerServices(["hotel"], getAllPartnerServices()),
     catalogueItems: partnerServiceCatalogue,
   });
 

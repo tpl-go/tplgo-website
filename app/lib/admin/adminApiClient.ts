@@ -1318,14 +1318,30 @@ export type AdminNotificationTemplateView = AdminCommunicationTemplate & {
   editAction: "disabled";
 };
 
+export type AdminWorkflowNotificationCategory = "approvals" | "publishing" | "service_requests" | "system";
+
+export type AdminWorkflowNotification = {
+  id: string;
+  eventType: string;
+  title: string;
+  message: string;
+  sourceType: "website_experience" | "service_catalogue" | "service_request" | "system";
+  sourceRecordId: string;
+  workflowState?: string;
+  internalDeepLink: string;
+  actorId?: string;
+  actorName?: string;
+  category: AdminWorkflowNotificationCategory;
+  unread: boolean;
+  readAt?: string;
+  createdAt: string;
+  context?: string;
+};
+
 export type AdminNotificationCenterDashboard = {
-  metrics: AdminNotificationMetric[];
-  routingRules: AdminAlertRoutingRule[];
-  escalationPolicies: AdminEscalationPolicy[];
-  timeline: AdminCommunicationEvent[];
-  channelHealth: AdminNotificationChannelHealth[];
-  alertIntelligence: AdminNotificationMetric[];
-  templates: AdminNotificationTemplateView[];
+  unreadCount: number;
+  filters: Array<"all" | "unread" | AdminWorkflowNotificationCategory>;
+  notifications: AdminWorkflowNotification[];
 };
 
 export type AdminWorkflowStatus = "healthy" | "watch" | "blocked" | "completed" | "disabled" | "needs_api";
@@ -2892,6 +2908,18 @@ export async function listAdminAlerts(): Promise<AdminApiResult<AdminAlertCatego
 
 export async function getAdminNotificationCenter(query: AdminListQuery = {}): Promise<AdminApiResult<AdminNotificationCenterDashboard>> {
   return adminApiRequest<AdminNotificationCenterDashboard>(`/api/v1/admin/notifications${buildAdminQuery(query)}`);
+}
+
+export async function markAdminNotificationRead(notificationId: string): Promise<AdminApiResult<AdminNotificationCenterDashboard>> {
+  return adminApiRequest<AdminNotificationCenterDashboard>(`/api/v1/admin/notifications/${encodeURIComponent(notificationId)}/read`, {
+    method: "POST",
+  });
+}
+
+export async function markAllAdminNotificationsRead(): Promise<AdminApiResult<AdminNotificationCenterDashboard>> {
+  return adminApiRequest<AdminNotificationCenterDashboard>("/api/v1/admin/notifications/read-all", {
+    method: "POST",
+  });
 }
 
 export async function listAdminAlertRouting(): Promise<AdminApiResult<AdminAlertRoutingRule[]>> {

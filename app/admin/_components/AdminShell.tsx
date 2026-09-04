@@ -44,7 +44,7 @@ import {
   Workflow,
   Store,
 } from "lucide-react";
-import { adminLogout, readAdminSession, refreshAdminSession } from "../../lib/admin/adminApiClient";
+import { adminLogout, getAdminNotificationCenter, readAdminSession, refreshAdminSession } from "../../lib/admin/adminApiClient";
 import type { AdminSession } from "../../lib/admin/adminApiClient";
 
 const navItems = [
@@ -129,6 +129,7 @@ export default function AdminShell({
   const pathname = usePathname();
   const router = useRouter();
   const [session, setSession] = useState<AdminSession | null>(() => readAdminSession());
+  const [notificationUnreadCount, setNotificationUnreadCount] = useState(0);
   const canAccess = (permission?: string) => {
     if (!permission) return true;
     if (!session) return true;
@@ -141,6 +142,16 @@ export default function AdminShell({
     let active = true;
     void refreshAdminSession().then((refreshed) => {
       if (active && refreshed) setSession(refreshed);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    void getAdminNotificationCenter({ limit: 1, status: "unread" }).then((result) => {
+      if (active && result.ok) setNotificationUnreadCount(result.data.unreadCount);
     });
     return () => {
       active = false;
@@ -207,6 +218,11 @@ export default function AdminShell({
               >
                 <Icon className="h-4 w-4" />
                 {item.label}
+                {item.href === "/admin/notifications" && notificationUnreadCount > 0 ? (
+                  <span className="ml-auto rounded-full bg-cyan-400 px-2 py-0.5 text-[10px] font-semibold text-slate-950" aria-label={`${notificationUnreadCount} unread notifications`}>
+                    {notificationUnreadCount > 99 ? "99+" : notificationUnreadCount}
+                  </span>
+                ) : null}
               </Link>
             ) : (
               <div

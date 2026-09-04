@@ -18,7 +18,7 @@ export const emptyPartnerPreviewSelection: PartnerPreviewSelectionState = {
   completedStep: "choose-services",
 };
 
-const legacyPartnerPreviewServices: PartnerServiceDefinition[] = [
+export const qaPartnerPreviewServices: PartnerServiceDefinition[] = [
   { id: "hotels-resorts", label: "Hotels & Resorts", keywords: ["hotels", "resorts", "stay", "accommodation"] },
   { id: "cab-taxi", label: "Cab / Taxi", keywords: ["cab", "taxi", "transport", "driver"] },
   { id: "activities", label: "Activities", keywords: ["activities", "experiences", "adventure", "scuba"] },
@@ -50,10 +50,14 @@ export function selectedServicesLabel(count: number): string {
 
 export function selectedPartnerServices(
   selectedServiceIds: string[],
-  services: PartnerServiceDefinition[] = legacyPartnerPreviewServices
+  services: PartnerServiceDefinition[] = []
 ): PartnerServiceDefinition[] {
   const selectedIds = new Set(selectedServiceIds);
   return services.filter((serviceItem) => selectedIds.has(serviceItem.id));
+}
+
+export function selectedPartnerServicesForQaPreview(selectedServiceIds: string[]): PartnerServiceDefinition[] {
+  return selectedPartnerServices(selectedServiceIds, qaPartnerPreviewServices);
 }
 
 export function readPartnerPreviewSelection(storage: PartnerPreviewStorage): PartnerPreviewSelectionState {

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import { test } from "vitest";
 import {
   canContinuePartnerPreview,
   clearServiceSelection,
@@ -7,6 +7,7 @@ import {
   PARTNER_PREVIEW_SELECTED_SERVICES_STORAGE_KEY,
   readPartnerPreviewSelection,
   selectedPartnerServices,
+  selectedPartnerServicesForQaPreview,
   selectedServicesLabel,
   toggleServiceSelection,
   writePartnerPreviewSelection,
@@ -34,13 +35,17 @@ test("deselect and clear all update selected services", () => {
 });
 
 test("selected service read model returns selected definitions", () => {
-  const selected = selectedPartnerServices(["hotels-resorts", "cab-taxi", "activities"]);
+  const selected = selectedPartnerServicesForQaPreview(["hotels-resorts", "cab-taxi", "activities"]);
 
   assert.deepEqual(selected.map((serviceItem) => serviceItem.label), [
     "Hotels & Resorts",
     "Cab / Taxi",
     "Activities",
   ]);
+});
+
+test("normal selected service read model does not silently use QA services", () => {
+  assert.deepEqual(selectedPartnerServices(["hotels-resorts"]), []);
 });
 
 test("preview persistence stores and restores selected services", () => {

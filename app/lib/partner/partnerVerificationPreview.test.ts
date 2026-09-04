@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import { test } from "vitest";
 import {
   buildPartnerVerificationRequirements,
   calculateVerificationReadiness,
@@ -12,10 +12,10 @@ import {
   sampleIndividualGuidePreviewProfile,
   samplePartnerOrganizationPreviewProfile,
 } from "./partnerOrganizationPreviewProfile";
-import { selectedPartnerServices } from "./partnerPreviewSelection";
+import { selectedPartnerServicesForQaPreview } from "./partnerPreviewSelection";
 
 test("company multi-service requirements attach to correct entity owners", () => {
-  const services = selectedPartnerServices(["hotels-resorts", "cab-taxi", "activities"]);
+  const services = selectedPartnerServicesForQaPreview(["hotels-resorts", "cab-taxi", "activities"]);
   const requirements = buildPartnerVerificationRequirements(samplePartnerOrganizationPreviewProfile, services, fictionalPreviewDocuments);
 
   assert.equal(requirements.find((item) => item.title === "Company PAN")?.ownerType, "ORGANIZATION");
@@ -26,7 +26,7 @@ test("company multi-service requirements attach to correct entity owners", () =>
 });
 
 test("individual professional avoids corporate-only registration requirements", () => {
-  const services = selectedPartnerServices(["guides"]);
+  const services = selectedPartnerServicesForQaPreview(["guides"]);
   const requirements = buildPartnerVerificationRequirements(sampleIndividualGuidePreviewProfile, services, []);
   const titles = requirements.map((requirement) => requirement.title);
 
@@ -37,7 +37,7 @@ test("individual professional avoids corporate-only registration requirements", 
 });
 
 test("duplicate document reuse is offered before upload and requires explicit linking", () => {
-  const services = selectedPartnerServices(["activities"]);
+  const services = selectedPartnerServicesForQaPreview(["activities"]);
   const requirements = buildPartnerVerificationRequirements(sampleIndividualGuidePreviewProfile, services, fictionalPreviewDocuments);
   const professionalRequirement = requirements.find((requirement) => requirement.title === "Scuba Professional Certification");
 
@@ -61,7 +61,7 @@ test("duplicate document reuse is offered before upload and requires explicit li
 });
 
 test("mandatory submitted requirements are not treated as verified readiness", () => {
-  const services = selectedPartnerServices(["cab-taxi"]);
+  const services = selectedPartnerServicesForQaPreview(["cab-taxi"]);
   const requirements = buildPartnerVerificationRequirements(samplePartnerOrganizationPreviewProfile, services, [
     {
       id: "doc-driver-under-review",
