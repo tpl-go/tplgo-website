@@ -35,9 +35,14 @@ import {
   savePartnerBusinessIdentityDraft,
   savePartnerBusinessLocationDraft,
   savePartnerServicesDraft,
+  savePartnerVerificationComplianceDraft,
+  createPartnerDocumentUploadSession,
+  confirmPartnerDocument,
+  linkPartnerDocumentToRequirement,
   verifyPartnerEmail,
   verifyPartnerMobile,
   type PartnerMobileChallenge,
+  type PartnerRequirement,
   type PartnerOrganizationBundle,
   type PartnerRequirementClassification,
 } from "../lib/partner/partnerApiClient";
@@ -487,6 +492,7 @@ export default function PartnerApplicationWorkspaceClient({
   const [emailChallenge, setEmailChallenge] = useState<{ challengeId: string; expiresAt: string } | null>(null);
   const [emailOtp, setEmailOtp] = useState("");
   const [busyAction, setBusyAction] = useState<string | null>(null);
+  const [uploadingRequirementId, setUploadingRequirementId] = useState<string | null>(null);
   const [qaVerifiedContacts, setQaVerifiedContacts] = useState({ mobile: false, email: false });
   const [serviceCatalogueState, setServiceCatalogueState] = useState<RuntimeCatalogueState>({
     status: "loading",
@@ -766,6 +772,7 @@ export default function PartnerApplicationWorkspaceClient({
     if (activeStep === "business_identity") return saveBusinessIdentityDraft(options);
     if (activeStep === "business_location") return saveBusinessLocationDraft(options);
     if (activeStep === "services") return saveServicesDraft(options);
+    if (activeStep === "documents_compliance") return saveVerificationDraft(options);
     setSaveStatus("saving");
     if (!options.silent) setMessage({ tone: "info", text: "Saving your draft." });
     const payload = {
@@ -883,6 +890,36 @@ export default function PartnerApplicationWorkspaceClient({
     setLastSavedAt(savedAt);
     setSaveStatus("saved");
     if (!options.silent) setMessage({ tone: "success", text: options.continueAfter ? "Draft saved. Continue with Verification & Compliance next." : "Draft saved." });
+    return result.data;
+  }
+
+  async function saveVerificationDraft(options: { silent?: boolean; continueAfter?: boolean } = {}) {
+    if (qaPreviewEnabled) {
+      const savedAt = new Date().toISOString();
+      setSaveStatus("saved");
+      setLastSavedAt(savedAt);
+      writeQaDraft(currentQaDraftPayload(options.continueAfter ? "payout_tax" : "documents_compliance", savedAt));
+      if (!options.silent) setMessage({ tone: "success", text: options.continueAfter ? "Preview draft saved. Continue with Payout & Tax next." : "Preview draft saved." });
+      return previewBundle;
+    }
+    const organizationId = activeBundle?.organization.id || servicesForm.organizationId || locationForm.organizationId || businessForm.organizationId || form.organizationId;
+    if (!organizationId) {
+      setMessage({ tone: "warning", text: "Save your application before completing verification." });
+      return null;
+    }
+    setSaveStatus("saving");
+    if (!options.silent) setMessage({ tone: "info", text: "Saving verification progress." });
+    const result = await savePartnerVerificationComplianceDraft({ organizationId, continueAfter: options.continueAfter === true });
+    if (!result.ok) {
+      setSaveStatus("error");
+      if (!options.silent) setMessage({ tone: "error", text: options.continueAfter ? "Complete the required checks before continuing." : "Could not save verification progress." });
+      return null;
+    }
+    setBundle(result.data);
+    const savedAt = readLastSaved(result.data) ?? new Date().toISOString();
+    setLastSavedAt(savedAt);
+    setSaveStatus("saved");
+    if (!options.silent) setMessage({ tone: "success", text: options.continueAfter ? "Verification progress saved. Continue with Payout & Tax next." : "Verification progress saved." });
     return result.data;
   }
 
@@ -1069,6 +1106,14 @@ export default function PartnerApplicationWorkspaceClient({
       }
       return;
     }
+    if (activeStep === "documents_compliance") {
+      const saved = await saveVerificationDraft({ continueAfter: true });
+      if (!saved) return;
+      if (isVerificationStepComplete(saved)) {
+        setActiveStep("payout_tax");
+      }
+      return;
+    }
     const saved = await saveDraft({ continueAfter: true });
     if (!saved) return;
     if (canCompleteStepOne || contactVerified(saved, "mobile", normalizedMobile(form.businessMobile, form.countryCode)) && contactVerified(saved, "email", normalizeEmail(form.businessEmail)) && form.authorizedRepresentative) {
@@ -1076,6 +1121,69 @@ export default function PartnerApplicationWorkspaceClient({
     } else {
       setMessage({ tone: "warning", text: "Complete the required contact details before continuing." });
     }
+  }
+
+  async function uploadEvidence(requirement: PartnerRequirement, file: File, details?: { documentNumber?: string; issueDate?: string; expiryDate?: string; noExpiry?: boolean }) {
+    const organizationId = activeBundle?.organization.id || form.organizationId;
+    if (!organizationId) {
+      setMessage({ tone: "warning", text: "Save your application before uploading evidence." });
+      return;
+    }
+    setUploadingRequirementId(requirement.id);
+    setMessage({ tone: "info", text: "Uploading evidence." });
+    const upload = await createPartnerDocumentUploadSession(organizationId, {
+      filename: file.name,
+      mimeType: file.type || "application/octet-stream",
+      sizeBytes: file.size,
+    });
+    if (!upload.ok || upload.data.executionStatus !== "READY" || upload.data.uploadMode !== "signed_url" || !upload.data.upload) {
+      setUploadingRequirementId(null);
+      setMessage({ tone: "error", text: "Secure upload is not available for this staging environment." });
+      return;
+    }
+    const putResult = await fetch(upload.data.upload.url, {
+      method: upload.data.upload.method,
+      headers: { "Content-Type": file.type || "application/octet-stream" },
+      body: file,
+    });
+    if (!putResult.ok) {
+      setUploadingRequirementId(null);
+      setMessage({ tone: "error", text: "Upload failed. Please retry." });
+      return;
+    }
+    const confirmed = await confirmPartnerDocument(organizationId, {
+      ownerEntityType: requirement.ownerEntityType,
+      ownerEntityId: requirement.ownerEntityType,
+      documentCategory: requirementGroupTitle(requirement),
+      documentType: requirement.title,
+      storageReference: upload.data.storageReference,
+      originalFilename: file.name,
+      mimeType: file.type || "application/octet-stream",
+      sizeBytes: file.size,
+      documentNumber: details?.documentNumber,
+      issueDate: details?.issueDate,
+      expiryDate: details?.expiryDate,
+      noExpiry: details?.noExpiry,
+    });
+    if (!confirmed.ok) {
+      setUploadingRequirementId(null);
+      setMessage({ tone: "error", text: "We couldn't save this evidence." });
+      return;
+    }
+    const linked = await linkPartnerDocumentToRequirement(organizationId, { documentId: confirmed.data.id, requirementId: requirement.id });
+    if (!linked.ok) {
+      setUploadingRequirementId(null);
+      setMessage({ tone: "error", text: "Evidence uploaded but could not be linked. Please retry." });
+      const refreshed = await fetchPartnerApplicationDraft();
+      if (refreshed.ok) setBundle(refreshed.data);
+      return;
+    }
+    const refreshed = await fetchPartnerApplicationDraft();
+    if (refreshed.ok) setBundle(refreshed.data);
+    setUploadingRequirementId(null);
+    setSaveStatus("saved");
+    setLastSavedAt(new Date().toISOString());
+    setMessage({ tone: "success", text: "Evidence uploaded and ready for review." });
   }
 
   function resetQaPreviewData() {
@@ -1238,6 +1346,17 @@ export default function PartnerApplicationWorkspaceClient({
                 onOpenSelectedServiceDomain={openSelectedServiceDomain}
                 onChange={updateServicesForm}
               />
+            ) : activeStep === "documents_compliance" ? (
+              <VerificationComplianceStep
+                bundle={activeBundle}
+                selectedServiceCodes={servicesForm.selectedServiceCodes}
+                serviceCatalogueItems={serviceCatalogueState.items}
+                qaPreviewEnabled={qaPreviewEnabled}
+                uploadingRequirementId={uploadingRequirementId}
+                onUploadEvidence={uploadEvidence}
+              />
+            ) : activeStep === "payout_tax" ? (
+              <PayoutTaxPlaceholder />
             ) : (
               <PlaceholderStep step={workspaceSteps.find((step) => step.id === activeStep) ?? workspaceSteps[1]!} />
             )}
@@ -2597,16 +2716,163 @@ function WorkspaceToast({ tone, text, onDismiss }: { tone: "success" | "info" | 
   );
 }
 
+function VerificationComplianceStep({
+  bundle,
+  selectedServiceCodes,
+  serviceCatalogueItems,
+  qaPreviewEnabled,
+  uploadingRequirementId,
+  onUploadEvidence,
+}: {
+  bundle: PartnerOrganizationBundle | null;
+  selectedServiceCodes: string[];
+  serviceCatalogueItems: PartnerServiceCatalogueItem[];
+  qaPreviewEnabled: boolean;
+  uploadingRequirementId: string | null;
+  onUploadEvidence: (requirement: PartnerRequirement, file: File) => void;
+}) {
+  const requirements = bundle?.requirements ?? previewRequirementsForSelectedServices(selectedServiceCodes, serviceCatalogueItems);
+  const documents = bundle?.documents ?? [];
+  const links = bundle?.links ?? [];
+  const requirementGroups = groupPartnerRequirements(requirements, bundle?.serviceScopes ?? [], serviceCatalogueItems);
+  const mandatory = requirements.filter((item) => item.priority === "MANDATORY" || item.priority === "CONDITIONAL");
+  const ready = mandatory.filter((item) => requirementReadyForUiProgression(item.status)).length;
+  const underReview = requirements.filter((item) => item.status === "SUBMITTED" || item.status === "UNDER_REVIEW").length;
+  const actionRequired = mandatory.length - ready;
+  const progressPercent = mandatory.length ? Math.round((ready / mandatory.length) * 100) : 0;
+  const serviceCount = new Set(requirements.map((item) => item.serviceScopeId).filter(Boolean)).size;
+
+  return (
+    <div data-application-active-step="documents_compliance" className="rounded-2xl border border-white/10 bg-[#171a20] shadow-2xl">
+      <div className="border-b border-white/10 p-5">
+        <p className="text-xs font-black uppercase tracking-[0.16em] text-[#fb923c]">Step 5</p>
+        <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Verification & Compliance</h1>
+        <p className="mt-2 text-sm font-semibold leading-6 text-slate-300">
+          Complete the checks required for your business and selected services.
+        </p>
+      </div>
+
+      <div className="grid gap-5 p-5">
+        {qaPreviewEnabled ? (
+          <div className="rounded-xl border border-[#f97316]/25 bg-[#f97316]/10 p-3 text-xs font-bold leading-5 text-[#fed7aa]">
+            Preview Example uses fictional requirement data only. It does not upload documents or verify identity.
+          </div>
+        ) : null}
+
+        <section className="rounded-xl border border-white/10 bg-[#11141a] p-4" aria-labelledby="verification-overview-heading">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h2 id="verification-overview-heading" className="text-sm font-black text-white">Verification overview</h2>
+              <p className="mt-1 text-xs font-semibold text-slate-400">Uploaded evidence is reviewed by TPL GO. Uploaded does not mean verified.</p>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-4">
+              <VerificationMetric label="Progress" value={`${progressPercent}%`} />
+              <VerificationMetric label="Ready" value={`${ready}/${mandatory.length}`} />
+              <VerificationMetric label="Action required" value={String(Math.max(0, actionRequired))} tone={actionRequired ? "warning" : "success"} />
+              <VerificationMetric label="Under review" value={String(underReview)} />
+            </div>
+          </div>
+          <div className="mt-4 h-2 rounded-full bg-white/10">
+            <div className="h-full rounded-full bg-[linear-gradient(135deg,#38bdf8,#22c55e)]" style={{ width: `${progressPercent}%` }} />
+          </div>
+          <p className="mt-3 text-xs font-semibold text-slate-400">
+            {serviceCount ? `${serviceCount} selected service area${serviceCount === 1 ? "" : "s"} have service-specific checks.` : "Business checks are ready. Select services in Step 4 to calculate service checks."}
+          </p>
+        </section>
+
+        {requirementGroups.map((group) => (
+          <section key={group.id} className="rounded-xl border border-white/10 bg-[#11141a] p-4" aria-labelledby={`${group.id}-heading`}>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h2 id={`${group.id}-heading`} className="text-sm font-black text-white">{group.title}</h2>
+                <p className="mt-1 text-xs font-semibold text-slate-400">{group.description}</p>
+              </div>
+              <span className="w-fit rounded-full border border-white/10 bg-[#0f1217] px-3 py-1 text-xs font-black text-slate-300">
+                {group.requirements.length} item{group.requirements.length === 1 ? "" : "s"}
+              </span>
+            </div>
+            <div className="mt-4 grid gap-3">
+              {group.requirements.map((requirement) => {
+                const linkedDocuments = documents.filter((document) => requirementLinkedDocument(requirement, document, links));
+                const status = verificationStatusLabel(requirement.status);
+                const uploadDisabled = qaPreviewEnabled || uploadingRequirementId === requirement.id || requirement.status === "VERIFIED" || requirement.status === "UNDER_REVIEW";
+                return (
+                  <div key={requirement.id} className="rounded-xl border border-white/10 bg-[#0f1217] p-4">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="text-sm font-black text-white">{requirement.title}</h3>
+                          <StatusLabel label={status} status={requirement.status} />
+                          <span className="rounded-full border border-white/10 bg-[#151922] px-2 py-0.5 text-[11px] font-black text-slate-400">{priorityLabel(requirement.priority)}</span>
+                        </div>
+                        <p className="mt-2 text-sm font-semibold leading-6 text-slate-300">{requirement.description}</p>
+                        <p className="mt-2 text-xs font-semibold leading-5 text-slate-500">{requirementAppliesTo(requirement, bundle?.serviceScopes ?? [])}</p>
+                        {requirement.metadata && requirement.metadata.missingProfile === true ? (
+                          <p className="mt-2 rounded-lg border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-xs font-bold text-amber-100">Requirements being reviewed by TPL GO.</p>
+                        ) : null}
+                      </div>
+                      <label className={`inline-flex h-10 shrink-0 items-center justify-center rounded-xl px-3 text-xs font-black ${uploadDisabled ? "cursor-not-allowed border border-white/10 bg-[#151922] text-slate-500" : "cursor-pointer border border-[#f97316]/40 bg-[#f97316]/10 text-[#fed7aa] hover:border-[#f97316]"}`}>
+                        {uploadingRequirementId === requirement.id ? "Uploading..." : linkedDocuments.length ? "Replace evidence" : "Upload evidence"}
+                        <input
+                          type="file"
+                          className="sr-only"
+                          disabled={uploadDisabled}
+                          accept="application/pdf,image/jpeg,image/png,image/webp"
+                          onChange={(event) => {
+                            const file = event.target.files?.[0];
+                            if (file) onUploadEvidence(requirement, file);
+                            event.currentTarget.value = "";
+                          }}
+                        />
+                      </label>
+                    </div>
+                    {linkedDocuments.length ? (
+                      <div className="mt-3 grid gap-2">
+                        {linkedDocuments.map((document) => (
+                          <div key={document.id} className="flex flex-col gap-1 rounded-lg border border-white/10 bg-[#151922] px-3 py-2 text-xs font-semibold text-slate-300 sm:flex-row sm:items-center sm:justify-between">
+                            <span className="truncate">{document.originalFilename}</span>
+                            <span>{verificationStatusLabel(document.status)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        ))}
+
+        <section className="rounded-xl border border-white/10 bg-[#11141a] p-4">
+          <SectionHeading title="Progress summary" detail="You can save incomplete work. Save & Continue is available after required evidence is ready for review." />
+          <div className={`mt-3 rounded-xl border p-3 text-sm font-bold ${actionRequired ? "border-[#f97316]/30 bg-[#f97316]/10 text-[#fed7aa]" : "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"}`}>
+            {actionRequired ? `${actionRequired} required check${actionRequired === 1 ? "" : "s"} still need evidence.` : "Required evidence is ready for review. This does not mean verified."}
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function PayoutTaxPlaceholder() {
+  return (
+    <div data-application-active-step="payout_tax" className="rounded-2xl border border-white/10 bg-[#171a20] p-6 shadow-2xl">
+      <p className="text-xs font-black uppercase tracking-[0.16em] text-[#fb923c]">Step 6</p>
+      <h1 className="mt-2 text-2xl font-black sm:text-3xl">Payout & Tax</h1>
+      <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-300">
+        Add the payout and tax details required for your Partner account.
+      </p>
+    </div>
+  );
+}
+
 function PlaceholderStep({ step }: { step: (typeof workspaceSteps)[number] }) {
-  const isStepFive = step.id === "documents_compliance";
   return (
     <div data-application-active-step={step.id} className="rounded-2xl border border-white/10 bg-[#171a20] p-6 shadow-2xl">
       <p className="text-xs font-black uppercase tracking-[0.16em] text-[#fb923c]">Step {step.number}</p>
       <h1 className="mt-2 text-2xl font-black sm:text-3xl">{step.title}</h1>
       <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-300">
-        {isStepFive
-          ? "We'll show the checks required for your business and selected services. Detailed verification form comes in the next development step."
-          : "Detailed form will be added in the next development step."}
+        This step is reserved in the approved 8-step Partner application flow.
       </p>
     </div>
   );
@@ -2634,6 +2900,27 @@ function LoadingCard() {
 
 function VerifiedChip({ label }: { label: string }) {
   return <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/12 px-2.5 py-1 text-xs font-black text-emerald-200"><Check size={13} aria-hidden="true" />{label}</span>;
+}
+
+function VerificationMetric({ label, value, tone = "neutral" }: { label: string; value: string; tone?: "neutral" | "success" | "warning" }) {
+  const color = tone === "success" ? "text-emerald-200" : tone === "warning" ? "text-[#fed7aa]" : "text-white";
+  return (
+    <div className="rounded-xl border border-white/10 bg-[#0f1217] px-3 py-2">
+      <p className="text-[11px] font-black uppercase tracking-[0.1em] text-slate-500">{label}</p>
+      <p className={`mt-1 text-sm font-black ${color}`}>{value}</p>
+    </div>
+  );
+}
+
+function StatusLabel({ label, status }: { label: string; status: string }) {
+  const color = status === "VERIFIED"
+    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
+    : status === "SUBMITTED" || status === "UNDER_REVIEW"
+      ? "border-sky-500/30 bg-sky-500/10 text-sky-200"
+      : status === "CHANGES_REQUIRED" || status === "REJECTED" || status === "EXPIRED"
+        ? "border-red-500/30 bg-red-500/10 text-red-200"
+        : "border-[#f97316]/30 bg-[#f97316]/10 text-[#fed7aa]";
+  return <span className={`rounded-full border px-2 py-0.5 text-[11px] font-black ${color}`}>{label}</span>;
 }
 
 function CenteredShell({ children }: { children: ReactNode }) {
@@ -3018,6 +3305,114 @@ function isServicesComplete(form: ServicesForm, countryCode: string, businessTyp
     const item = findPartnerCatalogueItemIn(catalogueItems, code);
     return item ? partnerServiceEligibleForApplication(item, countryCode, businessType) : false;
   });
+}
+
+function isVerificationStepComplete(bundle: PartnerOrganizationBundle | null): boolean {
+  if (!bundle || !bundle.requirements.length) return false;
+  return bundle.requirements
+    .filter((requirement) => requirement.priority === "MANDATORY" || requirement.priority === "CONDITIONAL")
+    .every((requirement) => requirementReadyForUiProgression(requirement.status));
+}
+
+function requirementReadyForUiProgression(status: string): boolean {
+  return status === "SUBMITTED" || status === "UNDER_REVIEW" || status === "VERIFIED" || status === "EXPIRING_SOON";
+}
+
+function groupPartnerRequirements(requirements: PartnerRequirement[], scopes: PartnerOrganizationBundle["serviceScopes"], catalogueItems: PartnerServiceCatalogueItem[]) {
+  const business = requirements.filter((item) => item.ownerEntityType === "ORGANIZATION");
+  const representative = requirements.filter((item) => ["PERSON", "PROFESSIONAL", "DRIVER"].includes(item.ownerEntityType) && !item.serviceScopeId);
+  const service = requirements.filter((item) => item.serviceScopeId);
+  const jurisdiction = requirements.filter((item) => item.ownerEntityType === "LOCATION");
+  const additional = requirements.filter((item) => item.metadata?.missingProfile === true || item.title.toLowerCase().includes("manual"));
+  return [
+    { id: "business-requirements", title: "Business requirements", description: "Checks shared by your Partner organization.", requirements: business },
+    { id: "representative-requirements", title: "Representative requirements", description: "Checks for the person responsible for this application.", requirements: representative },
+    { id: "service-requirements", title: "Service-specific requirements", description: serviceRequirementDescription(service, scopes, catalogueItems), requirements: service.filter((item) => !additional.includes(item)) },
+    { id: "jurisdiction-requirements", title: "Country and jurisdiction requirements", description: "Checks that depend on your selected country or operating location.", requirements: jurisdiction },
+    { id: "additional-review", title: "Additional review", description: "Items TPL GO needs to review manually.", requirements: additional },
+  ].map((group) => ({ ...group, requirements: dedupeRequirements(group.requirements) })).filter((group) => group.requirements.length > 0);
+}
+
+function dedupeRequirements(requirements: PartnerRequirement[]): PartnerRequirement[] {
+  const seen = new Set<string>();
+  return requirements.filter((requirement) => {
+    const key = `${requirement.requirementCode}:${requirement.ownerEntityType}:${requirement.title}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function previewRequirementsForSelectedServices(selectedServiceCodes: string[], catalogueItems: PartnerServiceCatalogueItem[]): PartnerRequirement[] {
+  const serviceCodes = selectedServiceCodes.length ? selectedServiceCodes : ["hotel", "cab-taxi-operator"];
+  const base: PartnerRequirement[] = [
+    previewRequirement("preview-business-address", "Business address evidence", "ORGANIZATION", "BUSINESS_ADDRESS", "Upload evidence for the registered or operating business address.", "MANDATORY", null),
+    previewRequirement("preview-identity", "Government identity document", "PERSON", "IDENTITY_DOCUMENT", "Upload identity evidence for the person responsible for this Partner application.", "MANDATORY", null),
+  ];
+  const serviceRequirements = serviceCodes.map((code) => {
+    const item = findPartnerCatalogueItemIn(catalogueItems, code);
+    const label = item?.name ?? titleFromDomainId(code);
+    return previewRequirement(`preview-${code}`, `${label} evidence`, "SERVICE", `${code.toUpperCase()}_SERVICE_EVIDENCE`, `Provide the evidence required for ${label}.`, "CONDITIONAL", `scope-${code}`, item?.verificationProfileKey);
+  });
+  return [...base, ...serviceRequirements];
+}
+
+function previewRequirement(id: string, title: string, ownerEntityType: string, requirementCode: string, description: string, priority: PartnerRequirement["priority"], serviceScopeId: string | null, verificationProfileKey?: string): PartnerRequirement {
+  return {
+    id,
+    title,
+    ownerEntityType,
+    requirementCode,
+    description,
+    priority,
+    serviceScopeId,
+    status: "NOT_SUBMITTED",
+    expires: true,
+    metadata: { previewExample: true, verificationProfileKey },
+  };
+}
+
+function requirementLinkedDocument(requirement: PartnerRequirement, document: PartnerOrganizationBundle["documents"][number], links: NonNullable<PartnerOrganizationBundle["links"]>): boolean {
+  if (links.some((link) => link.status === "active" && link.requirementId === requirement.id && link.documentId === document.id)) return true;
+  return links.length === 0 && document.ownerEntityType === requirement.ownerEntityType && document.documentType === requirement.title;
+}
+
+function requirementGroupTitle(requirement: PartnerRequirement): string {
+  if (requirement.ownerEntityType === "ORGANIZATION") return "Business Verification";
+  if (["PERSON", "PROFESSIONAL", "DRIVER"].includes(requirement.ownerEntityType)) return "Representative Verification";
+  if (requirement.ownerEntityType === "LOCATION") return "Country and Jurisdiction Requirements";
+  return "Service Verification";
+}
+
+function requirementAppliesTo(requirement: PartnerRequirement, scopes: PartnerOrganizationBundle["serviceScopes"]): string {
+  if (!requirement.serviceScopeId) return requirementGroupTitle(requirement);
+  const scope = scopes.find((item) => item.id === requirement.serviceScopeId);
+  return scope ? `Used for ${scope.serviceLabel}` : "Used for selected service";
+}
+
+function serviceRequirementDescription(requirements: PartnerRequirement[], scopes: PartnerOrganizationBundle["serviceScopes"], catalogueItems: PartnerServiceCatalogueItem[]): string {
+  const labels = [...new Set(requirements.map((requirement) => scopes.find((scope) => scope.id === requirement.serviceScopeId)?.serviceLabel).filter(Boolean))];
+  if (labels.length) return `Checks for ${labels.slice(0, 3).join(", ")}${labels.length > 3 ? " and other selected services" : ""}.`;
+  return catalogueItems.length ? "Checks for selected services." : "Checks generated from your selected services.";
+}
+
+function verificationStatusLabel(status: string): string {
+  if (status === "NOT_SUBMITTED") return "Action required";
+  if (status === "SUBMITTED") return "Ready for review";
+  if (status === "UNDER_REVIEW") return "Under review";
+  if (status === "VERIFIED") return "Verified";
+  if (status === "CHANGES_REQUIRED") return "Changes required";
+  if (status === "REJECTED") return "Rejected";
+  if (status === "EXPIRING_SOON") return "Expiring soon";
+  if (status === "EXPIRED") return "Expired";
+  return "Requirements being reviewed";
+}
+
+function priorityLabel(priority: string): string {
+  if (priority === "MANDATORY") return "Required";
+  if (priority === "CONDITIONAL") return "Required when applicable";
+  if (priority === "RECOMMENDED") return "Recommended";
+  return "Optional";
 }
 
 function domainTitleFor(domainId: PartnerServiceDomainId, serviceCatalog: PartnerServiceCategory[]): string {

@@ -65,6 +65,8 @@ export type PartnerRequirement = {
   description: string;
   priority: "MANDATORY" | "CONDITIONAL" | "RECOMMENDED" | "OPTIONAL";
   status: PartnerVerificationStatus;
+  expires?: boolean;
+  metadata?: Record<string, unknown>;
 };
 
 export type PartnerDocument = {
@@ -82,6 +84,14 @@ export type PartnerDocument = {
   noExpiry?: boolean;
   status: PartnerVerificationStatus;
   reviewNote?: string | null;
+};
+
+export type PartnerDocumentRequirementLink = {
+  id: string;
+  organizationId: string;
+  documentId: string;
+  requirementId: string;
+  status: "active" | "revoked";
 };
 
 export type PartnerPresignedUrl = {
@@ -142,6 +152,7 @@ export type PartnerOrganizationBundle = {
   serviceScopes: PartnerServiceScope[];
   requirements: PartnerRequirement[];
   documents: PartnerDocument[];
+  links?: PartnerDocumentRequirementLink[];
   review?: PartnerReview | null;
   events: PartnerVerificationEvent[];
   readiness: PartnerReadiness;
@@ -284,6 +295,13 @@ export function savePartnerBusinessLocationDraft(input: PartnerBusinessLocationD
 
 export function savePartnerServicesDraft(input: PartnerServicesDraftInput): Promise<TplApiResult<PartnerOrganizationBundle>> {
   return tplApiRequest<PartnerOrganizationBundle>("/api/v1/partner/application/draft/services", {
+    method: "POST",
+    body: input,
+  });
+}
+
+export function savePartnerVerificationComplianceDraft(input: { organizationId: string; continueAfter?: boolean }): Promise<TplApiResult<PartnerOrganizationBundle>> {
+  return tplApiRequest<PartnerOrganizationBundle>("/api/v1/partner/application/draft/verification-compliance", {
     method: "POST",
     body: input,
   });
