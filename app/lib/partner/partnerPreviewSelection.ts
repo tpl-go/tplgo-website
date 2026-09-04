@@ -18,6 +18,13 @@ export const emptyPartnerPreviewSelection: PartnerPreviewSelectionState = {
   completedStep: "choose-services",
 };
 
+const legacyPartnerPreviewServices: PartnerServiceDefinition[] = [
+  { id: "hotels-resorts", label: "Hotels & Resorts", keywords: ["hotels", "resorts", "stay", "accommodation"] },
+  { id: "cab-taxi", label: "Cab / Taxi", keywords: ["cab", "taxi", "transport", "driver"] },
+  { id: "activities", label: "Activities", keywords: ["activities", "experiences", "adventure", "scuba"] },
+  { id: "guides", label: "Guides", keywords: ["guide", "tour guide", "local expert"] },
+];
+
 export function toggleServiceSelection(selectedServiceIds: string[], serviceId: string): string[] {
   if (selectedServiceIds.includes(serviceId)) {
     return selectedServiceIds.filter((currentId) => currentId !== serviceId);
@@ -43,7 +50,7 @@ export function selectedServicesLabel(count: number): string {
 
 export function selectedPartnerServices(
   selectedServiceIds: string[],
-  services: PartnerServiceDefinition[] = []
+  services: PartnerServiceDefinition[] = legacyPartnerPreviewServices
 ): PartnerServiceDefinition[] {
   const selectedIds = new Set(selectedServiceIds);
   return services.filter((serviceItem) => selectedIds.has(serviceItem.id));

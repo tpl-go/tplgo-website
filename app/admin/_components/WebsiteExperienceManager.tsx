@@ -1715,14 +1715,18 @@ function catalogueWorkflowRow(catalogue: AdminPartnerServiceCatalogueResponse | 
     : false;
   if (!matches) return null;
   const domainId = record.sourceRecordId && record.sourceRecordId !== "default" ? record.sourceRecordId : catalogue.review?.domainId;
-  const href = domainId
+  const serviceId = catalogue.review?.scopeType === "item" ? catalogue.review?.itemCode : undefined;
+  const href = serviceId
+    ? `/admin/website-experience/pages/partner/service-catalogue/services/${encodeURIComponent(serviceId)}/edit`
+    : domainId
     ? `/admin/website-experience/pages/partner/service-catalogue/domains/${encodeURIComponent(domainId)}/edit`
     : "/admin/website-experience/pages/partner/service-catalogue";
   const changedAt = record.changedAt ? formatDateTime(record.changedAt) : "not available";
+  const scopeLabel = serviceId ? "Service changes" : "Domain changes";
   return {
     workflowState: state,
     href,
-    title: `${record.sectionDomain} · Domain changes`,
+    title: serviceId ? `${record.itemService} · ${scopeLabel}` : `${record.sectionDomain} · ${scopeLabel}`,
     detail: `Draft v${record.draftVersion} - Published v${record.publishedVersion} - Changed ${changedAt}`,
   };
 }

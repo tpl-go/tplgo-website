@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import Link from "next/link";
 import {
-  Archive,
   ChevronRight,
   FilePenLine,
   Filter,
@@ -11,7 +10,6 @@ import {
   Loader2,
   Plus,
   RefreshCcw,
-  RotateCcw,
   Save,
   Search,
   Trash2,
@@ -229,7 +227,8 @@ export function AdminPartnerServiceCatalogueClient() {
           busy={busy}
           onBack={() => navigate({ domain: activeDomain.id })}
           onEdit={(item) => openDialog(itemKind(item, scopedItems) === "sub-service" ? "edit-sub-service" : itemKind(item, scopedItems) === "category" ? "edit-category" : "edit-service", item)}
-          onAddSubService={(item) => openDialog("add-sub-service", undefined, item)}
+          editServiceHref={`/admin/website-experience/pages/partner/service-catalogue/services/${encodeURIComponent(selectedItem.stableCode)}/edit`}
+          addSubServiceHref={`/admin/website-experience/pages/partner/service-catalogue/domains/${encodeURIComponent(activeDomain.id)}/services/new?parent=${encodeURIComponent(selectedItem.stableCode)}`}
           onArchive={(item) => lifecycle(item, "archive")}
           onReactivate={(item) => lifecycle(item, "reactivate")}
           onDelete={(item) => openDialog("delete", item)}
@@ -268,7 +267,7 @@ export function AdminPartnerServiceCatalogueClient() {
           busy={busy}
            onBack={() => navigate({})}
           onAddCategory={() => openDialog("add-category")}
-          onAddService={() => openDialog("add-service")}
+          addServiceHref={`/admin/website-experience/pages/partner/service-catalogue/domains/${encodeURIComponent(activeDomain.id)}/services/new`}
           editDomainHref={`/admin/website-experience/pages/partner/service-catalogue/domains/${encodeURIComponent(activeDomain.id)}/edit`}
           onArchiveDomain={() => {
             const item = firstItemForDomain(items, activeDomain.id);
@@ -421,7 +420,7 @@ function DomainDetailView(props: {
   busy: string;
   onBack: () => void;
   onAddCategory: () => void;
-  onAddService: () => void;
+  addServiceHref: string;
   editDomainHref: string;
   onArchiveDomain: () => void;
   onEdit: (item: AdminPartnerServiceCatalogueItem) => void;
@@ -454,7 +453,11 @@ function DomainDetailView(props: {
             </div>
           </div>
           <div className="flex shrink-0 flex-wrap gap-2">
-            <button type="button" disabled={!props.canManage} onClick={props.onAddService} className="premiumButton primary"><Plus size={16} /> Add Service</button>
+            {props.canManage ? (
+              <Link href={props.addServiceHref} className="premiumButton primary"><Plus size={16} /> Add Service</Link>
+            ) : (
+              <button type="button" disabled className="premiumButton primary"><Plus size={16} /> Add Service</button>
+            )}
             {props.canManage ? (
               <Link href={props.editDomainHref} className="premiumButton secondary"><FilePenLine size={16} /> Edit Domain</Link>
             ) : (
@@ -562,7 +565,8 @@ function ServiceFocusedView(props: {
   busy: string;
   onBack: () => void;
   onEdit: (item: AdminPartnerServiceCatalogueItem) => void;
-  onAddSubService: (item: AdminPartnerServiceCatalogueItem) => void;
+  editServiceHref: string;
+  addSubServiceHref: string;
   onArchive: (item: AdminPartnerServiceCatalogueItem) => void;
   onReactivate: (item: AdminPartnerServiceCatalogueItem) => void;
   onDelete: (item: AdminPartnerServiceCatalogueItem) => void;
@@ -580,14 +584,23 @@ function ServiceFocusedView(props: {
             <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">{props.item.shortDescription}</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button type="button" disabled={!props.canManage} onClick={() => props.onEdit(props.item)} className="premiumButton primary"><FilePenLine size={16} /> Edit {titleKind(kind)}</button>
-            {kind !== "sub-service" ? <button type="button" disabled={!props.canManage} onClick={() => props.onAddSubService(props.item)} className="premiumButton secondary"><Plus size={16} /> Add Sub-service</button> : null}
-            {props.item.status === "archived" ? (
-              <button type="button" disabled={!props.canManage || props.busy !== ""} onClick={() => props.onReactivate(props.item)} className="premiumButton secondary"><RotateCcw size={16} /> Reactivate</button>
+            {props.canManage && kind !== "category" ? (
+              <Link href={props.editServiceHref} className="premiumButton primary"><FilePenLine size={16} /> Edit Service</Link>
             ) : (
-              <button type="button" disabled={!props.canManage || props.busy !== ""} onClick={() => props.onArchive(props.item)} className="premiumButton danger"><Archive size={16} /> Archive</button>
+              <button type="button" disabled={!props.canManage} onClick={() => props.onEdit(props.item)} className="premiumButton primary"><FilePenLine size={16} /> Edit {titleKind(kind)}</button>
             )}
-            <button type="button" disabled={!props.canManage || !canDeleteDraft(props.item, children.map((child) => ({ item: child, kind: itemKind(child, props.allDomainItems), depth: 1, parentLabel: props.item.name, children: [] }))) || props.busy !== ""} onClick={() => props.onDelete(props.item)} className="premiumButton danger"><Trash2 size={16} /> Safe Delete</button>
+            <details className="relative">
+              <summary className="premiumButton secondary cursor-pointer list-none">More Actions</summary>
+              <div className="absolute right-0 z-20 mt-2 w-52 rounded-xl border border-sky-300/15 bg-[#07111f] p-2 shadow-2xl shadow-black/40">
+                {kind !== "sub-service" && props.canManage ? <Link href={props.addSubServiceHref} className="block rounded-lg px-3 py-2 text-sm font-bold text-slate-200 hover:bg-sky-400/10 focus:outline-none focus:ring-2 focus:ring-sky-300">Add Sub-service</Link> : null}
+                {props.item.status === "archived" ? (
+                  <button type="button" disabled={!props.canManage || props.busy !== ""} onClick={() => props.onReactivate(props.item)} className="w-full rounded-lg px-3 py-2 text-left text-sm font-bold text-slate-200 hover:bg-sky-400/10 focus:outline-none focus:ring-2 focus:ring-sky-300 disabled:cursor-not-allowed disabled:opacity-50">Reactivate</button>
+                ) : (
+                  <button type="button" disabled={!props.canManage || props.busy !== ""} onClick={() => props.onArchive(props.item)} className="w-full rounded-lg px-3 py-2 text-left text-sm font-bold text-orange-100 hover:bg-orange-400/10 focus:outline-none focus:ring-2 focus:ring-orange-200 disabled:cursor-not-allowed disabled:opacity-50">Start Archive</button>
+                )}
+                <button type="button" disabled={!props.canManage || !canDeleteDraft(props.item, children.map((child) => ({ item: child, kind: itemKind(child, props.allDomainItems), depth: 1, parentLabel: props.item.name, children: [] }))) || props.busy !== ""} onClick={() => props.onDelete(props.item)} className="w-full rounded-lg px-3 py-2 text-left text-sm font-bold text-orange-100 hover:bg-orange-400/10 focus:outline-none focus:ring-2 focus:ring-orange-200 disabled:cursor-not-allowed disabled:opacity-50">Delete Draft</button>
+              </div>
+            </details>
           </div>
         </div>
       </div>
@@ -596,35 +609,33 @@ function ServiceFocusedView(props: {
         <h4 className="text-xl font-black text-sky-100">Service Details</h4>
         <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           <Detail label="Type" value={titleKind(kind)} />
-          <Detail label="Status" value={props.item.status} />
-          <Detail label="Parent" value={props.item.parentCode ? props.allDomainItems.find((item) => item.stableCode === props.item.parentCode)?.name ?? props.item.parentCode : props.domain.title} />
+          <Detail label="Status" value={itemStatusLabel(props.item)} />
+          <Detail label="Parent" value={props.item.parentCode ? props.allDomainItems.find((item) => item.stableCode === props.item.parentCode)?.name ?? props.domain.title : props.domain.title} />
           <Detail label="Countries" value={props.item.countries.join(", ") || "All configured"} />
           <Detail label="Eligibility" value={`${props.item.individualAllowed ? "Individual" : ""}${props.item.individualAllowed && props.item.organizationAllowed ? " / " : ""}${props.item.organizationAllowed ? "Organization" : ""}` || "Not configured"} />
-          <Detail label="Application selectable" value={props.item.applicationSelectable ? "Selectable" : "Not selectable"} />
-          <Detail label="Verification Profile" value={props.item.verificationProfileKey || "None"} />
-          <Detail label="Capabilities" value={props.item.capabilities.join(", ") || "None"} />
-          <Detail label="Aliases / Search Terms" value={props.item.aliases.join(", ") || "None"} />
+          <Detail label="Application availability" value={props.item.applicationSelectable ? "Available" : "Not available"} />
+          <Detail label="Search terms" value={props.item.aliases.join(", ") || "None"} />
         </div>
       </section>
 
       <section className="rounded-2xl border border-white/10 bg-[#0b1628] p-4 shadow-xl shadow-black/20">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <h4 className="text-xl font-black text-orange-100">Sub-services</h4>
-          {kind !== "sub-service" ? <button type="button" disabled={!props.canManage} onClick={() => props.onAddSubService(props.item)} className="premiumButton primary"><Plus size={16} /> Add Sub-service</button> : null}
+          {kind !== "sub-service" && props.canManage ? <Link href={props.addSubServiceHref} className="premiumButton primary"><Plus size={16} /> Add Sub-service</Link> : null}
         </div>
-        {children.length === 0 ? <Empty label="No Sub-services are configured for this item." /> : (
+        {children.length === 0 ? <Empty label="No sub-services have been added for this item." /> : (
           <div className="mt-4 space-y-3">
             {children.map((child) => (
-              <article key={child.stableCode} className="rounded-2xl border border-white/10 bg-[#07111f] p-4">
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                  <div>
-                    <StatusChip label={child.status} tone={child.status === "active" ? "cyan" : child.status === "archived" ? "orange" : "slate"} />
-                    <h5 className="mt-2 text-base font-black text-slate-100">{child.name}</h5>
-                    <p className="mt-1 text-sm text-slate-400">{child.shortDescription}</p>
-                  </div>
-                  <button type="button" disabled={!props.canManage} onClick={() => props.onEdit(child)} className="premiumButton compact secondary"><FilePenLine size={14} /> Edit Sub-service</button>
-                </div>
-              </article>
+              <Link key={child.stableCode} href={`/admin/website-experience/pages/partner/service-catalogue/services/${encodeURIComponent(child.stableCode)}/edit`} className="flex w-full flex-col gap-3 rounded-xl border border-white/10 bg-[#07111f] p-3 text-left transition hover:border-sky-300/30 hover:bg-[#10213b] focus:outline-none focus:ring-2 focus:ring-sky-300 lg:flex-row lg:items-center lg:justify-between">
+                <span>
+                  <span className="block text-base font-black text-slate-100">{child.name}</span>
+                  <span className="mt-1 block text-sm text-slate-400">{child.shortDescription}</span>
+                </span>
+                <span className="flex shrink-0 items-center gap-3">
+                  <StatusChip label={itemStatusLabel(child)} tone={itemStatusTone(child)} />
+                  <ChevronRight className="h-4 w-4 text-sky-200" />
+                </span>
+              </Link>
             ))}
           </div>
         )}
