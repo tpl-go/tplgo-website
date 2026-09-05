@@ -16,7 +16,6 @@ import {
   ClipboardCheck,
   FileCheck2,
   HelpCircle,
-  ListChecks,
   Loader2,
   LogOut,
   MapPin,
@@ -1386,6 +1385,11 @@ export default function PartnerApplicationWorkspaceClient({
           </section>
           <HelpPanel
             activeStep={activeStep}
+            verificationSummary={activeStep === "documents_compliance" ? (
+              <VerificationSummaryBody
+                requirements={activeBundle?.requirements ?? (qaPreviewEnabled ? previewRequirementsForSelectedServices(servicesForm.selectedServiceCodes, serviceCatalogueState.items) : [])}
+              />
+            ) : null}
             servicesSummary={activeStep === "services" ? (
               <SelectedServicesSummary
                 form={servicesForm}
@@ -2637,12 +2641,14 @@ function TopProgress({
   );
 }
 
-function HelpPanel({ activeStep, servicesSummary }: { activeStep: WorkspaceStepId; servicesSummary?: ReactNode }) {
+function HelpPanel({ activeStep, servicesSummary, verificationSummary }: { activeStep: WorkspaceStepId; servicesSummary?: ReactNode; verificationSummary?: ReactNode }) {
   return (
     <aside className="hidden xl:block">
       <div className="sticky top-28 rounded-2xl border border-white/10 bg-[#171a20] p-5 shadow-2xl">
         {activeStep === "services" && servicesSummary ? (
           servicesSummary
+        ) : activeStep === "documents_compliance" && verificationSummary ? (
+          verificationSummary
         ) : (
           <>
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#f97316]/12 text-[#fb923c]">
@@ -2836,8 +2842,6 @@ function VerificationComplianceStep({
       : "Start verification";
   const isChecklistReady = requirements.length > 0;
   const selectedServicesSummary = getServicesHeadline(selectedServices);
-  const nextRequiredCheck = requiredNow.find((item) => !requirementReadyForUiProgression(item.status));
-  const nextSectionAction = nextRequiredCheck ? `Upload your ${nextRequiredCheck.title}` : "Upload your next required document";
 
   const updateSectionSelection = (nextSectionId: string) => {
     setSelectedSectionId(nextSectionId);
@@ -2943,19 +2947,19 @@ function VerificationComplianceStep({
         </div>
       </div>
 
-      <div className="grid gap-5 p-5 xl:grid-cols-[minmax(0,1fr)_300px] xl:items-start">
-        <div className="grid gap-5">
+      <div className="p-5">
+        <div className="grid gap-4">
           {qaPreviewEnabled ? (
             <div className="rounded-lg border border-[#f97316]/30 bg-[#f97316]/10 p-2 text-xs font-black leading-5 text-[#fed7aa]">
               Preview example — Fictional data only. No documents are uploaded or verified.
             </div>
           ) : null}
 
-          <section className="rounded-xl border border-white/10 bg-[#11141a] p-4" aria-labelledby="selected-verification-services-heading">
-            <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
-              <div>
-                <h2 id="selected-verification-services-heading" className="text-lg font-black text-white">Your selected services</h2>
-                <p className="mt-1 text-sm font-semibold leading-6 text-slate-300">{selectedServicesSummary}</p>
+          <section className="rounded-xl border border-white/10 bg-[#11141a] p-3" aria-labelledby="selected-verification-services-heading">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <h2 id="selected-verification-services-heading" className="text-sm font-black text-white">Your selected services</h2>
+                <p className="mt-1 break-words text-sm font-semibold leading-5 text-slate-300">{selectedServicesSummary}</p>
               </div>
               <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
                 <button
@@ -2964,14 +2968,14 @@ function VerificationComplianceStep({
                   className="inline-flex h-10 items-center justify-center rounded-xl border border-white/10 px-3 text-xs font-black text-slate-200 outline-none focus-visible:ring-2 focus-visible:ring-[#38bdf8]"
                   aria-expanded={selectedServicesExpanded}
                 >
-                  View selected services
+                  View services
                 </button>
                 <button
                   type="button"
                   onClick={onEditSelectedServices}
                   className="inline-flex h-10 items-center justify-center rounded-xl border border-[#f97316]/40 px-3 text-xs font-black text-[#fed7aa] outline-none focus-visible:ring-2 focus-visible:ring-[#38bdf8]"
                 >
-                  Edit services
+                  Edit
                 </button>
               </div>
             </div>
@@ -2987,27 +2991,22 @@ function VerificationComplianceStep({
           </section>
 
           <section className="rounded-xl border border-white/10 bg-[#11141a] p-4 xl:hidden" aria-labelledby="mobile-verification-summary-heading">
-            <h2 id="mobile-verification-summary-heading" className="text-sm font-black text-white">Your progress</h2>
+            <h2 id="mobile-verification-summary-heading" className="sr-only">Your progress</h2>
             <VerificationSummaryBody
               requirements={requirements}
-              currentSectionId={selectedSection?.id ?? ""}
-              onSelectSection={updateSectionSelection}
-              groups={requirementGroups}
             />
-            <p className="mt-3 text-xs font-semibold leading-5 text-amber-200">
-              {isRequiredNowComplete ? "Required checks completed" : `Next step: ${nextSectionAction}`}
-            </p>
             <p className="mt-1 text-xs font-semibold leading-5 text-emerald-200">
               {isRequiredNowComplete ? "Your documents are ready for review. Additional documents may still be needed before individual services go live." : null}
             </p>
           </section>
 
-          <div className="rounded-xl border border-white/10 bg-[#11141a] p-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
+          <div className="rounded-xl border border-white/10 bg-[#11141a] p-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
                 <h2 className="text-sm font-black text-white">What you need to complete</h2>
-                <p className="mt-1 text-xs font-semibold leading-5 text-slate-300">{requiredChecksRemaining} checks required now</p>
-                <p className="mt-1 text-xs font-semibold leading-5 text-slate-300">{beforeActivationRemaining} checks required before your services go live</p>
+                <p className="mt-1 text-sm font-semibold leading-5 text-slate-300">
+                  {requiredChecksRemaining} checks required now · {beforeActivationRemaining} before services go live
+                </p>
               </div>
               <button
                 type="button"
@@ -3021,7 +3020,7 @@ function VerificationComplianceStep({
               </button>
             </div>
             <p className="mt-2 text-xs font-black uppercase tracking-[0.1em] text-[#fed7aa]">
-              {isRequiredNowComplete ? "Required checks completed" : `Next step: ${nextSectionAction}`}
+              {isRequiredNowComplete ? "Required checks completed" : null}
             </p>
             <p className="mt-1 text-xs font-semibold leading-5 text-emerald-200">
               {isRequiredNowComplete ? "Your documents are ready for review. Additional documents may still be needed before individual services go live." : null}
@@ -3033,8 +3032,7 @@ function VerificationComplianceStep({
 
           <section className="rounded-xl border border-white/10 bg-[#11141a] p-4" aria-label="Verification checklist">
             <h2 className="text-sm font-black text-white">Verification checklist</h2>
-            <p className="mt-1 text-xs font-semibold text-slate-400">Open one section at a time. Complete each check in order.</p>
-            <div className="mt-4 space-y-3">
+            <div className="mt-3 overflow-hidden rounded-xl border border-white/10">
               {requirementGroups.map((group) => {
                 const isActiveGroup = selectedSection?.id === group.id;
                 const sectionIndex = getSectionRequirementIndex(group);
@@ -3043,7 +3041,7 @@ function VerificationComplianceStep({
                 const isSectionCompleted = group.requirements.every((requirement) => requirementReadyForUiProgression(requirement.status));
                 const sectionStatus = isSectionCompleted ? "Complete" : hasRequiredNow ? "Action required" : "In progress";
                 return (
-                  <article key={group.id} className={`rounded-xl border ${isActiveGroup ? "border-[#f97316]/45 bg-[#f97316]/8" : "border-white/10 bg-[#0f1217]"}`}>
+                  <article key={group.id} className={`${isActiveGroup ? "bg-[#f97316]/8" : "bg-[#0f1217]"} border-b border-white/10 last:border-b-0`}>
                     <button
                       type="button"
                       ref={(button) => {
@@ -3051,32 +3049,22 @@ function VerificationComplianceStep({
                       }}
                       data-verification-section={group.id}
                       onClick={() => updateSectionSelection(group.id)}
-                      className="w-full rounded-xl p-3 text-left focus-visible:ring-2 focus-visible:ring-[#38bdf8]"
+                      className="flex min-h-14 w-full items-center justify-between gap-3 p-3 text-left focus-visible:ring-2 focus-visible:ring-[#38bdf8]"
                       aria-expanded={isActiveGroup}
                     >
-                      <div className="flex items-start gap-3">
-                        <span className="mt-0.5 rounded-md bg-[#f97316]/12 p-2 text-[#f97316]" aria-hidden="true">
-                          <ListChecks size={16} />
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <p className="flex items-center gap-2 text-sm font-black text-white">
-                            <span>{sectionTitle(group)}</span>
-                            {isActiveGroup ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                          </p>
-                          <p className="mt-1 text-xs font-semibold leading-5 text-slate-300">{sectionShortDescription(group)}</p>
-                          <div className="mt-2 flex flex-wrap items-center gap-2">
-                            <span className="rounded-full border px-2 py-0.5 text-[11px] font-black border-[#f97316]/30 bg-[#f97316]/10 text-[#fed7aa]">
-                              {statusLabelForProgress(group)}
-                            </span>
-                            <span className="rounded-full border border-white/10 bg-[#151922] px-2 py-0.5 text-[11px] font-black text-slate-300">{sectionStatus}</span>
-                          </div>
-                        </div>
+                      <div className="min-w-0">
+                        <p className="break-words text-sm font-black text-white">{sectionTitle(group)}</p>
+                        <p className="mt-1 text-xs font-semibold leading-4 text-slate-400">{statusLabelForProgress(group)}</p>
                       </div>
+                      <span className="flex shrink-0 items-center gap-2 text-xs font-black text-slate-300">
+                        {sectionStatus}
+                        {isActiveGroup ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                      </span>
                     </button>
                     {isActiveGroup ? (
                       <div className="border-t border-white/10 p-3">
                         {sectionRequirement ? (
-                          <div className="rounded-xl border border-[#f97316]/25 bg-[#171a20] p-3">
+                          <div className="rounded-xl border border-[#f97316]/25 bg-[#171a20] p-4">
                             <div className="mb-3 flex flex-col gap-1">
                               <span className="text-xs font-black text-[#fed7aa]">
                                 Check {sectionIndex + 1} of {group.requirements.length}
@@ -3085,9 +3073,6 @@ function VerificationComplianceStep({
                                 {sectionRequirement.title}
                               </h3>
                               <p className="text-xs font-semibold leading-5 text-slate-300">{sectionRequirement.description}</p>
-                              <p className="text-xs font-semibold leading-5 text-slate-500">
-                                {requirementAppliesTo(sectionRequirement, bundle?.serviceScopes ?? [])}
-                              </p>
                               <p className="text-xs font-semibold leading-5 text-slate-500">{sharedEvidenceLabel(sectionRequirement, requirements, bundle?.serviceScopes ?? [], selectedServices)}</p>
                             <div className="mt-2 flex flex-wrap items-center gap-2">
                                 <StatusLabel label={statusForRequirement(sectionRequirement)} status={sectionRequirement.status} />
@@ -3154,22 +3139,6 @@ function VerificationComplianceStep({
           </section>
         </div>
 
-        <aside className="hidden xl:block">
-          <div className="sticky top-28 rounded-xl border border-white/10 bg-[#11141a] p-4">
-            <h2 className="text-sm font-black text-white">Your progress</h2>
-            <VerificationSummaryBody
-              requirements={requirements}
-              currentSectionId={selectedSection?.id ?? ""}
-              onSelectSection={updateSectionSelection}
-              groups={requirementGroups}
-            />
-            <p className="mt-3 text-xs font-semibold leading-5 text-slate-300">
-              {isRequiredNowComplete
-                ? "Your documents are ready for review. Additional documents may still be needed before individual services go live."
-                : `${nextSectionAction} to continue`}
-            </p>
-          </div>
-        </aside>
       </div>
     </div>
   );
@@ -3652,14 +3621,6 @@ function sectionTitle(group: VerificationRequirementGroup): string {
   return group.title;
 }
 
-function sectionShortDescription(group: VerificationRequirementGroup): string {
-  if (group.id === "business-requirements") return "Checks shared by your Partner business profile.";
-  if (group.id === "representative-requirements") return "Checks for the person managing this application.";
-  if (group.id === "jurisdiction-requirements") return "Checks based on your selected country and locations.";
-  if (group.id === "additional-review") return "Items for manual review when your profile needs it.";
-  return group.description;
-}
-
 type VerificationSelectedService = { id: string; code: string; label: string };
 
 type VerificationRequirementGroup = {
@@ -3783,12 +3744,6 @@ function requirementGroupTitle(requirement: PartnerRequirement): string {
   return "Service-specific check";
 }
 
-function requirementAppliesTo(requirement: PartnerRequirement, scopes: PartnerOrganizationBundle["serviceScopes"]): string {
-  if (!requirement.serviceScopeId) return requirementGroupTitle(requirement);
-  const scope = scopes.find((item) => item.id === requirement.serviceScopeId);
-  return scope ? `Used for ${scope.serviceLabel}` : "Used for selected service";
-}
-
 function sharedEvidenceLabel(requirement: PartnerRequirement, requirements: PartnerRequirement[], scopes: PartnerOrganizationBundle["serviceScopes"], selectedServices: VerificationSelectedService[]): string {
   const labels = applicableServiceLabels(requirement, requirements, scopes, selectedServices);
   if (labels.length <= 1) return "Collected once for this requirement.";
@@ -3815,7 +3770,7 @@ function formatHumanList(values: string[]): string {
 function serviceRequirementDescription(requirements: PartnerRequirement[], scopes: PartnerOrganizationBundle["serviceScopes"], catalogueItems: PartnerServiceCatalogueItem[]): string {
   const labels = [...new Set(requirements.map((requirement) => scopes.find((scope) => scope.id === requirement.serviceScopeId)?.serviceLabel).filter(Boolean))];
   if (labels.length) return `Checks for ${labels.slice(0, 3).join(", ")}${labels.length > 3 ? " and other selected services" : ""}.`;
-  return catalogueItems.length ? "Checks for selected services." : "Checks generated from your selected services.";
+  return catalogueItems.length ? "Selected service check." : "Selected service check.";
 }
 
 function verificationStatusLabel(status: string): string {
@@ -3847,14 +3802,8 @@ function requirementStageLabel(requirement: PartnerRequirement): string {
 
 function VerificationSummaryBody({
   requirements,
-  groups,
-  currentSectionId,
-  onSelectSection,
 }: {
   requirements: PartnerRequirement[];
-  groups: VerificationRequirementGroup[];
-  currentSectionId: string;
-  onSelectSection: (sectionId: string) => void;
 }) {
   const requiredNow = requirements.filter((item) => requirementStage(item) === "REQUIRED_NOW");
   const beforeActivation = requirements.filter((item) => requirementStage(item) === "BEFORE_ACTIVATION");
@@ -3864,36 +3813,28 @@ function VerificationSummaryBody({
   const nextRequired = requiredNow.find((item) => !requirementReadyForUiProgression(item.status));
   const nextSectionAction = nextRequired ? `Upload your ${nextRequired.title}` : "Upload your next required document";
   return (
-    <div className="mt-3 space-y-3">
-      <div className="rounded-xl border border-white/10 bg-[#0f1217] p-3">
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-xs font-black uppercase tracking-[0.12em] text-slate-400">Required now</span>
-          <span className="text-sm font-black text-white">{ready.length} of {requiredNow.length}</span>
-        </div>
-        <div className="mt-2 flex items-center justify-between text-sm">
-          <span className="text-xs font-black uppercase tracking-[0.12em] text-slate-400">Before services go live</span>
-          <span className="text-sm font-black text-white">{beforeActivationReady.length} of {beforeActivation.length}</span>
-        </div>
-        <p className="mt-2 text-xs font-black uppercase tracking-[0.1em] text-[#fed7aa]">
-          Next step: {nextSectionAction}
-        </p>
-      </div>
-      <div className="h-2 rounded-full bg-white/10">
+    <div data-step5-progress-summary="true" className="space-y-3">
+      <h2 className="text-sm font-black text-white">Your progress</h2>
+      <div className="h-2 rounded-full bg-white/10" aria-label={`${ready.length} of ${requiredNow.length} required checks completed`}>
         <div className="h-full rounded-full bg-[linear-gradient(135deg,#38bdf8,#22c55e)]" style={{ width: `${progress}%` }} />
       </div>
-      <div className="space-y-2">
-        {groups.map((group) => (
-          <button
-            type="button"
-            key={group.id}
-            onClick={() => onSelectSection(group.id)}
-            className={`w-full rounded-xl border px-3 py-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-[#38bdf8] ${currentSectionId === group.id ? "border-[#f97316]/45 bg-[#f97316]/10" : "border-white/10 bg-[#0f1217]"}`}
-          >
-            <span className="block text-xs font-black text-white">{group.title}</span>
-            <span className="mt-1 block text-[11px] font-semibold text-slate-400">{sectionOptionLabel(group.title, group.requirements).replace(`${group.title} - `, "")}</span>
-          </button>
-        ))}
+      <div className="rounded-xl border border-white/10 bg-[#0f1217] p-3">
+        <p className="text-xs font-black uppercase tracking-[0.12em] text-slate-400">Required now</p>
+        <p className="mt-1 text-sm font-black text-white">{ready.length} of {requiredNow.length} completed</p>
       </div>
+      <div className="rounded-xl border border-white/10 bg-[#0f1217] p-3">
+        <p className="text-xs font-black uppercase tracking-[0.12em] text-slate-400">Before services go live</p>
+        <p className="mt-1 text-sm font-black text-white">{beforeActivationReady.length} of {beforeActivation.length} completed</p>
+      </div>
+      <div className="rounded-xl border border-[#f97316]/25 bg-[#f97316]/10 p-3">
+        <p className="text-xs font-black uppercase tracking-[0.12em] text-[#fed7aa]">Next action</p>
+        <p className="mt-1 break-words text-sm font-bold leading-5 text-white">{nextSectionAction}</p>
+      </div>
+      {!nextRequired && requiredNow.length ? (
+        <p className="text-xs font-semibold leading-5 text-emerald-200">
+          Your documents are ready for review. Additional documents may still be needed before individual services go live.
+        </p>
+      ) : null}
     </div>
   );
 }

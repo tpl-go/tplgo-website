@@ -48,13 +48,14 @@ test("Step 5 keeps QA preview clearly isolated from normal runtime behavior", ()
 test("Step 5 guides verification by selected services and section navigation", () => {
   assert.match(workspaceSource, /Your selected services/);
   assert.match(workspaceSource, /Complete the checks needed for your business and selected services\./);
-  assert.match(workspaceSource, /Edit services/);
+  assert.match(workspaceSource, /View services/);
+  assert.match(workspaceSource, />\s*Edit\s*</);
   assert.match(workspaceSource, /Verification checklist/);
   assert.match(workspaceSource, /Start verification|Continue verification|Continue to Payout & Tax/);
   assert.match(workspaceSource, /Previous check/);
   assert.match(workspaceSource, /Next check/);
   assert.match(workspaceSource, /selectedVerificationServices/);
-  assert.match(workspaceSource, /View selected services/);
+  assert.doesNotMatch(workspaceSource, /View selected services/);
 });
 
 test("Step 5 exposes minimum-onboarding stage labels and shared evidence presentation", () => {
@@ -69,13 +70,31 @@ test("Step 5 exposes minimum-onboarding stage labels and shared evidence present
 
 test("Step 5 renders desktop and mobile verification summaries", () => {
   assert.match(workspaceSource, /VerificationSummaryBody/);
+  assert.match(workspaceSource, /verificationSummary=\{activeStep === "documents_compliance"/);
+  assert.match(workspaceSource, /activeStep === "documents_compliance" && verificationSummary/);
+  assert.match(workspaceSource, /data-step5-progress-summary="true"/);
   assert.match(workspaceSource, /mobile-verification-summary-heading/);
   assert.match(workspaceSource, /Required now/);
   assert.match(workspaceSource, /Before services go live/);
+  assert.match(workspaceSource, /Next action/);
   assert.doesNotMatch(workspaceSource, /VerificationMetric/);
-  assert.match(workspaceSource, /onSelectSection/);
   assert.match(workspaceSource, /Your progress/);
   assert.match(workspaceSource, /Continue to Payout & Tax/);
+});
+
+test("Step 5 width optimization removes the internal desktop summary grid", () => {
+  assert.doesNotMatch(workspaceSource, /xl:grid-cols-\[minmax\(0,1fr\)_300px\]/);
+  assert.match(workspaceSource, /<div className="p-5">\s*<div className="grid gap-4">/);
+  assert.doesNotMatch(workspaceSource, /<h2 className="text-sm font-black text-white">Your progress<\/h2>\s*<VerificationSummaryBody[\s\S]*?groups=\{requirementGroups\}/);
+  assert.doesNotMatch(workspaceSource, /Checks for selected services\./);
+});
+
+test("Steps 1 through 4 keep their right-panel guidance behavior", () => {
+  assert.match(workspaceSource, /activeStep === "services" && servicesSummary/);
+  assert.match(workspaceSource, /activeStep === "account_contact"/);
+  assert.match(workspaceSource, /activeStep === "business_identity"/);
+  assert.match(workspaceSource, /activeStep === "business_location"/);
+  assert.match(workspaceSource, /Why we need this/);
 });
 
 test("Save Draft message layer uses a portal modal above sticky UI", () => {
