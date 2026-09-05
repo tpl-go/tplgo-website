@@ -66,7 +66,10 @@ export type PartnerRequirement = {
   priority: "MANDATORY" | "CONDITIONAL" | "RECOMMENDED" | "OPTIONAL";
   status: PartnerVerificationStatus;
   expires?: boolean;
-  metadata?: Record<string, unknown>;
+  metadata?: Record<string, unknown> & {
+    requirementStage?: "REQUIRED_NOW" | "BEFORE_ACTIVATION" | "IF_APPLICABLE";
+    applicableServiceLabels?: string[];
+  };
 };
 
 export type PartnerDocument = {

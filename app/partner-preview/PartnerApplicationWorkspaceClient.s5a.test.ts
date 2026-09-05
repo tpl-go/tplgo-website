@@ -40,3 +40,40 @@ test("Step 5 keeps QA preview clearly isolated from normal runtime behavior", ()
   assert.match(workspaceSource, /It does not upload documents or verify identity\./);
   assert.match(workspaceSource, /qaPreviewEnabled/);
 });
+
+test("Step 5 guides verification by selected services and section navigation", () => {
+  assert.match(workspaceSource, /Verification for your selected services/);
+  assert.match(workspaceSource, /Complete the minimum checks needed for your business and services\./);
+  assert.match(workspaceSource, /Edit selected services/);
+  assert.match(workspaceSource, /Select a verification section/);
+  assert.match(workspaceSource, /Previous Section/);
+  assert.match(workspaceSource, /Next Section/);
+  assert.match(workspaceSource, /selectedVerificationServices/);
+});
+
+test("Step 5 exposes minimum-onboarding stage labels and shared evidence presentation", () => {
+  assert.match(workspaceSource, /Required now/);
+  assert.match(workspaceSource, /Required before activation/);
+  assert.match(workspaceSource, /Only if applicable/);
+  assert.match(workspaceSource, /Used for/);
+  assert.match(workspaceSource, /Collected once for this requirement\./);
+  assert.match(workspaceSource, /requirementStage/);
+});
+
+test("Step 5 renders desktop and mobile verification summaries", () => {
+  assert.match(workspaceSource, /Verification Summary/);
+  assert.match(workspaceSource, /mobile-verification-summary-heading/);
+  assert.match(workspaceSource, /Required now/);
+  assert.match(workspaceSource, /Before activation/);
+  assert.match(workspaceSource, /If applicable/);
+  assert.match(workspaceSource, /onSelectSection/);
+});
+
+test("Save Draft message layer uses a portal modal above sticky UI", () => {
+  assert.match(workspaceSource, /createPortal/);
+  assert.match(workspaceSource, /data-save-draft-modal-layer/);
+  assert.match(workspaceSource, /aria-modal="true"/);
+  assert.match(workspaceSource, /document\.body\.style\.overflow = "hidden"/);
+  assert.match(workspaceSource, /z-\[80\]/);
+  assert.match(workspaceSource, /Escape/);
+});

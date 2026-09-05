@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -1354,6 +1355,7 @@ export default function PartnerApplicationWorkspaceClient({
                 qaPreviewEnabled={qaPreviewEnabled}
                 uploadingRequirementId={uploadingRequirementId}
                 onUploadEvidence={uploadEvidence}
+                onEditSelectedServices={() => setActiveStep("services")}
               />
             ) : activeStep === "payout_tax" ? (
               <PayoutTaxPlaceholder />
@@ -2704,15 +2706,36 @@ function QaPreviewBar({ selectedState, onChange, onReset }: { selectedState: Par
 }
 
 function WorkspaceToast({ tone, text, onDismiss }: { tone: "success" | "info" | "warning" | "error"; text: string; onDismiss: () => void }) {
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const timer = window.setTimeout(() => closeButtonRef.current?.focus(), 0);
+    return () => {
+      window.clearTimeout(timer);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") onDismiss();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onDismiss]);
   const toneClass = tone === "success" ? "border-emerald-500/40 text-emerald-100" : tone === "error" ? "border-red-500/40 text-red-100" : tone === "warning" ? "border-[#f97316]/50 text-[#fed7aa]" : "border-sky-500/40 text-sky-100";
-  return (
-    <div role="status" aria-live="polite" className={`fixed left-1/2 top-24 z-50 w-[min(92vw,420px)] -translate-x-1/2 rounded-xl border bg-[#171a20] p-3 shadow-2xl ${toneClass}`}>
-      <div className="flex items-start gap-3">
-        <span className="mt-0.5 h-5 w-1 rounded-full bg-[#f97316]" />
-        <p className="min-w-0 flex-1 text-sm font-bold">{text}</p>
-        <button type="button" onClick={onDismiss} className="text-xs font-black text-slate-400">Dismiss</button>
+  if (typeof document === "undefined") return null;
+  return createPortal(
+    <div data-save-draft-modal-layer="true" className="fixed inset-0 z-[80] flex items-center justify-center bg-black/55 px-4 py-6 backdrop-blur-sm" aria-modal="true" role="dialog" aria-label="Application message">
+      <div role="status" aria-live="polite" className={`w-[min(92vw,420px)] rounded-xl border bg-[#171a20] p-4 shadow-2xl ${toneClass}`}>
+        <div className="flex items-start gap-3">
+          <span className="mt-0.5 h-5 w-1 rounded-full bg-[#f97316]" />
+          <p className="min-w-0 flex-1 text-sm font-bold">{text}</p>
+          <button ref={closeButtonRef} type="button" onClick={onDismiss} className="rounded-md px-2 py-1 text-xs font-black text-slate-300 outline-none ring-offset-2 ring-offset-[#171a20] focus-visible:ring-2 focus-visible:ring-[#38bdf8]">Dismiss</button>
+        </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -2723,6 +2746,7 @@ function VerificationComplianceStep({
   qaPreviewEnabled,
   uploadingRequirementId,
   onUploadEvidence,
+  onEditSelectedServices,
 }: {
   bundle: PartnerOrganizationBundle | null;
   selectedServiceCodes: string[];
@@ -2730,17 +2754,19 @@ function VerificationComplianceStep({
   qaPreviewEnabled: boolean;
   uploadingRequirementId: string | null;
   onUploadEvidence: (requirement: PartnerRequirement, file: File) => void;
+  onEditSelectedServices: () => void;
 }) {
   const requirements = bundle?.requirements ?? previewRequirementsForSelectedServices(selectedServiceCodes, serviceCatalogueItems);
   const documents = bundle?.documents ?? [];
   const links = bundle?.links ?? [];
-  const requirementGroups = groupPartnerRequirements(requirements, bundle?.serviceScopes ?? [], serviceCatalogueItems);
-  const mandatory = requirements.filter((item) => item.priority === "MANDATORY" || item.priority === "CONDITIONAL");
-  const ready = mandatory.filter((item) => requirementReadyForUiProgression(item.status)).length;
-  const underReview = requirements.filter((item) => item.status === "SUBMITTED" || item.status === "UNDER_REVIEW").length;
-  const actionRequired = mandatory.length - ready;
-  const progressPercent = mandatory.length ? Math.round((ready / mandatory.length) * 100) : 0;
-  const serviceCount = new Set(requirements.map((item) => item.serviceScopeId).filter(Boolean)).size;
+  const selectedServices = selectedVerificationServices(selectedServiceCodes, bundle?.serviceScopes ?? [], serviceCatalogueItems);
+  const requirementGroups = groupPartnerRequirements(requirements, bundle?.serviceScopes ?? [], serviceCatalogueItems, selectedServices);
+  const [selectedSectionId, setSelectedSectionId] = useState<string>(requirementGroups[0]?.id ?? "business-requirements");
+  const selectedSection = requirementGroups.find((group) => group.id === selectedSectionId) ?? requirementGroups[0];
+  const sectionIndex = Math.max(0, requirementGroups.findIndex((group) => group.id === selectedSection?.id));
+  const requiredNow = requirements.filter((item) => requirementStage(item) === "REQUIRED_NOW");
+  const ready = requiredNow.filter((item) => requirementReadyForUiProgression(item.status)).length;
+  const actionRequired = requiredNow.length - ready;
 
   return (
     <div data-application-active-step="documents_compliance" className="rounded-2xl border border-white/10 bg-[#171a20] shadow-2xl">
@@ -2752,47 +2778,76 @@ function VerificationComplianceStep({
         </p>
       </div>
 
-      <div className="grid gap-5 p-5">
+      <div className="grid gap-5 p-5 xl:grid-cols-[minmax(0,1fr)_300px] xl:items-start">
+        <div className="grid gap-5">
         {qaPreviewEnabled ? (
           <div className="rounded-xl border border-[#f97316]/25 bg-[#f97316]/10 p-3 text-xs font-bold leading-5 text-[#fed7aa]">
-            Preview Example uses fictional requirement data only. It does not upload documents or verify identity.
+            Preview Example uses fictional requirement data only. It does not upload documents or verify identity. It never replaces the runtime catalogue.
           </div>
         ) : null}
 
-        <section className="rounded-xl border border-white/10 bg-[#11141a] p-4" aria-labelledby="verification-overview-heading">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <section className="rounded-xl border border-white/10 bg-[#11141a] p-4" aria-labelledby="selected-verification-services-heading">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <h2 id="verification-overview-heading" className="text-sm font-black text-white">Verification overview</h2>
-              <p className="mt-1 text-xs font-semibold text-slate-400">Uploaded evidence is reviewed by TPL GO. Uploaded does not mean verified.</p>
+              <h2 id="selected-verification-services-heading" className="text-lg font-black text-white">Verification for your selected services</h2>
+              <p className="mt-1 text-sm font-semibold leading-6 text-slate-300">Complete the minimum checks needed for your business and services.</p>
             </div>
-            <div className="grid gap-2 sm:grid-cols-4">
-              <VerificationMetric label="Progress" value={`${progressPercent}%`} />
-              <VerificationMetric label="Ready" value={`${ready}/${mandatory.length}`} />
-              <VerificationMetric label="Action required" value={String(Math.max(0, actionRequired))} tone={actionRequired ? "warning" : "success"} />
-              <VerificationMetric label="Under review" value={String(underReview)} />
-            </div>
+            <button type="button" onClick={onEditSelectedServices} className="inline-flex h-10 items-center justify-center rounded-xl border border-[#f97316]/40 px-3 text-xs font-black text-[#fed7aa] outline-none focus-visible:ring-2 focus-visible:ring-[#38bdf8]">
+              Edit selected services
+            </button>
           </div>
-          <div className="mt-4 h-2 rounded-full bg-white/10">
-            <div className="h-full rounded-full bg-[linear-gradient(135deg,#38bdf8,#22c55e)]" style={{ width: `${progressPercent}%` }} />
+          <div className="mt-4 flex flex-wrap gap-2">
+            {selectedServices.length ? selectedServices.map((service) => (
+              <span key={service.id} className="rounded-full border border-sky-400/25 bg-sky-400/10 px-3 py-1 text-xs font-black text-sky-100">{service.label}</span>
+            )) : (
+              <span className="rounded-full border border-white/10 bg-[#0f1217] px-3 py-1 text-xs font-black text-slate-300">No services selected</span>
+            )}
           </div>
-          <p className="mt-3 text-xs font-semibold text-slate-400">
-            {serviceCount ? `${serviceCount} selected service area${serviceCount === 1 ? "" : "s"} have service-specific checks.` : "Business checks are ready. Select services in Step 4 to calculate service checks."}
-          </p>
+          <p className="mt-3 text-xs font-semibold text-slate-400">{selectedServices.length} service{selectedServices.length === 1 ? "" : "s"} selected</p>
         </section>
 
-        {requirementGroups.map((group) => (
-          <section key={group.id} className="rounded-xl border border-white/10 bg-[#11141a] p-4" aria-labelledby={`${group.id}-heading`}>
+        <section className="rounded-xl border border-white/10 bg-[#11141a] p-4 xl:hidden" aria-labelledby="mobile-verification-summary-heading">
+          <h2 id="mobile-verification-summary-heading" className="text-sm font-black text-white">Verification Summary</h2>
+          <VerificationSummaryBody
+            selectedServices={selectedServices}
+            requirements={requirements}
+            currentSectionId={selectedSection?.id ?? ""}
+            onSelectSection={setSelectedSectionId}
+            groups={requirementGroups}
+          />
+        </section>
+
+        <section className="rounded-xl border border-white/10 bg-[#11141a] p-4" aria-labelledby="verification-section-select-heading">
+          <label id="verification-section-select-heading" htmlFor="verification-section-select" className="text-sm font-black text-white">Select a verification section</label>
+          <select
+            id="verification-section-select"
+            value={selectedSection?.id ?? ""}
+            onChange={(event) => setSelectedSectionId(event.target.value)}
+            className="mt-3 h-11 w-full rounded-xl border border-white/10 bg-[#0f1217] px-3 text-sm font-black text-white outline-none focus-visible:ring-2 focus-visible:ring-[#38bdf8]"
+          >
+            {requirementGroups.map((group) => (
+              <option key={group.id} value={group.id}>{group.optionLabel}</option>
+            ))}
+          </select>
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <button type="button" disabled={sectionIndex <= 0} onClick={() => setSelectedSectionId(requirementGroups[sectionIndex - 1]?.id ?? selectedSection?.id ?? "")} className="h-9 rounded-lg border border-white/10 px-3 text-xs font-black text-slate-300 disabled:cursor-not-allowed disabled:opacity-45">Previous Section</button>
+            <button type="button" disabled={sectionIndex >= requirementGroups.length - 1} onClick={() => setSelectedSectionId(requirementGroups[sectionIndex + 1]?.id ?? selectedSection?.id ?? "")} className="h-9 rounded-lg border border-white/10 px-3 text-xs font-black text-slate-300 disabled:cursor-not-allowed disabled:opacity-45">Next Section</button>
+          </div>
+        </section>
+
+        {selectedSection ? (
+          <section key={selectedSection.id} className="rounded-xl border border-white/10 bg-[#11141a] p-4" aria-labelledby={`${selectedSection.id}-heading`}>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <h2 id={`${group.id}-heading`} className="text-sm font-black text-white">{group.title}</h2>
-                <p className="mt-1 text-xs font-semibold text-slate-400">{group.description}</p>
+                <h2 id={`${selectedSection.id}-heading`} className="text-sm font-black text-white">{selectedSection.title}</h2>
+                <p className="mt-1 text-xs font-semibold text-slate-400">{selectedSection.description}</p>
               </div>
               <span className="w-fit rounded-full border border-white/10 bg-[#0f1217] px-3 py-1 text-xs font-black text-slate-300">
-                {group.requirements.length} item{group.requirements.length === 1 ? "" : "s"}
+                {selectedSection.requirements.length} item{selectedSection.requirements.length === 1 ? "" : "s"}
               </span>
             </div>
             <div className="mt-4 grid gap-3">
-              {group.requirements.map((requirement) => {
+              {selectedSection.requirements.map((requirement) => {
                 const linkedDocuments = documents.filter((document) => requirementLinkedDocument(requirement, document, links));
                 const status = verificationStatusLabel(requirement.status);
                 const uploadDisabled = qaPreviewEnabled || uploadingRequirementId === requirement.id || requirement.status === "VERIFIED" || requirement.status === "UNDER_REVIEW";
@@ -2803,13 +2858,15 @@ function VerificationComplianceStep({
                         <div className="flex flex-wrap items-center gap-2">
                           <h3 className="text-sm font-black text-white">{requirement.title}</h3>
                           <StatusLabel label={status} status={requirement.status} />
-                          <span className="rounded-full border border-white/10 bg-[#151922] px-2 py-0.5 text-[11px] font-black text-slate-400">{priorityLabel(requirement.priority)}</span>
+                          <span className="rounded-full border border-white/10 bg-[#151922] px-2 py-0.5 text-[11px] font-black text-slate-400">{requirementStageLabel(requirement)}</span>
                         </div>
                         <p className="mt-2 text-sm font-semibold leading-6 text-slate-300">{requirement.description}</p>
                         <p className="mt-2 text-xs font-semibold leading-5 text-slate-500">{requirementAppliesTo(requirement, bundle?.serviceScopes ?? [])}</p>
+                        <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">{sharedEvidenceLabel(requirement, requirements, bundle?.serviceScopes ?? [], selectedServices)}</p>
                         {requirement.metadata && requirement.metadata.missingProfile === true ? (
                           <p className="mt-2 rounded-lg border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-xs font-bold text-amber-100">Requirements being reviewed by TPL GO.</p>
                         ) : null}
+                        {requirement.expires ? <p className="mt-1 text-xs font-semibold text-slate-500">Issue and expiry information may be required.</p> : null}
                       </div>
                       <label className={`inline-flex h-10 shrink-0 items-center justify-center rounded-xl px-3 text-xs font-black ${uploadDisabled ? "cursor-not-allowed border border-white/10 bg-[#151922] text-slate-500" : "cursor-pointer border border-[#f97316]/40 bg-[#f97316]/10 text-[#fed7aa] hover:border-[#f97316]"}`}>
                         {uploadingRequirementId === requirement.id ? "Uploading..." : linkedDocuments.length ? "Replace evidence" : "Upload evidence"}
@@ -2841,14 +2898,27 @@ function VerificationComplianceStep({
               })}
             </div>
           </section>
-        ))}
+        ) : null}
 
         <section className="rounded-xl border border-white/10 bg-[#11141a] p-4">
           <SectionHeading title="Progress summary" detail="You can save incomplete work. Save & Continue is available after required evidence is ready for review." />
           <div className={`mt-3 rounded-xl border p-3 text-sm font-bold ${actionRequired ? "border-[#f97316]/30 bg-[#f97316]/10 text-[#fed7aa]" : "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"}`}>
-            {actionRequired ? `${actionRequired} required check${actionRequired === 1 ? "" : "s"} still need evidence.` : "Required evidence is ready for review. This does not mean verified."}
+            {actionRequired ? `${actionRequired} required check${actionRequired === 1 ? "" : "s"} still need evidence. Uploaded does not mean verified.` : "Required evidence is ready for review. Uploaded does not mean verified."}
           </div>
         </section>
+        </div>
+        <aside className="hidden xl:block">
+          <div className="sticky top-28 rounded-xl border border-white/10 bg-[#11141a] p-4">
+            <h2 className="text-sm font-black text-white">Verification Summary</h2>
+            <VerificationSummaryBody
+              selectedServices={selectedServices}
+              requirements={requirements}
+              currentSectionId={selectedSection?.id ?? ""}
+              onSelectSection={setSelectedSectionId}
+              groups={requirementGroups}
+            />
+          </div>
+        </aside>
       </div>
     </div>
   );
@@ -3310,7 +3380,7 @@ function isServicesComplete(form: ServicesForm, countryCode: string, businessTyp
 function isVerificationStepComplete(bundle: PartnerOrganizationBundle | null): boolean {
   if (!bundle || !bundle.requirements.length) return false;
   return bundle.requirements
-    .filter((requirement) => requirement.priority === "MANDATORY" || requirement.priority === "CONDITIONAL")
+    .filter((requirement) => requirementStage(requirement) === "REQUIRED_NOW")
     .every((requirement) => requirementReadyForUiProgression(requirement.status));
 }
 
@@ -3318,19 +3388,81 @@ function requirementReadyForUiProgression(status: string): boolean {
   return status === "SUBMITTED" || status === "UNDER_REVIEW" || status === "VERIFIED" || status === "EXPIRING_SOON";
 }
 
-function groupPartnerRequirements(requirements: PartnerRequirement[], scopes: PartnerOrganizationBundle["serviceScopes"], catalogueItems: PartnerServiceCatalogueItem[]) {
+type VerificationSelectedService = { id: string; code: string; label: string };
+
+type VerificationRequirementGroup = {
+  id: string;
+  title: string;
+  description: string;
+  optionLabel: string;
+  requirements: PartnerRequirement[];
+};
+
+function selectedVerificationServices(selectedServiceCodes: string[], scopes: PartnerOrganizationBundle["serviceScopes"], catalogueItems: PartnerServiceCatalogueItem[]): VerificationSelectedService[] {
+  const fromScopes = scopes.map((scope) => ({ id: scope.id, code: scope.serviceCode, label: scope.serviceLabel }));
+  const fromSelectedCodes = selectedServiceCodes.map((code) => {
+    const item = findPartnerCatalogueItemIn(catalogueItems, code);
+    return { id: `scope-${code}`, code, label: item?.name ?? titleFromDomainId(code) };
+  });
+  const merged = [...fromScopes, ...fromSelectedCodes];
+  const seen = new Set<string>();
+  return merged.filter((service) => {
+    if (seen.has(service.code)) return false;
+    seen.add(service.code);
+    return true;
+  });
+}
+
+function groupPartnerRequirements(requirements: PartnerRequirement[], scopes: PartnerOrganizationBundle["serviceScopes"], catalogueItems: PartnerServiceCatalogueItem[], selectedServices: VerificationSelectedService[]): VerificationRequirementGroup[] {
   const business = requirements.filter((item) => item.ownerEntityType === "ORGANIZATION");
   const representative = requirements.filter((item) => ["PERSON", "PROFESSIONAL", "DRIVER"].includes(item.ownerEntityType) && !item.serviceScopeId);
   const service = requirements.filter((item) => item.serviceScopeId);
   const jurisdiction = requirements.filter((item) => item.ownerEntityType === "LOCATION");
   const additional = requirements.filter((item) => item.metadata?.missingProfile === true || item.title.toLowerCase().includes("manual"));
-  return [
-    { id: "business-requirements", title: "Business requirements", description: "Checks shared by your Partner organization.", requirements: business },
-    { id: "representative-requirements", title: "Representative requirements", description: "Checks for the person responsible for this application.", requirements: representative },
-    { id: "service-requirements", title: "Service-specific requirements", description: serviceRequirementDescription(service, scopes, catalogueItems), requirements: service.filter((item) => !additional.includes(item)) },
-    { id: "jurisdiction-requirements", title: "Country and jurisdiction requirements", description: "Checks that depend on your selected country or operating location.", requirements: jurisdiction },
-    { id: "additional-review", title: "Additional review", description: "Items TPL GO needs to review manually.", requirements: additional },
-  ].map((group) => ({ ...group, requirements: dedupeRequirements(group.requirements) })).filter((group) => group.requirements.length > 0);
+  const groups: VerificationRequirementGroup[] = [
+    makeRequirementGroup("business-requirements", "Common Business Verification", "Checks shared by your Partner organization.", business),
+    makeRequirementGroup("representative-requirements", "Representative Verification", "Checks for the person responsible for this application.", representative),
+    makeRequirementGroup("jurisdiction-requirements", "Country and Jurisdiction Requirements", "Checks that depend on your selected country or operating location.", jurisdiction),
+  ];
+  const serviceGroups = selectedServices.map((selectedService) => {
+    const scoped = service.filter((item) => {
+      if (item.metadata?.missingProfile === true || item.title.toLowerCase().includes("manual")) return false;
+      const scope = scopes.find((scopeItem) => scopeItem.id === item.serviceScopeId);
+      return item.serviceScopeId === selectedService.id || scope?.serviceCode === selectedService.code || item.metadata?.serviceCode === selectedService.code;
+    });
+    return makeRequirementGroup(`service-${selectedService.code}`, selectedService.label, serviceRequirementDescription(scoped, scopes, catalogueItems), scoped);
+  });
+  const additionalGroup = makeRequirementGroup("additional-review", "Additional Review", "Items TPL GO needs to review manually.", additional);
+  return [...groups, ...serviceGroups, additionalGroup]
+    .map((group) => ({ ...group, requirements: sortRequirementsForDisplay(dedupeRequirements(group.requirements)), optionLabel: sectionOptionLabel(group.title, group.requirements) }))
+    .filter((group) => group.requirements.length > 0);
+}
+
+function makeRequirementGroup(id: string, title: string, description: string, requirements: PartnerRequirement[]): VerificationRequirementGroup {
+  return { id, title, description, optionLabel: sectionOptionLabel(title, requirements), requirements };
+}
+
+function sectionOptionLabel(title: string, requirements: PartnerRequirement[]): string {
+  const actionCount = requirements.filter((requirement) => requirementStage(requirement) === "REQUIRED_NOW" && !requirementReadyForUiProgression(requirement.status)).length;
+  if (actionCount > 0) return `${title} - ${actionCount} action${actionCount === 1 ? "" : "s"} required`;
+  if (requirements.length && requirements.every((requirement) => requirementReadyForUiProgression(requirement.status))) return `${title} - Complete`;
+  return `${title} - ${requirements.length} document${requirements.length === 1 ? "" : "s"} required`;
+}
+
+function sortRequirementsForDisplay(requirements: PartnerRequirement[]): PartnerRequirement[] {
+  return [...requirements].sort((a, b) => {
+    const statusA = requirementReadyForUiProgression(a.status) ? 1 : 0;
+    const statusB = requirementReadyForUiProgression(b.status) ? 1 : 0;
+    if (statusA !== statusB) return statusA - statusB;
+    return requirementStageOrder(a) - requirementStageOrder(b);
+  });
+}
+
+function requirementStageOrder(requirement: PartnerRequirement): number {
+  const stage = requirementStage(requirement);
+  if (stage === "REQUIRED_NOW") return 0;
+  if (stage === "BEFORE_ACTIVATION") return 1;
+  return 2;
 }
 
 function dedupeRequirements(requirements: PartnerRequirement[]): PartnerRequirement[] {
@@ -3368,7 +3500,7 @@ function previewRequirement(id: string, title: string, ownerEntityType: string, 
     serviceScopeId,
     status: "NOT_SUBMITTED",
     expires: true,
-    metadata: { previewExample: true, verificationProfileKey },
+    metadata: { previewExample: true, verificationProfileKey, requirementStage: serviceScopeId ? "BEFORE_ACTIVATION" : "REQUIRED_NOW" },
   };
 }
 
@@ -3390,6 +3522,29 @@ function requirementAppliesTo(requirement: PartnerRequirement, scopes: PartnerOr
   return scope ? `Used for ${scope.serviceLabel}` : "Used for selected service";
 }
 
+function sharedEvidenceLabel(requirement: PartnerRequirement, requirements: PartnerRequirement[], scopes: PartnerOrganizationBundle["serviceScopes"], selectedServices: VerificationSelectedService[]): string {
+  const labels = applicableServiceLabels(requirement, requirements, scopes, selectedServices);
+  if (labels.length <= 1) return "Collected once for this requirement.";
+  return `Used for ${formatHumanList(labels)}`;
+}
+
+function applicableServiceLabels(requirement: PartnerRequirement, requirements: PartnerRequirement[], scopes: PartnerOrganizationBundle["serviceScopes"], selectedServices: VerificationSelectedService[]): string[] {
+  const metadataLabels = requirement.metadata?.applicableServiceLabels;
+  if (Array.isArray(metadataLabels) && metadataLabels.length) return metadataLabels.filter((label): label is string => typeof label === "string");
+  if (requirement.serviceScopeId) {
+    const scope = scopes.find((item) => item.id === requirement.serviceScopeId);
+    return [scope?.serviceLabel ?? selectedServices.find((service) => service.id === requirement.serviceScopeId)?.label ?? "selected service"];
+  }
+  if (["ORGANIZATION", "PERSON"].includes(requirement.ownerEntityType) && selectedServices.length > 1) return selectedServices.map((service) => service.label);
+  return [];
+}
+
+function formatHumanList(values: string[]): string {
+  const unique = [...new Set(values)].filter(Boolean);
+  if (unique.length <= 2) return unique.join(" and ");
+  return `${unique.slice(0, -1).join(", ")} and ${unique[unique.length - 1]}`;
+}
+
 function serviceRequirementDescription(requirements: PartnerRequirement[], scopes: PartnerOrganizationBundle["serviceScopes"], catalogueItems: PartnerServiceCatalogueItem[]): string {
   const labels = [...new Set(requirements.map((requirement) => scopes.find((scope) => scope.id === requirement.serviceScopeId)?.serviceLabel).filter(Boolean))];
   if (labels.length) return `Checks for ${labels.slice(0, 3).join(", ")}${labels.length > 3 ? " and other selected services" : ""}.`;
@@ -3408,11 +3563,70 @@ function verificationStatusLabel(status: string): string {
   return "Requirements being reviewed";
 }
 
-function priorityLabel(priority: string): string {
-  if (priority === "MANDATORY") return "Required";
-  if (priority === "CONDITIONAL") return "Required when applicable";
-  if (priority === "RECOMMENDED") return "Recommended";
-  return "Optional";
+function requirementStage(requirement: PartnerRequirement): "REQUIRED_NOW" | "BEFORE_ACTIVATION" | "IF_APPLICABLE" {
+  const stage = requirement.metadata?.requirementStage;
+  if (stage === "REQUIRED_NOW" || stage === "BEFORE_ACTIVATION" || stage === "IF_APPLICABLE") return stage;
+  if (requirement.priority === "MANDATORY" && !requirement.serviceScopeId) return "REQUIRED_NOW";
+  if (requirement.priority === "CONDITIONAL" || requirement.priority === "OPTIONAL") return "IF_APPLICABLE";
+  return "BEFORE_ACTIVATION";
+}
+
+function requirementStageLabel(requirement: PartnerRequirement): string {
+  const stage = requirementStage(requirement);
+  if (stage === "REQUIRED_NOW") return "Required now";
+  if (stage === "BEFORE_ACTIVATION") return "Required before activation";
+  return "Only if applicable";
+}
+
+function VerificationSummaryBody({
+  selectedServices,
+  requirements,
+  groups,
+  currentSectionId,
+  onSelectSection,
+}: {
+  selectedServices: VerificationSelectedService[];
+  requirements: PartnerRequirement[];
+  groups: VerificationRequirementGroup[];
+  currentSectionId: string;
+  onSelectSection: (sectionId: string) => void;
+}) {
+  const requiredNow = requirements.filter((item) => requirementStage(item) === "REQUIRED_NOW");
+  const beforeActivation = requirements.filter((item) => requirementStage(item) === "BEFORE_ACTIVATION");
+  const ifApplicable = requirements.filter((item) => requirementStage(item) === "IF_APPLICABLE");
+  const completed = requirements.filter((item) => requirementReadyForUiProgression(item.status));
+  const ready = requiredNow.filter((item) => requirementReadyForUiProgression(item.status));
+  const underReview = requirements.filter((item) => item.status === "SUBMITTED" || item.status === "UNDER_REVIEW");
+  const progress = requiredNow.length ? Math.round((ready.length / requiredNow.length) * 100) : 0;
+  return (
+    <div className="mt-3 grid gap-3">
+      <div className="grid grid-cols-2 gap-2">
+        <VerificationMetric label="Services" value={String(selectedServices.length)} />
+        <VerificationMetric label="Progress" value={`${progress}%`} />
+        <VerificationMetric label="Required now" value={String(requiredNow.length - ready.length)} tone={requiredNow.length - ready.length ? "warning" : "success"} />
+        <VerificationMetric label="Before activation" value={String(beforeActivation.filter((item) => !requirementReadyForUiProgression(item.status)).length)} />
+        <VerificationMetric label="If applicable" value={String(ifApplicable.length)} />
+        <VerificationMetric label="Ready" value={String(underReview.length)} />
+        <VerificationMetric label="Completed" value={`${completed.length}/${requirements.length}`} />
+      </div>
+      <div className="h-2 rounded-full bg-white/10">
+        <div className="h-full rounded-full bg-[linear-gradient(135deg,#38bdf8,#22c55e)]" style={{ width: `${progress}%` }} />
+      </div>
+      <div className="grid gap-2">
+        {groups.map((group) => (
+          <button
+            type="button"
+            key={group.id}
+            onClick={() => onSelectSection(group.id)}
+            className={`rounded-xl border px-3 py-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-[#38bdf8] ${currentSectionId === group.id ? "border-[#f97316]/45 bg-[#f97316]/10" : "border-white/10 bg-[#0f1217]"}`}
+          >
+            <span className="block text-xs font-black text-white">{group.title}</span>
+            <span className="mt-1 block text-[11px] font-semibold text-slate-400">{sectionOptionLabel(group.title, group.requirements).replace(`${group.title} - `, "")}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function domainTitleFor(domainId: PartnerServiceDomainId, serviceCatalog: PartnerServiceCategory[]): string {
