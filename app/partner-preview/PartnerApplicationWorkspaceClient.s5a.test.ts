@@ -97,6 +97,44 @@ test("Steps 1 through 4 keep their right-panel guidance behavior", () => {
   assert.match(workspaceSource, /Why we need this/);
 });
 
+test("S5B.3 uses the existing application stepper as compact arrows with accessible states", () => {
+  assert.match(workspaceSource, /aria-label="Application progress"/);
+  assert.match(workspaceSource, /data-application-progress-step=\{step\.id\}/);
+  assert.match(workspaceSource, /aria-current=\{current \? "step" : undefined\}/);
+  assert.match(workspaceSource, /<ArrowRight className=\{`shrink-0 \$\{visual\.connector\}`\}/);
+  assert.match(workspaceSource, /Step \{activeStepMeta\.number\} of \{workspaceSteps\.length\}/);
+  assert.match(workspaceSource, /View all steps/);
+  assert.match(workspaceSource, /data-mobile-application-progress-step=\{step\.id\}/);
+  assert.doesNotMatch(workspaceSource, /onClick=\{\(\) => onSelect\(step\.id\)\}[\s\S]*data-application-progress-step/);
+});
+
+test("S5B.3 adds a secondary vertical verification rail without replacing compact rows", () => {
+  assert.match(workspaceSource, /data-verification-status-rail=\{railState\}/);
+  assert.match(workspaceSource, /verificationGroupRailState/);
+  assert.match(workspaceSource, /verificationGroupStatusLabel/);
+  assert.match(workspaceSource, /nextActionGroupId/);
+  assert.match(workspaceSource, /Changes required/);
+  assert.match(workspaceSource, /TPL review/);
+  assert.match(workspaceSource, /Not started/);
+  assert.match(workspaceSource, /className="flex min-h-14 w-full items-stretch justify-between gap-3 p-3 text-left/);
+});
+
+test("S5B.3 maps active document states truthfully and keeps uploaded distinct from completed", () => {
+  assert.match(workspaceSource, /data-document-state-flow="true"/);
+  assert.match(workspaceSource, /Document needed/);
+  assert.match(workspaceSource, /Uploaded/);
+  assert.match(workspaceSource, /TPL review/);
+  assert.match(workspaceSource, /Completed/);
+  assert.match(workspaceSource, /Uploading/);
+  assert.match(workspaceSource, /Changes required/);
+  assert.match(workspaceSource, /Renewal required/);
+  assert.match(workspaceSource, /if \(requirement\.status === "VERIFIED"\) return "completed";/);
+  assert.match(workspaceSource, /if \(requirement\.status === "UNDER_REVIEW"\) return "review";/);
+  assert.match(workspaceSource, /if \(requirement\.status === "SUBMITTED"\) return "uploaded";/);
+  assert.doesNotMatch(workspaceSource, /requirement\.status === "SUBMITTED"[\s\S]{0,80}return "completed"/);
+  assert.doesNotMatch(workspaceSource, /requirement\.status === "UNDER_REVIEW"[\s\S]{0,80}return "completed"/);
+});
+
 test("Save Draft message layer uses a portal modal above sticky UI", () => {
   assert.match(workspaceSource, /createPortal/);
   assert.match(workspaceSource, /data-save-draft-modal-layer/);

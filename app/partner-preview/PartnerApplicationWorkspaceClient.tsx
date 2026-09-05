@@ -2618,24 +2618,87 @@ function TopProgress({
   locationStepOverride?: PartnerApplicationStepStatus;
   servicesStepOverride?: PartnerApplicationStepStatus;
 }) {
+  const [stepsExpanded, setStepsExpanded] = useState(false);
+  const activeIndex = Math.max(0, workspaceSteps.findIndex((step) => step.id === activeStep));
+  const progress = Math.round(((activeIndex + 1) / workspaceSteps.length) * 100);
+  const activeStepMeta = workspaceSteps[activeIndex] ?? workspaceSteps[0]!;
+  const stepVisual = (status: PartnerApplicationStepStatus, current: boolean) => {
+    if (status === "completed") return { node: "bg-emerald-500 text-white", segment: "border-emerald-500/35 bg-emerald-500/10 text-emerald-100", connector: "text-emerald-300", icon: "check" as const };
+    if (status === "needs-attention") return { node: "bg-red-500 text-white", segment: "border-red-500/35 bg-red-500/10 text-red-100", connector: "text-red-300", icon: "alert" as const };
+    if (current) return { node: "bg-[#f97316] text-white", segment: "border-[#f97316]/45 bg-[#f97316]/15 text-[#fed7aa]", connector: "text-[#f97316]", icon: "number" as const };
+    if (status === "under-review") return { node: "bg-amber-400 text-[#11141a]", segment: "border-amber-400/35 bg-amber-400/10 text-amber-100", connector: "text-amber-300", icon: "number" as const };
+    if (status === "in-progress") return { node: "bg-[#38bdf8] text-[#07111a]", segment: "border-[#38bdf8]/35 bg-[#38bdf8]/10 text-sky-100", connector: "text-[#38bdf8]", icon: "number" as const };
+    if (status === "not-started") return { node: "bg-[#2563eb] text-white", segment: "border-[#38bdf8]/25 bg-[#38bdf8]/8 text-slate-200", connector: "text-[#38bdf8]/70", icon: "number" as const };
+    return { node: "bg-white/10 text-slate-400", segment: "border-white/10 bg-white/[0.03] text-slate-400", connector: "text-slate-600", icon: "number" as const };
+  };
   return (
     <div className="border-t border-white/5 px-4 py-2">
-      <div className="mx-auto grid max-w-7xl grid-cols-4 gap-1 sm:grid-cols-8">
+      <div className="mx-auto max-w-7xl">
+        <div className="lg:hidden">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-[#fb923c]">Step {activeStepMeta.number} of {workspaceSteps.length}</p>
+              <p className="mt-0.5 truncate text-sm font-black text-white">{activeStepMeta.title}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setStepsExpanded((value) => !value)}
+              aria-expanded={stepsExpanded}
+              className="shrink-0 rounded-lg border border-white/10 px-3 py-2 text-xs font-black text-slate-200 outline-none focus-visible:ring-2 focus-visible:ring-[#38bdf8]"
+            >
+              View all steps
+            </button>
+          </div>
+          <div className="mt-2 h-2 rounded-full bg-white/10" aria-label={`Step ${activeStepMeta.number} of ${workspaceSteps.length}`}>
+            <div className="h-full rounded-full bg-[linear-gradient(135deg,#38bdf8,#f97316)] transition-[width] duration-300 motion-reduce:transition-none" style={{ width: `${progress}%` }} />
+          </div>
+          {stepsExpanded ? (
+            <ol className="mt-3 grid gap-2 rounded-xl border border-white/10 bg-[#11141a] p-3">
+              {workspaceSteps.map((step) => {
+                const modelStatus = readModel.steps.find((item) => item.id === step.id)?.status ?? "locked";
+                const status = displayedStepStatus(step.id, activeStep, modelStatus, qaPreviewEnabled, accountStepOverride, businessStepOverride, locationStepOverride, servicesStepOverride);
+                const current = activeStep === step.id;
+                const visual = stepVisual(status, current);
+                return (
+                  <li key={step.id} data-mobile-application-progress-step={step.id} aria-current={current ? "step" : undefined} className="flex items-center gap-3 rounded-lg border border-white/10 bg-[#0f1217] p-2">
+                    <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-black ${visual.node}`}>
+                      {visual.icon === "check" ? <Check size={12} aria-hidden="true" /> : visual.icon === "alert" ? <X size={12} aria-hidden="true" /> : step.number}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block truncate text-xs font-black text-white">{step.number}. {step.title}</span>
+                      <span className="block text-[11px] font-semibold text-slate-400">{humanStatus(status, current)}</span>
+                    </span>
+                  </li>
+                );
+              })}
+            </ol>
+          ) : null}
+        </div>
+        <ol className="hidden items-center gap-1 lg:flex" aria-label="Application progress">
         {workspaceSteps.map((step) => {
           const modelStatus = readModel.steps.find((item) => item.id === step.id)?.status ?? "locked";
           const status = displayedStepStatus(step.id, activeStep, modelStatus, qaPreviewEnabled, accountStepOverride, businessStepOverride, locationStepOverride, servicesStepOverride);
           const current = activeStep === step.id;
+          const visual = stepVisual(status, current);
           return (
-            <div key={step.id} data-application-progress-step={step.id} className="flex items-center gap-2">
-              <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-black ${
-                status === "completed" ? "bg-emerald-500 text-white" : current ? "bg-[#f97316] text-white" : "bg-white/10 text-slate-400"
-              }`}>
-                {status === "completed" ? <Check size={12} aria-hidden="true" /> : step.number}
-              </span>
-              <span className="hidden truncate text-[11px] font-black text-slate-300 md:block">{step.shortTitle}</span>
-            </div>
+            <li key={step.id} className="flex min-w-0 flex-1 items-center gap-1">
+              <div
+                data-application-progress-step={step.id}
+                aria-current={current ? "step" : undefined}
+                aria-label={`${step.title}: ${humanStatus(status, current)}`}
+                title={`${step.title}: ${humanStatus(status, current)}`}
+                className={`flex h-9 min-w-0 flex-1 items-center gap-2 rounded-xl border px-2 transition-colors motion-reduce:transition-none ${visual.segment}`}
+              >
+                <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-black ${visual.node}`}>
+                  {visual.icon === "check" ? <Check size={12} aria-hidden="true" /> : visual.icon === "alert" ? <X size={12} aria-hidden="true" /> : step.number}
+                </span>
+                <span className="truncate text-[11px] font-black">{step.shortTitle}</span>
+              </div>
+              {step.number < workspaceSteps.length ? <ArrowRight className={`shrink-0 ${visual.connector}`} size={14} aria-hidden="true" /> : null}
+            </li>
           );
         })}
+        </ol>
       </div>
     </div>
   );
@@ -2877,6 +2940,9 @@ function VerificationComplianceStep({
     if (group.requirements.length === 0) return "No checks";
     return `${group.requirements.length} checks`;
   };
+  const nextActionGroupId = requirementGroups.find((group) =>
+    group.requirements.some((requirement) => requirementStage(requirement) === "REQUIRED_NOW" && !requirementReadyForUiProgression(requirement.status))
+  )?.id ?? requirementGroups.find((group) => group.requirements.some((requirement) => !requirementReadyForUiProgression(requirement.status)))?.id;
 
   if (!isChecklistReady && !qaPreviewEnabled) {
     return (
@@ -3033,13 +3099,13 @@ function VerificationComplianceStep({
           <section className="rounded-xl border border-white/10 bg-[#11141a] p-4" aria-label="Verification checklist">
             <h2 className="text-sm font-black text-white">Verification checklist</h2>
             <div className="mt-3 overflow-hidden rounded-xl border border-white/10">
-              {requirementGroups.map((group) => {
+              {requirementGroups.map((group, groupIndex) => {
                 const isActiveGroup = selectedSection?.id === group.id;
                 const sectionIndex = getSectionRequirementIndex(group);
                 const sectionRequirement = group.requirements[sectionIndex];
-                const hasRequiredNow = group.requirements.some((requirement) => requirementStage(requirement) === "REQUIRED_NOW");
-                const isSectionCompleted = group.requirements.every((requirement) => requirementReadyForUiProgression(requirement.status));
-                const sectionStatus = isSectionCompleted ? "Complete" : hasRequiredNow ? "Action required" : "In progress";
+                const railState = verificationGroupRailState(group, nextActionGroupId);
+                const railStyle = verificationRailStyle(railState);
+                const sectionStatus = verificationGroupStatusLabel(railState);
                 return (
                   <article key={group.id} className={`${isActiveGroup ? "bg-[#f97316]/8" : "bg-[#0f1217]"} border-b border-white/10 last:border-b-0`}>
                     <button
@@ -3048,13 +3114,23 @@ function VerificationComplianceStep({
                         sectionButtonRefs.current[group.id] = button;
                       }}
                       data-verification-section={group.id}
+                      data-verification-status-rail={railState}
                       onClick={() => updateSectionSelection(group.id)}
-                      className="flex min-h-14 w-full items-center justify-between gap-3 p-3 text-left focus-visible:ring-2 focus-visible:ring-[#38bdf8]"
+                      className="flex min-h-14 w-full items-stretch justify-between gap-3 p-3 text-left focus-visible:ring-2 focus-visible:ring-[#38bdf8]"
                       aria-expanded={isActiveGroup}
                     >
-                      <div className="min-w-0">
-                        <p className="break-words text-sm font-black text-white">{sectionTitle(group)}</p>
-                        <p className="mt-1 text-xs font-semibold leading-4 text-slate-400">{statusLabelForProgress(group)}</p>
+                      <div className="flex min-w-0 items-stretch gap-3">
+                        <span className="flex w-6 shrink-0 flex-col items-center self-stretch" aria-hidden="true">
+                          <span className={`h-3 w-px ${groupIndex === 0 ? "bg-transparent" : "bg-white/12"}`} />
+                          <span className={`flex h-5 w-5 items-center justify-center rounded-full border text-[10px] font-black ${railStyle.node}`}>
+                            {railState === "complete" ? <Check size={12} /> : railState === "changes" ? <X size={11} /> : railState === "review" ? <ShieldCheck size={11} /> : railState === "current" ? "!" : ""}
+                          </span>
+                          <span className={`min-h-3 flex-1 w-px ${groupIndex === requirementGroups.length - 1 ? "bg-transparent" : "bg-white/12"}`} />
+                        </span>
+                        <div className="min-w-0 self-center">
+                          <p className="break-words text-sm font-black text-white">{sectionTitle(group)}</p>
+                          <p className="mt-1 text-xs font-semibold leading-4 text-slate-400">{statusLabelForProgress(group)}</p>
+                        </div>
                       </div>
                       <span className="flex shrink-0 items-center gap-2 text-xs font-black text-slate-300">
                         {sectionStatus}
@@ -3079,6 +3155,10 @@ function VerificationComplianceStep({
                                 <span className="rounded-full border border-white/10 bg-[#151922] px-2 py-0.5 text-[11px] font-black text-slate-400">{requirementStageLabel(sectionRequirement)}</span>
                               </div>
                             </div>
+                            <DocumentStateFlow
+                              requirement={sectionRequirement}
+                              uploading={uploadingRequirementId === sectionRequirement.id}
+                            />
                                 <p className="text-xs font-semibold text-slate-500">Accepted documents: {verificationUploadAllowedMimeLabel}</p>
                                 <p className="mt-1 text-xs font-semibold text-slate-500">
                                   {sectionRequirement.status === "NOT_SUBMITTED" ? "Document not uploaded yet." : "Document uploaded"}
@@ -3597,6 +3677,35 @@ function requirementReadyForUiProgression(status: string): boolean {
   return status === "SUBMITTED" || status === "UNDER_REVIEW" || status === "VERIFIED" || status === "EXPIRING_SOON";
 }
 
+type VerificationRailState = "complete" | "current" | "in-progress" | "not-started" | "changes" | "review";
+
+function verificationGroupRailState(group: VerificationRequirementGroup, nextActionGroupId?: string): VerificationRailState {
+  if (group.requirements.some((requirement) => requirement.status === "CHANGES_REQUIRED" || requirement.status === "REJECTED" || requirement.status === "EXPIRED")) return "changes";
+  if (group.requirements.length && group.requirements.every((requirement) => requirement.status === "VERIFIED")) return "complete";
+  if (group.requirements.some((requirement) => requirement.status === "SUBMITTED" || requirement.status === "UNDER_REVIEW" || requirement.status === "EXPIRING_SOON")) return "review";
+  if (group.id === nextActionGroupId) return "current";
+  if (group.requirements.some((requirement) => requirement.status !== "NOT_SUBMITTED")) return "in-progress";
+  return "not-started";
+}
+
+function verificationRailStyle(state: VerificationRailState): { node: string } {
+  if (state === "complete") return { node: "border-emerald-400 bg-emerald-500 text-white" };
+  if (state === "current") return { node: "border-[#f97316] bg-[#f97316] text-white" };
+  if (state === "in-progress") return { node: "border-[#38bdf8] bg-[#38bdf8] text-[#07111a]" };
+  if (state === "changes") return { node: "border-red-400 bg-red-500 text-white" };
+  if (state === "review") return { node: "border-amber-300 bg-amber-300 text-[#11141a]" };
+  return { node: "border-white/20 bg-transparent text-slate-500" };
+}
+
+function verificationGroupStatusLabel(state: VerificationRailState): string {
+  if (state === "complete") return "Complete";
+  if (state === "current") return "Action required";
+  if (state === "in-progress") return "In progress";
+  if (state === "changes") return "Changes required";
+  if (state === "review") return "TPL review";
+  return "Not started";
+}
+
 function getFirstOutstandingRequirementIndex(requirements: PartnerRequirement[]): number {
   const first = requirements.findIndex((requirement) => !requirementReadyForUiProgression(requirement.status));
   return first === -1 ? Math.max(requirements.length - 1, 0) : first;
@@ -3798,6 +3907,85 @@ function requirementStageLabel(requirement: PartnerRequirement): string {
   if (stage === "REQUIRED_NOW") return "Required now";
   if (stage === "BEFORE_ACTIVATION") return "Required before this service goes live";
   return "We'll ask only if needed";
+}
+
+type DocumentJourneyState = "needed" | "uploading" | "uploaded" | "review" | "completed" | "changes" | "renewal";
+
+function documentJourneyState(requirement: PartnerRequirement, uploading: boolean): DocumentJourneyState {
+  if (uploading) return "uploading";
+  if (requirement.status === "VERIFIED") return "completed";
+  if (requirement.status === "UNDER_REVIEW") return "review";
+  if (requirement.status === "SUBMITTED") return "uploaded";
+  if (requirement.status === "CHANGES_REQUIRED" || requirement.status === "REJECTED") return "changes";
+  if (requirement.status === "EXPIRED") return "renewal";
+  return "needed";
+}
+
+function DocumentStateFlow({ requirement, uploading }: { requirement: PartnerRequirement; uploading: boolean }) {
+  const state = documentJourneyState(requirement, uploading);
+  const currentLabel = state === "uploading"
+    ? "Uploading"
+    : state === "changes"
+      ? "Changes required"
+      : state === "renewal"
+        ? "Renewal required"
+        : state === "needed"
+          ? "Document needed"
+          : state === "uploaded"
+            ? "Uploaded"
+            : state === "review"
+              ? "TPL review"
+              : "Completed";
+  const steps = [
+    { id: "needed", label: state === "changes" ? "Changes required" : state === "renewal" ? "Renewal required" : state === "uploading" ? "Uploading" : "Document needed" },
+    { id: "uploaded", label: "Uploaded" },
+    { id: "review", label: "TPL review" },
+    { id: "completed", label: "Completed" },
+  ] as const;
+  const rank: Record<DocumentJourneyState, number> = {
+    needed: 0,
+    uploading: 0,
+    changes: 0,
+    renewal: 0,
+    uploaded: 1,
+    review: 2,
+    completed: 3,
+  };
+  const toneForStep = (stepId: (typeof steps)[number]["id"]) => {
+    const index = steps.findIndex((step) => step.id === stepId);
+    const activeIndex = rank[state];
+    const isActive = index === activeIndex;
+    const isComplete = state === "completed" || index < activeIndex;
+    if (state === "changes" && isActive) return "border-red-400 bg-red-500/15 text-red-100";
+    if (state === "renewal" && isActive) return "border-amber-300 bg-amber-300/15 text-amber-100";
+    if (state === "uploading" && isActive) return "border-[#38bdf8] bg-[#38bdf8]/15 text-sky-100";
+    if (state === "review" && isActive) return "border-amber-300 bg-amber-300/15 text-amber-100";
+    if (isComplete) return "border-emerald-400/50 bg-emerald-500/15 text-emerald-100";
+    if (isActive) return "border-[#f97316]/60 bg-[#f97316]/15 text-[#fed7aa]";
+    return "border-white/10 bg-[#0f1217] text-slate-400";
+  };
+  const iconForStep = (stepId: (typeof steps)[number]["id"]) => {
+    if (state === "changes" && stepId === "needed") return <X size={12} aria-hidden="true" />;
+    if (state === "renewal" && stepId === "needed") return <RotateCcw size={12} aria-hidden="true" />;
+    if (state === "uploading" && stepId === "needed") return <Loader2 className="animate-spin motion-reduce:animate-none" size={12} aria-hidden="true" />;
+    if (state === "completed" || steps.findIndex((step) => step.id === stepId) < rank[state]) return <Check size={12} aria-hidden="true" />;
+    if (stepId === "review") return <ShieldCheck size={12} aria-hidden="true" />;
+    if (stepId === "uploaded") return <FileCheck2 size={12} aria-hidden="true" />;
+    return <span aria-hidden="true" className="h-2 w-2 rounded-full bg-current" />;
+  };
+  return (
+    <div data-document-state-flow="true" aria-label={`Document progress: ${currentLabel}`} className="mb-3 flex flex-wrap items-center gap-2">
+      {steps.map((step, index) => (
+        <div key={step.id} className="flex items-center gap-2">
+          <span className={`inline-flex h-8 items-center gap-2 rounded-full border px-2.5 text-[11px] font-black ${toneForStep(step.id)}`}>
+            {iconForStep(step.id)}
+            {step.label}
+          </span>
+          {index < steps.length - 1 ? <ArrowRight size={13} className="text-slate-600" aria-hidden="true" /> : null}
+        </div>
+      ))}
+    </div>
+  );
 }
 
 function VerificationSummaryBody({
