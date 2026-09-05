@@ -81,7 +81,7 @@ const navItems = [
 const partnerNavItems = [
   { href: "/admin/partners", label: "Overview", icon: Building2 },
   { href: "/admin/partners/applications", label: "Applications", icon: ClipboardCheck },
-  { href: "/admin/partner-verification", label: "Verification", icon: ShieldCheck },
+  { href: "/admin/partner-verification", label: "Verification & Compliance", icon: ShieldCheck },
   { href: "/admin/partners/organizations", label: "Organizations", icon: Users },
   { href: "/admin/partners/documents-compliance", label: "Documents & Compliance", icon: FileText },
 ];

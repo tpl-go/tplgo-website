@@ -3106,6 +3106,7 @@ function VerificationComplianceStep({
                 const railState = verificationGroupRailState(group, nextActionGroupId);
                 const railStyle = verificationRailStyle(railState);
                 const sectionStatus = verificationGroupStatusLabel(railState);
+                const sectionDocument = sectionRequirement ? documentForRequirement(requirements, bundle?.links ?? [], bundle?.documents ?? [], sectionRequirement.id) : null;
                 return (
                   <article key={group.id} className={`${isActiveGroup ? "bg-[#f97316]/8" : "bg-[#0f1217]"} border-b border-white/10 last:border-b-0`}>
                     <button
@@ -3167,6 +3168,12 @@ function VerificationComplianceStep({
                               <p className="mt-1 text-xs font-bold text-[#86efac]">Ready for review</p>
                             ) : sectionRequirement.status === "CHANGES_REQUIRED" ? (
                               <p className="mt-1 text-xs font-bold text-amber-300">Changes requested: TPL needs an updated document.</p>
+                            ) : null}
+                            {sectionDocument?.reviewNote && (sectionRequirement.status === "CHANGES_REQUIRED" || sectionRequirement.status === "REJECTED" || sectionRequirement.status === "EXPIRED") ? (
+                              <div className="mt-3 rounded-xl border border-amber-300/25 bg-amber-300/10 p-3 text-xs font-bold leading-5 text-amber-100" data-partner-review-feedback="true">
+                                <p className="font-black">{sectionRequirement.status === "REJECTED" ? "Check rejected" : sectionRequirement.status === "EXPIRED" ? "Renewal required" : "TPL needs an updated document."}</p>
+                                <p className="mt-1">{sectionDocument.reviewNote}</p>
+                              </div>
                             ) : null}
                             {selectedFilenames[sectionRequirement.id] ? (
                               <p className="mt-1 text-xs font-bold text-slate-200">Selected: {selectedFilenames[sectionRequirement.id]}</p>
@@ -3857,6 +3864,11 @@ function sharedEvidenceLabel(requirement: PartnerRequirement, requirements: Part
   const labels = applicableServiceLabels(requirement, requirements, scopes, selectedServices);
   if (labels.length <= 1) return "Collected once for this requirement.";
   return `Used for ${formatHumanList(labels)}`;
+}
+
+function documentForRequirement(_requirements: PartnerRequirement[], links: NonNullable<PartnerOrganizationBundle["links"]>, documents: PartnerOrganizationBundle["documents"], requirementId: string) {
+  const link = links.find((item) => item.requirementId === requirementId && item.status === "active");
+  return documents.find((document) => document.id === link?.documentId) ?? null;
 }
 
 function applicableServiceLabels(requirement: PartnerRequirement, requirements: PartnerRequirement[], scopes: PartnerOrganizationBundle["serviceScopes"], selectedServices: VerificationSelectedService[]): string[] {
