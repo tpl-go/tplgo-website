@@ -11,9 +11,12 @@ import {
   BriefcaseBusiness,
   Building2,
   Check,
+  ChevronDown,
+  ChevronRight,
   ClipboardCheck,
   FileCheck2,
   HelpCircle,
+  ListChecks,
   Loader2,
   LogOut,
   MapPin,
@@ -172,6 +175,9 @@ const workspaceSteps: Array<{
 ];
 
 const roleOptions = ["Owner", "Director", "Manager", "Authorized Representative", "Other"];
+const verificationUploadMimeTypes = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
+const verificationUploadMaxBytes = 25 * 1024 * 1024;
+const verificationUploadAllowedMimeLabel = "PDF, JPG, PNG, or WebP (max 25 MB)";
 const organizationTypeOptions = [
   "Individual / Independent Professional",
   "Sole Proprietorship",
@@ -494,6 +500,7 @@ export default function PartnerApplicationWorkspaceClient({
   const [emailOtp, setEmailOtp] = useState("");
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [uploadingRequirementId, setUploadingRequirementId] = useState<string | null>(null);
+  const [focusedVerificationSectionId, setFocusedVerificationSectionId] = useState<string | null>(null);
   const [qaVerifiedContacts, setQaVerifiedContacts] = useState({ mobile: false, email: false });
   const [serviceCatalogueState, setServiceCatalogueState] = useState<RuntimeCatalogueState>({
     status: "loading",
@@ -924,6 +931,14 @@ export default function PartnerApplicationWorkspaceClient({
     return result.data;
   }
 
+  function firstRequiredVerificationSectionId(saved: PartnerOrganizationBundle): string | null {
+    const missing = saved.requirements.find((requirement) => requirementStage(requirement) === "REQUIRED_NOW" && !requirementReadyForUiProgression(requirement.status));
+    if (!missing) return null;
+    const selectedServicesForChecklist = selectedVerificationServices(servicesForm.selectedServiceCodes, saved.serviceScopes, serviceCatalogueState.items);
+    const groups = groupPartnerRequirements(saved.requirements, saved.serviceScopes, serviceCatalogueState.items, selectedServicesForChecklist);
+    return groups.find((group) => group.requirements.some((requirement) => requirement.id === missing.id))?.id ?? null;
+  }
+
   async function requestMobileOtp() {
     if (qaPreviewEnabled) {
       setMobileChallenge({ status: "otp_sent", challengeId: "preview-mobile", expiresAt: new Date(Date.now() + 5 * 60_000).toISOString(), otpLength: 6, deliveryChannel: "preview" });
@@ -1112,6 +1127,10 @@ export default function PartnerApplicationWorkspaceClient({
       if (!saved) return;
       if (isVerificationStepComplete(saved)) {
         setActiveStep("payout_tax");
+        setFocusedVerificationSectionId(null);
+      } else {
+        setFocusedVerificationSectionId(firstRequiredVerificationSectionId(saved));
+        setMessage({ tone: "warning", text: "Complete this required check before continuing." });
       }
       return;
     }
@@ -1149,7 +1168,7 @@ export default function PartnerApplicationWorkspaceClient({
     });
     if (!putResult.ok) {
       setUploadingRequirementId(null);
-      setMessage({ tone: "error", text: "Upload failed. Please retry." });
+      setMessage({ tone: "error", text: "Document upload failed. Please try again." });
       return;
     }
     const confirmed = await confirmPartnerDocument(organizationId, {
@@ -1356,6 +1375,8 @@ export default function PartnerApplicationWorkspaceClient({
                 uploadingRequirementId={uploadingRequirementId}
                 onUploadEvidence={uploadEvidence}
                 onEditSelectedServices={() => setActiveStep("services")}
+                focusSectionId={focusedVerificationSectionId}
+                onFocusSectionHandled={() => setFocusedVerificationSectionId(null)}
               />
             ) : activeStep === "payout_tax" ? (
               <PayoutTaxPlaceholder />
@@ -2747,6 +2768,8 @@ function VerificationComplianceStep({
   uploadingRequirementId,
   onUploadEvidence,
   onEditSelectedServices,
+  focusSectionId,
+  onFocusSectionHandled,
 }: {
   bundle: PartnerOrganizationBundle | null;
   selectedServiceCodes: string[];
@@ -2755,18 +2778,154 @@ function VerificationComplianceStep({
   uploadingRequirementId: string | null;
   onUploadEvidence: (requirement: PartnerRequirement, file: File) => void;
   onEditSelectedServices: () => void;
+  focusSectionId?: string | null;
+  onFocusSectionHandled?: () => void;
 }) {
-  const requirements = bundle?.requirements ?? previewRequirementsForSelectedServices(selectedServiceCodes, serviceCatalogueItems);
-  const documents = bundle?.documents ?? [];
-  const links = bundle?.links ?? [];
+  const requirements = bundle?.requirements ?? (qaPreviewEnabled ? previewRequirementsForSelectedServices(selectedServiceCodes, serviceCatalogueItems) : []);
   const selectedServices = selectedVerificationServices(selectedServiceCodes, bundle?.serviceScopes ?? [], serviceCatalogueItems);
   const requirementGroups = groupPartnerRequirements(requirements, bundle?.serviceScopes ?? [], serviceCatalogueItems, selectedServices);
+  const sectionButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+
   const [selectedSectionId, setSelectedSectionId] = useState<string>(requirementGroups[0]?.id ?? "business-requirements");
+  const [sectionRequirementIndexById, setSectionRequirementIndexById] = useState<Record<string, number>>({});
+  const [selectedServicesExpanded, setSelectedServicesExpanded] = useState<boolean>(false);
+  const [selectedFilenames, setSelectedFilenames] = useState<Record<string, string>>({});
+  const [fileUploadMessages, setFileUploadMessages] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!focusSectionId) return;
+    const sectionToFocus = requirementGroups.find((group) => group.id === focusSectionId);
+    if (!sectionToFocus) return;
+    requestAnimationFrame(() => {
+      setSelectedSectionId(focusSectionId);
+      setSectionRequirementIndexById((current) => {
+        const sectionIndex = current[focusSectionId];
+        if (sectionIndex !== undefined && sectionToFocus.requirements[sectionIndex]) return current;
+        return { ...current, [focusSectionId]: getFirstOutstandingRequirementIndex(sectionToFocus.requirements) };
+      });
+      const sectionButton = sectionButtonRefs.current[focusSectionId];
+      sectionButton?.scrollIntoView({ behavior: "smooth", block: "start" });
+      sectionButton?.focus({ preventScroll: true });
+      onFocusSectionHandled?.();
+    });
+  }, [focusSectionId, onFocusSectionHandled, requirementGroups]);
+
   const selectedSection = requirementGroups.find((group) => group.id === selectedSectionId) ?? requirementGroups[0];
-  const sectionIndex = Math.max(0, requirementGroups.findIndex((group) => group.id === selectedSection?.id));
   const requiredNow = requirements.filter((item) => requirementStage(item) === "REQUIRED_NOW");
-  const ready = requiredNow.filter((item) => requirementReadyForUiProgression(item.status)).length;
-  const actionRequired = requiredNow.length - ready;
+  const readyRequired = requiredNow.filter((item) => requirementReadyForUiProgression(item.status)).length;
+  const requiredChecksRemaining = Math.max(requiredNow.length - readyRequired, 0);
+  const requiredNowProgress = requiredNow.length ? Math.round((readyRequired / requiredNow.length) * 100) : 0;
+
+  const beforeActivation = requirements.filter((item) => requirementStage(item) === "BEFORE_ACTIVATION");
+  const beforeActivationRemaining = Math.max(beforeActivation.length - beforeActivation.filter((item) => requirementReadyForUiProgression(item.status)).length, 0);
+
+  const getSectionRequirementIndex = (group: VerificationRequirementGroup) => {
+    if (!group.requirements.length) return 0;
+    const current = sectionRequirementIndexById[group.id];
+    if (current === undefined) return getFirstOutstandingRequirementIndex(group.requirements);
+    return Math.max(0, Math.min(group.requirements.length - 1, current));
+  };
+
+
+  const isRequiredNowComplete = requiredNow.length === 0 || requiredChecksRemaining === 0;
+  const hasStartedVerification = readyRequired > 0;
+  const primaryVerificationAction = isRequiredNowComplete
+    ? "Continue to Payout & Tax"
+    : hasStartedVerification
+      ? "Continue verification"
+      : "Start verification";
+  const isChecklistReady = requirements.length > 0;
+  const selectedServicesSummary = getServicesHeadline(selectedServices);
+  const nextRequiredCheck = requiredNow.find((item) => !requirementReadyForUiProgression(item.status));
+  const nextSectionAction = nextRequiredCheck ? `Upload your ${nextRequiredCheck.title}` : "Upload your next required document";
+
+  const updateSectionSelection = (nextSectionId: string) => {
+    setSelectedSectionId(nextSectionId);
+    setSectionRequirementIndexById((current) => {
+      const requirementsForSection = requirementGroups.find((group) => group.id === nextSectionId)?.requirements ?? [];
+      if (current[nextSectionId] !== undefined && requirementsForSection[current[nextSectionId]]) return current;
+      return { ...current, [nextSectionId]: getFirstOutstandingRequirementIndex(requirementsForSection) };
+    });
+  };
+
+  const setRequirementIndex = (groupId: string, nextIndex: number) => {
+    setSectionRequirementIndexById((current) => ({ ...current, [groupId]: Math.max(0, nextIndex) }));
+  };
+
+  const handleFileSelection = (requirement: PartnerRequirement, file: File) => {
+    const validationMessage = validateVerificationFile(file);
+    if (validationMessage) {
+      setFileUploadMessages((current) => ({ ...current, [requirement.id]: validationMessage }));
+      return;
+    }
+    setFileUploadMessages((current) => ({ ...current, [requirement.id]: "" }));
+    setSelectedFilenames((current) => ({ ...current, [requirement.id]: file.name }));
+    onUploadEvidence(requirement, file);
+  };
+
+  const statusForRequirement = (requirement: PartnerRequirement) =>
+    requirement.status === "VERIFIED" ? "Ready for review" : verificationStatusLabel(requirement.status);
+
+  const statusLabelForProgress = (group: VerificationRequirementGroup) => {
+    const requiredNowCount = group.requirements.filter((requirement) => requirementStage(requirement) === "REQUIRED_NOW").length;
+    const requiredNowReadyCount = group.requirements.filter((requirement) => requirementStage(requirement) === "REQUIRED_NOW" && requirementReadyForUiProgression(requirement.status)).length;
+    if (requiredNowCount > 0) return `${requiredNowReadyCount}/${requiredNowCount} required`;
+    if (group.requirements.length === 0) return "No checks";
+    return `${group.requirements.length} checks`;
+  };
+
+  if (!isChecklistReady && !qaPreviewEnabled) {
+    return (
+      <div data-application-active-step="documents_compliance" className="rounded-2xl border border-white/10 bg-[#171a20] shadow-2xl">
+        <div className="border-b border-white/10 p-5">
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-[#fb923c]">Step 5</p>
+          <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Verification & Compliance</h1>
+          <p className="mt-2 text-sm font-semibold leading-6 text-slate-300">
+            We couldn&apos;t load your verification checklist.
+          </p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="mt-3 inline-flex h-9 items-center justify-center rounded-lg border border-[#f97316]/50 px-3 text-xs font-black text-[#fed7aa] outline-none focus-visible:ring-2 focus-visible:ring-[#38bdf8]"
+          >
+            Try again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isChecklistReady && qaPreviewEnabled) {
+    return (
+      <div data-application-active-step="documents_compliance" className="rounded-2xl border border-white/10 bg-[#171a20] shadow-2xl">
+        <div className="border-b border-white/10 p-5">
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-[#fb923c]">Step 5</p>
+          <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Verification & Compliance</h1>
+          <p className="mt-2 text-sm font-semibold leading-6 text-slate-300">
+            We&apos;re confirming what is needed for this service.
+          </p>
+          <p className="mt-1 text-xs font-semibold text-[#f97316]">You can save your application and return later.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!requirementGroups.length) {
+    return (
+      <div data-application-active-step="documents_compliance" className="rounded-2xl border border-white/10 bg-[#171a20] shadow-2xl">
+        <div className="border-b border-white/10 p-5">
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-[#fb923c]">Step 5</p>
+          <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Verification & Compliance</h1>
+          <p className="mt-2 text-sm font-semibold leading-6 text-slate-300">
+            We&apos;re confirming what is needed for this service.
+          </p>
+          <p className="mt-1 text-sm font-semibold leading-6 text-slate-200">
+            You can save your application and return later.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div data-application-active-step="documents_compliance" className="rounded-2xl border border-white/10 bg-[#171a20] shadow-2xl">
@@ -2774,156 +2933,247 @@ function VerificationComplianceStep({
         <p className="text-xs font-black uppercase tracking-[0.16em] text-[#fb923c]">Step 5</p>
         <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Verification & Compliance</h1>
         <p className="mt-2 text-sm font-semibold leading-6 text-slate-300">
-          Complete the checks required for your business and selected services.
+          Complete the checks needed for your business and selected services.
         </p>
+        <p className="mt-2 text-sm font-black text-[#fed7aa]">
+          {readyRequired} of {requiredNow.length} required checks completed
+        </p>
+        <div className="mt-2 h-2.5 w-full rounded-full bg-white/10">
+          <div className="h-full rounded-full bg-[linear-gradient(135deg,#38bdf8,#22c55e)] transition-[width] duration-300" style={{ width: `${requiredNowProgress}%` }} />
+        </div>
       </div>
 
       <div className="grid gap-5 p-5 xl:grid-cols-[minmax(0,1fr)_300px] xl:items-start">
         <div className="grid gap-5">
-        {qaPreviewEnabled ? (
-          <div className="rounded-xl border border-[#f97316]/25 bg-[#f97316]/10 p-3 text-xs font-bold leading-5 text-[#fed7aa]">
-            Preview Example uses fictional requirement data only. It does not upload documents or verify identity. It never replaces the runtime catalogue.
-          </div>
-        ) : null}
-
-        <section className="rounded-xl border border-white/10 bg-[#11141a] p-4" aria-labelledby="selected-verification-services-heading">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-            <div>
-              <h2 id="selected-verification-services-heading" className="text-lg font-black text-white">Verification for your selected services</h2>
-              <p className="mt-1 text-sm font-semibold leading-6 text-slate-300">Complete the minimum checks needed for your business and services.</p>
+          {qaPreviewEnabled ? (
+            <div className="rounded-lg border border-[#f97316]/30 bg-[#f97316]/10 p-2 text-xs font-black leading-5 text-[#fed7aa]">
+              Preview example — Fictional data only. No documents are uploaded or verified.
             </div>
-            <button type="button" onClick={onEditSelectedServices} className="inline-flex h-10 items-center justify-center rounded-xl border border-[#f97316]/40 px-3 text-xs font-black text-[#fed7aa] outline-none focus-visible:ring-2 focus-visible:ring-[#38bdf8]">
-              Edit selected services
-            </button>
-          </div>
-          <div className="mt-4 flex flex-wrap gap-2">
-            {selectedServices.length ? selectedServices.map((service) => (
-              <span key={service.id} className="rounded-full border border-sky-400/25 bg-sky-400/10 px-3 py-1 text-xs font-black text-sky-100">{service.label}</span>
-            )) : (
-              <span className="rounded-full border border-white/10 bg-[#0f1217] px-3 py-1 text-xs font-black text-slate-300">No services selected</span>
-            )}
-          </div>
-          <p className="mt-3 text-xs font-semibold text-slate-400">{selectedServices.length} service{selectedServices.length === 1 ? "" : "s"} selected</p>
-        </section>
+          ) : null}
 
-        <section className="rounded-xl border border-white/10 bg-[#11141a] p-4 xl:hidden" aria-labelledby="mobile-verification-summary-heading">
-          <h2 id="mobile-verification-summary-heading" className="text-sm font-black text-white">Verification Summary</h2>
-          <VerificationSummaryBody
-            selectedServices={selectedServices}
-            requirements={requirements}
-            currentSectionId={selectedSection?.id ?? ""}
-            onSelectSection={setSelectedSectionId}
-            groups={requirementGroups}
-          />
-        </section>
-
-        <section className="rounded-xl border border-white/10 bg-[#11141a] p-4" aria-labelledby="verification-section-select-heading">
-          <label id="verification-section-select-heading" htmlFor="verification-section-select" className="text-sm font-black text-white">Select a verification section</label>
-          <select
-            id="verification-section-select"
-            value={selectedSection?.id ?? ""}
-            onChange={(event) => setSelectedSectionId(event.target.value)}
-            className="mt-3 h-11 w-full rounded-xl border border-white/10 bg-[#0f1217] px-3 text-sm font-black text-white outline-none focus-visible:ring-2 focus-visible:ring-[#38bdf8]"
-          >
-            {requirementGroups.map((group) => (
-              <option key={group.id} value={group.id}>{group.optionLabel}</option>
-            ))}
-          </select>
-          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <button type="button" disabled={sectionIndex <= 0} onClick={() => setSelectedSectionId(requirementGroups[sectionIndex - 1]?.id ?? selectedSection?.id ?? "")} className="h-9 rounded-lg border border-white/10 px-3 text-xs font-black text-slate-300 disabled:cursor-not-allowed disabled:opacity-45">Previous Section</button>
-            <button type="button" disabled={sectionIndex >= requirementGroups.length - 1} onClick={() => setSelectedSectionId(requirementGroups[sectionIndex + 1]?.id ?? selectedSection?.id ?? "")} className="h-9 rounded-lg border border-white/10 px-3 text-xs font-black text-slate-300 disabled:cursor-not-allowed disabled:opacity-45">Next Section</button>
-          </div>
-        </section>
-
-        {selectedSection ? (
-          <section key={selectedSection.id} className="rounded-xl border border-white/10 bg-[#11141a] p-4" aria-labelledby={`${selectedSection.id}-heading`}>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <section className="rounded-xl border border-white/10 bg-[#11141a] p-4" aria-labelledby="selected-verification-services-heading">
+            <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
               <div>
-                <h2 id={`${selectedSection.id}-heading`} className="text-sm font-black text-white">{selectedSection.title}</h2>
-                <p className="mt-1 text-xs font-semibold text-slate-400">{selectedSection.description}</p>
+                <h2 id="selected-verification-services-heading" className="text-lg font-black text-white">Your selected services</h2>
+                <p className="mt-1 text-sm font-semibold leading-6 text-slate-300">{selectedServicesSummary}</p>
               </div>
-              <span className="w-fit rounded-full border border-white/10 bg-[#0f1217] px-3 py-1 text-xs font-black text-slate-300">
-                {selectedSection.requirements.length} item{selectedSection.requirements.length === 1 ? "" : "s"}
-              </span>
+              <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
+                <button
+                  type="button"
+                  onClick={() => setSelectedServicesExpanded((value) => !value)}
+                  className="inline-flex h-10 items-center justify-center rounded-xl border border-white/10 px-3 text-xs font-black text-slate-200 outline-none focus-visible:ring-2 focus-visible:ring-[#38bdf8]"
+                  aria-expanded={selectedServicesExpanded}
+                >
+                  View selected services
+                </button>
+                <button
+                  type="button"
+                  onClick={onEditSelectedServices}
+                  className="inline-flex h-10 items-center justify-center rounded-xl border border-[#f97316]/40 px-3 text-xs font-black text-[#fed7aa] outline-none focus-visible:ring-2 focus-visible:ring-[#38bdf8]"
+                >
+                  Edit services
+                </button>
+              </div>
             </div>
-            <div className="mt-4 grid gap-3">
-              {selectedSection.requirements.map((requirement) => {
-                const linkedDocuments = documents.filter((document) => requirementLinkedDocument(requirement, document, links));
-                const status = verificationStatusLabel(requirement.status);
-                const uploadDisabled = qaPreviewEnabled || uploadingRequirementId === requirement.id || requirement.status === "VERIFIED" || requirement.status === "UNDER_REVIEW";
+            {selectedServices.length <= 2 || selectedServicesExpanded ? (
+              <ul className="mt-4 space-y-2">
+                {selectedServices.length ? selectedServices.map((service) => (
+                  <li key={service.id} className="rounded-lg border border-white/10 bg-[#151922] p-3 text-sm font-black text-white">{service.label}</li>
+                )) : (
+                  <li className="rounded-lg border border-dashed border-white/15 bg-[#0f1217] p-3 text-sm font-semibold text-slate-400">No services selected</li>
+                )}
+              </ul>
+            ) : null}
+          </section>
+
+          <section className="rounded-xl border border-white/10 bg-[#11141a] p-4 xl:hidden" aria-labelledby="mobile-verification-summary-heading">
+            <h2 id="mobile-verification-summary-heading" className="text-sm font-black text-white">Your progress</h2>
+            <VerificationSummaryBody
+              requirements={requirements}
+              currentSectionId={selectedSection?.id ?? ""}
+              onSelectSection={updateSectionSelection}
+              groups={requirementGroups}
+            />
+            <p className="mt-3 text-xs font-semibold leading-5 text-amber-200">
+              {isRequiredNowComplete ? "Required checks completed" : `Next step: ${nextSectionAction}`}
+            </p>
+            <p className="mt-1 text-xs font-semibold leading-5 text-emerald-200">
+              {isRequiredNowComplete ? "Your documents are ready for review. Additional documents may still be needed before individual services go live." : null}
+            </p>
+          </section>
+
+          <div className="rounded-xl border border-white/10 bg-[#11141a] p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-black text-white">What you need to complete</h2>
+                <p className="mt-1 text-xs font-semibold leading-5 text-slate-300">{requiredChecksRemaining} checks required now</p>
+                <p className="mt-1 text-xs font-semibold leading-5 text-slate-300">{beforeActivationRemaining} checks required before your services go live</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!selectedSection) return;
+                  setRequirementIndex(selectedSection.id, getFirstOutstandingRequirementIndex(selectedSection.requirements));
+                }}
+                className="inline-flex h-9 items-center justify-center rounded-lg border border-[#f97316]/40 px-3 text-xs font-black text-[#fed7aa] hover:bg-[#f97316]/10"
+              >
+                {primaryVerificationAction}
+              </button>
+            </div>
+            <p className="mt-2 text-xs font-black uppercase tracking-[0.1em] text-[#fed7aa]">
+              {isRequiredNowComplete ? "Required checks completed" : `Next step: ${nextSectionAction}`}
+            </p>
+            <p className="mt-1 text-xs font-semibold leading-5 text-emerald-200">
+              {isRequiredNowComplete ? "Your documents are ready for review. Additional documents may still be needed before individual services go live." : null}
+            </p>
+            <div className="mt-3 h-2 rounded-full bg-white/10">
+              <div className="h-full rounded-full bg-[linear-gradient(135deg,#38bdf8,#22c55e)]" style={{ width: `${requiredNowProgress}%` }} />
+            </div>
+          </div>
+
+          <section className="rounded-xl border border-white/10 bg-[#11141a] p-4" aria-label="Verification checklist">
+            <h2 className="text-sm font-black text-white">Verification checklist</h2>
+            <p className="mt-1 text-xs font-semibold text-slate-400">Open one section at a time. Complete each check in order.</p>
+            <div className="mt-4 space-y-3">
+              {requirementGroups.map((group) => {
+                const isActiveGroup = selectedSection?.id === group.id;
+                const sectionIndex = getSectionRequirementIndex(group);
+                const sectionRequirement = group.requirements[sectionIndex];
+                const hasRequiredNow = group.requirements.some((requirement) => requirementStage(requirement) === "REQUIRED_NOW");
+                const isSectionCompleted = group.requirements.every((requirement) => requirementReadyForUiProgression(requirement.status));
+                const sectionStatus = isSectionCompleted ? "Complete" : hasRequiredNow ? "Action required" : "In progress";
                 return (
-                  <div key={requirement.id} className="rounded-xl border border-white/10 bg-[#0f1217] p-4">
-                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="text-sm font-black text-white">{requirement.title}</h3>
-                          <StatusLabel label={status} status={requirement.status} />
-                          <span className="rounded-full border border-white/10 bg-[#151922] px-2 py-0.5 text-[11px] font-black text-slate-400">{requirementStageLabel(requirement)}</span>
-                        </div>
-                        <p className="mt-2 text-sm font-semibold leading-6 text-slate-300">{requirement.description}</p>
-                        <p className="mt-2 text-xs font-semibold leading-5 text-slate-500">{requirementAppliesTo(requirement, bundle?.serviceScopes ?? [])}</p>
-                        <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">{sharedEvidenceLabel(requirement, requirements, bundle?.serviceScopes ?? [], selectedServices)}</p>
-                        {requirement.metadata && requirement.metadata.missingProfile === true ? (
-                          <p className="mt-2 rounded-lg border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-xs font-bold text-amber-100">Requirements being reviewed by TPL GO.</p>
-                        ) : null}
-                        {requirement.expires ? <p className="mt-1 text-xs font-semibold text-slate-500">Issue and expiry information may be required.</p> : null}
-                      </div>
-                      <label className={`inline-flex h-10 shrink-0 items-center justify-center rounded-xl px-3 text-xs font-black ${uploadDisabled ? "cursor-not-allowed border border-white/10 bg-[#151922] text-slate-500" : "cursor-pointer border border-[#f97316]/40 bg-[#f97316]/10 text-[#fed7aa] hover:border-[#f97316]"}`}>
-                        {uploadingRequirementId === requirement.id ? "Uploading..." : linkedDocuments.length ? "Replace evidence" : "Upload evidence"}
-                        <input
-                          type="file"
-                          className="sr-only"
-                          disabled={uploadDisabled}
-                          accept="application/pdf,image/jpeg,image/png,image/webp"
-                          onChange={(event) => {
-                            const file = event.target.files?.[0];
-                            if (file) onUploadEvidence(requirement, file);
-                            event.currentTarget.value = "";
-                          }}
-                        />
-                      </label>
-                    </div>
-                    {linkedDocuments.length ? (
-                      <div className="mt-3 grid gap-2">
-                        {linkedDocuments.map((document) => (
-                          <div key={document.id} className="flex flex-col gap-1 rounded-lg border border-white/10 bg-[#151922] px-3 py-2 text-xs font-semibold text-slate-300 sm:flex-row sm:items-center sm:justify-between">
-                            <span className="truncate">{document.originalFilename}</span>
-                            <span>{verificationStatusLabel(document.status)}</span>
+                  <article key={group.id} className={`rounded-xl border ${isActiveGroup ? "border-[#f97316]/45 bg-[#f97316]/8" : "border-white/10 bg-[#0f1217]"}`}>
+                    <button
+                      type="button"
+                      ref={(button) => {
+                        sectionButtonRefs.current[group.id] = button;
+                      }}
+                      data-verification-section={group.id}
+                      onClick={() => updateSectionSelection(group.id)}
+                      className="w-full rounded-xl p-3 text-left focus-visible:ring-2 focus-visible:ring-[#38bdf8]"
+                      aria-expanded={isActiveGroup}
+                    >
+                      <div className="flex items-start gap-3">
+                        <span className="mt-0.5 rounded-md bg-[#f97316]/12 p-2 text-[#f97316]" aria-hidden="true">
+                          <ListChecks size={16} />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="flex items-center gap-2 text-sm font-black text-white">
+                            <span>{sectionTitle(group)}</span>
+                            {isActiveGroup ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                          </p>
+                          <p className="mt-1 text-xs font-semibold leading-5 text-slate-300">{sectionShortDescription(group)}</p>
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
+                            <span className="rounded-full border px-2 py-0.5 text-[11px] font-black border-[#f97316]/30 bg-[#f97316]/10 text-[#fed7aa]">
+                              {statusLabelForProgress(group)}
+                            </span>
+                            <span className="rounded-full border border-white/10 bg-[#151922] px-2 py-0.5 text-[11px] font-black text-slate-300">{sectionStatus}</span>
                           </div>
-                        ))}
+                        </div>
+                      </div>
+                    </button>
+                    {isActiveGroup ? (
+                      <div className="border-t border-white/10 p-3">
+                        {sectionRequirement ? (
+                          <div className="rounded-xl border border-[#f97316]/25 bg-[#171a20] p-3">
+                            <div className="mb-3 flex flex-col gap-1">
+                              <span className="text-xs font-black text-[#fed7aa]">
+                                Check {sectionIndex + 1} of {group.requirements.length}
+                              </span>
+                              <h3 id={`${group.id}-check-heading`} className="text-sm font-black text-white">
+                                {sectionRequirement.title}
+                              </h3>
+                              <p className="text-xs font-semibold leading-5 text-slate-300">{sectionRequirement.description}</p>
+                              <p className="text-xs font-semibold leading-5 text-slate-500">
+                                {requirementAppliesTo(sectionRequirement, bundle?.serviceScopes ?? [])}
+                              </p>
+                              <p className="text-xs font-semibold leading-5 text-slate-500">{sharedEvidenceLabel(sectionRequirement, requirements, bundle?.serviceScopes ?? [], selectedServices)}</p>
+                            <div className="mt-2 flex flex-wrap items-center gap-2">
+                                <StatusLabel label={statusForRequirement(sectionRequirement)} status={sectionRequirement.status} />
+                                <span className="rounded-full border border-white/10 bg-[#151922] px-2 py-0.5 text-[11px] font-black text-slate-400">{requirementStageLabel(sectionRequirement)}</span>
+                              </div>
+                            </div>
+                                <p className="text-xs font-semibold text-slate-500">Accepted documents: {verificationUploadAllowedMimeLabel}</p>
+                                <p className="mt-1 text-xs font-semibold text-slate-500">
+                                  {sectionRequirement.status === "NOT_SUBMITTED" ? "Document not uploaded yet." : "Document uploaded"}
+                                </p>
+                            {requirementReadyForUiProgression(sectionRequirement.status) ? (
+                              <p className="mt-1 text-xs font-bold text-[#86efac]">Ready for review</p>
+                            ) : sectionRequirement.status === "CHANGES_REQUIRED" ? (
+                              <p className="mt-1 text-xs font-bold text-amber-300">Changes requested: TPL needs an updated document.</p>
+                            ) : null}
+                            {selectedFilenames[sectionRequirement.id] ? (
+                              <p className="mt-1 text-xs font-bold text-slate-200">Selected: {selectedFilenames[sectionRequirement.id]}</p>
+                            ) : null}
+                            {fileUploadMessages[sectionRequirement.id] ? (
+                              <p className="mt-1 text-xs font-bold text-red-300">{fileUploadMessages[sectionRequirement.id]}</p>
+                            ) : null}
+                            <label className={`mt-3 inline-flex h-10 w-full items-center justify-center rounded-xl px-3 text-xs font-black ${qaPreviewEnabled ? "cursor-not-allowed border border-white/10 bg-[#151922] text-slate-500" : "cursor-pointer border border-[#f97316]/40 bg-[#f97316]/10 text-[#fed7aa] hover:border-[#f97316]"}`}>
+                              {uploadingRequirementId === sectionRequirement.id ? "Uploading..." : sectionRequirement.status === "NOT_SUBMITTED" ? "Upload document" : "Replace document"}
+                              <input
+                                type="file"
+                                className="sr-only"
+                                disabled={qaPreviewEnabled}
+                                accept={verificationUploadMimeTypes.join(",")}
+                                onChange={(event) => {
+                                  const file = event.target.files?.[0];
+                                  if (file) handleFileSelection(sectionRequirement, file);
+                                  event.currentTarget.value = "";
+                                }}
+                              />
+                            </label>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                disabled={sectionIndex <= 0}
+                                onClick={() => setRequirementIndex(group.id, sectionIndex - 1)}
+                                className="h-9 rounded-lg border border-white/10 px-3 text-xs font-black text-slate-300 disabled:cursor-not-allowed disabled:opacity-45"
+                              >
+                                Previous check
+                              </button>
+                              <button
+                                type="button"
+                                disabled={sectionIndex >= group.requirements.length - 1}
+                                onClick={() => setRequirementIndex(group.id, sectionIndex + 1)}
+                                className="h-9 rounded-lg border border-[#f97316]/45 px-3 text-xs font-black text-[#fed7aa] disabled:cursor-not-allowed disabled:opacity-45"
+                              >
+                                Next check
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-xs font-semibold leading-5 text-slate-500">No checks in this section.</p>
+                        )}
                       </div>
                     ) : null}
-                  </div>
+                  </article>
                 );
               })}
             </div>
           </section>
-        ) : null}
-
-        <section className="rounded-xl border border-white/10 bg-[#11141a] p-4">
-          <SectionHeading title="Progress summary" detail="You can save incomplete work. Save & Continue is available after required evidence is ready for review." />
-          <div className={`mt-3 rounded-xl border p-3 text-sm font-bold ${actionRequired ? "border-[#f97316]/30 bg-[#f97316]/10 text-[#fed7aa]" : "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"}`}>
-            {actionRequired ? `${actionRequired} required check${actionRequired === 1 ? "" : "s"} still need evidence. Uploaded does not mean verified.` : "Required evidence is ready for review. Uploaded does not mean verified."}
-          </div>
-        </section>
         </div>
+
         <aside className="hidden xl:block">
           <div className="sticky top-28 rounded-xl border border-white/10 bg-[#11141a] p-4">
-            <h2 className="text-sm font-black text-white">Verification Summary</h2>
+            <h2 className="text-sm font-black text-white">Your progress</h2>
             <VerificationSummaryBody
-              selectedServices={selectedServices}
               requirements={requirements}
               currentSectionId={selectedSection?.id ?? ""}
-              onSelectSection={setSelectedSectionId}
+              onSelectSection={updateSectionSelection}
               groups={requirementGroups}
             />
+            <p className="mt-3 text-xs font-semibold leading-5 text-slate-300">
+              {isRequiredNowComplete
+                ? "Your documents are ready for review. Additional documents may still be needed before individual services go live."
+                : `${nextSectionAction} to continue`}
+            </p>
           </div>
         </aside>
       </div>
     </div>
   );
 }
-
 function PayoutTaxPlaceholder() {
   return (
     <div data-application-active-step="payout_tax" className="rounded-2xl border border-white/10 bg-[#171a20] p-6 shadow-2xl">
@@ -2970,16 +3220,6 @@ function LoadingCard() {
 
 function VerifiedChip({ label }: { label: string }) {
   return <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/12 px-2.5 py-1 text-xs font-black text-emerald-200"><Check size={13} aria-hidden="true" />{label}</span>;
-}
-
-function VerificationMetric({ label, value, tone = "neutral" }: { label: string; value: string; tone?: "neutral" | "success" | "warning" }) {
-  const color = tone === "success" ? "text-emerald-200" : tone === "warning" ? "text-[#fed7aa]" : "text-white";
-  return (
-    <div className="rounded-xl border border-white/10 bg-[#0f1217] px-3 py-2">
-      <p className="text-[11px] font-black uppercase tracking-[0.1em] text-slate-500">{label}</p>
-      <p className={`mt-1 text-sm font-black ${color}`}>{value}</p>
-    </div>
-  );
 }
 
 function StatusLabel({ label, status }: { label: string; status: string }) {
@@ -3388,6 +3628,38 @@ function requirementReadyForUiProgression(status: string): boolean {
   return status === "SUBMITTED" || status === "UNDER_REVIEW" || status === "VERIFIED" || status === "EXPIRING_SOON";
 }
 
+function getFirstOutstandingRequirementIndex(requirements: PartnerRequirement[]): number {
+  const first = requirements.findIndex((requirement) => !requirementReadyForUiProgression(requirement.status));
+  return first === -1 ? Math.max(requirements.length - 1, 0) : first;
+}
+
+function validateVerificationFile(file: File): string {
+  if (file.size > verificationUploadMaxBytes) return `File is too large. Max size is ${verificationUploadAllowedMimeLabel}.`;
+  if (!verificationUploadMimeTypes.includes(file.type || "")) return `Unsupported file type. Use ${verificationUploadAllowedMimeLabel}.`;
+  return "";
+}
+
+function getServicesHeadline(services: VerificationSelectedService[]): string {
+  if (!services.length) return "No services selected yet";
+  if (services.length === 1) return services[0].label;
+  return `${services[0].label} + ${services.length - 1} more`;
+}
+
+function sectionTitle(group: VerificationRequirementGroup): string {
+  if (group.id === "business-requirements") return "Business details";
+  if (group.id === "representative-requirements") return "Your identity";
+  if (group.id === "jurisdiction-requirements" || group.id === "additional-review") return "Additional checks, only when needed";
+  return group.title;
+}
+
+function sectionShortDescription(group: VerificationRequirementGroup): string {
+  if (group.id === "business-requirements") return "Checks shared by your Partner business profile.";
+  if (group.id === "representative-requirements") return "Checks for the person managing this application.";
+  if (group.id === "jurisdiction-requirements") return "Checks based on your selected country and locations.";
+  if (group.id === "additional-review") return "Items for manual review when your profile needs it.";
+  return group.description;
+}
+
 type VerificationSelectedService = { id: string; code: string; label: string };
 
 type VerificationRequirementGroup = {
@@ -3420,9 +3692,9 @@ function groupPartnerRequirements(requirements: PartnerRequirement[], scopes: Pa
   const jurisdiction = requirements.filter((item) => item.ownerEntityType === "LOCATION");
   const additional = requirements.filter((item) => item.metadata?.missingProfile === true || item.title.toLowerCase().includes("manual"));
   const groups: VerificationRequirementGroup[] = [
-    makeRequirementGroup("business-requirements", "Common Business Verification", "Checks shared by your Partner organization.", business),
-    makeRequirementGroup("representative-requirements", "Representative Verification", "Checks for the person responsible for this application.", representative),
-    makeRequirementGroup("jurisdiction-requirements", "Country and Jurisdiction Requirements", "Checks that depend on your selected country or operating location.", jurisdiction),
+    makeRequirementGroup("business-requirements", "Business details", "Checks shared by your Partner business profile.", business),
+    makeRequirementGroup("representative-requirements", "Your identity", "Checks for the person managing this application.", representative),
+    makeRequirementGroup("jurisdiction-requirements", "Additional checks, only when needed", "Checks based on your selected country and locations.", jurisdiction),
   ];
   const serviceGroups = selectedServices.map((selectedService) => {
     const scoped = service.filter((item) => {
@@ -3432,7 +3704,7 @@ function groupPartnerRequirements(requirements: PartnerRequirement[], scopes: Pa
     });
     return makeRequirementGroup(`service-${selectedService.code}`, selectedService.label, serviceRequirementDescription(scoped, scopes, catalogueItems), scoped);
   });
-  const additionalGroup = makeRequirementGroup("additional-review", "Additional Review", "Items TPL GO needs to review manually.", additional);
+  const additionalGroup = makeRequirementGroup("additional-review", "Additional checks, only when needed", "Manual review items when requested by your profile.", additional);
   return [...groups, ...serviceGroups, additionalGroup]
     .map((group) => ({ ...group, requirements: sortRequirementsForDisplay(dedupeRequirements(group.requirements)), optionLabel: sectionOptionLabel(group.title, group.requirements) }))
     .filter((group) => group.requirements.length > 0);
@@ -3504,16 +3776,11 @@ function previewRequirement(id: string, title: string, ownerEntityType: string, 
   };
 }
 
-function requirementLinkedDocument(requirement: PartnerRequirement, document: PartnerOrganizationBundle["documents"][number], links: NonNullable<PartnerOrganizationBundle["links"]>): boolean {
-  if (links.some((link) => link.status === "active" && link.requirementId === requirement.id && link.documentId === document.id)) return true;
-  return links.length === 0 && document.ownerEntityType === requirement.ownerEntityType && document.documentType === requirement.title;
-}
-
 function requirementGroupTitle(requirement: PartnerRequirement): string {
-  if (requirement.ownerEntityType === "ORGANIZATION") return "Business Verification";
-  if (["PERSON", "PROFESSIONAL", "DRIVER"].includes(requirement.ownerEntityType)) return "Representative Verification";
-  if (requirement.ownerEntityType === "LOCATION") return "Country and Jurisdiction Requirements";
-  return "Service Verification";
+  if (requirement.ownerEntityType === "ORGANIZATION") return "Business details";
+  if (["PERSON", "PROFESSIONAL", "DRIVER"].includes(requirement.ownerEntityType)) return "Your identity";
+  if (requirement.ownerEntityType === "LOCATION") return "Additional checks, only when needed";
+  return "Service-specific check";
 }
 
 function requirementAppliesTo(requirement: PartnerRequirement, scopes: PartnerOrganizationBundle["serviceScopes"]): string {
@@ -3554,9 +3821,9 @@ function serviceRequirementDescription(requirements: PartnerRequirement[], scope
 function verificationStatusLabel(status: string): string {
   if (status === "NOT_SUBMITTED") return "Action required";
   if (status === "SUBMITTED") return "Ready for review";
-  if (status === "UNDER_REVIEW") return "Under review";
-  if (status === "VERIFIED") return "Verified";
-  if (status === "CHANGES_REQUIRED") return "Changes required";
+  if (status === "UNDER_REVIEW") return "TPL review required";
+  if (status === "VERIFIED") return "Ready for review";
+  if (status === "CHANGES_REQUIRED") return "TPL needs an updated document";
   if (status === "REJECTED") return "Rejected";
   if (status === "EXPIRING_SOON") return "Expiring soon";
   if (status === "EXPIRED") return "Expired";
@@ -3574,18 +3841,16 @@ function requirementStage(requirement: PartnerRequirement): "REQUIRED_NOW" | "BE
 function requirementStageLabel(requirement: PartnerRequirement): string {
   const stage = requirementStage(requirement);
   if (stage === "REQUIRED_NOW") return "Required now";
-  if (stage === "BEFORE_ACTIVATION") return "Required before activation";
-  return "Only if applicable";
+  if (stage === "BEFORE_ACTIVATION") return "Required before this service goes live";
+  return "We'll ask only if needed";
 }
 
 function VerificationSummaryBody({
-  selectedServices,
   requirements,
   groups,
   currentSectionId,
   onSelectSection,
 }: {
-  selectedServices: VerificationSelectedService[];
   requirements: PartnerRequirement[];
   groups: VerificationRequirementGroup[];
   currentSectionId: string;
@@ -3593,32 +3858,36 @@ function VerificationSummaryBody({
 }) {
   const requiredNow = requirements.filter((item) => requirementStage(item) === "REQUIRED_NOW");
   const beforeActivation = requirements.filter((item) => requirementStage(item) === "BEFORE_ACTIVATION");
-  const ifApplicable = requirements.filter((item) => requirementStage(item) === "IF_APPLICABLE");
-  const completed = requirements.filter((item) => requirementReadyForUiProgression(item.status));
   const ready = requiredNow.filter((item) => requirementReadyForUiProgression(item.status));
-  const underReview = requirements.filter((item) => item.status === "SUBMITTED" || item.status === "UNDER_REVIEW");
+  const beforeActivationReady = beforeActivation.filter((item) => requirementReadyForUiProgression(item.status));
   const progress = requiredNow.length ? Math.round((ready.length / requiredNow.length) * 100) : 0;
+  const nextRequired = requiredNow.find((item) => !requirementReadyForUiProgression(item.status));
+  const nextSectionAction = nextRequired ? `Upload your ${nextRequired.title}` : "Upload your next required document";
   return (
-    <div className="mt-3 grid gap-3">
-      <div className="grid grid-cols-2 gap-2">
-        <VerificationMetric label="Services" value={String(selectedServices.length)} />
-        <VerificationMetric label="Progress" value={`${progress}%`} />
-        <VerificationMetric label="Required now" value={String(requiredNow.length - ready.length)} tone={requiredNow.length - ready.length ? "warning" : "success"} />
-        <VerificationMetric label="Before activation" value={String(beforeActivation.filter((item) => !requirementReadyForUiProgression(item.status)).length)} />
-        <VerificationMetric label="If applicable" value={String(ifApplicable.length)} />
-        <VerificationMetric label="Ready" value={String(underReview.length)} />
-        <VerificationMetric label="Completed" value={`${completed.length}/${requirements.length}`} />
+    <div className="mt-3 space-y-3">
+      <div className="rounded-xl border border-white/10 bg-[#0f1217] p-3">
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-xs font-black uppercase tracking-[0.12em] text-slate-400">Required now</span>
+          <span className="text-sm font-black text-white">{ready.length} of {requiredNow.length}</span>
+        </div>
+        <div className="mt-2 flex items-center justify-between text-sm">
+          <span className="text-xs font-black uppercase tracking-[0.12em] text-slate-400">Before services go live</span>
+          <span className="text-sm font-black text-white">{beforeActivationReady.length} of {beforeActivation.length}</span>
+        </div>
+        <p className="mt-2 text-xs font-black uppercase tracking-[0.1em] text-[#fed7aa]">
+          Next step: {nextSectionAction}
+        </p>
       </div>
       <div className="h-2 rounded-full bg-white/10">
         <div className="h-full rounded-full bg-[linear-gradient(135deg,#38bdf8,#22c55e)]" style={{ width: `${progress}%` }} />
       </div>
-      <div className="grid gap-2">
+      <div className="space-y-2">
         {groups.map((group) => (
           <button
             type="button"
             key={group.id}
             onClick={() => onSelectSection(group.id)}
-            className={`rounded-xl border px-3 py-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-[#38bdf8] ${currentSectionId === group.id ? "border-[#f97316]/45 bg-[#f97316]/10" : "border-white/10 bg-[#0f1217]"}`}
+            className={`w-full rounded-xl border px-3 py-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-[#38bdf8] ${currentSectionId === group.id ? "border-[#f97316]/45 bg-[#f97316]/10" : "border-white/10 bg-[#0f1217]"}`}
           >
             <span className="block text-xs font-black text-white">{group.title}</span>
             <span className="mt-1 block text-[11px] font-semibold text-slate-400">{sectionOptionLabel(group.title, group.requirements).replace(`${group.title} - `, "")}</span>

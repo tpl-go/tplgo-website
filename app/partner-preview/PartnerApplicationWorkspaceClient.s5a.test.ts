@@ -7,9 +7,10 @@ const apiClientSource = readFileSync("app/lib/partner/partnerApiClient.ts", "utf
 
 test("Step 5 renders a real workspace instead of the development placeholder", () => {
   assert.match(workspaceSource, /Verification & Compliance/);
-  assert.match(workspaceSource, /Complete the checks required for your business and selected services\./);
+  assert.match(workspaceSource, /Complete the checks needed for your business and selected services\./);
   assert.match(workspaceSource, /VerificationComplianceStep/);
   assert.doesNotMatch(workspaceSource, /Detailed verification form comes in the next development step\./);
+  assert.doesNotMatch(workspaceSource, /Preparing your verification checklist\.\.\./);
 });
 
 test("Step 5 uses server-side draft persistence for save and continue", () => {
@@ -18,12 +19,14 @@ test("Step 5 uses server-side draft persistence for save and continue", () => {
   assert.match(workspaceSource, /savePartnerVerificationComplianceDraft/);
   assert.match(workspaceSource, /if \(activeStep === "documents_compliance"\)/);
   assert.match(workspaceSource, /setActiveStep\("payout_tax"\)/);
+  assert.match(workspaceSource, /Complete this required check before continuing\./);
 });
 
 test("Step 5 keeps Uploaded distinct from Verified and exposes Step 6 only as a placeholder", () => {
-  assert.match(workspaceSource, /Uploaded does not mean verified\./);
   assert.match(workspaceSource, /Evidence uploaded and ready for review\./);
+  assert.match(workspaceSource, /Your documents are ready for review\. Additional documents may still be needed before individual services go live\./);
   assert.match(workspaceSource, /Add the payout and tax details required for your Partner account\./);
+  assert.match(workspaceSource, /function verificationStatusLabel\(/);
   assert.doesNotMatch(workspaceSource, /automatic verification/);
 });
 
@@ -33,40 +36,46 @@ test("Step 5 uses the existing secure upload API and avoids permanent frontend s
   assert.match(workspaceSource, /linkPartnerDocumentToRequirement/);
   assert.match(workspaceSource, /Secure upload is not available for this staging environment\./);
   assert.doesNotMatch(workspaceSource, /localStorage\.setItem\("partnerDocument/);
+  assert.match(workspaceSource, /Document upload failed\. Please try again\./);
 });
 
 test("Step 5 keeps QA preview clearly isolated from normal runtime behavior", () => {
-  assert.match(workspaceSource, /Preview Example uses fictional requirement data only\./);
-  assert.match(workspaceSource, /It does not upload documents or verify identity\./);
+  assert.match(workspaceSource, /Preview example — Fictional data only\. No documents are uploaded or verified\./);
   assert.match(workspaceSource, /qaPreviewEnabled/);
+  assert.match(workspaceSource, /We&apos;re confirming what is needed for this service\./);
 });
 
 test("Step 5 guides verification by selected services and section navigation", () => {
-  assert.match(workspaceSource, /Verification for your selected services/);
-  assert.match(workspaceSource, /Complete the minimum checks needed for your business and services\./);
-  assert.match(workspaceSource, /Edit selected services/);
-  assert.match(workspaceSource, /Select a verification section/);
-  assert.match(workspaceSource, /Previous Section/);
-  assert.match(workspaceSource, /Next Section/);
+  assert.match(workspaceSource, /Your selected services/);
+  assert.match(workspaceSource, /Complete the checks needed for your business and selected services\./);
+  assert.match(workspaceSource, /Edit services/);
+  assert.match(workspaceSource, /Verification checklist/);
+  assert.match(workspaceSource, /Start verification|Continue verification|Continue to Payout & Tax/);
+  assert.match(workspaceSource, /Previous check/);
+  assert.match(workspaceSource, /Next check/);
   assert.match(workspaceSource, /selectedVerificationServices/);
+  assert.match(workspaceSource, /View selected services/);
 });
 
 test("Step 5 exposes minimum-onboarding stage labels and shared evidence presentation", () => {
   assert.match(workspaceSource, /Required now/);
-  assert.match(workspaceSource, /Required before activation/);
-  assert.match(workspaceSource, /Only if applicable/);
+  assert.match(workspaceSource, /Required before this service goes live/);
+  assert.match(workspaceSource, /We'll ask only if needed/);
   assert.match(workspaceSource, /Used for/);
   assert.match(workspaceSource, /Collected once for this requirement\./);
   assert.match(workspaceSource, /requirementStage/);
+  assert.match(workspaceSource, /Changes requested: TPL needs an updated document\./);
 });
 
 test("Step 5 renders desktop and mobile verification summaries", () => {
-  assert.match(workspaceSource, /Verification Summary/);
+  assert.match(workspaceSource, /VerificationSummaryBody/);
   assert.match(workspaceSource, /mobile-verification-summary-heading/);
   assert.match(workspaceSource, /Required now/);
-  assert.match(workspaceSource, /Before activation/);
-  assert.match(workspaceSource, /If applicable/);
+  assert.match(workspaceSource, /Before services go live/);
+  assert.doesNotMatch(workspaceSource, /VerificationMetric/);
   assert.match(workspaceSource, /onSelectSection/);
+  assert.match(workspaceSource, /Your progress/);
+  assert.match(workspaceSource, /Continue to Payout & Tax/);
 });
 
 test("Save Draft message layer uses a portal modal above sticky UI", () => {
