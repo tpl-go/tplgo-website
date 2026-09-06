@@ -790,6 +790,30 @@ export type AdminPartnerApplicationContentTree = {
   children: Array<{ id: string; label: string; editableFields: string[]; lockedFields: string[] }>;
 };
 
+export type AdminVerificationPolicyWorkflowView = {
+  published: { humanName: string; version: string; status: string; effectiveFrom: string; updatedAt: string };
+  draft: { version: string; status: string } | null;
+  pendingApproval: { version: string; status: string } | null;
+  scheduled: { version: string; status: string } | null;
+  totals: { activeRequirements: number; conflicts: number; validationIssues: string[] };
+  permissions: { canRead: boolean; canManage: boolean; canApprove: boolean; canPublish: boolean };
+  nextActions: string[];
+  workflowRecord?: {
+    targetType: "verification_policy";
+    targetStableId: string;
+    targetLabel: string;
+    targetPath: string;
+    draftVersionId?: string | null;
+    workflowState: "DRAFT" | "PENDING_APPROVAL" | "APPROVED" | "PUBLISHED" | "SCHEDULED" | "ARCHIVED";
+    changeSummary: string;
+    editorReturnRoute: string;
+    permissionScope: "partner_verification_policy";
+    updatedAt: string;
+    scheduledFor?: string | null;
+    nextAction?: string;
+  };
+};
+
 export type AdminPartnerServiceCatalogueResponse = {
   draft: { items: AdminPartnerServiceCatalogueItem[]; contentTree: AdminPartnerApplicationContentTree };
   published: { items: AdminPartnerServiceCatalogueItem[]; contentTree: AdminPartnerApplicationContentTree };
@@ -2724,6 +2748,10 @@ export async function listAdminPartnerRegistrationIntakes(): Promise<AdminApiRes
 
 export async function getAdminPartnerServiceCatalogue(): Promise<AdminApiResult<AdminPartnerServiceCatalogueResponse>> {
   return adminApiRequest<AdminPartnerServiceCatalogueResponse>("/api/v1/admin/partners/service-catalogue");
+}
+
+export async function getAdminVerificationPolicyWorkflow(): Promise<AdminApiResult<AdminVerificationPolicyWorkflowView>> {
+  return adminApiRequest<AdminVerificationPolicyWorkflowView>("/api/v1/admin/partner-verification/policies");
 }
 
 export async function saveAdminPartnerServiceCatalogueDraft(input: {

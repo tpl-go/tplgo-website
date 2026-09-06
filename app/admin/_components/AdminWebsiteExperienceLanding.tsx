@@ -32,8 +32,10 @@ import { AdminBackButton } from "./AdminBackButton";
 import {
   getAdminWebsiteExperienceLoginSignup,
   getAdminPartnerServiceCatalogue,
+  getAdminVerificationPolicyWorkflow,
   type AdminApiError,
   type AdminPartnerServiceCatalogueResponse,
+  type AdminVerificationPolicyWorkflowView,
   type WebsiteExperienceAdminContext,
   type WebsiteExperienceAdminResponse,
 } from "../../lib/admin/adminApiClient";
@@ -48,6 +50,12 @@ type LoadState =
 type CatalogueLoadState =
   | { status: "loading"; data: null }
   | { status: "ready"; data: AdminPartnerServiceCatalogueResponse }
+  | { status: "error"; data: null };
+
+type PolicyWorkflowLoadState =
+  | { status: "loading"; data: null }
+  | { status: "ready"; data: AdminVerificationPolicyWorkflowView }
+  | { status: "denied"; data: null }
   | { status: "error"; data: null };
 
 const futureGlobalModules = [
@@ -71,6 +79,7 @@ const pageModules = [
 export function AdminWebsiteExperienceLanding({ view = "root" }: { view?: LandingView }) {
   const [state, setState] = useState<LoadState>({ status: "loading", data: null, error: null });
   const [catalogueState, setCatalogueState] = useState<CatalogueLoadState>({ status: "loading", data: null });
+  const [policyWorkflowState, setPolicyWorkflowState] = useState<PolicyWorkflowLoadState>({ status: "loading", data: null });
   const [search, setSearch] = useState("");
 
   const loadWebsiteExperience = useCallback((active: { current: boolean }) => {
@@ -84,6 +93,15 @@ export function AdminWebsiteExperienceLanding({ view = "root" }: { view?: Landin
     void getAdminPartnerServiceCatalogue().then((result) => {
       if (!active.current) return;
       setCatalogueState(result.ok ? { status: "ready", data: result.data } : { status: "error", data: null });
+    });
+  }, []);
+
+  const loadPolicyWorkflowSummary = useCallback((active: { current: boolean }) => {
+    void getAdminVerificationPolicyWorkflow().then((result) => {
+      if (!active.current) return;
+      if (result.ok) setPolicyWorkflowState({ status: "ready", data: result.data });
+      else if (result.error.code === "ADMIN_UNAUTHORIZED" || result.error.code === "ADMIN_FORBIDDEN") setPolicyWorkflowState({ status: "denied", data: null });
+      else setPolicyWorkflowState({ status: "error", data: null });
     });
   }, []);
 
@@ -103,8 +121,16 @@ export function AdminWebsiteExperienceLanding({ view = "root" }: { view?: Landin
     };
   }, [loadCatalogueSummary]);
 
+  useEffect(() => {
+    const active = { current: true };
+    loadPolicyWorkflowSummary(active);
+    return () => {
+      active.current = false;
+    };
+  }, [loadPolicyWorkflowSummary]);
+
   const summary = useMemo(() => buildLoginSignupSummary(state.status === "ready" ? state.data.contexts.filter((context) => context.context !== "partner_application") : []), [state]);
-  const workflowSummary = useMemo(() => mergeWorkflowSummary(summary, catalogueState.status === "ready" ? catalogueState.data : null), [catalogueState, summary]);
+  const workflowSummary = useMemo(() => mergeWorkflowSummary(summary, catalogueState.status === "ready" ? catalogueState.data : null, policyWorkflowState.status === "ready" ? policyWorkflowState.data : null), [catalogueState, policyWorkflowState, summary]);
   const partnerContext = state.status === "ready" ? state.data.contexts.find((context) => context.context === "partner_application") : undefined;
   const visiblePages = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -188,11 +214,11 @@ export function AdminWebsiteExperienceLanding({ view = "root" }: { view?: Landin
             <h2 className="mt-2 text-3xl font-black tracking-normal text-sky-100">Website Experience</h2>
             <p className="mt-2 text-sm leading-6 text-slate-300">Manage website content and publishing.</p>
           </div>
-          <StatusSummary summary={workflowSummary} loading={state.status === "loading" || catalogueState.status === "loading"} />
+          <StatusSummary summary={workflowSummary} loading={state.status === "loading" || catalogueState.status === "loading" || policyWorkflowState.status === "loading"} />
         </div>
       </section>
 
-      {state.status === "error" || catalogueState.status === "error" ? (
+      {state.status === "error" || catalogueState.status === "error" || policyWorkflowState.status === "error" ? (
         <section className="flex flex-col gap-3 rounded-xl border border-orange-300/35 bg-orange-500/10 p-4 text-sm font-semibold text-orange-100 sm:flex-row sm:items-center sm:justify-between">
           <span>Some counts could not load. Navigation is still available.</span>
           <button
@@ -201,8 +227,10 @@ export function AdminWebsiteExperienceLanding({ view = "root" }: { view?: Landin
               const active = { current: true };
               setState({ status: "loading", data: null, error: null });
               setCatalogueState({ status: "loading", data: null });
+              setPolicyWorkflowState({ status: "loading", data: null });
               loadWebsiteExperience(active);
               loadCatalogueSummary(active);
+              loadPolicyWorkflowSummary(active);
             }}
             className="inline-flex h-10 items-center justify-center rounded-xl border border-orange-200/40 px-4 text-sm font-black text-orange-50 hover:bg-orange-300/10 focus:outline-none focus:ring-2 focus:ring-orange-200"
           >
@@ -224,6 +252,9 @@ export function AdminWebsiteExperienceLanding({ view = "root" }: { view?: Landin
         <VerticalEntry icon={Send} title="Needs Approval" detail="Review changes waiting for approval." count={formatCountLabel(workflowSummary.reviewLabel, "Needs Approval")} href="/admin/website-experience/login-signup?workflow=in_review" highlight={isPendingCount(workflowSummary.reviewLabel)} />
         <VerticalEntry icon={CheckCircle2} title="Ready to Publish" detail="Publish or schedule approved changes." count={formatCountLabel(workflowSummary.approvedLabel, "Ready")} href="/admin/website-experience/login-signup?workflow=approved" highlight={isPendingCount(workflowSummary.approvedLabel)} />
         <VerticalEntry icon={CalendarClock} title="Scheduled" detail="View upcoming publications." count={formatCountLabel(workflowSummary.scheduledLabel, "Scheduled")} href="/admin/website-experience/login-signup?workflow=scheduled" highlight={isPendingCount(workflowSummary.scheduledLabel)} />
+        {policyWorkflowState.status !== "denied" ? (
+          <VerticalEntry icon={ClipboardList} title="Verification Rules" detail="Central policy work item for Partner verification requirements." count={policyWorkflowState.status === "ready" ? policyStatusLabel(policyWorkflowState.data) : "Loading"} href="/admin/partner-verification/rules" highlight={policyWorkflowState.status === "ready" && policyWorkflowState.data.published.status !== "PUBLISHED"} />
+        ) : null}
       </section>
 
       <section className="space-y-3">
@@ -254,19 +285,28 @@ function buildLoginSignupSummary(contexts: WebsiteExperienceAdminContext[]) {
   };
 }
 
-function mergeWorkflowSummary(summary: ReturnType<typeof buildLoginSignupSummary>, catalogue: AdminPartnerServiceCatalogueResponse | null) {
-  if (!catalogue) return summary;
-  const catalogueState = catalogue.workflowState ?? (catalogue.hasUnpublishedChanges ? "draft" : "published");
+function mergeWorkflowSummary(summary: ReturnType<typeof buildLoginSignupSummary>, catalogue: AdminPartnerServiceCatalogueResponse | null, policy: AdminVerificationPolicyWorkflowView | null) {
+  const catalogueState = catalogue?.workflowState ?? (catalogue?.hasUnpublishedChanges ? "draft" : "published");
+  const policyState = policy?.workflowRecord?.workflowState ?? policy?.published.status;
   const add = (value: string, amount: number) => Number.isFinite(Number(value)) ? String(Number(value) + amount) : value;
   return {
     publishedLabel: summary.publishedLabel,
-    draftLabel: add(summary.draftLabel, catalogue.hasUnpublishedChanges && ["draft", "changes_requested"].includes(catalogueState) ? 1 : 0),
-    reviewLabel: add(summary.reviewLabel, catalogueState === "in_review" ? 1 : 0),
-    approvedLabel: add(summary.approvedLabel, catalogueState === "approved" ? 1 : 0),
-    scheduledLabel: summary.scheduledLabel,
-    archiveLabel: add(summary.archiveLabel, catalogueState === "archived" ? 1 : 0),
-    serviceRequestLabel: String(catalogue.requestedServices.filter((request) => !request.resolution && !["closed", "rejected", "mapped", "draft_created"].includes(request.status)).length),
+    draftLabel: add(summary.draftLabel, (catalogue?.hasUnpublishedChanges && ["draft", "changes_requested"].includes(catalogueState) ? 1 : 0) + (policyState === "DRAFT" ? 1 : 0)),
+    reviewLabel: add(summary.reviewLabel, (catalogueState === "in_review" ? 1 : 0) + (policyState === "PENDING_APPROVAL" ? 1 : 0)),
+    approvedLabel: add(summary.approvedLabel, (catalogueState === "approved" ? 1 : 0) + (policyState === "APPROVED" ? 1 : 0)),
+    scheduledLabel: add(summary.scheduledLabel, policyState === "SCHEDULED" ? 1 : 0),
+    archiveLabel: add(summary.archiveLabel, (catalogueState === "archived" ? 1 : 0) + (policyState === "ARCHIVED" ? 1 : 0)),
+    serviceRequestLabel: catalogue ? String(catalogue.requestedServices.filter((request) => !request.resolution && !["closed", "rejected", "mapped", "draft_created"].includes(request.status)).length) : "Loading",
   };
+}
+
+function policyStatusLabel(policy: AdminVerificationPolicyWorkflowView) {
+  const state = policy.workflowRecord?.workflowState ?? policy.published.status;
+  if (state === "DRAFT") return "Draft";
+  if (state === "PENDING_APPROVAL") return "Needs Approval";
+  if (state === "APPROVED") return "Ready to Publish";
+  if (state === "SCHEDULED") return "Scheduled";
+  return `${policy.totals.activeRequirements} published rules`;
 }
 
 function SectionLabel({ title, detail }: { title: string; detail: string }) {

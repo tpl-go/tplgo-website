@@ -3896,7 +3896,7 @@ function serviceRequirementDescription(requirements: PartnerRequirement[], scope
 
 function verificationStatusLabel(status: string): string {
   if (status === "NOT_SUBMITTED") return "Action required";
-  if (status === "SUBMITTED") return "Ready for review";
+  if (status === "SUBMITTED") return "Submitted for verification";
   if (status === "UNDER_REVIEW") return "TPL review required";
   if (status === "VERIFIED") return "Ready for review";
   if (status === "CHANGES_REQUIRED") return "TPL needs an updated document";

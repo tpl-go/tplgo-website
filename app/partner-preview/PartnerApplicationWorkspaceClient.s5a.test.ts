@@ -22,6 +22,13 @@ test("Step 5 uses server-side draft persistence for save and continue", () => {
   assert.match(workspaceSource, /Complete this required check before continuing\./);
 });
 
+test("Step 5 completion can move to Step 6 while Admin verification remains pending", () => {
+  assert.match(workspaceSource, /Submitted for Verification|Submitted for verification|Evidence uploaded and ready for review\./);
+  assert.match(workspaceSource, /setActiveStep\("payout_tax"\)/);
+  assert.match(workspaceSource, /Verified/);
+  assert.doesNotMatch(workspaceSource, /final Admin approval required to continue/i);
+});
+
 test("Step 5 keeps Uploaded distinct from Verified and exposes Step 6 only as a placeholder", () => {
   assert.match(workspaceSource, /Evidence uploaded and ready for review\./);
   assert.match(workspaceSource, /Your documents are ready for review\. Additional documents may still be needed before individual services go live\./);

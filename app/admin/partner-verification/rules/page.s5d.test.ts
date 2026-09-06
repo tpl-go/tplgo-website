@@ -5,6 +5,8 @@ import { test } from "vitest";
 const rulesPage = readFileSync("app/admin/partner-verification/rules/page.tsx", "utf8");
 const reviewPage = readFileSync("app/admin/partner-verification/page.tsx", "utf8");
 const shell = readFileSync("app/admin/_components/AdminShell.tsx", "utf8");
+const websiteExperienceHome = readFileSync("app/admin/_components/AdminWebsiteExperienceLanding.tsx", "utf8");
+const adminApiClient = readFileSync("app/lib/admin/adminApiClient.ts", "utf8");
 const partnerStep = readFileSync("app/partner-preview/PartnerApplicationWorkspaceClient.tsx", "utf8");
 const visibleText = rulesPage.replace(/<[^>]+>/g, " ");
 
@@ -51,6 +53,17 @@ test("Partner Step 5 approved layout remains present", () => {
   assert.match(partnerStep, /data-document-state-flow="true"/);
   assert.match(partnerStep, /Your selected services/);
   assert.match(partnerStep, /Your progress/);
+});
+
+test("Verification Rules appears in the central Website Experience work queue through guarded policy API", () => {
+  assert.match(adminApiClient, /AdminVerificationPolicyWorkflowView/);
+  assert.match(adminApiClient, /getAdminVerificationPolicyWorkflow/);
+  assert.match(websiteExperienceHome, /getAdminVerificationPolicyWorkflow/);
+  assert.match(websiteExperienceHome, /Central policy work item for Partner verification requirements\./);
+  assert.match(websiteExperienceHome, /policyWorkflowState\.status !== "denied"/);
+  assert.match(websiteExperienceHome, /policyState === "PENDING_APPROVAL"/);
+  assert.match(websiteExperienceHome, /policyState === "APPROVED"/);
+  assert.match(websiteExperienceHome, /policyState === "SCHEDULED"/);
 });
 
 
