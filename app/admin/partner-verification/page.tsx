@@ -21,6 +21,7 @@ type AdminDecisionAction = "start_review" | "send_senior_review" | "start_senior
 type AdminPermission = "partner_verification.read" | "partner_verification.review" | "partner_verification.level1_review" | "partner_verification.level2_review" | "partner_verification.final_approve" | "partner_verification.manage";
 type ReviewDepth = "TWO_LEVEL" | "THREE_LEVEL";
 type ReviewStage = "LEVEL_1_READY" | "LEVEL_1_IN_REVIEW" | "LEVEL_2_READY" | "LEVEL_2_IN_REVIEW" | "LEVEL_3_READY" | "LEVEL_3_IN_REVIEW" | "CHANGES_REQUIRED" | "REJECTED" | "ON_HOLD" | "VERIFIED" | "EXPIRED";
+type DocumentReviewState = "awaiting" | "submitted" | "unavailable";
 type QueueTab = "my-reviews" | "level-1" | "senior-review" | "final-approval" | "changes" | "completed" | "all";
 
 type AdminDocumentAccess = {
@@ -334,7 +335,9 @@ function RequirementCard({ requirement, detail, adminPermissions, decisionDraft,
   const document = documentForRequirement(detail, requirement.id);
   const depth = reviewDepthForRequirement(requirement);
   const stage = reviewStageForRequirement(requirement, detail.events, depth);
-  const actions = reviewActions(stage, Boolean(document), adminPermissions, requirement.expires);
+  const documentState = documentReviewState(requirement, document);
+  const actions = reviewActions(stage, documentState === "submitted", adminPermissions, requirement.expires);
+  const showDecisionInputs = actions.some((item) => actionNeedsMessage(item.action));
   return (
     <article className="rounded-xl border border-white/10 bg-[#0b1220] p-4" data-admin-verification-check="true">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
@@ -347,23 +350,34 @@ function RequirementCard({ requirement, detail, adminPermissions, decisionDraft,
         <StatusChip status={requirement.status} />
       </div>
 
-      <ReviewStageFlow depth={depth} stage={stage} events={detail.events.filter((event) => event.requirementId === requirement.id)} />
+      <ReviewStageFlow depth={depth} stage={stage} documentState={documentState} events={detail.events.filter((event) => event.requirementId === requirement.id)} />
 
-      <div className="mt-4 rounded-xl border border-white/10 bg-[#111827] p-3">
-        <p className="text-xs font-black uppercase tracking-[0.12em] text-sky-300/70">Submitted document</p>
+      <div className="mt-4 rounded-xl border border-white/10 bg-[#111827] p-3" data-document-review-state={documentState}>
+        <p className="text-xs font-black uppercase tracking-[0.12em] text-sky-300/70">Partner document</p>
         {document ? (
-          <div className="mt-2 grid gap-2 text-sm font-semibold text-slate-300 md:grid-cols-2">
-            <span>{document.documentType}</span>
-            <span>{document.originalFilename}</span>
-            <span>{document.mimeType}</span>
-            <span>Uploaded {formatDate((document as PartnerDocument & { createdAt?: string }).createdAt)}</span>
-            <span>Issue date: {document.issueDate || "Not provided"}</span>
-            <span>Expiry: {document.noExpiry ? "No expiry" : document.expiryDate || "Not provided"}</span>
-            <span>Version: current replacement</span>
-            <span>State: {humanStatus(document.status)}</span>
+          <div className="mt-2">
+            <p className="text-sm font-black text-white">Document submitted</p>
+            <div className="mt-2 grid gap-2 text-sm font-semibold text-slate-300 md:grid-cols-2">
+              <span>{document.documentType}</span>
+              <span>{document.originalFilename}</span>
+              <span>{document.mimeType}</span>
+              <span>Uploaded {formatDate((document as PartnerDocument & { createdAt?: string }).createdAt)}</span>
+              <span>Issue date: {document.issueDate || "Not provided"}</span>
+              <span>Expiry: {document.noExpiry ? "No expiry" : document.expiryDate || "Not provided"}</span>
+              <span>Version: current replacement</span>
+              <span>State: {humanStatus(document.status)}</span>
+            </div>
+          </div>
+        ) : documentState === "unavailable" ? (
+          <div className="mt-2 rounded-xl border border-amber-300/25 bg-amber-300/10 p-3 text-sm font-semibold text-amber-100">
+            <p className="font-black text-amber-50">Document unavailable</p>
+            <p className="mt-1 text-amber-100/85">The submission record exists, but its document cannot be opened.</p>
           </div>
         ) : (
-          <p className="mt-2 text-sm font-semibold text-slate-400">Waiting for Partner document.</p>
+          <div className="mt-2 rounded-xl border border-white/10 bg-[#0b1220] p-3 text-sm font-semibold text-slate-400">
+            <p className="font-black text-white">Awaiting Partner document</p>
+            <p className="mt-1">Not started</p>
+          </div>
         )}
         {document ? (
           <button type="button" onClick={() => onOpenDocument(requirement)} className="mt-3 inline-flex h-9 items-center gap-2 rounded-xl border border-sky-300/25 bg-sky-400/10 px-3 text-xs font-black text-sky-100 hover:bg-sky-400/15">
@@ -375,7 +389,7 @@ function RequirementCard({ requirement, detail, adminPermissions, decisionDraft,
       {document?.reviewNote ? <div className="mt-3 rounded-xl border border-amber-300/25 bg-amber-300/10 p-3 text-sm font-semibold text-amber-100"><AlertTriangle className="mr-2 inline h-4 w-4" /> Previous reviewer feedback: {document.reviewNote}</div> : null}
 
       <div className="mt-4 grid gap-3 rounded-xl border border-white/10 bg-[#111827] p-3">
-        <div className="grid gap-3 lg:grid-cols-2">
+        {showDecisionInputs ? <div className="grid gap-3 lg:grid-cols-2">
           <label className="grid gap-1 text-xs font-black uppercase tracking-[0.1em] text-sky-300/70">
             Message to Partner
             <textarea value={decisionDraft.reason} onChange={(event) => onDecisionDraft({ ...decisionDraft, reason: event.target.value })} className="min-h-20 rounded-xl border border-white/10 bg-[#0b1220] p-3 text-sm font-semibold normal-case tracking-normal text-white outline-none focus:border-[#f97316]/60" />
@@ -384,10 +398,10 @@ function RequirementCard({ requirement, detail, adminPermissions, decisionDraft,
             Private admin note
             <textarea value={decisionDraft.internalNote} onChange={(event) => onDecisionDraft({ ...decisionDraft, internalNote: event.target.value })} className="min-h-20 rounded-xl border border-white/10 bg-[#0b1220] p-3 text-sm font-semibold normal-case tracking-normal text-white outline-none focus:border-sky-300/50" />
           </label>
-        </div>
+        </div> : null}
         <p className="text-xs font-black uppercase tracking-[0.12em] text-sky-300/70">Next review action</p>
         <div className="flex flex-wrap gap-2">
-          {actions.length ? actions.map((action) => <DecisionButton key={action.action} label={action.label} action={action.action} requirement={requirement} busyAction={busyAction} onDecide={onDecide} />) : <p className="text-sm font-semibold text-slate-400">{waitingCopy(stage, Boolean(document))}</p>}
+          {actions.length ? actions.map((action) => <DecisionButton key={action.action} label={action.label} action={action.action} requirement={requirement} busyAction={busyAction} onDecide={onDecide} />) : <p className="text-sm font-semibold text-slate-400">{waitingCopy(stage, documentState)}</p>}
         </div>
       </div>
     </article>
@@ -444,12 +458,13 @@ function StatusChip({ status }: { status: string }) {
   return <span className={`inline-flex w-fit rounded-full border px-2.5 py-1 text-xs font-black ${tone}`}>{humanStatus(status)}</span>;
 }
 
-function ReviewStageFlow({ depth, stage, events }: { depth: ReviewDepth; stage: ReviewStage; events: PartnerVerificationEvent[] }) {
+function ReviewStageFlow({ depth, stage, documentState, events }: { depth: ReviewDepth; stage: ReviewStage; documentState: DocumentReviewState; events: PartnerVerificationEvent[] }) {
   const steps = depth === "TWO_LEVEL"
     ? ["Document submitted", "Document Check", "Final Review", "Verified"]
     : ["Document submitted", "Document Check", "Senior Review", "Final Approval", "Verified"];
-  const activeIndex = reviewStageIndex(depth, stage);
+  const activeIndex = documentState === "submitted" ? reviewStageIndex(depth, stage) : 0;
   const latest = events.find((event) => event.action.startsWith("admin.review."));
+  const currentAction = documentState === "awaiting" ? "Awaiting Partner document" : documentState === "unavailable" ? "Document unavailable" : stageCopy(stage);
   return (
     <div className="mt-4 rounded-xl border border-white/10 bg-[#111827] p-3" data-review-stage-flow={depth}>
       <div className="flex flex-wrap items-center gap-2 text-xs font-black">
@@ -459,7 +474,7 @@ function ReviewStageFlow({ depth, stage, events }: { depth: ReviewDepth; stage: 
           </span>
         ))}
       </div>
-      <p className="mt-2 text-xs font-semibold text-slate-400">Current action required: <span className="text-[#fed7aa]">{stageCopy(stage)}</span></p>
+      <p className="mt-2 text-xs font-semibold text-slate-400">Current action required: <span className="text-[#fed7aa]">{currentAction}</span></p>
       <p className="mt-1 text-xs font-semibold text-slate-400">Previous reviewer: <span className="text-white">{latest ? "Recorded" : "Not recorded"}</span></p>
     </div>
   );
@@ -587,13 +602,28 @@ function canRunAction(action: AdminDecisionAction, permissions: string[]) {
   return manage || has("partner_verification.review");
 }
 
-function waitingCopy(stage: ReviewStage, hasDocument: boolean) {
-  if (!hasDocument) return "Waiting for Partner document.";
+function waitingCopy(stage: ReviewStage, documentState: DocumentReviewState) {
+  if (documentState === "awaiting") return "Awaiting Partner document.";
+  if (documentState === "unavailable") return "Document unavailable.";
   if (stage === "CHANGES_REQUIRED") return "Waiting for Partner update.";
   if (stage === "EXPIRED") return "Waiting for replacement.";
   if (stage === "VERIFIED") return "Verified.";
   if (stage === "ON_HOLD") return "Hold for additional review.";
   return "No action available for your reviewer level.";
+}
+
+function documentReviewState(requirement: PartnerRequirement, document: PartnerDocument | null): DocumentReviewState {
+  if (document) return "submitted";
+  if (requirementHasSubmissionState(requirement.status)) return "unavailable";
+  return "awaiting";
+}
+
+function requirementHasSubmissionState(status: PartnerRequirement["status"]) {
+  return ["SUBMITTED", "UNDER_REVIEW", "VERIFIED", "CHANGES_REQUIRED", "REJECTED", "EXPIRING_SOON", "EXPIRED"].includes(status);
+}
+
+function actionNeedsMessage(action: AdminDecisionAction) {
+  return ["request_changes", "reject", "hold", "renewal_required"].includes(action);
 }
 
 function reviewStageIndex(depth: ReviewDepth, stage: ReviewStage) {

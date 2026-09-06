@@ -66,7 +66,13 @@ test("Admin review actions are state based and use Partner-safe labels", () => {
   assert.match(pageSource, /Request changes/);
   assert.match(pageSource, /Reject/);
   assert.match(pageSource, /Renewal required/);
-  assert.match(pageSource, /Waiting for Partner document\./);
+  assert.match(pageSource, /Awaiting Partner document\./);
+  assert.match(pageSource, /Document unavailable/);
+  assert.match(pageSource, /The submission record exists, but its document cannot be opened\./);
+  assert.match(pageSource, /data-document-review-state=\{documentState\}/);
+  assert.match(pageSource, /documentReviewState\(requirement, document\)/);
+  assert.match(pageSource, /documentState === "submitted"/);
+  assert.match(pageSource, /actionNeedsMessage/);
   assert.match(pageSource, /Waiting for Partner update\./);
   assert.match(pageSource, /window\.confirm/);
   assert.match(pageSource, /Add a message to Partner before saving this decision\./);
