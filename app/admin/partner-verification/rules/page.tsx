@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, CheckCircle2, Clock, FileSearch, ListChecks, PlayCircle, RefreshCcw, Send, ShieldCheck } from "lucide-react";
+import { ArrowLeft, CalendarClock, CheckCircle2, Clock, FileSearch, ListChecks, PlayCircle, RefreshCcw, Send, ShieldCheck, XCircle } from "lucide-react";
 import AdminProtected from "../../_components/AdminProtected";
 import AdminShell from "../../_components/AdminShell";
 import { adminApiRequest, readAdminSession } from "../../../lib/admin/adminApiClient";
@@ -45,6 +45,7 @@ function VerificationRulesClient() {
   const [policy, setPolicy] = useState<PolicyView | null>(null);
   const [message, setMessage] = useState("Loading verification rules.");
   const [preview, setPreview] = useState<PreviewResult | null>(null);
+  const [schedule, setSchedule] = useState(() => defaultScheduleInput());
   const permissions = readAdminSession()?.admin.permissions ?? [];
   const localCanRead = hasPermission(permissions, "partner_verification_policy.read");
   const activeGroup = useMemo(() => policy?.groups[0] ?? null, [policy]);
@@ -62,6 +63,18 @@ function VerificationRulesClient() {
     setMessage(result.error.message);
   }
 
+  async function schedulePolicy() {
+    const publishAt = new Date(`${schedule.date}T${schedule.time}:00`).toISOString();
+    const result = await adminApiRequest<PolicyView>("/api/v1/admin/partner-verification/policies/schedule", { method: "POST", body: JSON.stringify({ publishAt, timezone: schedule.timezone }) });
+    if (result.ok) { setPolicy(result.data); setMessage("Scheduled for publication."); return; }
+    setMessage(result.error.message);
+  }
+
+  async function cancelSchedule() {
+    const result = await adminApiRequest<PolicyView>("/api/v1/admin/partner-verification/policies/schedule/cancel", { method: "POST", body: JSON.stringify({}) });
+    if (result.ok) { setPolicy(result.data); setMessage("Schedule cancelled."); return; }
+    setMessage(result.error.message);
+  }
   async function runPreview() {
     const result = await adminApiRequest<PreviewResult>("/api/v1/admin/partner-verification/policies/preview", {
       method: "POST",
@@ -98,13 +111,13 @@ function VerificationRulesClient() {
       </div>
 
       {message ? <p className="rounded-2xl border border-amber-300/20 bg-amber-400/10 p-4 text-sm font-bold text-amber-100">{message}</p> : null}
-      {policy ? <PolicyHome policy={policy} activeGroup={activeGroup} onPreview={runPreview} onDraft={() => transition("/api/v1/admin/partner-verification/policies/draft", "Draft created")} onSubmit={() => transition("/api/v1/admin/partner-verification/policies/approval/submit", "Sent for approval")} onApprove={() => transition("/api/v1/admin/partner-verification/policies/approval/approve", "Approval")} onPublish={() => transition("/api/v1/admin/partner-verification/policies/publish", "Publish")} /> : null}
+      {policy ? <PolicyHome policy={policy} activeGroup={activeGroup} onPreview={runPreview} onDraft={() => transition("/api/v1/admin/partner-verification/policies/draft", "Draft created")} onSubmit={() => transition("/api/v1/admin/partner-verification/policies/approval/submit", "Sent for approval")} onApprove={() => transition("/api/v1/admin/partner-verification/policies/approval/approve", "Approval")} onPublish={() => transition("/api/v1/admin/partner-verification/policies/publish", "Publish")} schedule={schedule} onScheduleChange={setSchedule} onSchedule={schedulePolicy} onCancelSchedule={cancelSchedule} /> : null}
       {preview ? <PreviewPanel preview={preview} /> : null}
     </div>
   );
 }
 
-function PolicyHome({ policy, activeGroup, onPreview, onDraft, onSubmit, onApprove, onPublish }: { policy: PolicyView; activeGroup: PolicyView["groups"][number] | null; onPreview: () => void; onDraft: () => void; onSubmit: () => void; onApprove: () => void; onPublish: () => void }) {
+function PolicyHome({ policy, activeGroup, onPreview, onDraft, onSubmit, onApprove, onPublish, schedule, onScheduleChange, onSchedule, onCancelSchedule }: { policy: PolicyView; activeGroup: PolicyView["groups"][number] | null; onPreview: () => void; onDraft: () => void; onSubmit: () => void; onApprove: () => void; onPublish: () => void; schedule: ReturnType<typeof defaultScheduleInput>; onScheduleChange: (value: ReturnType<typeof defaultScheduleInput>) => void; onSchedule: () => void; onCancelSchedule: () => void }) {
   const action = nextAction(policy);
   return <div className="grid gap-4 xl:grid-cols-[0.85fr_1.15fr]">
     <section className="rounded-2xl border border-white/10 bg-[#111827] p-5" data-policy-workflow="true">
@@ -121,6 +134,8 @@ function PolicyHome({ policy, activeGroup, onPreview, onDraft, onSubmit, onAppro
         {action === "Send for approval" && policy.permissions.canManage ? <button type="button" onClick={onSubmit} className="primaryAction"><Send className="h-4 w-4" /> Send for approval</button> : null}
         {action === "Approve" && policy.permissions.canApprove ? <button type="button" onClick={onApprove} className="primaryAction"><CheckCircle2 className="h-4 w-4" /> Approve</button> : null}
         {action === "Publish now" && policy.permissions.canPublish ? <button type="button" onClick={onPublish} className="primaryAction"><ShieldCheck className="h-4 w-4" /> Publish now</button> : null}
+        {policy.nextActions.includes("Schedule") && policy.permissions.canPublish ? <div className="flex flex-wrap items-end gap-2 rounded-xl border border-amber-300/20 bg-amber-400/10 p-3" data-policy-schedule-controls="true"><label className="text-xs font-black text-amber-100">Publish date<input type="date" value={schedule.date} onChange={(event) => onScheduleChange({ ...schedule, date: event.target.value })} className="mt-1 block h-9 rounded-lg border border-white/10 bg-[#0b1220] px-2 text-sm text-white" /></label><label className="text-xs font-black text-amber-100">Publish time<input type="time" value={schedule.time} onChange={(event) => onScheduleChange({ ...schedule, time: event.target.value })} className="mt-1 block h-9 rounded-lg border border-white/10 bg-[#0b1220] px-2 text-sm text-white" /></label><button type="button" onClick={onSchedule} className="inline-flex h-10 items-center gap-2 rounded-xl border border-amber-300/30 bg-amber-400/10 px-4 text-sm font-black text-amber-100"><CalendarClock className="h-4 w-4" /> Schedule</button></div> : null}
+        {action === "Cancel schedule" && policy.permissions.canPublish ? <button type="button" onClick={onCancelSchedule} className="inline-flex h-10 items-center gap-2 rounded-xl border border-amber-300/30 bg-amber-400/10 px-4 text-sm font-black text-amber-100"><XCircle className="h-4 w-4" /> Cancel schedule</button> : null}
       </div>
     </section>
     <section className="rounded-2xl border border-white/10 bg-[#111827] p-5" data-policy-groups="true">
@@ -158,5 +173,9 @@ function Status({ text }: { text: string }) { return <span className="w-fit roun
 function nextAction(policy: PolicyView) { return policy.nextActions.find((item) => ["Create draft", "Send for approval", "Approve", "Publish now"].includes(item)) ?? "Preview requirements"; }
 function necessityLabel(value: PolicyRule["necessity"]) { if (value === "REQUIRED_NOW") return "Required now"; if (value === "BEFORE_ACTIVATION") return "Required before activation"; if (value === "OPTIONAL") return "Optional"; return "Only if applicable"; }
 function hasPermission(permissions: string[], permission: string) { return permissions.includes(permission) || permissions.includes("admin.super") || permissions.includes("*"); }
+
+
+
+function defaultScheduleInput() { const when = new Date(Date.now() + 3600_000); return { date: when.toISOString().slice(0, 10), time: when.toISOString().slice(11, 16), timezone: "Asia/Kolkata" }; }
 
 

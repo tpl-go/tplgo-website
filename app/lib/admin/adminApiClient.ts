@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { resolveCurrentTplApiTarget } from "@/app/lib/api/apiTargetResolver";
 
@@ -814,6 +814,17 @@ export type AdminVerificationPolicyWorkflowView = {
   };
 };
 
+
+export async function scheduleAdminVerificationPolicy(input: { publishAt: string; timezone: string }): Promise<AdminApiResult<AdminVerificationPolicyWorkflowView>> {
+  return adminApiRequest<AdminVerificationPolicyWorkflowView>("/api/v1/admin/partner-verification/policies/schedule", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function cancelAdminVerificationPolicySchedule(): Promise<AdminApiResult<AdminVerificationPolicyWorkflowView>> {
+  return adminApiRequest<AdminVerificationPolicyWorkflowView>("/api/v1/admin/partner-verification/policies/schedule/cancel", { method: "POST" });
+}
 export type AdminPartnerServiceCatalogueResponse = {
   draft: { items: AdminPartnerServiceCatalogueItem[]; contentTree: AdminPartnerApplicationContentTree };
   published: { items: AdminPartnerServiceCatalogueItem[]; contentTree: AdminPartnerApplicationContentTree };
@@ -3373,3 +3384,5 @@ function failure(requestId: string, status: number, error: AdminApiError): Admin
     requestId,
   };
 }
+
+
