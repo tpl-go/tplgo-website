@@ -33,7 +33,7 @@ test("Admin verification access denial hides queue data behind a clean state", (
   assert.match(pageSource, /You don&apos;t have access to Partner verification reviews\./);
   assert.match(pageSource, /Back to Partners/);
   assert.match(pageSource, /accessDenied \? null :/);
-  assert.doesNotMatch(pageSource, /partner_verification\.read/);
+  assert.match(pageSource, /accessDenied \? <AccessDeniedState \/> : null/);
 });
 
 test("Admin verification page uses human copy and authorized empty queue language", () => {
@@ -73,8 +73,28 @@ test("Admin review actions are state based and use Partner-safe labels", () => {
   assert.match(pageSource, /Message to Partner/);
   assert.match(pageSource, /Private admin note/);
   assert.match(pageSource, /internalNote/);
+  assert.match(pageSource, /readAdminSession/);
+  assert.match(pageSource, /Next review action/);
+  assert.match(pageSource, /canRunAction/);
+  assert.match(pageSource, /partner_verification\.level1_review/);
+  assert.match(pageSource, /partner_verification\.level2_review/);
+  assert.match(pageSource, /partner_verification\.final_approve/);
   assert.doesNotMatch(pageSource, /Partner-facing reason/);
   assert.doesNotMatch(pageSource, /Internal note/);
+});
+
+test("Admin action visibility matrix is permission and state aware", () => {
+  assert.match(pageSource, /if \(!hasDocument\) return \[\]/);
+  assert.match(pageSource, /LEVEL_1_READY"\) return visibleActions\(\[\{ action: "start_review", label: "Start document check" \}\], permissions\)/);
+  assert.match(pageSource, /LEVEL_1_IN_REVIEW"\) return visibleActions\(\[\{ action: "send_senior_review", label: "Send for senior review" \}, \{ action: "request_changes", label: "Request changes" \}\], permissions\)/);
+  assert.match(pageSource, /LEVEL_2_READY"\) return visibleActions\(\[\{ action: "start_senior_review", label: "Start senior review" \}\], permissions\)/);
+  assert.match(pageSource, /LEVEL_2_IN_REVIEW"\) return visibleActions\(\[\{ action: "recommend_approval", label: "Recommend approval" \}, \{ action: "send_back_correction", label: "Send back for correction" \}, \{ action: "request_changes", label: "Request changes" \}, \{ action: "reject", label: "Reject" \}, \{ action: "escalate", label: "Escalate" \}\], permissions\)/);
+  assert.match(pageSource, /LEVEL_3_READY"\) return visibleActions\(\[\{ action: "start_final_approval", label: "Start final approval" \}\], permissions\)/);
+  assert.match(pageSource, /LEVEL_3_IN_REVIEW"\) return visibleActions\(\[\{ action: "final_approve", label: "Final approve" \}, \{ action: "request_changes", label: "Request changes" \}, \{ action: "reject", label: "Reject" \}, \{ action: "hold", label: "Hold for additional review" \}\], permissions\)/);
+  assert.match(pageSource, /stage === "VERIFIED" && expires/);
+  assert.match(pageSource, /return manage \|\| has\("partner_verification\.level1_review"\)/);
+  assert.match(pageSource, /return manage \|\| has\("partner_verification\.level2_review"\)/);
+  assert.match(pageSource, /return manage \|\| has\("partner_verification\.final_approve"\)/);
 });
 
 test("Admin record shows semantic review depth and status flow", () => {

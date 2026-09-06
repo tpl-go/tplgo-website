@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { AlertTriangle, ArrowLeft, CheckCircle2, Eye, FileText, RefreshCcw, Search, XCircle } from "lucide-react";
 import AdminProtected from "../_components/AdminProtected";
 import AdminShell from "../_components/AdminShell";
-import { adminApiRequest, type AdminApiResult } from "../../lib/admin/adminApiClient";
+import { adminApiRequest, readAdminSession, type AdminApiResult } from "../../lib/admin/adminApiClient";
 import type { PartnerDocument, PartnerOrganizationBundle, PartnerRequirement, PartnerServiceScope, PartnerVerificationEvent, PartnerVerificationStatus } from "../../lib/partner/partnerApiClient";
 
 type PartnerQueueRow = {
@@ -18,6 +18,7 @@ type PartnerQueueRow = {
 };
 
 type AdminDecisionAction = "start_review" | "send_senior_review" | "start_senior_review" | "recommend_approval" | "send_back_correction" | "escalate" | "start_final_approval" | "final_approve" | "reject" | "request_changes" | "renewal_required" | "hold" | "note";
+type AdminPermission = "partner_verification.read" | "partner_verification.review" | "partner_verification.level1_review" | "partner_verification.level2_review" | "partner_verification.final_approve" | "partner_verification.manage";
 type ReviewDepth = "TWO_LEVEL" | "THREE_LEVEL";
 type ReviewStage = "LEVEL_1_READY" | "LEVEL_1_IN_REVIEW" | "LEVEL_2_READY" | "LEVEL_2_IN_REVIEW" | "LEVEL_3_READY" | "LEVEL_3_IN_REVIEW" | "CHANGES_REQUIRED" | "REJECTED" | "ON_HOLD" | "VERIFIED" | "EXPIRED";
 type QueueTab = "my-reviews" | "level-1" | "senior-review" | "final-approval" | "changes" | "completed" | "all";
@@ -78,6 +79,7 @@ function AdminPartnerVerificationView() {
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [documentAccessMessage, setDocumentAccessMessage] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [adminPermissions, setAdminPermissions] = useState<string[]>([]);
 
   const loadDetail = useCallback(async (organizationId: string) => {
     setActiveOrganizationId(organizationId);
@@ -86,6 +88,7 @@ function AdminPartnerVerificationView() {
   }, []);
 
   const loadQueue = useCallback(async () => {
+    setAdminPermissions(readAdminSession()?.admin.permissions ?? []);
     const result = await adminApiRequest<PartnerQueueRow[]>("/api/v1/admin/partner-verification/queue");
     setQueueResult(result);
     if (result.ok && requestedOrganizationId) await loadDetail(requestedOrganizationId);
@@ -191,7 +194,7 @@ function AdminPartnerVerificationView() {
       {!requestedOrganizationId ? (
         <QueueView rows={filteredQueue} filters={{ activeTab, query, serviceFilter, countryFilter, stateFilter, submittedAfter }} filterOptions={filterOptions} onTab={setActiveTab} onQuery={setQuery} onService={setServiceFilter} onCountry={setCountryFilter} onState={setStateFilter} onSubmittedAfter={setSubmittedAfter} />
       ) : (
-        <RecordView detail={detail} actionMessage={actionMessage} documentAccessMessage={documentAccessMessage} decisionDraft={decisionDraft} busyAction={busyAction} onDecisionDraft={setDecisionDraft} onOpenDocument={openDocument} onDecide={decide} />
+        <RecordView detail={detail} adminPermissions={adminPermissions} actionMessage={actionMessage} documentAccessMessage={documentAccessMessage} decisionDraft={decisionDraft} busyAction={busyAction} onDecisionDraft={setDecisionDraft} onOpenDocument={openDocument} onDecide={decide} />
       )}
         </>
       )}
@@ -265,7 +268,7 @@ function QueueRow({ row }: { row: PartnerQueueRow }) {
   );
 }
 
-function RecordView({ detail, actionMessage, documentAccessMessage, decisionDraft, busyAction, onDecisionDraft, onOpenDocument, onDecide }: { detail: PartnerOrganizationBundle | null; actionMessage: string | null; documentAccessMessage: string | null; decisionDraft: DecisionDraft; busyAction: string | null; onDecisionDraft: (value: DecisionDraft) => void; onOpenDocument: (requirement: PartnerRequirement) => void; onDecide: (requirement: PartnerRequirement, action: AdminDecisionAction) => void }) {
+function RecordView({ detail, adminPermissions, actionMessage, documentAccessMessage, decisionDraft, busyAction, onDecisionDraft, onOpenDocument, onDecide }: { detail: PartnerOrganizationBundle | null; adminPermissions: string[]; actionMessage: string | null; documentAccessMessage: string | null; decisionDraft: DecisionDraft; busyAction: string | null; onDecisionDraft: (value: DecisionDraft) => void; onOpenDocument: (requirement: PartnerRequirement) => void; onDecide: (requirement: PartnerRequirement, action: AdminDecisionAction) => void }) {
   if (!detail) return <div className="rounded-2xl border border-white/10 bg-[#111827] p-8 text-sm font-semibold text-slate-400">Loading verification record...</div>;
   const grouped = groupRequirements(detail.requirements);
   return (
@@ -302,7 +305,7 @@ function RecordView({ detail, actionMessage, documentAccessMessage, decisionDraf
       </Panel>
       <Panel title="Verification checks">
         <div className="grid gap-4">
-          {grouped.map((group) => <RequirementGroup key={group.title} title={group.title} requirements={group.requirements} detail={detail} decisionDraft={decisionDraft} busyAction={busyAction} onDecisionDraft={onDecisionDraft} onOpenDocument={onOpenDocument} onDecide={onDecide} />)}
+          {grouped.map((group) => <RequirementGroup key={group.title} title={group.title} requirements={group.requirements} detail={detail} adminPermissions={adminPermissions} decisionDraft={decisionDraft} busyAction={busyAction} onDecisionDraft={onDecisionDraft} onOpenDocument={onOpenDocument} onDecide={onDecide} />)}
         </div>
       </Panel>
       <Panel title="Review history">
@@ -316,22 +319,22 @@ function RecordView({ detail, actionMessage, documentAccessMessage, decisionDraf
 
 type DecisionDraft = { reason: string; partnerMessage: string; internalNote: string; category: string };
 
-function RequirementGroup(props: { title: string; requirements: PartnerRequirement[]; detail: PartnerOrganizationBundle; decisionDraft: DecisionDraft; busyAction: string | null; onDecisionDraft: (value: DecisionDraft) => void; onOpenDocument: (requirement: PartnerRequirement) => void; onDecide: (requirement: PartnerRequirement, action: AdminDecisionAction) => void }) {
+function RequirementGroup(props: { title: string; requirements: PartnerRequirement[]; detail: PartnerOrganizationBundle; adminPermissions: string[]; decisionDraft: DecisionDraft; busyAction: string | null; onDecisionDraft: (value: DecisionDraft) => void; onOpenDocument: (requirement: PartnerRequirement) => void; onDecide: (requirement: PartnerRequirement, action: AdminDecisionAction) => void }) {
   return (
     <section>
       <h3 className="text-sm font-black text-cyan-100">{props.title}</h3>
       <div className="mt-2 grid gap-3">
-        {props.requirements.map((requirement) => <RequirementCard key={requirement.id} requirement={requirement} detail={props.detail} decisionDraft={props.decisionDraft} busyAction={props.busyAction} onDecisionDraft={props.onDecisionDraft} onOpenDocument={props.onOpenDocument} onDecide={props.onDecide} />)}
+        {props.requirements.map((requirement) => <RequirementCard key={requirement.id} requirement={requirement} detail={props.detail} adminPermissions={props.adminPermissions} decisionDraft={props.decisionDraft} busyAction={props.busyAction} onDecisionDraft={props.onDecisionDraft} onOpenDocument={props.onOpenDocument} onDecide={props.onDecide} />)}
       </div>
     </section>
   );
 }
 
-function RequirementCard({ requirement, detail, decisionDraft, busyAction, onDecisionDraft, onOpenDocument, onDecide }: { requirement: PartnerRequirement; detail: PartnerOrganizationBundle; decisionDraft: DecisionDraft; busyAction: string | null; onDecisionDraft: (value: DecisionDraft) => void; onOpenDocument: (requirement: PartnerRequirement) => void; onDecide: (requirement: PartnerRequirement, action: AdminDecisionAction) => void }) {
+function RequirementCard({ requirement, detail, adminPermissions, decisionDraft, busyAction, onDecisionDraft, onOpenDocument, onDecide }: { requirement: PartnerRequirement; detail: PartnerOrganizationBundle; adminPermissions: string[]; decisionDraft: DecisionDraft; busyAction: string | null; onDecisionDraft: (value: DecisionDraft) => void; onOpenDocument: (requirement: PartnerRequirement) => void; onDecide: (requirement: PartnerRequirement, action: AdminDecisionAction) => void }) {
   const document = documentForRequirement(detail, requirement.id);
   const depth = reviewDepthForRequirement(requirement);
   const stage = reviewStageForRequirement(requirement, detail.events, depth);
-  const actions = reviewActions(stage, Boolean(document), requirement.expires);
+  const actions = reviewActions(stage, Boolean(document), adminPermissions, requirement.expires);
   return (
     <article className="rounded-xl border border-white/10 bg-[#0b1220] p-4" data-admin-verification-check="true">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
@@ -382,6 +385,7 @@ function RequirementCard({ requirement, detail, decisionDraft, busyAction, onDec
             <textarea value={decisionDraft.internalNote} onChange={(event) => onDecisionDraft({ ...decisionDraft, internalNote: event.target.value })} className="min-h-20 rounded-xl border border-white/10 bg-[#0b1220] p-3 text-sm font-semibold normal-case tracking-normal text-white outline-none focus:border-sky-300/50" />
           </label>
         </div>
+        <p className="text-xs font-black uppercase tracking-[0.12em] text-sky-300/70">Next review action</p>
         <div className="flex flex-wrap gap-2">
           {actions.length ? actions.map((action) => <DecisionButton key={action.action} label={action.label} action={action.action} requirement={requirement} busyAction={busyAction} onDecide={onDecide} />) : <p className="text-sm font-semibold text-slate-400">{waitingCopy(stage, Boolean(document))}</p>}
         </div>
@@ -556,16 +560,31 @@ function latestRequirementEvent(events: PartnerVerificationEvent[], requirementI
   return [...events].reverse().find((event) => event.requirementId === requirementId && event.action.startsWith("admin.review."));
 }
 
-function reviewActions(stage: ReviewStage, hasDocument: boolean, expires?: boolean): Array<{ action: AdminDecisionAction; label: string }> {
+function reviewActions(stage: ReviewStage, hasDocument: boolean, permissions: string[], expires?: boolean): Array<{ action: AdminDecisionAction; label: string }> {
   if (!hasDocument) return [];
-  if (stage === "LEVEL_1_READY") return [{ action: "start_review", label: "Start document check" }];
-  if (stage === "LEVEL_1_IN_REVIEW") return [{ action: "send_senior_review", label: "Send for senior review" }, { action: "request_changes", label: "Request changes" }];
-  if (stage === "LEVEL_2_READY") return [{ action: "start_senior_review", label: "Start senior review" }];
-  if (stage === "LEVEL_2_IN_REVIEW") return [{ action: "recommend_approval", label: "Recommend approval" }, { action: "send_back_correction", label: "Send back for correction" }, { action: "request_changes", label: "Request changes" }, { action: "escalate", label: "Escalate" }];
-  if (stage === "LEVEL_3_READY") return [{ action: "start_final_approval", label: "Start final approval" }];
-  if (stage === "LEVEL_3_IN_REVIEW") return [{ action: "final_approve", label: "Final approve" }, { action: "request_changes", label: "Request changes" }, { action: "reject", label: "Reject" }, { action: "hold", label: "Hold for additional review" }];
-  if (stage === "VERIFIED" && expires) return [{ action: "renewal_required", label: "Renewal required" }];
+  if (stage === "LEVEL_1_READY") return visibleActions([{ action: "start_review", label: "Start document check" }], permissions);
+  if (stage === "LEVEL_1_IN_REVIEW") return visibleActions([{ action: "send_senior_review", label: "Send for senior review" }, { action: "request_changes", label: "Request changes" }], permissions);
+  if (stage === "LEVEL_2_READY") return visibleActions([{ action: "start_senior_review", label: "Start senior review" }], permissions);
+  if (stage === "LEVEL_2_IN_REVIEW") return visibleActions([{ action: "recommend_approval", label: "Recommend approval" }, { action: "send_back_correction", label: "Send back for correction" }, { action: "request_changes", label: "Request changes" }, { action: "reject", label: "Reject" }, { action: "escalate", label: "Escalate" }], permissions);
+  if (stage === "LEVEL_3_READY") return visibleActions([{ action: "start_final_approval", label: "Start final approval" }], permissions);
+  if (stage === "LEVEL_3_IN_REVIEW") return visibleActions([{ action: "final_approve", label: "Final approve" }, { action: "request_changes", label: "Request changes" }, { action: "reject", label: "Reject" }, { action: "hold", label: "Hold for additional review" }], permissions);
+  if (stage === "VERIFIED" && expires) return visibleActions([{ action: "renewal_required", label: "Renewal required" }], permissions);
   return [];
+}
+
+function visibleActions(actions: Array<{ action: AdminDecisionAction; label: string }>, permissions: string[]) {
+  return actions.filter((item) => canRunAction(item.action, permissions));
+}
+
+function canRunAction(action: AdminDecisionAction, permissions: string[]) {
+  const has = (permission: AdminPermission) => permissions.includes(permission) || permissions.includes("admin.super") || permissions.includes("*");
+  const manage = has("partner_verification.manage");
+  if (action === "start_review" || action === "send_senior_review") return manage || has("partner_verification.level1_review");
+  if (action === "start_senior_review" || action === "recommend_approval" || action === "send_back_correction" || action === "escalate") return manage || has("partner_verification.level2_review");
+  if (action === "start_final_approval" || action === "final_approve" || action === "hold") return manage || has("partner_verification.final_approve");
+  if (action === "reject") return manage || has("partner_verification.level2_review") || has("partner_verification.final_approve");
+  if (action === "request_changes" || action === "renewal_required") return manage || has("partner_verification.level1_review") || has("partner_verification.level2_review") || has("partner_verification.final_approve");
+  return manage || has("partner_verification.review");
 }
 
 function waitingCopy(stage: ReviewStage, hasDocument: boolean) {
