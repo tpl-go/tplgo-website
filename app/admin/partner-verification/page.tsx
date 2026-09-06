@@ -91,6 +91,7 @@ function AdminPartnerVerificationView() {
   const filterOptions = useMemo(() => buildFilterOptions(queue), [queue]);
   const filteredQueue = useMemo(() => filterQueue(queue, { activeTab, query, serviceFilter, countryFilter, stateFilter, submittedAfter }), [queue, activeTab, query, serviceFilter, countryFilter, stateFilter, submittedAfter]);
   const detail = detailResult?.ok ? detailResult.data : null;
+  const accessDenied = (queueResult && !queueResult.ok && queueResult.status === 403) || (detailResult && !detailResult.ok && detailResult.status === 403);
 
   async function decide(requirement: PartnerRequirement, action: AdminDecisionAction) {
     if (!activeOrganizationId) return;
@@ -163,13 +164,16 @@ function AdminPartnerVerificationView() {
             {detail ? <><span>/</span><span className="text-slate-200">{detail.organization.legalName}</span></> : null}
           </nav>
           <h1 className="mt-3 text-2xl font-black tracking-tight text-white">Verification & Compliance</h1>
-          <p className="mt-1 max-w-3xl text-sm font-semibold leading-6 text-slate-400">Review submitted Partner checks, inspect private documents through authorized access, and record check-level decisions.</p>
+          <p className="mt-1 max-w-3xl text-sm font-semibold leading-6 text-slate-400">Review Partner documents and complete verification checks.</p>
         </div>
         <button type="button" onClick={loadQueue} className="inline-flex h-10 w-fit items-center gap-2 rounded-xl border border-sky-300/20 bg-sky-400/10 px-4 text-sm font-black text-sky-100 hover:bg-sky-400/15">
           <RefreshCcw className="h-4 w-4" /> Refresh
         </button>
       </div>
 
+      {accessDenied ? <AccessDeniedState /> : null}
+      {accessDenied ? null : (
+        <>
       {queueResult && !queueResult.ok ? <Notice text={queueResult.error.message} /> : null}
       {detailResult && !detailResult.ok ? <Notice text={detailResult.error.message} /> : null}
 
@@ -178,7 +182,21 @@ function AdminPartnerVerificationView() {
       ) : (
         <RecordView detail={detail} actionMessage={actionMessage} documentAccessMessage={documentAccessMessage} decisionDraft={decisionDraft} busyAction={busyAction} onDecisionDraft={setDecisionDraft} onOpenDocument={openDocument} onDecide={decide} />
       )}
+        </>
+      )}
     </div>
+  );
+}
+
+function AccessDeniedState() {
+  return (
+    <section className="rounded-2xl border border-amber-300/25 bg-[#111827] p-6 shadow-2xl shadow-black/25" data-admin-verification-denied="true">
+      <p className="text-lg font-black text-white">You don&apos;t have access to Partner verification reviews.</p>
+      <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-400">Ask a Super Admin or authorized Partner verification reviewer to update your Admin role.</p>
+      <Link href="/admin/partners" className="mt-4 inline-flex h-10 items-center gap-2 rounded-xl border border-sky-300/25 bg-sky-400/10 px-4 text-sm font-black text-sky-100 hover:bg-sky-400/15">
+        <ArrowLeft className="h-4 w-4" /> Back to Partners
+      </Link>
+    </section>
   );
 }
 
@@ -203,7 +221,7 @@ function QueueView({ rows, filters, filterOptions, onTab, onQuery, onService, on
         <input value={filters.submittedAfter} onChange={(event) => onSubmittedAfter(event.target.value)} type="date" aria-label="Submitted after" className="h-10 rounded-xl border border-white/10 bg-[#0b1220] px-3 text-sm font-semibold text-white outline-none focus:border-sky-300/40" />
       </div>
       <div className="mt-4 overflow-hidden rounded-xl border border-white/10">
-        {rows.length ? rows.map((row) => <QueueRow key={row.organization.id} row={row} />) : <p className="p-6 text-sm font-semibold text-slate-400">No Partner verification records match this queue.</p>}
+        {rows.length ? rows.map((row) => <QueueRow key={row.organization.id} row={row} />) : <p className="p-6 text-sm font-semibold text-slate-400">No Partner verification submissions are ready for review.</p>}
       </div>
     </section>
   );

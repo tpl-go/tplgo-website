@@ -28,6 +28,20 @@ test("Admin verification queue exposes operational tabs and filters", () => {
   assert.match(pageSource, /submittedAfter/);
 });
 
+test("Admin verification access denial hides queue data behind a clean state", () => {
+  assert.match(pageSource, /data-admin-verification-denied="true"/);
+  assert.match(pageSource, /You don&apos;t have access to Partner verification reviews\./);
+  assert.match(pageSource, /Back to Partners/);
+  assert.match(pageSource, /accessDenied \? null :/);
+  assert.doesNotMatch(pageSource, /partner_verification\.read/);
+});
+
+test("Admin verification page uses human copy and authorized empty queue language", () => {
+  assert.match(pageSource, /Review Partner documents and complete verification checks\./);
+  assert.match(pageSource, /No Partner verification submissions are ready for review\./);
+  assert.doesNotMatch(pageSource, /Review submitted Partner checks, inspect private documents through authorized access, and record check-level decisions\./);
+});
+
 test("Admin verification record is check scoped with secure document access", () => {
   assert.match(pageSource, /data-admin-verification-record="true"/);
   assert.match(pageSource, /Partner summary/);
