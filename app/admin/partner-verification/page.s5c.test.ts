@@ -17,7 +17,7 @@ test("Admin verification review lives under Partners and not Website Experience"
 });
 
 test("Admin verification queue exposes operational tabs and filters", () => {
-  for (const label of ["Ready for Review", "Under Review", "Changes Required", "Approved", "Rejected", "Expired / Renewal Required", "All"]) {
+  for (const label of ["My Reviews", "Level 1", "Senior Review", "Final Approval", "Changes Required", "Completed", "All"]) {
     assert.match(pageSource, new RegExp(label.replace("/", "\\/")));
   }
   assert.match(pageSource, /data-admin-verification-queue="true"/);
@@ -46,24 +46,46 @@ test("Admin verification record is check scoped with secure document access", ()
   assert.match(pageSource, /data-admin-verification-record="true"/);
   assert.match(pageSource, /Partner summary/);
   assert.match(pageSource, /Verification progress/);
-  assert.match(pageSource, /Submitted checks/);
+  assert.match(pageSource, /Verification checks/);
   assert.match(pageSource, /Business details/);
   assert.match(pageSource, /Your identity\/representative/);
   assert.match(pageSource, /Service-specific checks/);
   assert.match(pageSource, /Additional\/conditional checks/);
-  assert.match(pageSource, /Secure document access/);
+  assert.match(pageSource, /View document/);
   assert.match(pageSource, /Temporary document access expires/);
+  assert.doesNotMatch(pageSource, /Secure document access/);
 });
 
-test("Admin review actions require confirmation or Partner-facing reasons", () => {
-  assert.match(pageSource, /Start review/);
-  assert.match(pageSource, /Approve check/);
+test("Admin review actions are state based and use Partner-safe labels", () => {
+  assert.match(pageSource, /Start document check/);
+  assert.match(pageSource, /Send for senior review/);
+  assert.match(pageSource, /Start senior review/);
+  assert.match(pageSource, /Recommend approval/);
+  assert.match(pageSource, /Start final approval/);
+  assert.match(pageSource, /Final approve/);
   assert.match(pageSource, /Request changes/);
-  assert.match(pageSource, /Reject check/);
+  assert.match(pageSource, /Reject/);
   assert.match(pageSource, /Renewal required/);
+  assert.match(pageSource, /Waiting for Partner document\./);
+  assert.match(pageSource, /Waiting for Partner update\./);
   assert.match(pageSource, /window\.confirm/);
-  assert.match(pageSource, /Add a Partner-facing reason before saving this decision\./);
+  assert.match(pageSource, /Add a message to Partner before saving this decision\./);
+  assert.match(pageSource, /Message to Partner/);
+  assert.match(pageSource, /Private admin note/);
   assert.match(pageSource, /internalNote/);
+  assert.doesNotMatch(pageSource, /Partner-facing reason/);
+  assert.doesNotMatch(pageSource, /Internal note/);
+});
+
+test("Admin record shows semantic review depth and status flow", () => {
+  assert.match(pageSource, /data-review-stage-flow=\{depth\}/);
+  assert.match(pageSource, /Document Check/);
+  assert.match(pageSource, /Senior Review/);
+  assert.match(pageSource, /Final Approval/);
+  assert.match(pageSource, /Only if applicable/);
+  assert.match(pageSource, /text-cyan-100/);
+  assert.match(pageSource, /text-sky-300\/70/);
+  assert.match(pageSource, /text-\[#fed7aa\]/);
 });
 
 test("Partner Step 5 renders safe reviewer feedback without changing S5B layout", () => {

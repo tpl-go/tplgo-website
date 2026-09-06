@@ -126,9 +126,12 @@ export type PartnerReview = {
 
 export type PartnerVerificationEvent = {
   id: string;
+  requirementId?: string | null;
+  documentId?: string | null;
   action: string;
   reason?: string | null;
   newStatus?: string | null;
+  metadata?: Record<string, unknown>;
   createdAt: string;
 };
 

@@ -17,8 +17,10 @@ type PartnerQueueRow = {
   blockingCount: number;
 };
 
-type AdminDecisionAction = "start_review" | "approve" | "reject" | "request_changes" | "renewal_required" | "note";
-type QueueTab = "ready" | "under-review" | "changes" | "approved" | "rejected" | "expired" | "all";
+type AdminDecisionAction = "start_review" | "send_senior_review" | "start_senior_review" | "recommend_approval" | "send_back_correction" | "escalate" | "start_final_approval" | "final_approve" | "reject" | "request_changes" | "renewal_required" | "hold" | "note";
+type ReviewDepth = "TWO_LEVEL" | "THREE_LEVEL";
+type ReviewStage = "LEVEL_1_READY" | "LEVEL_1_IN_REVIEW" | "LEVEL_2_READY" | "LEVEL_2_IN_REVIEW" | "LEVEL_3_READY" | "LEVEL_3_IN_REVIEW" | "CHANGES_REQUIRED" | "REJECTED" | "ON_HOLD" | "VERIFIED" | "EXPIRED";
+type QueueTab = "my-reviews" | "level-1" | "senior-review" | "final-approval" | "changes" | "completed" | "all";
 
 type AdminDocumentAccess = {
   document: Record<string, unknown>;
@@ -30,16 +32,25 @@ type AdminDocumentAccess = {
 };
 
 const queueTabs: Array<{ id: QueueTab; label: string }> = [
-  { id: "ready", label: "Ready for Review" },
-  { id: "under-review", label: "Under Review" },
+  { id: "my-reviews", label: "My Reviews" },
+  { id: "level-1", label: "Level 1" },
+  { id: "senior-review", label: "Senior Review" },
+  { id: "final-approval", label: "Final Approval" },
   { id: "changes", label: "Changes Required" },
-  { id: "approved", label: "Approved" },
-  { id: "rejected", label: "Rejected" },
-  { id: "expired", label: "Expired / Renewal Required" },
+  { id: "completed", label: "Completed" },
   { id: "all", label: "All" },
 ];
 
-const stateOptions = ["", "SUBMITTED", "UNDER_REVIEW", "CHANGES_REQUIRED", "VERIFIED", "REJECTED", "EXPIRED", "EXPIRING_SOON"];
+const stateOptions = [
+  { value: "", label: "All states" },
+  { value: "SUBMITTED", label: "Ready for Review" },
+  { value: "UNDER_REVIEW", label: "Under Review" },
+  { value: "CHANGES_REQUIRED", label: "Changes Required" },
+  { value: "VERIFIED", label: "Approved" },
+  { value: "REJECTED", label: "Rejected" },
+  { value: "EXPIRED", label: "Renewal Required" },
+  { value: "EXPIRING_SOON", label: "Expiring Soon" },
+];
 
 export default function AdminPartnerVerificationPage() {
   return (
@@ -57,7 +68,7 @@ function AdminPartnerVerificationView() {
   const [queueResult, setQueueResult] = useState<AdminApiResult<PartnerQueueRow[]> | null>(null);
   const [detailResult, setDetailResult] = useState<AdminApiResult<PartnerOrganizationBundle> | null>(null);
   const [activeOrganizationId, setActiveOrganizationId] = useState<string | null>(requestedOrganizationId);
-  const [activeTab, setActiveTab] = useState<QueueTab>("ready");
+  const [activeTab, setActiveTab] = useState<QueueTab>("level-1");
   const [query, setQuery] = useState("");
   const [serviceFilter, setServiceFilter] = useState("");
   const [countryFilter, setCountryFilter] = useState("");
@@ -96,16 +107,16 @@ function AdminPartnerVerificationView() {
   async function decide(requirement: PartnerRequirement, action: AdminDecisionAction) {
     if (!activeOrganizationId) return;
     const document = documentForRequirement(detail, requirement.id);
-    const needsReason = action === "reject" || action === "request_changes" || action === "renewal_required";
+    const needsReason = action === "reject" || action === "request_changes" || action === "renewal_required" || action === "hold";
     if (!document && action !== "note") {
-      setActionMessage("Open a submitted document before taking this review action.");
+      setActionMessage("Waiting for Partner document.");
       return;
     }
     if (needsReason && !decisionDraft.reason.trim()) {
-      setActionMessage("Add a Partner-facing reason before saving this decision.");
+      setActionMessage("Add a message to Partner before saving this decision.");
       return;
     }
-    if ((action === "approve" || action === "reject") && !window.confirm(`${action === "approve" ? "Approve" : "Reject"} this verification check?`)) return;
+    if ((action === "final_approve" || action === "reject" || action === "hold") && !window.confirm(`${action === "final_approve" ? "Final approve" : action === "reject" ? "Reject" : "Hold"} this verification check?`)) return;
     setBusyAction(`${requirement.id}:${action}`);
     const result = await adminApiRequest<PartnerOrganizationBundle>(`/api/v1/admin/partner-verification/organizations/${encodeURIComponent(activeOrganizationId)}/decision`, {
       method: "POST",
@@ -289,7 +300,7 @@ function RecordView({ detail, actionMessage, documentAccessMessage, decisionDraf
         </div>
         <p className="mt-3 text-sm font-semibold text-slate-400">Overall application readiness: {humanStatus(detail.readiness.overallVerificationStatus)}</p>
       </Panel>
-      <Panel title="Submitted checks">
+      <Panel title="Verification checks">
         <div className="grid gap-4">
           {grouped.map((group) => <RequirementGroup key={group.title} title={group.title} requirements={group.requirements} detail={detail} decisionDraft={decisionDraft} busyAction={busyAction} onDecisionDraft={onDecisionDraft} onOpenDocument={onOpenDocument} onDecide={onDecide} />)}
         </div>
@@ -308,7 +319,7 @@ type DecisionDraft = { reason: string; partnerMessage: string; internalNote: str
 function RequirementGroup(props: { title: string; requirements: PartnerRequirement[]; detail: PartnerOrganizationBundle; decisionDraft: DecisionDraft; busyAction: string | null; onDecisionDraft: (value: DecisionDraft) => void; onOpenDocument: (requirement: PartnerRequirement) => void; onDecide: (requirement: PartnerRequirement, action: AdminDecisionAction) => void }) {
   return (
     <section>
-      <h3 className="text-sm font-black text-white">{props.title}</h3>
+      <h3 className="text-sm font-black text-cyan-100">{props.title}</h3>
       <div className="mt-2 grid gap-3">
         {props.requirements.map((requirement) => <RequirementCard key={requirement.id} requirement={requirement} detail={props.detail} decisionDraft={props.decisionDraft} busyAction={props.busyAction} onDecisionDraft={props.onDecisionDraft} onOpenDocument={props.onOpenDocument} onDecide={props.onDecide} />)}
       </div>
@@ -318,20 +329,25 @@ function RequirementGroup(props: { title: string; requirements: PartnerRequireme
 
 function RequirementCard({ requirement, detail, decisionDraft, busyAction, onDecisionDraft, onOpenDocument, onDecide }: { requirement: PartnerRequirement; detail: PartnerOrganizationBundle; decisionDraft: DecisionDraft; busyAction: string | null; onDecisionDraft: (value: DecisionDraft) => void; onOpenDocument: (requirement: PartnerRequirement) => void; onDecide: (requirement: PartnerRequirement, action: AdminDecisionAction) => void }) {
   const document = documentForRequirement(detail, requirement.id);
+  const depth = reviewDepthForRequirement(requirement);
+  const stage = reviewStageForRequirement(requirement, detail.events, depth);
+  const actions = reviewActions(stage, Boolean(document), requirement.expires);
   return (
     <article className="rounded-xl border border-white/10 bg-[#0b1220] p-4" data-admin-verification-check="true">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
           <p className="break-words text-sm font-black text-white">{requirement.title}</p>
           <p className="mt-1 text-sm font-semibold leading-6 text-slate-400">{requirement.description}</p>
-          <p className="mt-2 text-xs font-semibold text-slate-500">Applies to: {applicableServices(detail, requirement)}</p>
-          <p className="mt-1 text-xs font-semibold text-slate-500">Stage: {stageLabel(requirement)}</p>
+          <p className="mt-2 text-xs font-semibold text-sky-300/70">Applies to: <span className="text-white">{applicableServices(detail, requirement)}</span></p>
+          <p className="mt-1 text-xs font-semibold text-sky-300/70">{stageLabel(requirement)}</p>
         </div>
         <StatusChip status={requirement.status} />
       </div>
 
+      <ReviewStageFlow depth={depth} stage={stage} events={detail.events.filter((event) => event.requirementId === requirement.id)} />
+
       <div className="mt-4 rounded-xl border border-white/10 bg-[#111827] p-3">
-        <p className="text-xs font-black uppercase tracking-[0.12em] text-slate-500">Submitted document</p>
+        <p className="text-xs font-black uppercase tracking-[0.12em] text-sky-300/70">Submitted document</p>
         {document ? (
           <div className="mt-2 grid gap-2 text-sm font-semibold text-slate-300 md:grid-cols-2">
             <span>{document.documentType}</span>
@@ -344,32 +360,30 @@ function RequirementCard({ requirement, detail, decisionDraft, busyAction, onDec
             <span>State: {humanStatus(document.status)}</span>
           </div>
         ) : (
-          <p className="mt-2 text-sm font-semibold text-slate-500">No submitted document is linked to this check.</p>
+          <p className="mt-2 text-sm font-semibold text-slate-400">Waiting for Partner document.</p>
         )}
-        <button type="button" onClick={() => onOpenDocument(requirement)} className="mt-3 inline-flex h-9 items-center gap-2 rounded-xl border border-sky-300/25 bg-sky-400/10 px-3 text-xs font-black text-sky-100 hover:bg-sky-400/15">
-          <Eye className="h-4 w-4" /> Secure document access
-        </button>
+        {document ? (
+          <button type="button" onClick={() => onOpenDocument(requirement)} className="mt-3 inline-flex h-9 items-center gap-2 rounded-xl border border-sky-300/25 bg-sky-400/10 px-3 text-xs font-black text-sky-100 hover:bg-sky-400/15">
+            <Eye className="h-4 w-4" /> View document
+          </button>
+        ) : null}
       </div>
 
       {document?.reviewNote ? <div className="mt-3 rounded-xl border border-amber-300/25 bg-amber-300/10 p-3 text-sm font-semibold text-amber-100"><AlertTriangle className="mr-2 inline h-4 w-4" /> Previous reviewer feedback: {document.reviewNote}</div> : null}
 
       <div className="mt-4 grid gap-3 rounded-xl border border-white/10 bg-[#111827] p-3">
         <div className="grid gap-3 lg:grid-cols-2">
-          <label className="grid gap-1 text-xs font-black uppercase tracking-[0.1em] text-slate-400">
-            Partner-facing reason
+          <label className="grid gap-1 text-xs font-black uppercase tracking-[0.1em] text-sky-300/70">
+            Message to Partner
             <textarea value={decisionDraft.reason} onChange={(event) => onDecisionDraft({ ...decisionDraft, reason: event.target.value })} className="min-h-20 rounded-xl border border-white/10 bg-[#0b1220] p-3 text-sm font-semibold normal-case tracking-normal text-white outline-none focus:border-[#f97316]/60" />
           </label>
-          <label className="grid gap-1 text-xs font-black uppercase tracking-[0.1em] text-slate-400">
-            Internal note
+          <label className="grid gap-1 text-xs font-black uppercase tracking-[0.1em] text-sky-300/70">
+            Private admin note
             <textarea value={decisionDraft.internalNote} onChange={(event) => onDecisionDraft({ ...decisionDraft, internalNote: event.target.value })} className="min-h-20 rounded-xl border border-white/10 bg-[#0b1220] p-3 text-sm font-semibold normal-case tracking-normal text-white outline-none focus:border-sky-300/50" />
           </label>
         </div>
         <div className="flex flex-wrap gap-2">
-          <DecisionButton label="Start review" action="start_review" requirement={requirement} busyAction={busyAction} onDecide={onDecide} />
-          <DecisionButton label="Approve check" action="approve" requirement={requirement} busyAction={busyAction} onDecide={onDecide} />
-          <DecisionButton label="Request changes" action="request_changes" requirement={requirement} busyAction={busyAction} onDecide={onDecide} />
-          <DecisionButton label="Reject check" action="reject" requirement={requirement} busyAction={busyAction} onDecide={onDecide} />
-          <DecisionButton label="Renewal required" action="renewal_required" requirement={requirement} busyAction={busyAction} onDecide={onDecide} />
+          {actions.length ? actions.map((action) => <DecisionButton key={action.action} label={action.label} action={action.action} requirement={requirement} busyAction={busyAction} onDecide={onDecide} />) : <p className="text-sm font-semibold text-slate-400">{waitingCopy(stage, Boolean(document))}</p>}
         </div>
       </div>
     </article>
@@ -378,17 +392,17 @@ function RequirementCard({ requirement, detail, decisionDraft, busyAction, onDec
 
 function DecisionButton({ label, action, requirement, busyAction, onDecide }: { label: string; action: AdminDecisionAction; requirement: PartnerRequirement; busyAction: string | null; onDecide: (requirement: PartnerRequirement, action: AdminDecisionAction) => void }) {
   const busy = busyAction === `${requirement.id}:${action}`;
-  const tone = action === "approve" ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-100" : action === "reject" || action === "renewal_required" ? "border-red-400/30 bg-red-500/10 text-red-100" : action === "request_changes" ? "border-amber-300/30 bg-amber-300/10 text-amber-100" : "border-[#f97316]/35 bg-[#f97316]/10 text-[#fed7aa]";
+  const tone = action === "final_approve" || action === "recommend_approval" ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-100" : action === "reject" ? "border-red-400/30 bg-red-500/10 text-red-100" : action === "request_changes" || action === "renewal_required" || action === "hold" || action === "send_back_correction" ? "border-amber-300/30 bg-amber-300/10 text-amber-100" : "border-[#f97316]/35 bg-[#f97316]/10 text-[#fed7aa]";
   return (
     <button type="button" disabled={busy} onClick={() => onDecide(requirement, action)} className={`inline-flex h-9 items-center gap-2 rounded-xl border px-3 text-xs font-black disabled:opacity-50 ${tone}`}>
-      {action === "approve" ? <CheckCircle2 className="h-4 w-4" /> : action === "reject" ? <XCircle className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+      {action === "final_approve" || action === "recommend_approval" ? <CheckCircle2 className="h-4 w-4" /> : action === "reject" ? <XCircle className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
       {busy ? "Saving" : label}
     </button>
   );
 }
 
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
-  return <section className="rounded-2xl border border-white/10 bg-[#111827] p-4 shadow-2xl shadow-black/20"><h2 className="mb-3 text-sm font-black text-white">{title}</h2>{children}</section>;
+  return <section className="rounded-2xl border border-white/10 bg-[#111827] p-4 shadow-2xl shadow-black/20"><h2 className="mb-3 text-sm font-black text-cyan-100">{title}</h2>{children}</section>;
 }
 
 function Metric({ label, value }: { label: string; value: string }) {
@@ -396,11 +410,15 @@ function Metric({ label, value }: { label: string; value: string }) {
 }
 
 function Fact({ label, value }: { label: string; value: string }) {
-  return <div className="rounded-xl border border-white/10 bg-[#0b1220] p-3"><p className="text-xs font-black uppercase tracking-[0.12em] text-slate-500">{label}</p><p className="mt-1 break-words text-sm font-semibold text-slate-200">{value}</p></div>;
+  return <div className="rounded-xl border border-white/10 bg-[#0b1220] p-3"><p className="text-xs font-black uppercase tracking-[0.12em] text-sky-300/70">{label}</p><p className="mt-1 break-words text-sm font-semibold text-white">{value}</p></div>;
 }
 
-function Select({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (value: string) => void }) {
-  return <select aria-label={label} value={value} onChange={(event) => onChange(event.target.value)} className="h-10 rounded-xl border border-white/10 bg-[#0b1220] px-3 text-sm font-semibold text-white outline-none focus:border-sky-300/40">{options.map((option) => <option key={option || "all"} value={option}>{option || label}</option>)}</select>;
+function Select({ label, value, options, onChange }: { label: string; value: string; options: Array<string | { value: string; label: string }>; onChange: (value: string) => void }) {
+  return <select aria-label={label} value={value} onChange={(event) => onChange(event.target.value)} className="h-10 rounded-xl border border-white/10 bg-[#0b1220] px-3 text-sm font-semibold text-white outline-none focus:border-sky-300/40">{options.map((option) => {
+    const value = typeof option === "string" ? option : option.value;
+    const optionLabel = typeof option === "string" ? option || label : option.label;
+    return <option key={value || "all"} value={value}>{optionLabel}</option>;
+  })}</select>;
 }
 
 function Notice({ text }: { text: string }) {
@@ -410,12 +428,37 @@ function Notice({ text }: { text: string }) {
 function StatusChip({ status }: { status: string }) {
   const tone = status === "VERIFIED"
     ? "border-emerald-400/35 bg-emerald-500/10 text-emerald-100"
-    : status === "REJECTED" || status === "CHANGES_REQUIRED" || status === "EXPIRED"
+    : status === "REJECTED" || status === "EXPIRED"
       ? "border-red-400/35 bg-red-500/10 text-red-100"
-      : status === "UNDER_REVIEW" || status === "EXPIRING_SOON"
+      : status === "CHANGES_REQUIRED" || status === "EXPIRING_SOON"
         ? "border-amber-300/35 bg-amber-300/10 text-amber-100"
-        : "border-sky-300/25 bg-sky-400/10 text-sky-100";
+        : status === "UNDER_REVIEW"
+          ? "border-blue-300/35 bg-blue-400/10 text-blue-100"
+          : status === "SUBMITTED"
+            ? "border-cyan-300/35 bg-cyan-400/10 text-cyan-100"
+            : "border-slate-400/25 bg-slate-400/10 text-slate-200";
   return <span className={`inline-flex w-fit rounded-full border px-2.5 py-1 text-xs font-black ${tone}`}>{humanStatus(status)}</span>;
+}
+
+function ReviewStageFlow({ depth, stage, events }: { depth: ReviewDepth; stage: ReviewStage; events: PartnerVerificationEvent[] }) {
+  const steps = depth === "TWO_LEVEL"
+    ? ["Document submitted", "Document Check", "Final Review", "Verified"]
+    : ["Document submitted", "Document Check", "Senior Review", "Final Approval", "Verified"];
+  const activeIndex = reviewStageIndex(depth, stage);
+  const latest = events.find((event) => event.action.startsWith("admin.review."));
+  return (
+    <div className="mt-4 rounded-xl border border-white/10 bg-[#111827] p-3" data-review-stage-flow={depth}>
+      <div className="flex flex-wrap items-center gap-2 text-xs font-black">
+        {steps.map((step, index) => (
+          <span key={step} className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 ${index < activeIndex ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-100" : index === activeIndex ? "border-[#f97316]/40 bg-[#f97316]/10 text-[#fed7aa]" : "border-slate-500/25 bg-slate-500/10 text-slate-300"}`}>
+            {index < activeIndex ? "✓" : index === activeIndex ? "●" : "○"} {step}
+          </span>
+        ))}
+      </div>
+      <p className="mt-2 text-xs font-semibold text-slate-400">Current action required: <span className="text-[#fed7aa]">{stageCopy(stage)}</span></p>
+      <p className="mt-1 text-xs font-semibold text-slate-400">Previous reviewer: <span className="text-white">{latest ? "Recorded" : "Not recorded"}</span></p>
+    </div>
+  );
 }
 
 function HistoryRow({ event }: { event: PartnerVerificationEvent }) {
@@ -435,12 +478,12 @@ function filterQueue(rows: PartnerQueueRow[], filters: { activeTab: QueueTab; qu
     if (filters.countryFilter && (row.organization.country || "India") !== filters.countryFilter) return false;
     if (filters.stateFilter && row.review.status !== filters.stateFilter) return false;
     if (filters.submittedAfter && row.review.submittedAt && new Date(row.review.submittedAt) < new Date(filters.submittedAfter)) return false;
-    if (filters.activeTab === "ready") return row.review.status === "SUBMITTED";
-    if (filters.activeTab === "under-review") return row.review.status === "UNDER_REVIEW";
+    if (filters.activeTab === "my-reviews") return row.review.status === "SUBMITTED" || row.review.status === "UNDER_REVIEW";
+    if (filters.activeTab === "level-1") return row.review.status === "SUBMITTED";
+    if (filters.activeTab === "senior-review") return row.review.status === "UNDER_REVIEW";
+    if (filters.activeTab === "final-approval") return row.review.status === "UNDER_REVIEW";
     if (filters.activeTab === "changes") return row.review.status === "CHANGES_REQUIRED";
-    if (filters.activeTab === "approved") return row.review.status === "VERIFIED";
-    if (filters.activeTab === "rejected") return row.review.status === "REJECTED";
-    if (filters.activeTab === "expired") return row.review.status === "EXPIRED" || row.review.status === "EXPIRING_SOON";
+    if (filters.activeTab === "completed") return row.review.status === "VERIFIED" || row.review.status === "REJECTED" || row.review.status === "EXPIRED" || row.review.status === "EXPIRING_SOON";
     return true;
   });
 }
@@ -459,7 +502,7 @@ function serviceHeadline(services: PartnerServiceScope[]) {
 }
 
 function nextQueueAction(status: string) {
-  if (status === "SUBMITTED") return "Start review";
+  if (status === "SUBMITTED") return "Start document check";
   if (status === "UNDER_REVIEW") return "Review document";
   if (status === "CHANGES_REQUIRED") return "Wait for Partner";
   if (status === "VERIFIED") return "Ready for activation";
@@ -483,7 +526,77 @@ function stageLabel(requirement: PartnerRequirement) {
   const stage = requirement.metadata?.requirementStage;
   if (stage === "REQUIRED_NOW") return "Required now";
   if (stage === "BEFORE_ACTIVATION") return "Required before this service goes live";
-  return "We will ask only if needed";
+  return "Only if applicable";
+}
+
+function reviewDepthForRequirement(requirement: PartnerRequirement): ReviewDepth {
+  if (requirement.metadata?.reviewDepth === "TWO_LEVEL" || requirement.metadata?.reviewDepth === "THREE_LEVEL") return requirement.metadata.reviewDepth;
+  if (requirement.serviceScopeId) return "THREE_LEVEL";
+  if (["PROPERTY", "VEHICLE", "DRIVER", "PROFESSIONAL", "SERVICE", "LOCATION", "EQUIPMENT_ASSET"].includes(requirement.ownerEntityType)) return "THREE_LEVEL";
+  return "TWO_LEVEL";
+}
+
+function reviewStageForRequirement(requirement: PartnerRequirement, events: PartnerVerificationEvent[], depth: ReviewDepth): ReviewStage {
+  if (requirement.status === "VERIFIED") return "VERIFIED";
+  if (requirement.status === "CHANGES_REQUIRED") return "CHANGES_REQUIRED";
+  if (requirement.status === "REJECTED") return "REJECTED";
+  if (requirement.status === "EXPIRED" || requirement.status === "EXPIRING_SOON") return "EXPIRED";
+  if (requirement.status === "SUBMITTED") return "LEVEL_1_READY";
+  const latest = latestRequirementEvent(events, requirement.id);
+  if (latest?.action === "admin.review.send_senior_review") return "LEVEL_2_READY";
+  if (latest?.action === "admin.review.start_senior_review") return "LEVEL_2_IN_REVIEW";
+  if (latest?.action === "admin.review.recommend_approval") return depth === "TWO_LEVEL" ? "VERIFIED" : "LEVEL_3_READY";
+  if (latest?.action === "admin.review.escalate") return "LEVEL_3_READY";
+  if (latest?.action === "admin.review.start_final_approval") return "LEVEL_3_IN_REVIEW";
+  if (latest?.action === "admin.review.hold") return "ON_HOLD";
+  return requirement.status === "UNDER_REVIEW" ? "LEVEL_1_IN_REVIEW" : "LEVEL_1_READY";
+}
+
+function latestRequirementEvent(events: PartnerVerificationEvent[], requirementId: string) {
+  return [...events].reverse().find((event) => event.requirementId === requirementId && event.action.startsWith("admin.review."));
+}
+
+function reviewActions(stage: ReviewStage, hasDocument: boolean, expires?: boolean): Array<{ action: AdminDecisionAction; label: string }> {
+  if (!hasDocument) return [];
+  if (stage === "LEVEL_1_READY") return [{ action: "start_review", label: "Start document check" }];
+  if (stage === "LEVEL_1_IN_REVIEW") return [{ action: "send_senior_review", label: "Send for senior review" }, { action: "request_changes", label: "Request changes" }];
+  if (stage === "LEVEL_2_READY") return [{ action: "start_senior_review", label: "Start senior review" }];
+  if (stage === "LEVEL_2_IN_REVIEW") return [{ action: "recommend_approval", label: "Recommend approval" }, { action: "send_back_correction", label: "Send back for correction" }, { action: "request_changes", label: "Request changes" }, { action: "escalate", label: "Escalate" }];
+  if (stage === "LEVEL_3_READY") return [{ action: "start_final_approval", label: "Start final approval" }];
+  if (stage === "LEVEL_3_IN_REVIEW") return [{ action: "final_approve", label: "Final approve" }, { action: "request_changes", label: "Request changes" }, { action: "reject", label: "Reject" }, { action: "hold", label: "Hold for additional review" }];
+  if (stage === "VERIFIED" && expires) return [{ action: "renewal_required", label: "Renewal required" }];
+  return [];
+}
+
+function waitingCopy(stage: ReviewStage, hasDocument: boolean) {
+  if (!hasDocument) return "Waiting for Partner document.";
+  if (stage === "CHANGES_REQUIRED") return "Waiting for Partner update.";
+  if (stage === "EXPIRED") return "Waiting for replacement.";
+  if (stage === "VERIFIED") return "Verified.";
+  if (stage === "ON_HOLD") return "Hold for additional review.";
+  return "No action available for your reviewer level.";
+}
+
+function reviewStageIndex(depth: ReviewDepth, stage: ReviewStage) {
+  if (stage === "VERIFIED") return depth === "TWO_LEVEL" ? 3 : 4;
+  if (stage === "LEVEL_3_READY" || stage === "LEVEL_3_IN_REVIEW") return 3;
+  if (stage === "LEVEL_2_READY" || stage === "LEVEL_2_IN_REVIEW") return 2;
+  if (stage === "LEVEL_1_READY" || stage === "LEVEL_1_IN_REVIEW") return 1;
+  return 0;
+}
+
+function stageCopy(stage: ReviewStage) {
+  if (stage === "LEVEL_1_READY") return "Start document check";
+  if (stage === "LEVEL_1_IN_REVIEW") return "Document Check";
+  if (stage === "LEVEL_2_READY") return "Start senior review";
+  if (stage === "LEVEL_2_IN_REVIEW") return "Senior Review";
+  if (stage === "LEVEL_3_READY") return "Start final approval";
+  if (stage === "LEVEL_3_IN_REVIEW") return "Final Approval";
+  if (stage === "CHANGES_REQUIRED") return "Waiting for Partner update";
+  if (stage === "REJECTED") return "Rejected";
+  if (stage === "EXPIRED") return "Renewal required";
+  if (stage === "VERIFIED") return "Verified";
+  return "Hold for additional review";
 }
 
 function groupRequirements(requirements: PartnerRequirement[]) {
