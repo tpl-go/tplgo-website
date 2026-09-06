@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -181,9 +181,9 @@ function AdminPartnerVerificationView() {
           <h1 className="mt-3 text-2xl font-black tracking-tight text-white">Verification & Compliance</h1>
           <p className="mt-1 max-w-3xl text-sm font-semibold leading-6 text-slate-400">Review Partner documents and complete verification checks.</p>
         </div>
-        <button type="button" onClick={loadQueue} className="inline-flex h-10 w-fit items-center gap-2 rounded-xl border border-sky-300/20 bg-sky-400/10 px-4 text-sm font-black text-sky-100 hover:bg-sky-400/15">
+        <div className="flex flex-wrap gap-2"><Link href="/admin/partner-verification/rules" className="inline-flex h-10 w-fit items-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-400/10 px-4 text-sm font-black text-cyan-100 hover:bg-cyan-400/15">Verification Rules</Link><button type="button" onClick={loadQueue} className="inline-flex h-10 w-fit items-center gap-2 rounded-xl border border-sky-300/20 bg-sky-400/10 px-4 text-sm font-black text-sky-100 hover:bg-sky-400/15">
           <RefreshCcw className="h-4 w-4" /> Refresh
-        </button>
+        </button></div>
       </div>
 
       {accessDenied ? <AccessDeniedState /> : null}
@@ -697,3 +697,5 @@ function authorizedRepresentative(detail: PartnerOrganizationBundle) {
 function formatDate(value?: string | null) {
   return value ? new Date(value).toLocaleString() : "Not submitted";
 }
+
+

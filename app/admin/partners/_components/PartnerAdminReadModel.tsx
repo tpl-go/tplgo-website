@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -129,7 +129,7 @@ function Overview({ metrics, rows }: { metrics: ReturnType<typeof buildMetrics>;
         <Panel title="Partner Navigation">
           <div className="grid gap-3">
             <NavCard href="/admin/partners/applications" icon={ClipboardCheck} title="Applications" detail="Submitted onboarding records and review state" />
-            <NavCard href="/admin/partner-verification" icon={ShieldCheck} title="Verification" detail="Operational review, signed document access, and decisions" />
+            <NavCard href="/admin/partner-verification" icon={ShieldCheck} title="Partner Reviews" detail="Review submitted Partner documents" />`r`n            <NavCard href="/admin/partner-verification/rules" icon={FileText} title="Verification Rules" detail="Manage which checks and documents Partners must complete" />
             <NavCard href="/admin/partners/organizations" icon={Building2} title="Organizations" detail="Organization and TPL Identity membership visibility" />
           </div>
         </Panel>
@@ -483,3 +483,4 @@ function buildDocumentRows(rows: PartnerQueueRow[]) {
       blockingCount: row.blockingCount,
     }));
 }
+

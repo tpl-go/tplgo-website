@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -16,6 +16,7 @@ import {
   CreditCard,
   Database,
   FileText,
+  FileSearch,
   FileBarChart,
   FileClock,
   Gauge,
@@ -82,6 +83,7 @@ const partnerNavItems = [
   { href: "/admin/partners", label: "Overview", icon: Building2 },
   { href: "/admin/partners/applications", label: "Applications", icon: ClipboardCheck },
   { href: "/admin/partner-verification", label: "Verification & Compliance", icon: ShieldCheck },
+  { href: "/admin/partner-verification/rules", label: "Verification Rules", icon: FileSearch, permission: "partner_verification_policy.read" },
   { href: "/admin/partners/organizations", label: "Organizations", icon: Users },
   { href: "/admin/partners/documents-compliance", label: "Documents & Compliance", icon: FileText },
 ];
@@ -420,3 +422,8 @@ export default function AdminShell({
     </div>
   );
 }
+
+
+
+
+
