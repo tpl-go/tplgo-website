@@ -4,6 +4,7 @@ import {
   resolveTplApiTarget,
   TPL_PRODUCTION_API_BASE_URL,
   TPL_SMOKE_PROXY_API_BASE_URL,
+  TPL_STAGING_API_BASE_URL_HOSTNAME,
 } from "./apiTargetResolver";
 
 test("Preview without API URL blocks production fallback", () => {
@@ -86,4 +87,40 @@ test("Allowed smoke proxy resolves to the same-origin proxy target", () => {
 
   assert.equal(target.baseUrl, TPL_SMOKE_PROXY_API_BASE_URL);
   assert.equal(target.status, "smoke-proxy");
+});
+
+test("App Development build is blocked from targeting the Website Staging API", () => {
+  const target = resolveTplApiTarget({
+    nodeEnv: "production",
+    vercelEnv: "preview",
+    apiBaseUrl: `https://${TPL_STAGING_API_BASE_URL_HOSTNAME}`,
+    tplEnv: "app-development",
+  });
+
+  assert.equal(target.baseUrl, "");
+  assert.equal(target.status, "cross-environment-blocked");
+  assert.equal(target.usesProductionFallback, false);
+});
+
+test("Website Staging build itself is unaffected by the App Development guard", () => {
+  const target = resolveTplApiTarget({
+    nodeEnv: "production",
+    vercelEnv: "preview",
+    apiBaseUrl: `https://${TPL_STAGING_API_BASE_URL_HOSTNAME}`,
+  });
+
+  assert.equal(target.baseUrl, `https://${TPL_STAGING_API_BASE_URL_HOSTNAME}`);
+  assert.equal(target.status, "configured");
+});
+
+test("App Development build with its own API URL resolves normally", () => {
+  const target = resolveTplApiTarget({
+    nodeEnv: "production",
+    vercelEnv: "preview",
+    apiBaseUrl: "https://api-app-dev.tplgo.com",
+    tplEnv: "app-development",
+  });
+
+  assert.equal(target.baseUrl, "https://api-app-dev.tplgo.com");
+  assert.equal(target.status, "configured");
 });
