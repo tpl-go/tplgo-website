@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { CentralSchedulePanel } from "./CentralSchedulePanel";
 import {
   ArrowRight,
   BadgeCheck,
@@ -307,6 +308,7 @@ export function WebsiteExperienceManager({
   };
 
   if (editorView === "workflow" && workflowView) {
+    if (workflowView === "scheduled") return <div className="space-y-4"><Link href="/admin/website-experience">Back to Website Experience</Link><CentralSchedulePanel /></div>;
     return (
       <WorkflowQueueView
         view={workflowView}
@@ -384,6 +386,7 @@ export function WebsiteExperienceManager({
         backLabel="Back to Partner"
       >
         <ItemStatusStrip activeRow={activeRow} />
+        <CentralSchedulePanel targetType="website_experience" targetId={activeContext} onChanged={() => void load()} />
         <PartnerApplicationTreeEditor
           content={activeDraft}
           selectedNodeId={undefined}
@@ -440,7 +443,8 @@ export function WebsiteExperienceManager({
       <div className="grid gap-5 2xl:grid-cols-[minmax(0,1fr)_28rem]">
         <div className="space-y-4 min-w-0">
           <section className="rounded-2xl border border-sky-300/15 bg-[#0b1628] p-5 shadow-xl shadow-black/20">
-            <WorkflowActionBar
+            <CentralSchedulePanel targetType="website_experience" targetId={activeContext} onChanged={() => void load()} />
+        <WorkflowActionBar
               canWrite={canWrite}
               canPublish={canPublish}
               schedule={schedule}
@@ -785,27 +789,30 @@ function BlockEditor({
 }) {
   if (content.context === "partner_application") {
     return (
-      <PartnerApplicationTreeEditor
-        content={content}
-        selectedNodeId={partnerApplicationNodeId}
-        canWrite={canWrite}
-        canPublish={canPublish}
-        schedule={schedule}
-        activeRow={activeRow}
-        busyAction={busyAction}
-        message={message}
-        onContentChange={onContentChange}
-        onScheduleChange={onScheduleChange}
-        onSaveDraft={onSaveDraft}
-        onPublish={onPublish}
-        onSchedule={onSchedule}
-        onCancelSchedule={onCancelSchedule}
-        reviewNote={reviewNote}
-        bypassReason={bypassReason}
-        onReviewNoteChange={onReviewNoteChange}
-        onBypassReasonChange={onBypassReasonChange}
-        onWorkflowAction={onWorkflowAction}
-      />
+      <>
+        <CentralSchedulePanel targetType="website_experience" targetId={activeRow.context} />
+        <PartnerApplicationTreeEditor
+          content={content}
+          selectedNodeId={partnerApplicationNodeId}
+          canWrite={canWrite}
+          canPublish={canPublish}
+          schedule={schedule}
+          activeRow={activeRow}
+          busyAction={busyAction}
+          message={message}
+          onContentChange={onContentChange}
+          onScheduleChange={onScheduleChange}
+          onSaveDraft={onSaveDraft}
+          onPublish={onPublish}
+          onSchedule={onSchedule}
+          onCancelSchedule={onCancelSchedule}
+          reviewNote={reviewNote}
+          bypassReason={bypassReason}
+          onReviewNoteChange={onReviewNoteChange}
+          onBypassReasonChange={onBypassReasonChange}
+          onWorkflowAction={onWorkflowAction}
+        />
+      </>
     );
   }
 

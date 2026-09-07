@@ -72,10 +72,10 @@ test("Verification Rules appears in the central Website Experience work queue th
 
 test("S5E.1 Verification Rules uses central scheduler actions", () => {
   assert.match(rulesPage, /\/api\/v1\/admin\/partner-verification\/policies\/schedule/);
-  assert.match(rulesPage, /\/api\/v1\/admin\/partner-verification\/policies\/schedule\/cancel/);
+  assert.match(rulesPage, /CentralSchedulePanel/);
+  assert.match(rulesPage, /targetType="verification_policy"/);
   assert.match(rulesPage, /data-policy-schedule-controls="true"/);
   assert.match(rulesPage, /Schedule/);
-  assert.match(rulesPage, /Cancel schedule/);
   assert.match(rulesPage, /policy\.permissions\.canPublish/);
   assert.doesNotMatch(rulesPage, /policy keys|stable IDs|runtime catalogue/);
 });

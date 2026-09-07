@@ -28,6 +28,7 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react";
+import { CentralSchedulePanel } from "./CentralSchedulePanel";
 import { AdminBackButton } from "./AdminBackButton";
 import {
   getAdminWebsiteExperienceLoginSignup,
@@ -247,6 +248,7 @@ export function AdminWebsiteExperienceLanding({ view = "root" }: { view?: Landin
 
       <section className="space-y-3">
         <SectionLabel title="Work Queue" detail="Continue or review pending changes." />
+        <CentralSchedulePanel />
         <VerticalEntry icon={FilePenLine} title="Drafts" detail="Continue editing saved changes." count={formatCountLabel(workflowSummary.draftLabel, "Draft")} href="/admin/website-experience/login-signup?workflow=drafts" highlight={isPendingCount(workflowSummary.draftLabel)} />
         <VerticalEntry icon={ClipboardList} title="Service Requests" detail="Review services requested by Partners." count={formatCountLabel(workflowSummary.serviceRequestLabel, "Service Request")} href="/admin/website-experience/service-requests" highlight={isPendingCount(workflowSummary.serviceRequestLabel)} />
         <VerticalEntry icon={Send} title="Needs Approval" detail="Review changes waiting for approval." count={formatCountLabel(workflowSummary.reviewLabel, "Needs Approval")} href="/admin/website-experience/login-signup?workflow=in_review" highlight={isPendingCount(workflowSummary.reviewLabel)} />

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
+import { CentralSchedulePanel } from "../../_components/CentralSchedulePanel";
 import { AlertTriangle, CheckCircle2, Eye, FilePenLine, Loader2, MoreHorizontal, RefreshCcw, Save, Send, Trash2, XCircle } from "lucide-react";
 import { AdminBackButton } from "../../_components/AdminBackButton";
 import {
@@ -252,6 +253,7 @@ export function AdminPartnerServiceCatalogueServiceEditorClient({
       </div>
 
       {message ? <MessageBox message={message} /> : null}
+      <CentralSchedulePanel targetType="service_catalogue" onChanged={() => void load()} />
 
       <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_26rem]">
         <main className="min-w-0 space-y-4">
