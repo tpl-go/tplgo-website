@@ -40,11 +40,13 @@ import {
   savePartnerServicesDraft,
   savePartnerVerificationComplianceDraft,
   savePartnerPayoutTaxDraft,
+  fetchPublishedPartnerApplicationContent,
   createPartnerDocumentUploadSession,
   confirmPartnerDocument,
   linkPartnerDocumentToRequirement,
   verifyPartnerEmail,
   verifyPartnerMobile,
+  type PartnerApplicationContentNode,
   type PartnerMobileChallenge,
   type PartnerRequirement,
   type PartnerOrganizationBundle,
@@ -177,6 +179,24 @@ type PayoutTaxForm = {
   gstRegistrationState: string;
   foreignTaxIdentifier: string;
   documentIntent: string;
+};
+
+type PayoutTaxContent = {
+  title: string;
+  subtitle: string;
+  helperText: string;
+  documentInstructions: string;
+  reviewReadyCopy: string;
+  reviewIncompleteCopy: string;
+};
+
+const fallbackPayoutTaxContent: PayoutTaxContent = {
+  title: "Payout & Tax",
+  subtitle: "Add the bank and tax details TPL needs before payouts can be reviewed. This does not activate payouts or move money.",
+  helperText: "",
+  documentInstructions: "Upload cancelled cheque, bank letter, PAN/GST certificate or local tax evidence only when requested. Documents use the existing private upload flow and are not public.",
+  reviewReadyCopy: "Required Step 6 details are ready to submit for manual review.",
+  reviewIncompleteCopy: "Complete the highlighted payout and tax fields before continuing.",
 };
 
 type RuntimeCatalogueState = {
@@ -534,6 +554,7 @@ export default function PartnerApplicationWorkspaceClient({
   const [uploadingRequirementId, setUploadingRequirementId] = useState<string | null>(null);
   const [focusedVerificationSectionId, setFocusedVerificationSectionId] = useState<string | null>(null);
   const [qaVerifiedContacts, setQaVerifiedContacts] = useState({ mobile: false, email: false });
+  const [payoutTaxContent, setPayoutTaxContent] = useState<PayoutTaxContent>(fallbackPayoutTaxContent);
   const [serviceCatalogueState, setServiceCatalogueState] = useState<RuntimeCatalogueState>({
     status: "loading",
     version: null,
@@ -614,6 +635,18 @@ export default function PartnerApplicationWorkspaceClient({
       } else {
         setServiceCatalogueState({ status: "error", version: null, updatedAt: null, domains: [], items: [] });
       }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchPublishedPartnerApplicationContent().then((result) => {
+      if (cancelled || !result.ok) return;
+      const stepSixNode = result.data.contexts?.partner_application?.applicationTree?.children.find((node) => node.id === "step-6-payout-tax");
+      setPayoutTaxContent(payoutTaxContentFromNode(stepSixNode));
     });
     return () => {
       cancelled = true;
@@ -1471,7 +1504,7 @@ export default function PartnerApplicationWorkspaceClient({
                 onFocusSectionHandled={() => setFocusedVerificationSectionId(null)}
               />
             ) : activeStep === "payout_tax" ? (
-              <PayoutTaxStep form={payoutTaxForm} bundle={activeBundle} canComplete={canCompleteStepSix} onChange={updatePayoutTaxForm} />
+              <PayoutTaxStep form={payoutTaxForm} bundle={activeBundle} content={payoutTaxContent} canComplete={canCompleteStepSix} onChange={updatePayoutTaxForm} />
             ) : (
               <PlaceholderStep step={workspaceSteps.find((step) => step.id === activeStep) ?? workspaceSteps[1]!} />
             )}
@@ -3351,11 +3384,13 @@ function PayoutSelect({ label, value, onChange, children }: { label: string; val
 function PayoutTaxStep({
   form,
   bundle,
+  content,
   canComplete,
   onChange,
 }: {
   form: PayoutTaxForm;
   bundle: PartnerOrganizationBundle | null;
+  content: PayoutTaxContent;
   canComplete: boolean;
   onChange: (next: Partial<PayoutTaxForm>) => void;
 }) {
@@ -3377,10 +3412,11 @@ function PayoutTaxStep({
     <div data-application-active-step="payout_tax" className="rounded-2xl border border-white/10 bg-[#171a20] shadow-2xl">
       <div className="border-b border-white/10 p-5">
         <p className="text-xs font-black uppercase tracking-[0.16em] text-[#fb923c]">Step 6</p>
-        <h1 className="mt-2 text-2xl font-black sm:text-3xl">Payout & Tax</h1>
+        <h1 className="mt-2 text-2xl font-black sm:text-3xl">{content.title}</h1>
         <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-slate-300">
-          Add the bank and tax details TPL needs before payouts can be reviewed. This does not activate payouts or move money.
+          {content.subtitle}
         </p>
+        {content.helperText ? <p className="mt-2 max-w-3xl text-xs font-semibold leading-5 text-slate-400">{content.helperText}</p> : null}
         <div className="mt-4 flex flex-wrap gap-2 text-xs font-black">
           <span className="rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-amber-100">Manual review available</span>
           <span className="rounded-full border border-slate-500/30 bg-slate-500/10 px-3 py-1 text-slate-200">Provider setup pending</span>
@@ -3426,10 +3462,10 @@ function PayoutTaxStep({
                       {isIndiaTax ? <><PayoutField label={tax?.indiaPanMasked ? `Saved PAN ${tax.indiaPanMasked}` : "PAN"} value={form.indiaPan} onChange={(value) => onChange({ indiaPan: value.toUpperCase() })} placeholder={tax?.indiaPanMasked ? "Enter only to replace" : "ABCDE1234F"} /><label className="flex items-center gap-3 rounded-xl border border-white/10 bg-[#171a20] p-3 text-sm font-bold text-slate-200"><input type="checkbox" checked={form.gstRegistered} onChange={(event) => onChange({ gstRegistered: event.target.checked })} className="h-4 w-4 rounded border-white/20 bg-[#11141a]" />GST registered</label>{form.gstRegistered ? <><PayoutField label={tax?.indiaGstinMasked ? `Saved GSTIN ${tax.indiaGstinMasked}` : "GSTIN"} value={form.indiaGstin} onChange={(value) => onChange({ indiaGstin: value.toUpperCase() })} placeholder="22ABCDE1234F1Z5" /><PayoutField label="GST registration state" value={form.gstRegistrationState} onChange={(value) => onChange({ gstRegistrationState: value })} placeholder="State" /></> : null}</> : <><PayoutField label="Tax identifier type" value={form.taxIdentifierType} onChange={(value) => onChange({ taxIdentifierType: value })} placeholder="TIN / VAT / local tax ID" /><PayoutField label={tax?.foreignTaxIdentifierMasked ? `Saved tax ID ${tax.foreignTaxIdentifierMasked}` : "Tax identifier"} value={form.foreignTaxIdentifier || form.taxIdentifier} onChange={(value) => onChange({ foreignTaxIdentifier: value, taxIdentifier: value })} placeholder="Local tax identifier" /></>}
                     </div>
                   ) : active.id === "documents" ? (
-                    <div className="rounded-xl border border-sky-400/20 bg-sky-400/10 p-4 text-sm font-semibold leading-6 text-sky-100">Upload cancelled cheque, bank letter, PAN/GST certificate or local tax evidence only when requested. Documents use the existing private upload flow and are not public.</div>
+                    <div className="rounded-xl border border-sky-400/20 bg-sky-400/10 p-4 text-sm font-semibold leading-6 text-sky-100">{content.documentInstructions}</div>
                   ) : (
                     <div className="grid gap-3 rounded-xl border border-white/10 bg-[#171a20] p-4 text-sm font-semibold text-slate-200">
-                      <p>{canComplete ? "Required Step 6 details are ready to submit for manual review." : "Complete the highlighted payout and tax fields before continuing."}</p>
+                      <p>{canComplete ? content.reviewReadyCopy : content.reviewIncompleteCopy}</p>
                       <p>Bank status: {payoutTaxStatusLabel(review?.bankStatus ?? payout?.bankVerificationStatus ?? "NOT_PROVIDED")}</p>
                       <p>Tax status: {payoutTaxStatusLabel(review?.taxStatus ?? tax?.taxRegistrationStatus ?? "NOT_PROVIDED")}</p>
                     </div>
@@ -3483,6 +3519,24 @@ function step6SectionLabel(section: PayoutTaxForm["activeSection"]): string {
   if (section === "tax") return "Tax details";
   if (section === "documents") return "Supporting documents";
   return "Review your details";
+}
+
+function payoutTaxContentFromNode(node: PartnerApplicationContentNode | undefined): PayoutTaxContent {
+  if (!node) return fallbackPayoutTaxContent;
+  return {
+    title: safePublishedCopy(node.title, fallbackPayoutTaxContent.title),
+    subtitle: safePublishedCopy(node.subtitle, fallbackPayoutTaxContent.subtitle),
+    helperText: safePublishedCopy(node.helperText, fallbackPayoutTaxContent.helperText),
+    documentInstructions: safePublishedCopy(node.sectionDescription || node.domainIntroductionCopy || node.emptyStateCopy, fallbackPayoutTaxContent.documentInstructions),
+    reviewReadyCopy: safePublishedCopy(node.ctaLabels?.reviewReady, fallbackPayoutTaxContent.reviewReadyCopy),
+    reviewIncompleteCopy: safePublishedCopy(node.ctaLabels?.reviewIncomplete, fallbackPayoutTaxContent.reviewIncompleteCopy),
+  };
+}
+
+function safePublishedCopy(value: string | undefined, fallback: string): string {
+  const normalized = value?.trim();
+  if (/payout and tax setup will continue after verification requirements are known/i.test(normalized ?? "")) return fallback;
+  return normalized ? normalized : fallback;
 }
 
 function SummaryRow({ label, value }: { label: string; value: string }) {

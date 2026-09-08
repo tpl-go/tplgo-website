@@ -353,6 +353,35 @@ export type PartnerPayoutTaxDraftInput = {
   };
 };
 
+export type PartnerApplicationContentNode = {
+  id: string;
+  label: string;
+  title: string;
+  subtitle: string;
+  helperText?: string;
+  rightHelpCopy?: string;
+  sectionDescription?: string;
+  domainIntroductionCopy?: string;
+  emptyStateCopy?: string;
+  otherServiceGuidance?: string;
+  ctaLabels?: Record<string, string>;
+};
+
+export type PartnerApplicationPublishedContent = {
+  context: "partner_application";
+  applicationTree?: {
+    root: string;
+    children: PartnerApplicationContentNode[];
+  };
+};
+
+export type PartnerApplicationWebsiteExperienceResponse = {
+  contexts?: {
+    partner_application?: PartnerApplicationPublishedContent;
+  };
+  version?: string;
+};
+
 export type PartnerServiceCatalogueRuntimeResponse = {
   version: number;
   updatedAt: string;
@@ -410,6 +439,13 @@ export function savePartnerPayoutTaxDraft(input: PartnerPayoutTaxDraftInput): Pr
   return tplApiRequest<PartnerOrganizationBundle>("/api/v1/partner/application/draft/payout-tax", {
     method: "POST",
     body: input,
+  });
+}
+
+export function fetchPublishedPartnerApplicationContent(): Promise<TplApiResult<PartnerApplicationWebsiteExperienceResponse>> {
+  return tplApiRequest<PartnerApplicationWebsiteExperienceResponse>("/api/v1/content/website-experience/partner-application", {
+    authToken: null,
+    fallbackOnError: false,
   });
 }
 

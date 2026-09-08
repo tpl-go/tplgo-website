@@ -25,6 +25,14 @@ test("Step 6 uses the backend bundle and save endpoint instead of a local author
     expect(centerSource).toContain("bundle?.payoutTaxReview?.status");
 });
 
+test("Step 6 loads editable copy from published Partner Application Website Experience content", () => {
+    expect(apiSource).toContain("/api/v1/content/website-experience/partner-application");
+    expect(workspaceSource).toContain("fetchPublishedPartnerApplicationContent");
+    expect(workspaceSource).toContain('node.id === "step-6-payout-tax"');
+    expect(workspaceSource).toContain("payoutTaxContentFromNode");
+    expect(workspaceSource).toContain("fallbackPayoutTaxContent");
+});
+
 test("Step 6 keeps sensitive and provider states human-safe", () => {
     expect(workspaceSource).toContain("Sensitive values stay masked");
     expect(workspaceSource).toContain("Provider setup pending");
