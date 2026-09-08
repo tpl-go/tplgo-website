@@ -142,11 +142,13 @@ test("S5B.3 maps active document states truthfully and keeps uploaded distinct f
   assert.doesNotMatch(workspaceSource, /requirement\.status === "UNDER_REVIEW"[\s\S]{0,80}return "completed"/);
 });
 
-test("Save Draft message layer uses a portal modal above sticky UI", () => {
+test("Save Draft message layer uses a portal toast above sticky UI without blocking the form", () => {
   assert.match(workspaceSource, /createPortal/);
-  assert.match(workspaceSource, /data-save-draft-modal-layer/);
-  assert.match(workspaceSource, /aria-modal="true"/);
-  assert.match(workspaceSource, /document\.body\.style\.overflow = "hidden"/);
-  assert.match(workspaceSource, /z-\[80\]/);
+  assert.match(workspaceSource, /data-save-draft-toast-layer/);
+  assert.doesNotMatch(workspaceSource, /data-save-draft-modal-layer/);
+  assert.doesNotMatch(workspaceSource, /aria-modal="true"/);
+  assert.doesNotMatch(workspaceSource, /document\.body\.style\.overflow = "hidden"/);
+  assert.match(workspaceSource, /z-\[120\]/);
+  assert.match(workspaceSource, /pointer-events-none fixed inset-x-0 top-4/);
   assert.match(workspaceSource, /Escape/);
 });

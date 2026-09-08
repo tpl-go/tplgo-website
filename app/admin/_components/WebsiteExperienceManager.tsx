@@ -381,32 +381,20 @@ export function WebsiteExperienceManager({
       <ContentListShell
         eyebrow="Website Experience > Pages > Partner"
         title="Partner Application"
-        detail="Open one application item. Each editor keeps workflow actions visible and scoped to Partner Application content."
+        detail="Open one Partner Application section. Save changes as a draft here; approval, publishing, scheduling and history stay in the central workflow."
         backHref="/admin/website-experience/pages/partner"
         backLabel="Back to Partner"
       >
         <ItemStatusStrip activeRow={activeRow} />
-        <CentralSchedulePanel targetType="website_experience" targetId={activeContext} onChanged={() => void load()} />
         <PartnerApplicationTreeEditor
           content={activeDraft}
           selectedNodeId={undefined}
           canWrite={canWrite}
-          canPublish={canPublish}
-          schedule={schedule}
           activeRow={activeRow}
           busyAction={busyAction}
           message={message}
           onContentChange={updateDraft}
-          onScheduleChange={setSchedule}
           onSaveDraft={saveDraft}
-          onPublish={publish}
-          onSchedule={schedulePublish}
-          onCancelSchedule={cancelSchedule}
-          reviewNote={reviewNote}
-          bypassReason={bypassReason}
-          onReviewNoteChange={setReviewNote}
-          onBypassReasonChange={setBypassReason}
-          onWorkflowAction={workflowAction}
         />
       </ContentListShell>
     );
@@ -442,28 +430,30 @@ export function WebsiteExperienceManager({
 
       <div className="grid gap-5 2xl:grid-cols-[minmax(0,1fr)_28rem]">
         <div className="space-y-4 min-w-0">
-          <section className="rounded-2xl border border-sky-300/15 bg-[#0b1628] p-5 shadow-xl shadow-black/20">
-            <CentralSchedulePanel targetType="website_experience" targetId={activeContext} onChanged={() => void load()} />
-        <WorkflowActionBar
-              canWrite={canWrite}
-              canPublish={canPublish}
-              schedule={schedule}
-              activeRow={activeRow}
-              busyAction={busyAction}
-              message={message}
-              reviewNote={reviewNote}
-              bypassReason={bypassReason}
-              onScheduleChange={setSchedule}
-              onSaveDraft={saveDraft}
-              onPublish={publish}
-              onSchedule={schedulePublish}
-              onCancelSchedule={cancelSchedule}
-              onReviewNoteChange={setReviewNote}
-              onBypassReasonChange={setBypassReason}
-              onWorkflowAction={workflowAction}
-              onPreview={() => setMessage(activeRow.hasUnpublishedChanges ? "Draft Preview is shown beside this editor and is not live." : "Unsaved Preview is shown beside this editor and is not live.")}
-            />
-          </section>
+          {mode === "partner-application" ? null : (
+            <section className="rounded-2xl border border-sky-300/15 bg-[#0b1628] p-5 shadow-xl shadow-black/20">
+              <CentralSchedulePanel targetType="website_experience" targetId={activeContext} onChanged={() => void load()} />
+              <WorkflowActionBar
+                canWrite={canWrite}
+                canPublish={canPublish}
+                schedule={schedule}
+                activeRow={activeRow}
+                busyAction={busyAction}
+                message={message}
+                reviewNote={reviewNote}
+                bypassReason={bypassReason}
+                onScheduleChange={setSchedule}
+                onSaveDraft={saveDraft}
+                onPublish={publish}
+                onSchedule={schedulePublish}
+                onCancelSchedule={cancelSchedule}
+                onReviewNoteChange={setReviewNote}
+                onBypassReasonChange={setBypassReason}
+                onWorkflowAction={workflowAction}
+                onPreview={() => setMessage(activeRow.hasUnpublishedChanges ? "Draft Preview is shown beside this editor and is not live." : "Unsaved Preview is shown beside this editor and is not live.")}
+              />
+            </section>
+          )}
 
           <section className="rounded-2xl border border-sky-300/15 bg-white p-5 shadow-sm">
             <BlockEditor
@@ -790,27 +780,15 @@ function BlockEditor({
   if (content.context === "partner_application") {
     return (
       <>
-        <CentralSchedulePanel targetType="website_experience" targetId={activeRow.context} />
         <PartnerApplicationTreeEditor
           content={content}
           selectedNodeId={partnerApplicationNodeId}
           canWrite={canWrite}
-          canPublish={canPublish}
-          schedule={schedule}
           activeRow={activeRow}
           busyAction={busyAction}
           message={message}
           onContentChange={onContentChange}
-          onScheduleChange={onScheduleChange}
           onSaveDraft={onSaveDraft}
-          onPublish={onPublish}
-          onSchedule={onSchedule}
-          onCancelSchedule={onCancelSchedule}
-          reviewNote={reviewNote}
-          bypassReason={bypassReason}
-          onReviewNoteChange={onReviewNoteChange}
-          onBypassReasonChange={onBypassReasonChange}
-          onWorkflowAction={onWorkflowAction}
         />
       </>
     );
@@ -928,43 +906,22 @@ function PartnerApplicationTreeEditor({
   content,
   selectedNodeId,
   canWrite,
-  canPublish,
-  schedule,
   activeRow,
   busyAction,
   message,
   onContentChange,
-  onScheduleChange,
   onSaveDraft,
-  onPublish,
-  onSchedule,
-  onCancelSchedule,
-  reviewNote,
-  bypassReason,
-  onReviewNoteChange,
-  onBypassReasonChange,
-  onWorkflowAction,
 }: {
   content: WebsiteExperienceContent;
   selectedNodeId?: string;
   canWrite: boolean;
-  canPublish: boolean;
-  schedule: typeof defaultSchedule;
   activeRow: WebsiteExperienceAdminContext;
   busyAction: string;
   message: string;
-  reviewNote: string;
-  bypassReason: string;
   onContentChange: (patch: Partial<WebsiteExperienceContent>) => void;
-  onScheduleChange: (value: typeof defaultSchedule) => void;
   onSaveDraft: () => void;
-  onPublish: () => void;
-  onSchedule: () => void;
-  onCancelSchedule: () => void;
-  onReviewNoteChange: (value: string) => void;
-  onBypassReasonChange: (value: string) => void;
-  onWorkflowAction: (action: "submit" | "approve" | "request-changes" | "delete-draft" | "archive" | "restore") => void;
 }) {
+  const [activeStepSevenUnit, setActiveStepSevenUnit] = useState("page-content");
   const tree = content.applicationTree;
   const updateNode = (nodeId: string, patch: Record<string, string>) => {
     if (!tree) return;
@@ -997,11 +954,12 @@ function PartnerApplicationTreeEditor({
             <Link
               key={node.id}
               href={`/admin/website-experience/pages/partner/application/${node.id}`}
-              className="flex min-h-16 items-center justify-between gap-4 rounded border border-slate-200 bg-slate-50 p-4 text-left hover:border-blue-300 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="flex min-h-20 w-full flex-col justify-between gap-4 rounded border border-slate-200 bg-slate-50 p-4 text-left hover:border-blue-300 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-400 sm:flex-row sm:items-center"
             >
-              <span>
+              <span className="min-w-0">
                 <span className="block text-sm font-semibold text-slate-950">{node.label}</span>
-                <span className="mt-1 block text-xs leading-5 text-slate-600">{node.editableFields.length} editable fields</span>
+                <span className="mt-1 block text-xs leading-5 text-slate-600">{partnerApplicationSectionDescription(node.id, node.editableFields.length)}</span>
+                <span className="mt-2 inline-flex rounded-full bg-white px-2 py-1 text-[11px] font-semibold text-slate-600">{partnerApplicationWorkflowLabel(activeRow)}</span>
               </span>
               <ArrowRight className="h-4 w-4 text-blue-700" />
             </Link>
@@ -1025,9 +983,21 @@ function PartnerApplicationTreeEditor({
         Website Experience &gt; Pages &gt; Partner &gt; Partner Application &gt; {selectedNode.label}
       </div>
       <AdminBackButton href="/admin/website-experience/pages/partner/application" label="Back to Partner Application" className="border-slate-300 bg-slate-950 text-sky-100" />
+      {selectedNode.id === "step-7-partner-agreement" ? (
+        <StepSevenContentUnits
+          activeUnit={activeStepSevenUnit}
+          node={selectedNode}
+          canWrite={canWrite}
+          busyAction={busyAction}
+          onActiveUnitChange={setActiveStepSevenUnit}
+          onNodeChange={(patch) => updateNode(selectedNode.id, patch)}
+          onCtaChange={(key, value) => updateCta(selectedNode.id, key, value)}
+          onSaveDraft={onSaveDraft}
+        />
+      ) : null}
       <div className="space-y-3">
         {[selectedNode].map((node) => (
-          <section key={node.id} className="rounded border border-slate-200 bg-slate-50 p-3">
+          <section key={node.id} className={node.id === "step-7-partner-agreement" ? "sr-only" : "rounded border border-slate-200 bg-slate-50 p-3"}>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h4 className="text-sm font-semibold text-slate-950">{node.label}</h4>
               <span className="rounded bg-white px-2 py-1 text-[11px] font-semibold text-slate-500">{node.editableFields.length} editable fields</span>
@@ -1056,25 +1026,138 @@ function PartnerApplicationTreeEditor({
         ))}
       </div>
       {stepFour ? <p className="rounded border border-slate-200 bg-white p-3 text-xs text-slate-600">Step 4 preview source: {stepFour.title} - {stepFour.subtitle}</p> : null}
-      <WorkflowActions
-        canWrite={canWrite}
-        canPublish={canPublish}
-        schedule={schedule}
-        activeRow={activeRow}
-        busyAction={busyAction}
-        message={message}
-        reviewNote={reviewNote}
-        bypassReason={bypassReason}
-        onScheduleChange={onScheduleChange}
-        onSaveDraft={onSaveDraft}
-        onPublish={onPublish}
-        onSchedule={onSchedule}
-        onCancelSchedule={onCancelSchedule}
-        onReviewNoteChange={onReviewNoteChange}
-        onBypassReasonChange={onBypassReasonChange}
-        onWorkflowAction={onWorkflowAction}
-      />
+      <LocalStepEditorActions canWrite={canWrite} busyAction={busyAction} message={message} onSaveDraft={onSaveDraft} />
     </EditorSection>
+  );
+}
+
+function partnerApplicationSectionDescription(nodeId: string, editableFields: number): string {
+  if (nodeId === "application-shell") return "Application shell, progress and shared guidance.";
+  if (nodeId === "step-7-partner-agreement") return "Page content, agreement templates, signing instructions and declarations.";
+  if (nodeId === "step-8-review-submit") return "Review and Submit guidance for the final onboarding step.";
+  return `${editableFields} editable presentation fields.`;
+}
+
+function partnerApplicationWorkflowLabel(activeRow: WebsiteExperienceAdminContext): string {
+  if (activeRow.workflowState === "in_review") return "Needs review";
+  if (activeRow.workflowState === "approved") return "Approved centrally";
+  if (activeRow.workflowState === "scheduled") return "Scheduled centrally";
+  if (activeRow.hasUnpublishedChanges) return "Draft changes";
+  return "Published";
+}
+
+function LocalStepEditorActions({ canWrite, busyAction, message, onSaveDraft }: { canWrite: boolean; busyAction: string; message: string; onSaveDraft: () => void }) {
+  return (
+    <div className="rounded border border-cyan-200 bg-cyan-50 p-4">
+      <p className="text-sm font-semibold text-cyan-950">Preview this item beside the editor, then save changes as a draft. Approval, publishing, scheduling and history are handled from the central Website Experience workflow.</p>
+      <div className="mt-3 flex flex-wrap gap-3">
+        <a href="#website-experience-preview" className="inline-flex h-10 items-center gap-2 rounded border border-cyan-300 bg-white px-4 text-sm font-semibold text-cyan-900 focus:outline-none focus:ring-2 focus:ring-cyan-400">
+          <Eye className="h-4 w-4" />
+          Preview
+        </a>
+        <button type="button" disabled={!canWrite || busyAction === "save"} onClick={onSaveDraft} className="inline-flex h-10 items-center gap-2 rounded bg-slate-900 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300">
+          <Save className="h-4 w-4" />
+          Save as Draft
+        </button>
+      </div>
+      {message ? <p className="mt-3 rounded border border-cyan-200 bg-white p-3 text-sm font-semibold text-cyan-900">{message}</p> : null}
+    </div>
+  );
+}
+
+function StepSevenContentUnits({
+  activeUnit,
+  node,
+  canWrite,
+  busyAction,
+  onActiveUnitChange,
+  onNodeChange,
+  onCtaChange,
+  onSaveDraft,
+}: {
+  activeUnit: string;
+  node: NonNullable<WebsiteExperienceContent["applicationTree"]>["children"][number];
+  canWrite: boolean;
+  busyAction: string;
+  onActiveUnitChange: (unit: string) => void;
+  onNodeChange: (patch: Record<string, string>) => void;
+  onCtaChange: (key: string, value: string) => void;
+  onSaveDraft: () => void;
+}) {
+  const units = [
+    ["page-content", "Page Content", "Title, subtitle and page help text."],
+    ["agreement-templates", "Agreement Templates", "Draft, preview and upload the governed master template."],
+    ["signer-instructions", "Signer Instructions", "Signer and authority guidance."],
+    ["signing-methods", "Signing Methods", "Authenticated acceptance, manual signed document and future eSign copy."],
+    ["signed-document-instructions", "Signed Document Instructions", "Private signed PDF upload guidance."],
+    ["declarations", "Declarations", "Partner acceptance declaration copy."],
+    ["status-messages", "Agreement Status Messages", "Human status and next-action messages."],
+    ["summary-guidance", "Summary Guidance", "Right-side summary labels and guidance."],
+  ];
+  return (
+    <div className="grid gap-4">
+      <div className="space-y-3" data-step7-content-unit-list="vertical">
+        {units.map(([id, label, detail]) => (
+          <button key={id} type="button" onClick={() => onActiveUnitChange(id)} className={`flex min-h-16 w-full items-center justify-between gap-4 rounded border p-4 text-left focus:outline-none focus:ring-2 focus:ring-blue-400 ${activeUnit === id ? "border-blue-300 bg-blue-50" : "border-slate-200 bg-slate-50"}`}>
+            <span>
+              <span className="block text-sm font-semibold text-slate-950">{label}</span>
+              <span className="mt-1 block text-xs leading-5 text-slate-600">{detail}</span>
+            </span>
+            <ArrowRight className="h-4 w-4 text-blue-700" />
+          </button>
+        ))}
+      </div>
+      <section className="rounded border border-slate-200 bg-slate-50 p-4" data-step7-content-unit-editor={activeUnit}>
+        {activeUnit === "agreement-templates" ? (
+          <AgreementTemplateDraftPanel canWrite={canWrite} busyAction={busyAction} onSaveDraft={onSaveDraft} />
+        ) : activeUnit === "signer-instructions" ? (
+          <Field label="Signer instructions" value={node.rightHelpCopy} maxLength={300} onChange={(value) => onNodeChange({ rightHelpCopy: value })} />
+        ) : activeUnit === "signing-methods" ? (
+          <Field label="Signing-method explanation" value={node.domainIntroductionCopy} maxLength={260} onChange={(value) => onNodeChange({ domainIntroductionCopy: value })} />
+        ) : activeUnit === "signed-document-instructions" ? (
+          <Field label="Signed document instructions" value={node.sectionDescription} maxLength={260} onChange={(value) => onNodeChange({ sectionDescription: value })} />
+        ) : activeUnit === "declarations" ? (
+          <Field label="Declaration guidance" value={node.emptyStateCopy} maxLength={180} onChange={(value) => onNodeChange({ emptyStateCopy: value })} />
+        ) : activeUnit === "status-messages" ? (
+          <div className="grid gap-3">
+            <Field label="Review ready message" value={node.ctaLabels.reviewReady ?? ""} maxLength={120} onChange={(value) => onCtaChange("reviewReady", value)} />
+            <Field label="Review incomplete message" value={node.ctaLabels.reviewIncomplete ?? ""} maxLength={160} onChange={(value) => onCtaChange("reviewIncomplete", value)} />
+          </div>
+        ) : activeUnit === "summary-guidance" ? (
+          <Field label="Summary guidance" value={node.otherServiceGuidance} maxLength={180} onChange={(value) => onNodeChange({ otherServiceGuidance: value })} />
+        ) : (
+          <div className="grid gap-3">
+            <Field label="Title" value={node.title} maxLength={80} onChange={(value) => onNodeChange({ title: value })} />
+            <Field label="Subtitle" value={node.subtitle} maxLength={180} onChange={(value) => onNodeChange({ subtitle: value })} />
+            <Field label="Help text" value={node.helperText} maxLength={220} onChange={(value) => onNodeChange({ helperText: value })} />
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function AgreementTemplateDraftPanel({ canWrite, busyAction, onSaveDraft }: { canWrite: boolean; busyAction: string; onSaveDraft: () => void }) {
+  const placeholders = ["Partner legal name", "Entity type", "Registered address", "Country", "Authorized signer name", "Signer designation", "Selected service schedule", "Payout/tax safe reference", "Agreement issue date", "Agreement ID", "Agreement version"];
+  return (
+    <div className="grid gap-4">
+      <p className="text-sm leading-6 text-slate-700">Manage the master agreement template here as a Website Experience draft. Publishing, scheduling, superseding and history happen only through the central workflow after approval.</p>
+      <Field label="Template name" value="Partner Master Services Agreement" maxLength={120} onChange={() => undefined} />
+      <Field label="Country scope" value="Global / country-specific when approved" maxLength={120} onChange={() => undefined} />
+      <Field label="Entity type scope" value="All supported entity types" maxLength={120} onChange={() => undefined} />
+      <label className="grid gap-2">
+        <span className="text-xs font-black uppercase tracking-[0.1em] text-slate-500">Upload template document</span>
+        <input disabled={!canWrite} type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="rounded border border-slate-300 bg-white p-3 text-sm text-slate-800 disabled:cursor-not-allowed disabled:opacity-60" />
+        <span className="text-xs leading-5 text-slate-600">Static PDFs must not be published as autofill templates unless supported fill mapping exists. Unknown template expressions are rejected by policy.</span>
+      </label>
+      <div className="rounded border border-slate-200 bg-white p-3">
+        <p className="text-xs font-black uppercase tracking-[0.1em] text-slate-500">Supported autofill placeholders</p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {placeholders.map((placeholder) => <span key={placeholder} className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">{placeholder}</span>)}
+        </div>
+      </div>
+      <button type="button" disabled={!canWrite || busyAction === "save"} onClick={onSaveDraft} className="w-fit rounded bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300">Save template draft</button>
+    </div>
   );
 }
 
@@ -1502,7 +1585,7 @@ function PreviewPanel({ content, device, onDeviceChange }: { content: WebsiteExp
   ];
   const frameClass = device === "desktop" ? "max-w-[460px]" : device === "tablet" ? "max-w-[360px]" : "max-w-[230px]";
   return (
-    <section className="sticky top-20 rounded border border-slate-200 bg-white p-4 shadow-sm">
+    <section id="website-experience-preview" className="sticky top-20 rounded border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
           <Eye className="h-4 w-4 text-blue-700" />

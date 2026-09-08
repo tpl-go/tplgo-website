@@ -640,7 +640,7 @@ export default function PartnerApplicationWorkspaceClient({
   const canCompleteStepThree = isBusinessLocationComplete(locationForm);
   const canCompleteStepFour = serviceCatalogueState.status === "ready" && isServicesComplete(servicesForm, locationForm.primaryLocation.countryCode, businessForm.organizationType, serviceCatalogueState.items);
   const canCompleteStepSix = isPayoutTaxComplete(payoutTaxForm) || ["SUBMITTED", "UNDER_REVIEW", "VERIFIED"].includes(activeBundle?.payoutTaxReview?.status ?? "");
-  const canCompleteStepSeven = isAgreementComplete(agreementForm) || ["PARTNER_ACCEPTED", "SIGNED_DOCUMENT_UPLOADED", "UNDER_ADMIN_REVIEW", "COUNTERSIGN_PENDING", "COMPLETED"].includes(activeBundle?.agreement?.status ?? "");
+  const canCompleteStepSeven = isAgreementPartnerSigningComplete(activeBundle?.agreement?.status);
 
   useEffect(() => {
     formRef.current = form;
@@ -1114,8 +1114,8 @@ export default function PartnerApplicationWorkspaceClient({
       const savedAt = new Date().toISOString();
       setSaveStatus("saved");
       setLastSavedAt(savedAt);
-      writeQaDraft(currentQaDraftPayload(options.continueAfter ? "review_submit" : "partner_agreement", savedAt));
-      if (!options.silent) setMessage({ tone: "success", text: options.continueAfter ? "Preview agreement saved. Continue with Review & Submit next." : "Preview agreement saved." });
+      writeQaDraft(currentQaDraftPayload("partner_agreement", savedAt));
+      if (!options.silent) setMessage({ tone: "success", text: "Preview agreement saved. Acceptance is required before Review & Submit." });
       return previewBundle;
     }
     const organizationId = activeBundle?.organization.id || agreementForm.organizationId || payoutTaxForm.organizationId || servicesForm.organizationId || locationForm.organizationId || businessForm.organizationId || form.organizationId;
@@ -1136,7 +1136,7 @@ export default function PartnerApplicationWorkspaceClient({
     const savedAt = readLastSaved(result.data) ?? new Date().toISOString();
     setLastSavedAt(savedAt);
     setSaveStatus("saved");
-    if (!options.silent) setMessage({ tone: "success", text: options.continueAfter ? "Agreement submitted for review. Continue with Review & Submit next." : "Agreement details saved." });
+    if (!options.silent) setMessage({ tone: "success", text: options.continueAfter ? "Agreement signing submitted. Continue with Review & Submit next." : "Agreement details saved." });
     return result.data;
   }
 
@@ -1354,9 +1354,13 @@ export default function PartnerApplicationWorkspaceClient({
       return;
     }
     if (activeStep === "partner_agreement") {
+      if (!isAgreementReadyForPartnerAction(activeBundle?.agreement?.status)) {
+        setMessage({ tone: "warning", text: "Wait for Admin to issue the agreement before continuing." });
+        return;
+      }
       const saved = await saveAgreementDraft({ continueAfter: true });
       if (!saved) return;
-      if (canCompleteStepSeven || ["PARTNER_ACCEPTED", "SIGNED_DOCUMENT_UPLOADED", "UNDER_ADMIN_REVIEW", "COUNTERSIGN_PENDING", "COMPLETED"].includes(saved.agreement?.status ?? "")) {
+      if (isAgreementPartnerSigningComplete(saved.agreement?.status)) {
         setActiveStep("review_submit");
       } else {
         setMessage({ tone: "warning", text: "Complete the agreement review before continuing." });
@@ -1460,6 +1464,7 @@ export default function PartnerApplicationWorkspaceClient({
 
   const currentStepIndex = workspaceSteps.findIndex((step) => step.id === activeStep);
   const previousStep = currentStepIndex > 0 ? workspaceSteps[currentStepIndex - 1]!.id : "account_contact";
+  const saveContinueDisabled = saveStatus === "saving" || (activeStep === "partner_agreement" && !isAgreementReadyForPartnerAction(activeBundle?.agreement?.status) && !canCompleteStepSeven);
   const accountStepOverride: PartnerApplicationStepStatus | undefined = canCompleteStepOne ? "completed" : hasMeaningfulStepOneInput(form) ? "in-progress" : undefined;
   const businessStepOverride: PartnerApplicationStepStatus | undefined = canCompleteStepTwo ? "completed" : hasMeaningfulStepTwoInput(businessForm) ? "in-progress" : undefined;
   const locationStepOverride: PartnerApplicationStepStatus | undefined = canCompleteStepThree ? "completed" : hasMeaningfulStepThreeInput(locationForm) ? "in-progress" : undefined;
@@ -1669,7 +1674,7 @@ export default function PartnerApplicationWorkspaceClient({
               <button
                 type="button"
                 onClick={() => void saveAndContinue()}
-                disabled={saveStatus === "saving"}
+                disabled={saveContinueDisabled}
                 className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[linear-gradient(135deg,#f97316,#ea580c)] px-4 text-sm font-black text-white shadow-[0_12px_28px_rgba(249,115,22,0.26)] disabled:cursor-not-allowed disabled:opacity-55"
               >
                 Save & Continue
@@ -3039,32 +3044,26 @@ function QaPreviewBar({ selectedState, onChange, onReset }: { selectedState: Par
 }
 
 function WorkspaceToast({ tone, text, onDismiss }: { tone: "success" | "info" | "warning" | "error"; text: string; onDismiss: () => void }) {
-  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   useEffect(() => {
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const timer = window.setTimeout(() => closeButtonRef.current?.focus(), 0);
-    return () => {
-      window.clearTimeout(timer);
-      document.body.style.overflow = previousOverflow;
-    };
-  }, []);
-  useEffect(() => {
+    const timer = tone === "success" || tone === "info" ? window.setTimeout(onDismiss, 4200) : null;
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") onDismiss();
     }
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onDismiss]);
-  const toneClass = tone === "success" ? "border-emerald-500/40 text-emerald-100" : tone === "error" ? "border-red-500/40 text-red-100" : tone === "warning" ? "border-[#f97316]/50 text-[#fed7aa]" : "border-sky-500/40 text-sky-100";
+    return () => {
+      if (timer) window.clearTimeout(timer);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [onDismiss, tone]);
+  const toneClass = tone === "success" ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-100" : tone === "error" ? "border-red-500/40 bg-red-500/10 text-red-100" : tone === "warning" ? "border-[#f97316]/50 bg-[#f97316]/10 text-[#fed7aa]" : "border-sky-500/40 bg-sky-500/10 text-sky-100";
   if (typeof document === "undefined") return null;
   return createPortal(
-    <div data-save-draft-modal-layer="true" className="fixed inset-0 z-[80] flex items-center justify-center bg-black/55 px-4 py-6 backdrop-blur-sm" aria-modal="true" role="dialog" aria-label="Application message">
-      <div role="status" aria-live="polite" className={`w-[min(92vw,420px)] rounded-xl border bg-[#171a20] p-4 shadow-2xl ${toneClass}`}>
+    <div data-save-draft-toast-layer="true" className="pointer-events-none fixed inset-x-0 top-4 z-[120] flex justify-center px-4 sm:justify-end sm:px-6" aria-label="Application message">
+      <div role="status" aria-live="polite" className={`pointer-events-auto w-[min(92vw,420px)] rounded-xl border bg-[#171a20] p-4 shadow-2xl backdrop-blur ${toneClass}`}>
         <div className="flex items-start gap-3">
           <span className="mt-0.5 h-5 w-1 rounded-full bg-[#f97316]" />
           <p className="min-w-0 flex-1 text-sm font-bold">{text}</p>
-          <button ref={closeButtonRef} type="button" onClick={onDismiss} className="rounded-md px-2 py-1 text-xs font-black text-slate-300 outline-none ring-offset-2 ring-offset-[#171a20] focus-visible:ring-2 focus-visible:ring-[#38bdf8]">Dismiss</button>
+          <button type="button" onClick={onDismiss} className="rounded-md px-2 py-1 text-xs font-black text-slate-300 outline-none ring-offset-2 ring-offset-[#171a20] focus-visible:ring-2 focus-visible:ring-[#38bdf8]">Dismiss</button>
         </div>
       </div>
     </div>,
@@ -3607,6 +3606,7 @@ function AgreementStep({
 }) {
   const agreement = bundle?.agreement;
   const template = bundle?.agreementTemplate;
+  const agreementReadyForPartner = isAgreementReadyForPartnerAction(agreement?.status) || isAgreementPartnerSigningComplete(agreement?.status);
   const [downloadStatus, setDownloadStatus] = useState<"idle" | "loading" | "error">("idle");
   const sections: Array<{ id: AgreementForm["activeSection"]; label: string; done: boolean; detail: string }> = [
     { id: "signer", label: "Confirm Partner and signer", done: Boolean(form.signerName.trim() && form.signerRole.trim() && form.authorityBasis.trim()), detail: form.signerName || "Signer details required" },
@@ -3684,9 +3684,10 @@ function AgreementStep({
                       <AgreementField label="Agreement type" value={agreement?.agreementType || "Partner master services"} readOnly />
                       <AgreementField label="Template version" value={String(agreement?.templateVersion ?? template?.versionNumber ?? 1)} readOnly />
                       <AgreementField label="Snapshot reference" value={agreement?.snapshotHash ? `${agreement.snapshotHash.slice(0, 12)}…` : "Created on save"} readOnly />
-                      <button type="button" onClick={() => { onChange({ viewedAgreement: true }); void downloadAgreement(); }} disabled={!bundle?.organization.id || downloadStatus === "loading"} className="min-h-11 rounded-xl bg-[#38bdf8] px-4 py-3 text-sm font-black text-[#07111a] transition hover:bg-[#7dd3fc] disabled:cursor-not-allowed disabled:opacity-50">
+                      <button type="button" onClick={() => { onChange({ viewedAgreement: true }); void downloadAgreement(); }} disabled={!bundle?.organization.id || !agreementReadyForPartner || downloadStatus === "loading"} className="min-h-11 rounded-xl bg-[#38bdf8] px-4 py-3 text-sm font-black text-[#07111a] transition hover:bg-[#7dd3fc] disabled:cursor-not-allowed disabled:opacity-50">
                         {downloadStatus === "loading" ? "Preparing agreement…" : "Download agreement PDF"}
                       </button>
+                      {!agreementReadyForPartner ? <p className="text-sm font-bold text-amber-100">Waiting for Admin to issue the agreement.</p> : null}
                       {downloadStatus === "error" ? <p className="text-sm font-bold text-red-200">Agreement download is unavailable. Save the agreement details and try again.</p> : null}
                       <label className="flex items-start gap-3 rounded-xl border border-white/10 bg-[#171a20] p-3 text-sm font-bold text-slate-200">
                         <input type="checkbox" checked={form.viewedAgreement} onChange={(event) => onChange({ viewedAgreement: event.target.checked })} className="mt-1 h-4 w-4 rounded border-white/20 bg-[#11141a]" />
@@ -4184,6 +4185,14 @@ function isAgreementComplete(form: AgreementForm): boolean {
   if (!signerReady || !form.viewedAgreement || form.signingMethod === "esign_provider") return false;
   if (form.signingMethod === "manual_signed_document") return Boolean(form.signedDocumentId.trim());
   return Boolean(form.electronicRecordsConsent && form.acceptedDeclarations);
+}
+
+function isAgreementReadyForPartnerAction(status: string | undefined): boolean {
+  return status === "ISSUED" || status === "VIEWED" || status === "CHANGES_REQUIRED";
+}
+
+function isAgreementPartnerSigningComplete(status: string | undefined): boolean {
+  return ["PARTNER_ACCEPTED", "SIGNED_DOCUMENT_UPLOADED", "UNDER_ADMIN_REVIEW", "COUNTERSIGN_PENDING", "COMPLETED"].includes(status ?? "");
 }
 
 function agreementContentFromNode(node: PartnerApplicationContentNode | undefined): AgreementContent {

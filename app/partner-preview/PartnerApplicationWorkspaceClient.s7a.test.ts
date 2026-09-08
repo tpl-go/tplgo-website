@@ -6,6 +6,7 @@ const workspaceSource = readFileSync(join(process.cwd(), "app/partner-preview/Pa
 const apiSource = readFileSync(join(process.cwd(), "app/lib/partner/partnerApiClient.ts"), "utf8");
 const adminAgreementSource = readFileSync(join(process.cwd(), "app/admin/partners/agreements/page.tsx"), "utf8");
 const adminShellSource = readFileSync(join(process.cwd(), "app/admin/_components/AdminShell.tsx"), "utf8");
+const websiteExperienceSource = readFileSync(join(process.cwd(), "app/admin/_components/WebsiteExperienceManager.tsx"), "utf8");
 
 test("Step 7 renders a guided six-section Partner agreement flow", () => {
   expect(workspaceSource).toContain("function AgreementStep");
@@ -51,6 +52,51 @@ test("Step 7 loads editable copy from published Partner Application Website Expe
   expect(workspaceSource).toContain('node.id === "step-7-partner-agreement"');
   expect(workspaceSource).toContain("agreementContentFromNode");
   expect(workspaceSource).toContain("fallbackAgreementContent");
+});
+
+test("Step 7 blocks unsigned continuation while preserving draft save", () => {
+  expect(workspaceSource).toContain("function isAgreementReadyForPartnerAction");
+  expect(workspaceSource).toContain("function isAgreementPartnerSigningComplete");
+  expect(workspaceSource).toContain('Wait for Admin to issue the agreement before continuing.');
+  expect(workspaceSource).toContain('disabled={saveStatus === "saving"}');
+  expect(workspaceSource).toContain("disabled={saveContinueDisabled}");
+  expect(workspaceSource).toContain('Preview agreement saved. Acceptance is required before Review & Submit.');
+});
+
+test("Step 7 save feedback uses one non-blocking top-layer toast", () => {
+  expect(workspaceSource).toContain("data-save-draft-toast-layer");
+  expect(workspaceSource).toContain("z-[120]");
+  expect(workspaceSource).toContain("pointer-events-none fixed inset-x-0 top-4");
+  expect(workspaceSource).not.toContain("data-save-draft-modal-layer");
+  expect(workspaceSource).not.toContain('aria-modal="true"');
+  expect(workspaceSource).not.toContain('document.body.style.overflow = "hidden"');
+});
+
+test("Website Experience Partner Application removes local workflow controls and keeps central drafting", () => {
+  expect(websiteExperienceSource).toContain("Open one Partner Application section. Save changes as a draft here; approval, publishing, scheduling and history stay in the central workflow.");
+  expect(websiteExperienceSource).toContain("function LocalStepEditorActions");
+  expect(websiteExperienceSource).toContain("Approval, publishing, scheduling and history are handled from the central Website Experience workflow.");
+  expect(websiteExperienceSource).toContain('href="#website-experience-preview"');
+  expect(websiteExperienceSource).toContain("Save as Draft");
+  const partnerEditorSlice = websiteExperienceSource.slice(websiteExperienceSource.indexOf("function PartnerApplicationTreeEditor"), websiteExperienceSource.indexOf("function partnerApplicationSectionDescription"));
+  expect(partnerEditorSlice).not.toContain("<WorkflowActions");
+  expect(partnerEditorSlice).not.toContain("<CentralSchedulePanel");
+});
+
+test("Website Experience Step 7 content units expose Agreement Templates under the Partner hierarchy", () => {
+  expect(websiteExperienceSource).toContain('data-step7-content-unit-list="vertical"');
+  expect(websiteExperienceSource).toContain("Page Content");
+  expect(websiteExperienceSource).toContain("Agreement Templates");
+  expect(websiteExperienceSource).toContain("Signer Instructions");
+  expect(websiteExperienceSource).toContain("Signing Methods");
+  expect(websiteExperienceSource).toContain("Signed Document Instructions");
+  expect(websiteExperienceSource).toContain("Declarations");
+  expect(websiteExperienceSource).toContain("Agreement Status Messages");
+  expect(websiteExperienceSource).toContain("Summary Guidance");
+  expect(websiteExperienceSource).toContain("Supported autofill placeholders");
+  expect(websiteExperienceSource).toContain("Publishing, scheduling, superseding and history happen only through the central workflow");
+  expect(websiteExperienceSource).toContain('Website Experience &gt; Pages &gt; Partner &gt; Partner Application &gt; {selectedNode.label}');
+  expect(websiteExperienceSource).toContain('label="Back to Partner Application"');
 });
 
 test("Admin Agreements area is protected and uses Partner agreement routes", () => {
