@@ -183,6 +183,64 @@ export type PartnerPayoutTaxReview = {
   updatedAt?: string;
 };
 
+export type PartnerAgreementStatus =
+  | "NOT_STARTED"
+  | "DRAFT"
+  | "READY_TO_ISSUE"
+  | "ISSUED"
+  | "VIEWED"
+  | "PARTNER_ACTION_REQUIRED"
+  | "PARTNER_ACCEPTED"
+  | "SIGNED_DOCUMENT_UPLOADED"
+  | "UNDER_ADMIN_REVIEW"
+  | "CHANGES_REQUIRED"
+  | "COUNTERSIGN_PENDING"
+  | "COMPLETED"
+  | "REJECTED"
+  | "EXPIRED"
+  | "VOID"
+  | "SUPERSEDED";
+
+export type PartnerAgreement = {
+  id: string;
+  organizationId: string;
+  country: string;
+  legalEntityType: string;
+  agreementType: string;
+  templateVersion: number;
+  agreementSnapshot?: Record<string, unknown>;
+  snapshotHash: string;
+  serviceScheduleRefs: string[];
+  issuedAt?: string | null;
+  viewedAt?: string | null;
+  acceptedAt?: string | null;
+  signerName?: string | null;
+  signerRole?: string | null;
+  signerEmailMasked?: string | null;
+  signerMobileMasked?: string | null;
+  signerAuthorityBasis?: string | null;
+  signingMethod: "authenticated_acceptance" | "manual_signed_document" | "esign_provider";
+  signedDocumentId?: string | null;
+  status: PartnerAgreementStatus;
+  tplReviewStatus: string;
+  currentStage: string;
+  partnerMessage?: string | null;
+  version: number;
+  metadata?: Record<string, unknown>;
+  updatedAt?: string;
+};
+
+export type PartnerAgreementTemplate = {
+  id: string;
+  stableKey: string;
+  agreementType: string;
+  versionNumber: number;
+  lifecycleStatus: string;
+  title: string;
+  introduction: string;
+  sections: Array<Record<string, unknown>>;
+};
+
 export type PartnerVerificationEvent = {
   id: string;
   requirementId?: string | null;
@@ -222,6 +280,8 @@ export type PartnerOrganizationBundle = {
   payoutProfile?: PartnerPayoutProfile | null;
   taxProfile?: PartnerTaxProfile | null;
   payoutTaxReview?: PartnerPayoutTaxReview | null;
+  agreement?: PartnerAgreement | null;
+  agreementTemplate?: PartnerAgreementTemplate | null;
   events: PartnerVerificationEvent[];
   readiness: PartnerReadiness;
 };
@@ -353,6 +413,23 @@ export type PartnerPayoutTaxDraftInput = {
   };
 };
 
+export type PartnerAgreementDraftInput = {
+  organizationId: string;
+  continueAfter?: boolean;
+  signer: {
+    legalName?: string;
+    role?: string;
+    authorityBasis?: string;
+    authorityDocumentId?: string;
+    authorizedDeclaration?: boolean;
+    electronicRecordsConsent?: boolean;
+  };
+  signingMethod?: "authenticated_acceptance" | "manual_signed_document" | "esign_provider";
+  viewedAgreement?: boolean;
+  acceptedDeclarations?: boolean;
+  signedDocumentId?: string;
+};
+
 export type PartnerApplicationContentNode = {
   id: string;
   label: string;
@@ -440,6 +517,17 @@ export function savePartnerPayoutTaxDraft(input: PartnerPayoutTaxDraftInput): Pr
     method: "POST",
     body: input,
   });
+}
+
+export function savePartnerAgreementDraft(input: PartnerAgreementDraftInput): Promise<TplApiResult<PartnerOrganizationBundle>> {
+  return tplApiRequest<PartnerOrganizationBundle>("/api/v1/partner/application/draft/agreement", {
+    method: "POST",
+    body: input,
+  });
+}
+
+export function fetchPartnerAgreementDownload(organizationId: string): Promise<TplApiResult<{ filename: string; contentType: string; contentBase64: string; snapshotHash: string; publicUrl: null }>> {
+  return tplApiRequest(`/api/v1/partner/organizations/${encodeURIComponent(organizationId)}/agreement/download`);
 }
 
 export function fetchPublishedPartnerApplicationContent(): Promise<TplApiResult<PartnerApplicationWebsiteExperienceResponse>> {

@@ -40,6 +40,8 @@ import {
   savePartnerServicesDraft,
   savePartnerVerificationComplianceDraft,
   savePartnerPayoutTaxDraft,
+  savePartnerAgreementDraft,
+  fetchPartnerAgreementDownload,
   fetchPublishedPartnerApplicationContent,
   createPartnerDocumentUploadSession,
   confirmPartnerDocument,
@@ -51,6 +53,7 @@ import {
   type PartnerRequirement,
   type PartnerOrganizationBundle,
   type PartnerRequirementClassification,
+  type PartnerAgreementDraftInput,
   type PartnerPayoutTaxDraftInput,
 } from "../lib/partner/partnerApiClient";
 import {
@@ -188,6 +191,42 @@ type PayoutTaxContent = {
   documentInstructions: string;
   reviewReadyCopy: string;
   reviewIncompleteCopy: string;
+};
+
+type AgreementForm = {
+  organizationId?: string;
+  activeSection: "signer" | "agreement" | "schedules" | "method" | "accept" | "status";
+  signerName: string;
+  signerRole: string;
+  authorityBasis: string;
+  signingMethod: "authenticated_acceptance" | "manual_signed_document" | "esign_provider";
+  viewedAgreement: boolean;
+  authorizedDeclaration: boolean;
+  electronicRecordsConsent: boolean;
+  acceptedDeclarations: boolean;
+  signedDocumentId: string;
+};
+
+type AgreementContent = {
+  title: string;
+  subtitle: string;
+  helperText: string;
+  signerInstructions: string;
+  signingMethodCopy: string;
+  documentInstructions: string;
+  reviewReadyCopy: string;
+  reviewIncompleteCopy: string;
+};
+
+const fallbackAgreementContent: AgreementContent = {
+  title: "Partner Agreement",
+  subtitle: "Review the Partner agreement before final submission.",
+  helperText: "The agreement uses the published template and your submitted Partner details. Final legal wording remains controlled by authorized review.",
+  signerInstructions: "Confirm the person who will accept or sign the agreement for this Partner organization.",
+  signingMethodCopy: "Choose an available signing method. eSign provider setup is pending, so no external signing provider is called.",
+  documentInstructions: "If you sign offline or by your own DSC process, upload only the signed agreement PDF through the private document flow.",
+  reviewReadyCopy: "Agreement details are ready to submit for review.",
+  reviewIncompleteCopy: "Review the agreement and complete the signer declarations before continuing.",
 };
 
 const fallbackPayoutTaxContent: PayoutTaxContent = {
@@ -536,12 +575,14 @@ export default function PartnerApplicationWorkspaceClient({
   const [locationForm, setLocationForm] = useState<BusinessLocationForm>(() => emptyLocationForm());
   const [servicesForm, setServicesForm] = useState<ServicesForm>(() => emptyServicesForm());
   const [payoutTaxForm, setPayoutTaxForm] = useState<PayoutTaxForm>(() => emptyPayoutTaxForm());
+  const [agreementForm, setAgreementForm] = useState<AgreementForm>(() => emptyAgreementForm());
   const [activeServiceDomainIds, setActiveServiceDomainIds] = useState<PartnerServiceDomainId[]>([]);
   const formRef = useRef(form);
   const businessFormRef = useRef(businessForm);
   const locationFormRef = useRef(locationForm);
   const servicesFormRef = useRef(servicesForm);
   const payoutTaxFormRef = useRef(payoutTaxForm);
+  const agreementFormRef = useRef(agreementForm);
   const [loadStatus, setLoadStatus] = useState<"idle" | "loading" | "ready" | "error">(qaPreviewEnabled ? "ready" : "idle");
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">(qaPreviewEnabled ? "saved" : "idle");
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(qaPreviewEnabled ? new Date().toISOString() : null);
@@ -555,6 +596,7 @@ export default function PartnerApplicationWorkspaceClient({
   const [focusedVerificationSectionId, setFocusedVerificationSectionId] = useState<string | null>(null);
   const [qaVerifiedContacts, setQaVerifiedContacts] = useState({ mobile: false, email: false });
   const [payoutTaxContent, setPayoutTaxContent] = useState<PayoutTaxContent>(fallbackPayoutTaxContent);
+  const [agreementContent, setAgreementContent] = useState<AgreementContent>(fallbackAgreementContent);
   const [serviceCatalogueState, setServiceCatalogueState] = useState<RuntimeCatalogueState>({
     status: "loading",
     version: null,
@@ -598,6 +640,7 @@ export default function PartnerApplicationWorkspaceClient({
   const canCompleteStepThree = isBusinessLocationComplete(locationForm);
   const canCompleteStepFour = serviceCatalogueState.status === "ready" && isServicesComplete(servicesForm, locationForm.primaryLocation.countryCode, businessForm.organizationType, serviceCatalogueState.items);
   const canCompleteStepSix = isPayoutTaxComplete(payoutTaxForm) || ["SUBMITTED", "UNDER_REVIEW", "VERIFIED"].includes(activeBundle?.payoutTaxReview?.status ?? "");
+  const canCompleteStepSeven = isAgreementComplete(agreementForm) || ["PARTNER_ACCEPTED", "SIGNED_DOCUMENT_UPLOADED", "UNDER_ADMIN_REVIEW", "COUNTERSIGN_PENDING", "COMPLETED"].includes(activeBundle?.agreement?.status ?? "");
 
   useEffect(() => {
     formRef.current = form;
@@ -618,6 +661,10 @@ export default function PartnerApplicationWorkspaceClient({
   useEffect(() => {
     payoutTaxFormRef.current = payoutTaxForm;
   }, [payoutTaxForm]);
+
+  useEffect(() => {
+    agreementFormRef.current = agreementForm;
+  }, [agreementForm]);
 
   useEffect(() => {
     let cancelled = false;
@@ -646,7 +693,9 @@ export default function PartnerApplicationWorkspaceClient({
     fetchPublishedPartnerApplicationContent().then((result) => {
       if (cancelled || !result.ok) return;
       const stepSixNode = result.data.contexts?.partner_application?.applicationTree?.children.find((node) => node.id === "step-6-payout-tax");
+      const stepSevenNode = result.data.contexts?.partner_application?.applicationTree?.children.find((node) => node.id === "step-7-partner-agreement");
       setPayoutTaxContent(payoutTaxContentFromNode(stepSixNode));
+      setAgreementContent(agreementContentFromNode(stepSevenNode));
     });
     return () => {
       cancelled = true;
@@ -671,11 +720,13 @@ export default function PartnerApplicationWorkspaceClient({
       const nextLocationForm = savedForState?.locationForm ?? locationFormFromBundle(qaBundle);
       const nextServicesForm = savedForState?.servicesForm ?? servicesFormFromBundle(qaBundle);
       const nextPayoutTaxForm = savedForState?.payoutTaxForm ?? payoutTaxFormFromBundle(qaBundle);
+      const nextAgreementForm = savedForState?.agreementForm ?? agreementFormFromBundle(qaBundle);
       setForm(nextForm);
       setBusinessForm(nextBusinessForm);
       setLocationForm(nextLocationForm);
       setServicesForm(nextServicesForm);
       setPayoutTaxForm(nextPayoutTaxForm);
+      setAgreementForm(nextAgreementForm);
       setActiveServiceDomainIds(serviceDomainIdsFromCodes(nextServicesForm.selectedServiceCodes, serviceCatalogueState.items));
       setQaVerifiedContacts(savedForState?.verified ?? {
         mobile: contactVerified(qaBundle, "mobile", normalizedMobile(nextForm.businessMobile, nextForm.countryCode)),
@@ -702,6 +753,7 @@ export default function PartnerApplicationWorkspaceClient({
         const nextServicesForm = servicesFormFromBundle(result.data);
         setServicesForm(nextServicesForm);
         setPayoutTaxForm(payoutTaxFormFromBundle(result.data));
+        setAgreementForm(agreementFormFromBundle(result.data));
         setActiveServiceDomainIds(serviceDomainIdsFromCodes(nextServicesForm.selectedServiceCodes, serviceCatalogueState.items));
         setLastSavedAt(readLastSaved(result.data));
         setActiveStep(resolveActiveStep(result.data));
@@ -801,6 +853,15 @@ export default function PartnerApplicationWorkspaceClient({
     setSaveStatus("idle");
   }
 
+  function updateAgreementForm(next: Partial<AgreementForm>) {
+    setAgreementForm((current) => {
+      const resolved = { ...current, ...next };
+      agreementFormRef.current = resolved;
+      return resolved;
+    });
+    setSaveStatus("idle");
+  }
+
   function removeSelectedService(service: PartnerServiceCatalogueItem) {
     updateServicesForm((current) => {
       const remainingCodes = current.selectedServiceCodes.filter((code) => code !== service.stableCode);
@@ -835,6 +896,7 @@ export default function PartnerApplicationWorkspaceClient({
       locationForm: locationFormRef.current,
       servicesForm: servicesFormRef.current,
       payoutTaxForm: payoutTaxFormRef.current,
+      agreementForm: agreementFormRef.current,
       verified: qaVerifiedContacts,
       activeStep: step,
       state: qaPreviewState,
@@ -865,6 +927,7 @@ export default function PartnerApplicationWorkspaceClient({
     if (activeStep === "services") return saveServicesDraft(options);
     if (activeStep === "documents_compliance") return saveVerificationDraft(options);
     if (activeStep === "payout_tax") return savePayoutTaxDraft(options);
+    if (activeStep === "partner_agreement") return saveAgreementDraft(options);
     setSaveStatus("saving");
     if (!options.silent) setMessage({ tone: "info", text: "Saving your draft." });
     const payload = {
@@ -1043,6 +1106,37 @@ export default function PartnerApplicationWorkspaceClient({
     setLastSavedAt(savedAt);
     setSaveStatus("saved");
     if (!options.silent) setMessage({ tone: "success", text: options.continueAfter ? "Payout and tax details submitted for review. Continue with Partner Agreement next." : "Payout and tax details saved." });
+    return result.data;
+  }
+
+  async function saveAgreementDraft(options: { silent?: boolean; continueAfter?: boolean } = {}) {
+    if (qaPreviewEnabled) {
+      const savedAt = new Date().toISOString();
+      setSaveStatus("saved");
+      setLastSavedAt(savedAt);
+      writeQaDraft(currentQaDraftPayload(options.continueAfter ? "review_submit" : "partner_agreement", savedAt));
+      if (!options.silent) setMessage({ tone: "success", text: options.continueAfter ? "Preview agreement saved. Continue with Review & Submit next." : "Preview agreement saved." });
+      return previewBundle;
+    }
+    const organizationId = activeBundle?.organization.id || agreementForm.organizationId || payoutTaxForm.organizationId || servicesForm.organizationId || locationForm.organizationId || businessForm.organizationId || form.organizationId;
+    if (!organizationId) {
+      setMessage({ tone: "warning", text: "Save your application before reviewing the agreement." });
+      return null;
+    }
+    setSaveStatus("saving");
+    if (!options.silent) setMessage({ tone: "info", text: "Saving agreement details." });
+    const result = await savePartnerAgreementDraft(agreementPayload({ ...agreementForm, organizationId }, options.continueAfter === true));
+    if (!result.ok) {
+      setSaveStatus("error");
+      if (!options.silent) setMessage({ tone: "error", text: result.error.message || "Could not save agreement details." });
+      return null;
+    }
+    setBundle(result.data);
+    setAgreementForm(agreementFormFromBundle(result.data));
+    const savedAt = readLastSaved(result.data) ?? new Date().toISOString();
+    setLastSavedAt(savedAt);
+    setSaveStatus("saved");
+    if (!options.silent) setMessage({ tone: "success", text: options.continueAfter ? "Agreement submitted for review. Continue with Review & Submit next." : "Agreement details saved." });
     return result.data;
   }
 
@@ -1256,6 +1350,16 @@ export default function PartnerApplicationWorkspaceClient({
         setActiveStep("partner_agreement");
       } else {
         setMessage({ tone: "warning", text: "Complete the required payout and tax details before continuing." });
+      }
+      return;
+    }
+    if (activeStep === "partner_agreement") {
+      const saved = await saveAgreementDraft({ continueAfter: true });
+      if (!saved) return;
+      if (canCompleteStepSeven || ["PARTNER_ACCEPTED", "SIGNED_DOCUMENT_UPLOADED", "UNDER_ADMIN_REVIEW", "COUNTERSIGN_PENDING", "COMPLETED"].includes(saved.agreement?.status ?? "")) {
+        setActiveStep("review_submit");
+      } else {
+        setMessage({ tone: "warning", text: "Complete the agreement review before continuing." });
       }
       return;
     }
@@ -1505,6 +1609,8 @@ export default function PartnerApplicationWorkspaceClient({
               />
             ) : activeStep === "payout_tax" ? (
               <PayoutTaxStep form={payoutTaxForm} bundle={activeBundle} content={payoutTaxContent} canComplete={canCompleteStepSix} onChange={updatePayoutTaxForm} />
+            ) : activeStep === "partner_agreement" ? (
+              <AgreementStep form={agreementForm} bundle={activeBundle} content={agreementContent} canComplete={canCompleteStepSeven} onChange={updateAgreementForm} />
             ) : (
               <PlaceholderStep step={workspaceSteps.find((step) => step.id === activeStep) ?? workspaceSteps[1]!} />
             )}
@@ -1518,6 +1624,9 @@ export default function PartnerApplicationWorkspaceClient({
             ) : null}
             payoutTaxSummary={activeStep === "payout_tax" ? (
               <PayoutTaxSummary form={payoutTaxForm} bundle={activeBundle} canComplete={canCompleteStepSix} />
+            ) : null}
+            agreementSummary={activeStep === "partner_agreement" ? (
+              <AgreementSummary form={agreementForm} bundle={activeBundle} canComplete={canCompleteStepSeven} />
             ) : null}
             servicesSummary={activeStep === "services" ? (
               <SelectedServicesSummary
@@ -2833,16 +2942,19 @@ function TopProgress({
   );
 }
 
-function HelpPanel({ activeStep, servicesSummary, verificationSummary, payoutTaxSummary }: { activeStep: WorkspaceStepId; servicesSummary?: ReactNode; verificationSummary?: ReactNode; payoutTaxSummary?: ReactNode }) {
+function HelpPanel({ activeStep, servicesSummary, verificationSummary, payoutTaxSummary, agreementSummary }: { activeStep: WorkspaceStepId; servicesSummary?: ReactNode; verificationSummary?: ReactNode; payoutTaxSummary?: ReactNode; agreementSummary?: ReactNode }) {
+  const usesWideSummary = activeStep === "payout_tax" || activeStep === "partner_agreement";
   return (
-    <aside className={activeStep === "payout_tax" ? "block min-w-0 lg:col-start-2 xl:col-start-auto" : "hidden xl:block"}>
-      <div className={activeStep === "payout_tax" ? "rounded-2xl border border-white/10 bg-[#171a20] p-5 shadow-2xl xl:sticky xl:top-28" : "sticky top-28 rounded-2xl border border-white/10 bg-[#171a20] p-5 shadow-2xl"}>
+    <aside className={usesWideSummary ? "block min-w-0 lg:col-start-2 xl:col-start-auto" : "hidden xl:block"}>
+      <div className={usesWideSummary ? "rounded-2xl border border-white/10 bg-[#171a20] p-5 shadow-2xl xl:sticky xl:top-28" : "sticky top-28 rounded-2xl border border-white/10 bg-[#171a20] p-5 shadow-2xl"}>
         {activeStep === "services" && servicesSummary ? (
           servicesSummary
         ) : activeStep === "documents_compliance" && verificationSummary ? (
           verificationSummary
         ) : activeStep === "payout_tax" && payoutTaxSummary ? (
           payoutTaxSummary
+        ) : activeStep === "partner_agreement" && agreementSummary ? (
+          agreementSummary
         ) : (
           <>
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#f97316]/12 text-[#fb923c]">
@@ -3480,6 +3592,211 @@ function PayoutTaxStep({
   );
 }
 
+function AgreementStep({
+  form,
+  bundle,
+  content,
+  canComplete,
+  onChange,
+}: {
+  form: AgreementForm;
+  bundle: PartnerOrganizationBundle | null;
+  content: AgreementContent;
+  canComplete: boolean;
+  onChange: (next: Partial<AgreementForm>) => void;
+}) {
+  const agreement = bundle?.agreement;
+  const template = bundle?.agreementTemplate;
+  const [downloadStatus, setDownloadStatus] = useState<"idle" | "loading" | "error">("idle");
+  const sections: Array<{ id: AgreementForm["activeSection"]; label: string; done: boolean; detail: string }> = [
+    { id: "signer", label: "Confirm Partner and signer", done: Boolean(form.signerName.trim() && form.signerRole.trim() && form.authorityBasis.trim()), detail: form.signerName || "Signer details required" },
+    { id: "agreement", label: "Review agreement", done: form.viewedAgreement || Boolean(agreement?.viewedAt), detail: template ? `Template version ${template.versionNumber}` : "Published template will be used" },
+    { id: "schedules", label: "Review service schedules", done: (bundle?.serviceScopes ?? []).some((scope) => scope.status !== "disabled"), detail: `${(bundle?.serviceScopes ?? []).filter((scope) => scope.status !== "disabled").length} service schedule reference(s)` },
+    { id: "method", label: "Select permitted signing method", done: form.signingMethod !== "esign_provider", detail: agreementSigningMethodLabel(form.signingMethod) },
+    { id: "accept", label: "Accept declarations/sign or upload", done: isAgreementComplete(form), detail: form.signingMethod === "manual_signed_document" ? "Signed PDF upload required" : "Authenticated acceptance available" },
+    { id: "status", label: "Review agreement status", done: canComplete, detail: agreementStatusLabel(agreement?.status ?? "NOT_STARTED") },
+  ];
+  const active = sections.find((section) => section.id === form.activeSection) ?? sections[0]!;
+  const serviceScopes = (bundle?.serviceScopes ?? []).filter((scope) => scope.status !== "disabled");
+
+  async function downloadAgreement() {
+    const organizationId = bundle?.organization.id || form.organizationId;
+    if (!organizationId) return;
+    setDownloadStatus("loading");
+    const response = await fetchPartnerAgreementDownload(organizationId);
+    if (!response.ok) {
+      setDownloadStatus("error");
+      return;
+    }
+    const binary = atob(response.data.contentBase64);
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+    const blob = new Blob([bytes], { type: response.data.contentType || "application/pdf" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = response.data.filename;
+    anchor.click();
+    URL.revokeObjectURL(url);
+    setDownloadStatus("idle");
+  }
+
+  return (
+    <div data-application-active-step="partner_agreement" className="rounded-2xl border border-white/10 bg-[#171a20] shadow-2xl">
+      <div className="border-b border-white/10 p-5">
+        <p className="text-xs font-black uppercase tracking-[0.16em] text-[#fb923c]">Step 7</p>
+        <h1 className="mt-2 text-2xl font-black sm:text-3xl">{content.title}</h1>
+        <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-slate-300">{content.subtitle}</p>
+        {content.helperText ? <p className="mt-2 max-w-3xl text-xs font-semibold leading-5 text-slate-400">{content.helperText}</p> : null}
+        <div className="mt-4 flex flex-wrap gap-2 text-xs font-black">
+          <span className="rounded-full border border-sky-400/30 bg-sky-400/10 px-3 py-1 text-sky-100">Published template snapshot</span>
+          <span className="rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-amber-100">Admin review required</span>
+          <span className="rounded-full border border-slate-500/30 bg-slate-500/10 px-3 py-1 text-slate-200">eSign provider disabled</span>
+        </div>
+      </div>
+      <div className="p-5">
+        <div className="mx-auto max-w-4xl space-y-3">
+          {sections.map((section) => (
+            <section key={section.id} className={`rounded-2xl border ${section.id === form.activeSection ? "border-[#f97316]/45 bg-[#11141a]" : "border-white/10 bg-[#11141a]/70"}`}>
+              <button type="button" onClick={() => onChange({ activeSection: section.id })} className="flex w-full items-center justify-between gap-3 p-4 text-left focus:outline-none focus:ring-2 focus:ring-sky-300">
+                <span>
+                  <span className="block text-sm font-black text-white">{section.label}</span>
+                  <span className="mt-1 block text-xs font-semibold text-slate-400">{section.detail}</span>
+                </span>
+                <span className={`flex h-8 w-8 items-center justify-center rounded-full ${section.done ? "bg-emerald-500/15 text-emerald-200" : "bg-slate-700 text-slate-300"}`}>{section.done ? <Check size={16} /> : <ChevronDown size={16} />}</span>
+              </button>
+              {section.id === active.id ? (
+                <div className="grid gap-4 border-t border-white/10 p-4">
+                  {active.id === "signer" ? (
+                    <div className="grid gap-4" data-step7-field-stack="signer">
+                      <AgreementField label="Partner legal name" value={bundle?.organization.legalName ?? "Save earlier steps first"} readOnly />
+                      <AgreementField label="Signer legal name" value={form.signerName} onChange={(value) => onChange({ signerName: value })} placeholder="Full legal name" />
+                      <AgreementField label="Role or designation" value={form.signerRole} onChange={(value) => onChange({ signerRole: value })} placeholder="Owner / Director / Authorized representative" />
+                      <AgreementField label="Authority basis" value={form.authorityBasis} onChange={(value) => onChange({ authorityBasis: value })} placeholder="How this signer is authorized" />
+                      <label className="flex items-start gap-3 rounded-xl border border-white/10 bg-[#171a20] p-3 text-sm font-bold text-slate-200">
+                        <input type="checkbox" checked={form.authorizedDeclaration} onChange={(event) => onChange({ authorizedDeclaration: event.target.checked })} className="mt-1 h-4 w-4 rounded border-white/20 bg-[#11141a]" />
+                        <span>I confirm this signer is authorized to act for this Partner organization.</span>
+                      </label>
+                      <p className="text-xs font-semibold leading-5 text-slate-400">{content.signerInstructions}</p>
+                    </div>
+                  ) : active.id === "agreement" ? (
+                    <div className="grid gap-4" data-step7-field-stack="agreement">
+                      <AgreementField label="Agreement type" value={agreement?.agreementType || "Partner master services"} readOnly />
+                      <AgreementField label="Template version" value={String(agreement?.templateVersion ?? template?.versionNumber ?? 1)} readOnly />
+                      <AgreementField label="Snapshot reference" value={agreement?.snapshotHash ? `${agreement.snapshotHash.slice(0, 12)}…` : "Created on save"} readOnly />
+                      <button type="button" onClick={() => { onChange({ viewedAgreement: true }); void downloadAgreement(); }} disabled={!bundle?.organization.id || downloadStatus === "loading"} className="min-h-11 rounded-xl bg-[#38bdf8] px-4 py-3 text-sm font-black text-[#07111a] transition hover:bg-[#7dd3fc] disabled:cursor-not-allowed disabled:opacity-50">
+                        {downloadStatus === "loading" ? "Preparing agreement…" : "Download agreement PDF"}
+                      </button>
+                      {downloadStatus === "error" ? <p className="text-sm font-bold text-red-200">Agreement download is unavailable. Save the agreement details and try again.</p> : null}
+                      <label className="flex items-start gap-3 rounded-xl border border-white/10 bg-[#171a20] p-3 text-sm font-bold text-slate-200">
+                        <input type="checkbox" checked={form.viewedAgreement} onChange={(event) => onChange({ viewedAgreement: event.target.checked })} className="mt-1 h-4 w-4 rounded border-white/20 bg-[#11141a]" />
+                        <span>I have opened and reviewed the agreement.</span>
+                      </label>
+                    </div>
+                  ) : active.id === "schedules" ? (
+                    <div className="grid gap-3" data-step7-field-stack="schedules">
+                      {serviceScopes.length ? serviceScopes.map((scope) => (
+                        <div key={scope.id} className="rounded-xl border border-white/10 bg-[#171a20] p-4">
+                          <p className="text-sm font-black text-white">{scope.serviceLabel}</p>
+                          <p className="mt-1 break-words text-xs font-semibold text-slate-400">Schedule reference: {scope.serviceCode}</p>
+                        </div>
+                      )) : <p className="rounded-xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm font-semibold text-amber-100">Select services in Step 4 before completing the agreement.</p>}
+                    </div>
+                  ) : active.id === "method" ? (
+                    <div className="grid gap-4" data-step7-field-stack="method">
+                      <AgreementSelect label="Signing method" value={form.signingMethod} onChange={(value) => onChange({ signingMethod: value as AgreementForm["signingMethod"] })}>
+                        <option value="authenticated_acceptance">Authenticated electronic acceptance</option>
+                        <option value="manual_signed_document">Manual signed-document upload</option>
+                        <option value="esign_provider" disabled>eSign provider setup pending</option>
+                      </AgreementSelect>
+                      <p className="rounded-xl border border-sky-400/20 bg-sky-400/10 p-4 text-sm font-semibold leading-6 text-sky-100">{content.signingMethodCopy}</p>
+                    </div>
+                  ) : active.id === "accept" ? (
+                    <div className="grid gap-4" data-step7-field-stack="accept">
+                      {form.signingMethod === "manual_signed_document" ? (
+                        <>
+                          <AgreementField label="Signed agreement document reference" value={form.signedDocumentId} onChange={(value) => onChange({ signedDocumentId: value })} placeholder="Private document ID after upload" />
+                          <p className="rounded-xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm font-semibold leading-6 text-amber-100">{content.documentInstructions}</p>
+                        </>
+                      ) : (
+                        <>
+                          <label className="flex items-start gap-3 rounded-xl border border-white/10 bg-[#171a20] p-3 text-sm font-bold text-slate-200">
+                            <input type="checkbox" checked={form.electronicRecordsConsent} onChange={(event) => onChange({ electronicRecordsConsent: event.target.checked })} className="mt-1 h-4 w-4 rounded border-white/20 bg-[#11141a]" />
+                            <span>I consent to use electronic records and authenticated acceptance for this agreement where permitted by policy.</span>
+                          </label>
+                          <label className="flex items-start gap-3 rounded-xl border border-white/10 bg-[#171a20] p-3 text-sm font-bold text-slate-200">
+                            <input type="checkbox" checked={form.acceptedDeclarations} onChange={(event) => onChange({ acceptedDeclarations: event.target.checked })} className="mt-1 h-4 w-4 rounded border-white/20 bg-[#11141a]" />
+                            <span>I deliberately accept the agreement declarations for this Partner application.</span>
+                          </label>
+                        </>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="grid gap-3 rounded-xl border border-white/10 bg-[#171a20] p-4 text-sm font-semibold text-slate-200" data-step7-field-stack="status">
+                      <p>{canComplete ? content.reviewReadyCopy : content.reviewIncompleteCopy}</p>
+                      <p>Agreement status: {agreementStatusLabel(agreement?.status ?? "NOT_STARTED")}</p>
+                      <p>TPL review: {agreementStatusLabel(agreement?.tplReviewStatus ?? "NOT_STARTED")}</p>
+                      <p className="text-slate-400">Completing this step does not approve the Partner, activate services, activate payouts or open the Partner Desk.</p>
+                    </div>
+                  )}
+                </div>
+              ) : null}
+            </section>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AgreementField({ label, value, onChange, placeholder, readOnly }: { label: string; value: string; onChange?: (value: string) => void; placeholder?: string; readOnly?: boolean }) {
+  return (
+    <label className="grid gap-2">
+      <span className="text-xs font-black uppercase tracking-[0.1em] text-slate-300">{label}</span>
+      <input value={value} readOnly={readOnly} onChange={(event) => onChange?.(event.target.value)} placeholder={placeholder} className="h-11 rounded-xl border border-white/10 bg-[#0f1217] px-3 text-sm font-semibold text-white outline-none placeholder:text-slate-600 focus:border-[#f97316] focus:ring-2 focus:ring-[#f97316]/25 read-only:text-slate-300" />
+    </label>
+  );
+}
+
+function AgreementSelect({ label, value, onChange, children }: { label: string; value: string; onChange: (value: string) => void; children: ReactNode }) {
+  return (
+    <label className="grid gap-2">
+      <span className="text-xs font-black uppercase tracking-[0.1em] text-slate-300">{label}</span>
+      <select value={value} onChange={(event) => onChange(event.target.value)} className="h-11 rounded-xl border border-white/10 bg-[#0f1217] px-3 text-sm font-semibold text-white outline-none focus:border-[#f97316] focus:ring-2 focus:ring-[#f97316]/25">
+        {children}
+      </select>
+    </label>
+  );
+}
+
+function AgreementSummary({ form, bundle, canComplete }: { form: AgreementForm; bundle: PartnerOrganizationBundle | null; canComplete: boolean }) {
+  const agreement = bundle?.agreement;
+  const serviceCount = (bundle?.serviceScopes ?? []).filter((scope) => scope.status !== "disabled").length;
+  return (
+    <div data-step7-summary-panel="right-shell">
+      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#f97316]/12 text-[#fb923c]">
+        <Scale size={19} aria-hidden="true" />
+      </div>
+      <p className="mt-4 text-xs font-black uppercase tracking-[0.14em] text-[#fb923c]">Step 7 summary</p>
+      <h2 className="mt-2 text-lg font-black text-white">Partner Agreement</h2>
+      <dl className="mt-4 space-y-3 text-sm">
+        <SummaryRow label="Partner legal name" value={bundle?.organization.legalName || "Not saved"} />
+        <SummaryRow label="Entity/country" value={`${bundle?.organization.organizationType || "Entity"} · ${bundle?.organization.country || "Country"}`} />
+        <SummaryRow label="Signer" value={form.signerName || agreement?.signerName || "Not added"} />
+        <SummaryRow label="Signer role" value={form.signerRole || agreement?.signerRole || "Not added"} />
+        <SummaryRow label="Agreement type" value={agreement?.agreementType || "Partner master services"} />
+        <SummaryRow label="Template version" value={String(agreement?.templateVersion ?? bundle?.agreementTemplate?.versionNumber ?? 1)} />
+        <SummaryRow label="Service schedules" value={`${serviceCount} selected`} />
+        <SummaryRow label="Signing method" value={agreementSigningMethodLabel(form.signingMethod)} />
+        <SummaryRow label="Agreement status" value={agreementStatusLabel(agreement?.status ?? "NOT_STARTED")} />
+        <SummaryRow label="Issued/viewed/signed" value={`${agreement?.issuedAt ? "Issued" : "Not issued"} · ${form.viewedAgreement || agreement?.viewedAt ? "Viewed" : "Not viewed"} · ${agreement?.acceptedAt ? "Accepted" : "Not accepted"}`} />
+        <SummaryRow label="TPL review" value={agreementStatusLabel(agreement?.tplReviewStatus ?? "NOT_STARTED")} />
+        <SummaryRow label="Next action" value={canComplete ? "Ready to continue" : step7SectionLabel(form.activeSection)} />
+      </dl>
+    </div>
+  );
+}
+
 function PayoutTaxSummary({ form, bundle, canComplete }: { form: PayoutTaxForm; bundle: PartnerOrganizationBundle | null; canComplete: boolean }) {
   const isIndiaBank = /^india|^in$/i.test(form.bankCountry);
   const review = bundle?.payoutTaxReview;
@@ -3803,6 +4120,118 @@ function payoutTaxPayload(form: PayoutTaxForm, continueAfter = false): PartnerPa
       withholdingDeclaration: { payoutActivationAllowed: false },
     },
   };
+}
+
+function emptyAgreementForm(): AgreementForm {
+  return {
+    activeSection: "signer",
+    signerName: "",
+    signerRole: "",
+    authorityBasis: "",
+    signingMethod: "authenticated_acceptance",
+    viewedAgreement: false,
+    authorizedDeclaration: false,
+    electronicRecordsConsent: false,
+    acceptedDeclarations: false,
+    signedDocumentId: "",
+  };
+}
+
+function agreementFormFromBundle(bundle: PartnerOrganizationBundle | null): AgreementForm {
+  const agreement = bundle?.agreement;
+  const metadata = asClientRecord(agreement?.metadata);
+  const declarations = asClientRecord(metadata.signerDeclarations);
+  const accountContact = readAccountContact(bundle);
+  const signerName = agreement?.signerName || String(accountContact.contactPersonFullName || bundle?.organization.legalName || "");
+  const signerRole = agreement?.signerRole || String(accountContact.designation || "Authorized representative");
+  const status = agreement?.status ?? "NOT_STARTED";
+  return {
+    ...emptyAgreementForm(),
+    organizationId: bundle?.organization.id,
+    activeSection: ["PARTNER_ACCEPTED", "SIGNED_DOCUMENT_UPLOADED", "UNDER_ADMIN_REVIEW", "COUNTERSIGN_PENDING", "COMPLETED"].includes(status) ? "status" : "signer",
+    signerName,
+    signerRole,
+    authorityBasis: agreement?.signerAuthorityBasis || "",
+    signingMethod: agreement?.signingMethod || "authenticated_acceptance",
+    viewedAgreement: Boolean(agreement?.viewedAt),
+    authorizedDeclaration: declarations.authorizedDeclaration === true || ["PARTNER_ACCEPTED", "SIGNED_DOCUMENT_UPLOADED", "UNDER_ADMIN_REVIEW", "COUNTERSIGN_PENDING", "COMPLETED"].includes(status),
+    electronicRecordsConsent: declarations.electronicRecordsConsent === true || agreement?.signingMethod === "authenticated_acceptance" && Boolean(agreement?.acceptedAt),
+    acceptedDeclarations: Boolean(agreement?.acceptedAt),
+    signedDocumentId: agreement?.signedDocumentId || "",
+  };
+}
+
+function agreementPayload(form: AgreementForm, continueAfter = false): PartnerAgreementDraftInput {
+  return {
+    organizationId: form.organizationId ?? "",
+    continueAfter,
+    signer: {
+      legalName: form.signerName,
+      role: form.signerRole,
+      authorityBasis: form.authorityBasis,
+      authorizedDeclaration: form.authorizedDeclaration,
+      electronicRecordsConsent: form.electronicRecordsConsent,
+    },
+    signingMethod: form.signingMethod,
+    viewedAgreement: form.viewedAgreement,
+    acceptedDeclarations: form.acceptedDeclarations,
+    signedDocumentId: form.signedDocumentId || undefined,
+  };
+}
+
+function isAgreementComplete(form: AgreementForm): boolean {
+  const signerReady = Boolean(form.signerName.trim() && form.signerRole.trim() && form.authorityBasis.trim() && form.authorizedDeclaration);
+  if (!signerReady || !form.viewedAgreement || form.signingMethod === "esign_provider") return false;
+  if (form.signingMethod === "manual_signed_document") return Boolean(form.signedDocumentId.trim());
+  return Boolean(form.electronicRecordsConsent && form.acceptedDeclarations);
+}
+
+function agreementContentFromNode(node: PartnerApplicationContentNode | undefined): AgreementContent {
+  if (!node) return fallbackAgreementContent;
+  return {
+    title: safePublishedCopy(node.title, fallbackAgreementContent.title),
+    subtitle: safePublishedCopy(node.subtitle, fallbackAgreementContent.subtitle),
+    helperText: safePublishedCopy(node.helperText, fallbackAgreementContent.helperText),
+    signerInstructions: safePublishedCopy(node.rightHelpCopy, fallbackAgreementContent.signerInstructions),
+    signingMethodCopy: safePublishedCopy(node.domainIntroductionCopy, fallbackAgreementContent.signingMethodCopy),
+    documentInstructions: safePublishedCopy(node.sectionDescription || node.emptyStateCopy, fallbackAgreementContent.documentInstructions),
+    reviewReadyCopy: safePublishedCopy(node.ctaLabels?.reviewReady, fallbackAgreementContent.reviewReadyCopy),
+    reviewIncompleteCopy: safePublishedCopy(node.ctaLabels?.reviewIncomplete, fallbackAgreementContent.reviewIncompleteCopy),
+  };
+}
+
+function step7SectionLabel(section: AgreementForm["activeSection"]): string {
+  if (section === "signer") return "Confirm Partner and signer";
+  if (section === "agreement") return "Review agreement";
+  if (section === "schedules") return "Review service schedules";
+  if (section === "method") return "Select permitted signing method";
+  if (section === "accept") return "Accept declarations/sign or upload";
+  return "Review agreement status";
+}
+
+function agreementSigningMethodLabel(method: AgreementForm["signingMethod"]): string {
+  if (method === "manual_signed_document") return "Manual signed-document upload";
+  if (method === "esign_provider") return "eSign provider setup pending";
+  return "Authenticated electronic acceptance";
+}
+
+function agreementStatusLabel(status: string): string {
+  if (status === "DRAFT") return "Draft";
+  if (status === "ISSUED") return "Issued";
+  if (status === "VIEWED") return "Viewed";
+  if (status === "PARTNER_ACTION_REQUIRED") return "Partner action required";
+  if (status === "PARTNER_ACCEPTED") return "Accepted by Partner";
+  if (status === "SIGNED_DOCUMENT_UPLOADED") return "Signed document uploaded";
+  if (status === "UNDER_ADMIN_REVIEW" || status === "UNDER_REVIEW") return "Under Admin review";
+  if (status === "SENIOR_REVIEW") return "Senior review";
+  if (status === "COUNTERSIGN_PENDING") return "Countersign pending";
+  if (status === "COMPLETED") return "Completed";
+  if (status === "CHANGES_REQUIRED") return "Changes required";
+  if (status === "REJECTED") return "Rejected";
+  if (status === "EXPIRED") return "Expired";
+  if (status === "VOID") return "Void";
+  if (status === "SUPERSEDED") return "Superseded";
+  return "Not started";
 }
 
 function isPayoutTaxComplete(form: PayoutTaxForm): boolean {
@@ -4607,11 +5036,11 @@ function isWorkspaceStep(value: unknown): value is WorkspaceStepId {
   return typeof value === "string" && workspaceSteps.some((step) => step.id === value);
 }
 
-function readQaDraft(): { form: AccountContactForm; businessForm: BusinessIdentityForm; locationForm: BusinessLocationForm; servicesForm: ServicesForm; payoutTaxForm?: PayoutTaxForm; verified: { mobile: boolean; email: boolean }; activeStep: WorkspaceStepId; state: PartnerQaPreviewState; savedAt: string } | null {
+function readQaDraft(): { form: AccountContactForm; businessForm: BusinessIdentityForm; locationForm: BusinessLocationForm; servicesForm: ServicesForm; payoutTaxForm?: PayoutTaxForm; agreementForm?: AgreementForm; verified: { mobile: boolean; email: boolean }; activeStep: WorkspaceStepId; state: PartnerQaPreviewState; savedAt: string } | null {
   try {
     const raw = window.localStorage.getItem(qaDraftStorageKey);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as Partial<{ form: AccountContactForm; businessForm: BusinessIdentityForm; locationForm: BusinessLocationForm; servicesForm: ServicesForm; verified: { mobile: boolean; email: boolean }; activeStep: WorkspaceStepId; state: PartnerQaPreviewState; savedAt: string }>;
+    const parsed = JSON.parse(raw) as Partial<{ form: AccountContactForm; businessForm: BusinessIdentityForm; locationForm: BusinessLocationForm; servicesForm: ServicesForm; payoutTaxForm: PayoutTaxForm; agreementForm: AgreementForm; verified: { mobile: boolean; email: boolean }; activeStep: WorkspaceStepId; state: PartnerQaPreviewState; savedAt: string }>;
     const state = partnerQaPreviewStates.some((item) => item.id === parsed.state) ? parsed.state as PartnerQaPreviewState : null;
     if (!parsed.form || !parsed.verified || !isWorkspaceStep(parsed.activeStep) || !state) return null;
     return {
@@ -4619,6 +5048,8 @@ function readQaDraft(): { form: AccountContactForm; businessForm: BusinessIdenti
       businessForm: { ...emptyBusinessForm(), ...parsed.businessForm },
       locationForm: parsed.locationForm ? mergeLocationForm(parsed.locationForm) : emptyLocationForm(),
       servicesForm: parsed.servicesForm ? mergeServicesForm(parsed.servicesForm) : emptyServicesForm(),
+      payoutTaxForm: parsed.payoutTaxForm ? { ...emptyPayoutTaxForm(), ...parsed.payoutTaxForm } : undefined,
+      agreementForm: parsed.agreementForm ? { ...emptyAgreementForm(), ...parsed.agreementForm } : undefined,
       verified: { mobile: parsed.verified.mobile === true, email: parsed.verified.email === true },
       activeStep: parsed.activeStep,
       state,
@@ -4629,7 +5060,7 @@ function readQaDraft(): { form: AccountContactForm; businessForm: BusinessIdenti
   }
 }
 
-function writeQaDraft(input: { form: AccountContactForm; businessForm: BusinessIdentityForm; locationForm: BusinessLocationForm; servicesForm: ServicesForm; payoutTaxForm?: PayoutTaxForm; verified: { mobile: boolean; email: boolean }; activeStep: WorkspaceStepId; state: PartnerQaPreviewState; savedAt: string }) {
+function writeQaDraft(input: { form: AccountContactForm; businessForm: BusinessIdentityForm; locationForm: BusinessLocationForm; servicesForm: ServicesForm; payoutTaxForm?: PayoutTaxForm; agreementForm?: AgreementForm; verified: { mobile: boolean; email: boolean }; activeStep: WorkspaceStepId; state: PartnerQaPreviewState; savedAt: string }) {
   window.localStorage.setItem(qaDraftStorageKey, JSON.stringify(input));
 }
 

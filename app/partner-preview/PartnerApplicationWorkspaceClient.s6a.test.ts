@@ -59,7 +59,7 @@ test("Step 6 form fields use vertical one-control-per-row stacks", () => {
 
 test("Step 6 right summary has safe values and responsive shell placement", () => {
     expect(workspaceSource).toContain('xl:grid-cols-[280px_minmax(0,1fr)_360px]');
-    expect(workspaceSource).toContain('activeStep === "payout_tax" ? "block min-w-0 lg:col-start-2 xl:col-start-auto"');
+    expect(workspaceSource).toContain('const usesWideSummary = activeStep === "payout_tax" || activeStep === "partner_agreement"');
     expect(workspaceSource).toContain("Bank account");
     expect(workspaceSource).toContain("GST/VAT state");
     expect(workspaceSource).toContain("Masked after save");
