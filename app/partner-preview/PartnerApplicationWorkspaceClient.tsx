@@ -1384,7 +1384,7 @@ export default function PartnerApplicationWorkspaceClient({
         {qaPreviewEnabled ? <QaPreviewBar selectedState={qaPreviewState} onChange={changeQaPreviewState} onReset={resetQaPreviewData} /> : null}
         {message ? <WorkspaceToast tone={message.tone} text={message.text} onDismiss={() => setMessage(null)} /> : null}
 
-        <div className="grid flex-1 gap-4 px-4 py-4 lg:grid-cols-[270px_minmax(0,1fr)] xl:grid-cols-[280px_minmax(0,1fr)_320px]">
+        <div className="grid flex-1 gap-4 px-4 py-4 lg:grid-cols-[270px_minmax(0,1fr)] xl:grid-cols-[280px_minmax(0,1fr)_360px] 2xl:grid-cols-[300px_minmax(0,1fr)_390px]">
           <StepNavigator activeStep={activeStep} readModel={readModel} qaPreviewEnabled={qaPreviewEnabled} accountStepOverride={accountStepOverride} businessStepOverride={businessStepOverride} locationStepOverride={locationStepOverride} servicesStepOverride={servicesStepOverride} onSelect={(step) => setActiveStep(step)} />
           <section className="min-w-0">
             <MobileStepSelector activeStep={activeStep} readModel={readModel} qaPreviewEnabled={qaPreviewEnabled} accountStepOverride={accountStepOverride} businessStepOverride={businessStepOverride} locationStepOverride={locationStepOverride} servicesStepOverride={servicesStepOverride} onSelect={(step) => setActiveStep(step)} />
@@ -1482,6 +1482,9 @@ export default function PartnerApplicationWorkspaceClient({
               <VerificationSummaryBody
                 requirements={activeBundle?.requirements ?? (qaPreviewEnabled ? previewRequirementsForSelectedServices(servicesForm.selectedServiceCodes, serviceCatalogueState.items) : [])}
               />
+            ) : null}
+            payoutTaxSummary={activeStep === "payout_tax" ? (
+              <PayoutTaxSummary form={payoutTaxForm} bundle={activeBundle} canComplete={canCompleteStepSix} />
             ) : null}
             servicesSummary={activeStep === "services" ? (
               <SelectedServicesSummary
@@ -2797,14 +2800,16 @@ function TopProgress({
   );
 }
 
-function HelpPanel({ activeStep, servicesSummary, verificationSummary }: { activeStep: WorkspaceStepId; servicesSummary?: ReactNode; verificationSummary?: ReactNode }) {
+function HelpPanel({ activeStep, servicesSummary, verificationSummary, payoutTaxSummary }: { activeStep: WorkspaceStepId; servicesSummary?: ReactNode; verificationSummary?: ReactNode; payoutTaxSummary?: ReactNode }) {
   return (
-    <aside className="hidden xl:block">
-      <div className="sticky top-28 rounded-2xl border border-white/10 bg-[#171a20] p-5 shadow-2xl">
+    <aside className={activeStep === "payout_tax" ? "block min-w-0 lg:col-start-2 xl:col-start-auto" : "hidden xl:block"}>
+      <div className={activeStep === "payout_tax" ? "rounded-2xl border border-white/10 bg-[#171a20] p-5 shadow-2xl xl:sticky xl:top-28" : "sticky top-28 rounded-2xl border border-white/10 bg-[#171a20] p-5 shadow-2xl"}>
         {activeStep === "services" && servicesSummary ? (
           servicesSummary
         ) : activeStep === "documents_compliance" && verificationSummary ? (
           verificationSummary
+        ) : activeStep === "payout_tax" && payoutTaxSummary ? (
+          payoutTaxSummary
         ) : (
           <>
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#f97316]/12 text-[#fb923c]">
@@ -3368,7 +3373,6 @@ function PayoutTaxStep({
     { id: "review", label: "Review your details", done: canComplete, detail: review ? payoutTaxStatusLabel(review.status) : "Ready when required fields are complete" },
   ];
   const active = sections.find((section) => section.id === form.activeSection) ?? sections[0]!;
-  const routingSummary = isIndiaBank ? `IFSC ${form.ifsc || "not added"}` : form.iban ? "IBAN added" : form.swiftBic ? `SWIFT/BIC ${form.swiftBic}` : form.routingNumber ? "Routing number added" : "Routing code needed";
   return (
     <div data-application-active-step="payout_tax" className="rounded-2xl border border-white/10 bg-[#171a20] shadow-2xl">
       <div className="border-b border-white/10 p-5">
@@ -3383,8 +3387,8 @@ function PayoutTaxStep({
           <span className="rounded-full border border-sky-400/30 bg-sky-400/10 px-3 py-1 text-sky-100">Sensitive values stay masked</span>
         </div>
       </div>
-      <div className="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_280px]">
-        <div className="space-y-3">
+      <div className="p-5">
+        <div className="mx-auto max-w-4xl space-y-3">
           {sections.map((section) => (
             <section key={section.id} className={`rounded-2xl border ${section.id === form.activeSection ? "border-[#f97316]/45 bg-[#11141a]" : "border-white/10 bg-[#11141a]/70"}`}>
               <button type="button" onClick={() => onChange({ activeSection: section.id })} className="flex w-full items-center justify-between gap-3 p-4 text-left focus:outline-none focus:ring-2 focus:ring-sky-300">
@@ -3397,26 +3401,26 @@ function PayoutTaxStep({
               {section.id === active.id ? (
                 <div className="grid gap-4 border-t border-white/10 p-4">
                   {active.id === "country" ? (
-                    <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="grid gap-4" data-step6-field-stack="country">
                       <PayoutSelect label="Payout country" value={form.payoutCountry} onChange={(value) => onChange({ payoutCountry: value, bankCountry: value, settlementCurrency: value === "India" ? "INR" : form.settlementCurrency || "USD", taxResidencyCountry: value })}>{countryOptions.map((country) => <option key={country.countryCode}>{country.displayName}</option>)}</PayoutSelect>
                       <PayoutField label="Settlement currency" value={form.settlementCurrency} onChange={(value) => onChange({ settlementCurrency: value.toUpperCase() })} placeholder="INR" maxLength={3} />
                     </div>
                   ) : active.id === "beneficiary" ? (
-                    <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="grid gap-4" data-step6-field-stack="beneficiary">
                       <PayoutSelect label="Beneficiary type" value={form.beneficiaryType} onChange={(value) => onChange({ beneficiaryType: value as PayoutTaxForm["beneficiaryType"] })}><option value="business">Business</option><option value="individual">Individual</option></PayoutSelect>
                       <PayoutField label="Account-holder legal name" value={form.beneficiaryLegalName} onChange={(value) => onChange({ beneficiaryLegalName: value })} placeholder="Legal name on bank account" />
                     </div>
                   ) : active.id === "bank" ? (
-                    <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="grid gap-4" data-step6-field-stack="bank">
                       <PayoutSelect label="Bank country" value={form.bankCountry} onChange={(value) => onChange({ bankCountry: value })}>{countryOptions.map((country) => <option key={country.countryCode}>{country.displayName}</option>)}</PayoutSelect>
                       <PayoutField label="Bank name" value={form.bankName} onChange={(value) => onChange({ bankName: value })} placeholder="Bank name" />
                       <PayoutField label={payout?.bankAccountMasked ? `Saved account ${payout.bankAccountMasked}` : "Bank account number"} value={form.bankAccountIdentifier} onChange={(value) => onChange({ bankAccountIdentifier: value })} placeholder={payout?.bankAccountMasked ? "Enter only to replace" : "Enter account number"} />
                       <PayoutField label="Re-enter account number" value={form.bankAccountConfirmation} onChange={(value) => onChange({ bankAccountConfirmation: value })} placeholder="Confirm account number" />
-                      {isIndiaBank ? <PayoutField label="IFSC" value={form.ifsc} onChange={(value) => onChange({ ifsc: value.toUpperCase() })} placeholder="ABCD0123456" /> : <><PayoutField label="IBAN" value={form.iban} onChange={(value) => onChange({ iban: value.toUpperCase() })} placeholder="If used in your country" /><PayoutField label="SWIFT/BIC or routing number" value={form.swiftBic || form.routingNumber} onChange={(value) => onChange({ swiftBic: value.toUpperCase(), routingNumber: value.toUpperCase() })} placeholder="Bank routing code" /></>}
+                      {isIndiaBank ? <PayoutField label="IFSC" value={form.ifsc} onChange={(value) => onChange({ ifsc: value.toUpperCase() })} placeholder="ABCD0123456" /> : <><PayoutField label="IBAN" value={form.iban} onChange={(value) => onChange({ iban: value.toUpperCase() })} placeholder="If used in your country" /><PayoutField label="SWIFT/BIC" value={form.swiftBic} onChange={(value) => onChange({ swiftBic: value.toUpperCase() })} placeholder="International bank code" /><PayoutField label="Routing number" value={form.routingNumber} onChange={(value) => onChange({ routingNumber: value.toUpperCase() })} placeholder="Local routing code where used" /></>}
                       <PayoutField label="Account type" value={form.accountType} onChange={(value) => onChange({ accountType: value })} placeholder="Current / Savings / Checking" />
                     </div>
                   ) : active.id === "tax" ? (
-                    <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="grid gap-4" data-step6-field-stack="tax">
                       <PayoutSelect label="Tax residency" value={form.taxResidencyCountry} onChange={(value) => onChange({ taxResidencyCountry: value, taxIdentifierType: value === "India" ? "PAN" : "TIN" })}>{countryOptions.map((country) => <option key={country.countryCode}>{country.displayName}</option>)}</PayoutSelect>
                       <PayoutField label="Legal tax name" value={form.legalTaxName} onChange={(value) => onChange({ legalTaxName: value })} placeholder="Name used for tax records" />
                       {isIndiaTax ? <><PayoutField label={tax?.indiaPanMasked ? `Saved PAN ${tax.indiaPanMasked}` : "PAN"} value={form.indiaPan} onChange={(value) => onChange({ indiaPan: value.toUpperCase() })} placeholder={tax?.indiaPanMasked ? "Enter only to replace" : "ABCDE1234F"} /><label className="flex items-center gap-3 rounded-xl border border-white/10 bg-[#171a20] p-3 text-sm font-bold text-slate-200"><input type="checkbox" checked={form.gstRegistered} onChange={(event) => onChange({ gstRegistered: event.target.checked })} className="h-4 w-4 rounded border-white/20 bg-[#11141a]" />GST registered</label>{form.gstRegistered ? <><PayoutField label={tax?.indiaGstinMasked ? `Saved GSTIN ${tax.indiaGstinMasked}` : "GSTIN"} value={form.indiaGstin} onChange={(value) => onChange({ indiaGstin: value.toUpperCase() })} placeholder="22ABCDE1234F1Z5" /><PayoutField label="GST registration state" value={form.gstRegistrationState} onChange={(value) => onChange({ gstRegistrationState: value })} placeholder="State" /></> : null}</> : <><PayoutField label="Tax identifier type" value={form.taxIdentifierType} onChange={(value) => onChange({ taxIdentifierType: value })} placeholder="TIN / VAT / local tax ID" /><PayoutField label={tax?.foreignTaxIdentifierMasked ? `Saved tax ID ${tax.foreignTaxIdentifierMasked}` : "Tax identifier"} value={form.foreignTaxIdentifier || form.taxIdentifier} onChange={(value) => onChange({ foreignTaxIdentifier: value, taxIdentifier: value })} placeholder="Local tax identifier" /></>}
@@ -3435,27 +3439,54 @@ function PayoutTaxStep({
             </section>
           ))}
         </div>
-        <aside className="h-fit rounded-2xl border border-white/10 bg-[#11141a] p-4">
-          <p className="text-xs font-black uppercase tracking-[0.14em] text-[#fb923c]">Step 6 summary</p>
-          <dl className="mt-4 space-y-3 text-sm">
-            <SummaryRow label="Country" value={`${form.payoutCountry} · ${form.settlementCurrency}`} />
-            <SummaryRow label="Beneficiary" value={`${form.beneficiaryLegalName || "Not added"} · ${form.beneficiaryType}`} />
-            <SummaryRow label="Bank" value={payout?.bankAccountMasked || "Masked after save"} />
-            <SummaryRow label="Routing" value={routingSummary} />
-            <SummaryRow label="Bank review" value={payoutTaxStatusLabel(review?.bankStatus ?? payout?.bankVerificationStatus ?? "NOT_PROVIDED")} />
-            <SummaryRow label="Tax residency" value={form.taxResidencyCountry} />
-            <SummaryRow label="Tax ID" value={tax?.indiaPanMasked || tax?.indiaGstinMasked || tax?.foreignTaxIdentifierMasked || tax?.taxIdentifierMasked || "Masked after save"} />
-            <SummaryRow label="Tax review" value={payoutTaxStatusLabel(review?.taxStatus ?? tax?.taxRegistrationStatus ?? "NOT_PROVIDED")} />
-            <SummaryRow label="Remaining" value={canComplete ? "Ready to continue" : active.label} />
-          </dl>
-        </aside>
       </div>
     </div>
   );
 }
 
+function PayoutTaxSummary({ form, bundle, canComplete }: { form: PayoutTaxForm; bundle: PartnerOrganizationBundle | null; canComplete: boolean }) {
+  const isIndiaBank = /^india|^in$/i.test(form.bankCountry);
+  const review = bundle?.payoutTaxReview;
+  const payout = bundle?.payoutProfile;
+  const tax = bundle?.taxProfile;
+  const routingSummary = isIndiaBank ? `IFSC ${form.ifsc || "not added"}` : form.iban ? "IBAN added" : form.swiftBic ? `SWIFT/BIC ${form.swiftBic}` : form.routingNumber ? "Routing number added" : "Routing code needed";
+  const activeLabel = step6SectionLabel(form.activeSection);
+  return (
+    <div data-step6-summary-panel="right-shell">
+      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#f97316]/12 text-[#fb923c]">
+        <WalletCards size={19} aria-hidden="true" />
+      </div>
+      <p className="mt-4 text-xs font-black uppercase tracking-[0.14em] text-[#fb923c]">Step 6 summary</p>
+      <h2 className="mt-2 text-lg font-black text-white">Payout & Tax</h2>
+      <dl className="mt-4 space-y-3 text-sm">
+        <SummaryRow label="Payout country" value={form.payoutCountry || "Not selected"} />
+        <SummaryRow label="Currency" value={form.settlementCurrency || "Not selected"} />
+        <SummaryRow label="Beneficiary type" value={form.beneficiaryType === "individual" ? "Individual" : "Business"} />
+        <SummaryRow label="Beneficiary name" value={form.beneficiaryLegalName || "Not added"} />
+        <SummaryRow label="Bank account" value={payout?.bankAccountMasked || "Masked after save"} />
+        <SummaryRow label="Routing" value={routingSummary} />
+        <SummaryRow label="Bank review" value={payoutTaxStatusLabel(review?.bankStatus ?? payout?.bankVerificationStatus ?? "NOT_PROVIDED")} />
+        <SummaryRow label="Tax residency" value={form.taxResidencyCountry || "Not selected"} />
+        <SummaryRow label="Tax ID" value={tax?.indiaPanMasked || tax?.indiaGstinMasked || tax?.foreignTaxIdentifierMasked || tax?.taxIdentifierMasked || "Masked after save"} />
+        <SummaryRow label="GST/VAT state" value={form.gstRegistered ? form.gstRegistrationState || "Needed" : "Not applicable"} />
+        <SummaryRow label="Documents" value="Private upload when requested" />
+        <SummaryRow label="Remaining action" value={canComplete ? "Ready to continue" : activeLabel} />
+      </dl>
+    </div>
+  );
+}
+
+function step6SectionLabel(section: PayoutTaxForm["activeSection"]): string {
+  if (section === "country") return "Payout country and currency";
+  if (section === "beneficiary") return "Who will receive the payout?";
+  if (section === "bank") return "Bank account details";
+  if (section === "tax") return "Tax details";
+  if (section === "documents") return "Supporting documents";
+  return "Review your details";
+}
+
 function SummaryRow({ label, value }: { label: string; value: string }) {
-  return <div className="flex items-start justify-between gap-3 border-b border-white/10 pb-2 last:border-b-0"><dt className="text-slate-400">{label}</dt><dd className="max-w-[150px] break-words text-right font-black text-white">{value}</dd></div>;
+  return <div className="grid gap-1 border-b border-white/10 pb-2 last:border-b-0"><dt className="text-xs font-bold uppercase tracking-[0.08em] text-slate-500">{label}</dt><dd className="break-words font-black leading-5 text-white">{value}</dd></div>;
 }
 
 function payoutTaxStatusLabel(status: string): string {

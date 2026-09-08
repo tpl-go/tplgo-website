@@ -32,6 +32,31 @@ test("Step 6 keeps sensitive and provider states human-safe", () => {
     expect(workspaceSource).toContain("This does not activate payouts or move money.");
 });
 
+test("Step 6 summary is rendered once in the outer right shell instead of inside the form card", () => {
+    expect((workspaceSource.match(/Step 6 summary/g) ?? []).length).toBe(1);
+    expect(workspaceSource).toContain('data-step6-summary-panel="right-shell"');
+    expect(workspaceSource).toContain('payoutTaxSummary={activeStep === "payout_tax"');
+    expect(workspaceSource).not.toMatch(/activeStep === "payout_tax"[\\s\\S]{0,800}Coming next/);
+});
+
+test("Step 6 form fields use vertical one-control-per-row stacks", () => {
+    expect(workspaceSource).toContain('data-step6-field-stack="country"');
+    expect(workspaceSource).toContain('data-step6-field-stack="beneficiary"');
+    expect(workspaceSource).toContain('data-step6-field-stack="bank"');
+    expect(workspaceSource).toContain('data-step6-field-stack="tax"');
+    expect(workspaceSource).not.toMatch(/data-step6-field-stack="(?:country|beneficiary|bank|tax)"[^>]*sm:grid-cols-2/);
+    expect(workspaceSource).toContain('label="SWIFT/BIC"');
+    expect(workspaceSource).toContain('label="Routing number"');
+});
+
+test("Step 6 right summary has safe values and responsive shell placement", () => {
+    expect(workspaceSource).toContain('xl:grid-cols-[280px_minmax(0,1fr)_360px]');
+    expect(workspaceSource).toContain('activeStep === "payout_tax" ? "block min-w-0 lg:col-start-2 xl:col-start-auto"');
+    expect(workspaceSource).toContain("Bank account");
+    expect(workspaceSource).toContain("GST/VAT state");
+    expect(workspaceSource).toContain("Masked after save");
+});
+
 test("Step 6 adds a protected Admin payout and tax review area", () => {
     expect(adminSource).toContain('requiredPermissions={["partner_payout_tax.read"]}');
     expect(adminSource).toContain("/api/v1/admin/partners/payout-tax");
