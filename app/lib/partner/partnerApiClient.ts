@@ -124,6 +124,65 @@ export type PartnerReview = {
   completedAt?: string | null;
 };
 
+export type PartnerPayoutTaxStatus =
+  | "NOT_PROVIDED"
+  | "DRAFT"
+  | "SUBMITTED"
+  | "UNDER_REVIEW"
+  | "CHANGES_REQUIRED"
+  | "VERIFIED"
+  | "REJECTED"
+  | "EXPIRED"
+  | "PROVIDER_SETUP_PENDING";
+
+export type PartnerPayoutProfile = {
+  id: string;
+  organizationId: string;
+  payoutCountry: string;
+  settlementCurrency: string;
+  beneficiaryType: "individual" | "business";
+  beneficiaryLegalName: string;
+  bankCountry: string;
+  bankName?: string | null;
+  bankAccountMasked?: string | null;
+  routingInfo?: Record<string, unknown>;
+  accountType?: string | null;
+  bankVerificationStatus: PartnerPayoutTaxStatus;
+  manualReviewStatus: PartnerPayoutTaxStatus;
+  metadata?: Record<string, unknown>;
+  updatedAt?: string;
+};
+
+export type PartnerTaxProfile = {
+  id: string;
+  organizationId: string;
+  taxResidencyCountries: string[];
+  taxpayerType: string;
+  taxIdentifierType?: string | null;
+  taxIdentifierMasked?: string | null;
+  indiaPanMasked?: string | null;
+  indiaGstinMasked?: string | null;
+  gstRegistrationState?: string | null;
+  foreignTaxIdentifierMasked?: string | null;
+  legalTaxName: string;
+  taxRegistrationStatus: PartnerPayoutTaxStatus;
+  manualReviewStatus: PartnerPayoutTaxStatus;
+  evidenceDocumentRefs?: string[];
+  updatedAt?: string;
+};
+
+export type PartnerPayoutTaxReview = {
+  id: string;
+  organizationId: string;
+  status: PartnerPayoutTaxStatus;
+  bankStatus: PartnerPayoutTaxStatus;
+  taxStatus: PartnerPayoutTaxStatus;
+  currentStage: string;
+  partnerMessage?: string | null;
+  submittedAt?: string | null;
+  updatedAt?: string;
+};
+
 export type PartnerVerificationEvent = {
   id: string;
   requirementId?: string | null;
@@ -160,6 +219,9 @@ export type PartnerOrganizationBundle = {
   documents: PartnerDocument[];
   links?: PartnerDocumentRequirementLink[];
   review?: PartnerReview | null;
+  payoutProfile?: PartnerPayoutProfile | null;
+  taxProfile?: PartnerTaxProfile | null;
+  payoutTaxReview?: PartnerPayoutTaxReview | null;
   events: PartnerVerificationEvent[];
   readiness: PartnerReadiness;
 };
@@ -260,6 +322,37 @@ export type PartnerServicesDraftInput = {
   requestedServices?: PartnerRequestedServiceInput[];
 };
 
+export type PartnerPayoutTaxDraftInput = {
+  organizationId: string;
+  continueAfter?: boolean;
+  payout: {
+    payoutCountry?: string;
+    settlementCurrency?: string;
+    beneficiaryType?: "individual" | "business";
+    beneficiaryLegalName?: string;
+    bankCountry?: string;
+    bankName?: string;
+    bankAccountIdentifier?: string;
+    bankAccountConfirmation?: string;
+    routingInfo?: Record<string, unknown>;
+    accountType?: string;
+  };
+  tax: {
+    taxResidencyCountries?: string[];
+    taxpayerType?: string;
+    taxIdentifierType?: string;
+    taxIdentifier?: string;
+    indiaPan?: string;
+    indiaGstin?: string;
+    gstRegistrationState?: string;
+    gstRegistered?: boolean;
+    foreignTaxIdentifier?: string;
+    legalTaxName?: string;
+    withholdingDeclaration?: Record<string, unknown>;
+    evidenceDocumentRefs?: string[];
+  };
+};
+
 export type PartnerServiceCatalogueRuntimeResponse = {
   version: number;
   updatedAt: string;
@@ -308,6 +401,13 @@ export function savePartnerServicesDraft(input: PartnerServicesDraftInput): Prom
 
 export function savePartnerVerificationComplianceDraft(input: { organizationId: string; continueAfter?: boolean }): Promise<TplApiResult<PartnerOrganizationBundle>> {
   return tplApiRequest<PartnerOrganizationBundle>("/api/v1/partner/application/draft/verification-compliance", {
+    method: "POST",
+    body: input,
+  });
+}
+
+export function savePartnerPayoutTaxDraft(input: PartnerPayoutTaxDraftInput): Promise<TplApiResult<PartnerOrganizationBundle>> {
+  return tplApiRequest<PartnerOrganizationBundle>("/api/v1/partner/application/draft/payout-tax", {
     method: "POST",
     body: input,
   });

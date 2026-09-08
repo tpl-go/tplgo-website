@@ -66,7 +66,7 @@ export function buildPartnerApplicationCenterReadModel(input: {
   const locationDone = Boolean(metadataApplication.stepCompletion.business_location);
   const servicesDone = hasEligibleApplicationService(bundle, selectedServices, catalogueItems);
   const documentsDone = hasDocumentsReady(bundle);
-  const payoutDone = Boolean(metadataApplication.stepCompletion.payout_tax);
+  const payoutDone = Boolean(metadataApplication.stepCompletion.payout_tax) || ["SUBMITTED", "UNDER_REVIEW", "VERIFIED"].includes(bundle?.payoutTaxReview?.status ?? "");
   const agreementDone = Boolean(metadataApplication.stepCompletion.partner_agreement);
   const reviewDone = reviewStatus === "SUBMITTED" || reviewStatus === "UNDER_REVIEW" || reviewStatus === "VERIFIED";
   const reviewNeedsAttention = reviewStatus === "CHANGES_REQUIRED" || hasBlockingRequirement(bundle);

@@ -29,10 +29,10 @@ test("Step 5 completion can move to Step 6 while Admin verification remains pend
   assert.doesNotMatch(workspaceSource, /final Admin approval required to continue/i);
 });
 
-test("Step 5 keeps Uploaded distinct from Verified and exposes Step 6 only as a placeholder", () => {
+test("Step 5 keeps Uploaded distinct from Verified and routes to the Step 6 payout and tax foundation", () => {
   assert.match(workspaceSource, /Evidence uploaded and ready for review\./);
   assert.match(workspaceSource, /Your documents are ready for review\. Additional documents may still be needed before individual services go live\./);
-  assert.match(workspaceSource, /Add the payout and tax details required for your Partner account\./);
+  assert.match(workspaceSource, /Add the bank and tax details TPL needs before payouts can be reviewed\./);
   assert.match(workspaceSource, /function verificationStatusLabel\(/);
   assert.doesNotMatch(workspaceSource, /automatic verification/);
 });

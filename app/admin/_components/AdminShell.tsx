@@ -86,6 +86,7 @@ const partnerNavItems = [
   { href: "/admin/partner-verification/rules", label: "Verification Rules", icon: FileSearch, permission: "partner_verification_policy.read" },
   { href: "/admin/partners/organizations", label: "Organizations", icon: Users },
   { href: "/admin/partners/documents-compliance", label: "Documents & Compliance", icon: FileText },
+  { href: "/admin/partners/payout-tax", label: "Payout & Tax", icon: FileText, permission: "partner_payout_tax.read" },
 ];
 
 const websiteContentNavItems = [

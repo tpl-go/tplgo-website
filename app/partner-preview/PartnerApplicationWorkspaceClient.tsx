@@ -39,6 +39,7 @@ import {
   savePartnerBusinessLocationDraft,
   savePartnerServicesDraft,
   savePartnerVerificationComplianceDraft,
+  savePartnerPayoutTaxDraft,
   createPartnerDocumentUploadSession,
   confirmPartnerDocument,
   linkPartnerDocumentToRequirement,
@@ -48,6 +49,7 @@ import {
   type PartnerRequirement,
   type PartnerOrganizationBundle,
   type PartnerRequirementClassification,
+  type PartnerPayoutTaxDraftInput,
 } from "../lib/partner/partnerApiClient";
 import {
   filterEligiblePartnerServiceCatalog,
@@ -147,6 +149,35 @@ type ServicesForm = {
 };
 
 type ServicesFormUpdate = Partial<ServicesForm> | ((current: ServicesForm) => Partial<ServicesForm>);
+
+type PayoutTaxForm = {
+  organizationId?: string;
+  activeSection: "country" | "beneficiary" | "bank" | "tax" | "documents" | "review";
+  payoutCountry: string;
+  settlementCurrency: string;
+  beneficiaryType: "individual" | "business";
+  beneficiaryLegalName: string;
+  bankCountry: string;
+  bankName: string;
+  bankAccountIdentifier: string;
+  bankAccountConfirmation: string;
+  ifsc: string;
+  swiftBic: string;
+  iban: string;
+  routingNumber: string;
+  accountType: string;
+  taxResidencyCountry: string;
+  taxpayerType: string;
+  legalTaxName: string;
+  taxIdentifierType: string;
+  taxIdentifier: string;
+  indiaPan: string;
+  gstRegistered: boolean;
+  indiaGstin: string;
+  gstRegistrationState: string;
+  foreignTaxIdentifier: string;
+  documentIntent: string;
+};
 
 type RuntimeCatalogueState = {
   status: "loading" | "ready" | "error";
@@ -484,11 +515,13 @@ export default function PartnerApplicationWorkspaceClient({
   const [businessForm, setBusinessForm] = useState<BusinessIdentityForm>(() => emptyBusinessForm());
   const [locationForm, setLocationForm] = useState<BusinessLocationForm>(() => emptyLocationForm());
   const [servicesForm, setServicesForm] = useState<ServicesForm>(() => emptyServicesForm());
+  const [payoutTaxForm, setPayoutTaxForm] = useState<PayoutTaxForm>(() => emptyPayoutTaxForm());
   const [activeServiceDomainIds, setActiveServiceDomainIds] = useState<PartnerServiceDomainId[]>([]);
   const formRef = useRef(form);
   const businessFormRef = useRef(businessForm);
   const locationFormRef = useRef(locationForm);
   const servicesFormRef = useRef(servicesForm);
+  const payoutTaxFormRef = useRef(payoutTaxForm);
   const [loadStatus, setLoadStatus] = useState<"idle" | "loading" | "ready" | "error">(qaPreviewEnabled ? "ready" : "idle");
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">(qaPreviewEnabled ? "saved" : "idle");
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(qaPreviewEnabled ? new Date().toISOString() : null);
@@ -543,6 +576,7 @@ export default function PartnerApplicationWorkspaceClient({
     businessForm.description.length <= 500;
   const canCompleteStepThree = isBusinessLocationComplete(locationForm);
   const canCompleteStepFour = serviceCatalogueState.status === "ready" && isServicesComplete(servicesForm, locationForm.primaryLocation.countryCode, businessForm.organizationType, serviceCatalogueState.items);
+  const canCompleteStepSix = isPayoutTaxComplete(payoutTaxForm) || ["SUBMITTED", "UNDER_REVIEW", "VERIFIED"].includes(activeBundle?.payoutTaxReview?.status ?? "");
 
   useEffect(() => {
     formRef.current = form;
@@ -559,6 +593,10 @@ export default function PartnerApplicationWorkspaceClient({
   useEffect(() => {
     servicesFormRef.current = servicesForm;
   }, [servicesForm]);
+
+  useEffect(() => {
+    payoutTaxFormRef.current = payoutTaxForm;
+  }, [payoutTaxForm]);
 
   useEffect(() => {
     let cancelled = false;
@@ -599,10 +637,12 @@ export default function PartnerApplicationWorkspaceClient({
       const nextBusinessForm = savedForState?.businessForm ?? businessFormFromBundle(qaBundle);
       const nextLocationForm = savedForState?.locationForm ?? locationFormFromBundle(qaBundle);
       const nextServicesForm = savedForState?.servicesForm ?? servicesFormFromBundle(qaBundle);
+      const nextPayoutTaxForm = savedForState?.payoutTaxForm ?? payoutTaxFormFromBundle(qaBundle);
       setForm(nextForm);
       setBusinessForm(nextBusinessForm);
       setLocationForm(nextLocationForm);
       setServicesForm(nextServicesForm);
+      setPayoutTaxForm(nextPayoutTaxForm);
       setActiveServiceDomainIds(serviceDomainIdsFromCodes(nextServicesForm.selectedServiceCodes, serviceCatalogueState.items));
       setQaVerifiedContacts(savedForState?.verified ?? {
         mobile: contactVerified(qaBundle, "mobile", normalizedMobile(nextForm.businessMobile, nextForm.countryCode)),
@@ -628,6 +668,7 @@ export default function PartnerApplicationWorkspaceClient({
         setLocationForm(locationFormFromBundle(result.data));
         const nextServicesForm = servicesFormFromBundle(result.data);
         setServicesForm(nextServicesForm);
+        setPayoutTaxForm(payoutTaxFormFromBundle(result.data));
         setActiveServiceDomainIds(serviceDomainIdsFromCodes(nextServicesForm.selectedServiceCodes, serviceCatalogueState.items));
         setLastSavedAt(readLastSaved(result.data));
         setActiveStep(resolveActiveStep(result.data));
@@ -718,6 +759,15 @@ export default function PartnerApplicationWorkspaceClient({
     setSaveStatus("idle");
   }
 
+  function updatePayoutTaxForm(next: Partial<PayoutTaxForm>) {
+    setPayoutTaxForm((current) => {
+      const resolved = { ...current, ...next };
+      payoutTaxFormRef.current = resolved;
+      return resolved;
+    });
+    setSaveStatus("idle");
+  }
+
   function removeSelectedService(service: PartnerServiceCatalogueItem) {
     updateServicesForm((current) => {
       const remainingCodes = current.selectedServiceCodes.filter((code) => code !== service.stableCode);
@@ -751,6 +801,7 @@ export default function PartnerApplicationWorkspaceClient({
       businessForm: businessFormRef.current,
       locationForm: locationFormRef.current,
       servicesForm: servicesFormRef.current,
+      payoutTaxForm: payoutTaxFormRef.current,
       verified: qaVerifiedContacts,
       activeStep: step,
       state: qaPreviewState,
@@ -780,6 +831,7 @@ export default function PartnerApplicationWorkspaceClient({
     if (activeStep === "business_location") return saveBusinessLocationDraft(options);
     if (activeStep === "services") return saveServicesDraft(options);
     if (activeStep === "documents_compliance") return saveVerificationDraft(options);
+    if (activeStep === "payout_tax") return savePayoutTaxDraft(options);
     setSaveStatus("saving");
     if (!options.silent) setMessage({ tone: "info", text: "Saving your draft." });
     const payload = {
@@ -927,6 +979,37 @@ export default function PartnerApplicationWorkspaceClient({
     setLastSavedAt(savedAt);
     setSaveStatus("saved");
     if (!options.silent) setMessage({ tone: "success", text: options.continueAfter ? "Verification progress saved. Continue with Payout & Tax next." : "Verification progress saved." });
+    return result.data;
+  }
+
+  async function savePayoutTaxDraft(options: { silent?: boolean; continueAfter?: boolean } = {}) {
+    if (qaPreviewEnabled) {
+      const savedAt = new Date().toISOString();
+      setSaveStatus("saved");
+      setLastSavedAt(savedAt);
+      writeQaDraft(currentQaDraftPayload(options.continueAfter ? "partner_agreement" : "payout_tax", savedAt));
+      if (!options.silent) setMessage({ tone: "success", text: options.continueAfter ? "Preview payout and tax details saved. Continue with Partner Agreement next." : "Preview payout and tax details saved." });
+      return previewBundle;
+    }
+    const organizationId = activeBundle?.organization.id || payoutTaxForm.organizationId || servicesForm.organizationId || locationForm.organizationId || businessForm.organizationId || form.organizationId;
+    if (!organizationId) {
+      setMessage({ tone: "warning", text: "Save your application before adding payout and tax details." });
+      return null;
+    }
+    setSaveStatus("saving");
+    if (!options.silent) setMessage({ tone: "info", text: "Saving payout and tax details." });
+    const result = await savePartnerPayoutTaxDraft(payoutTaxPayload({ ...payoutTaxForm, organizationId }, options.continueAfter === true));
+    if (!result.ok) {
+      setSaveStatus("error");
+      if (!options.silent) setMessage({ tone: "error", text: result.error.message || "Could not save payout and tax details." });
+      return null;
+    }
+    setBundle(result.data);
+    setPayoutTaxForm(payoutTaxFormFromBundle(result.data));
+    const savedAt = readLastSaved(result.data) ?? new Date().toISOString();
+    setLastSavedAt(savedAt);
+    setSaveStatus("saved");
+    if (!options.silent) setMessage({ tone: "success", text: options.continueAfter ? "Payout and tax details submitted for review. Continue with Partner Agreement next." : "Payout and tax details saved." });
     return result.data;
   }
 
@@ -1130,6 +1213,16 @@ export default function PartnerApplicationWorkspaceClient({
       } else {
         setFocusedVerificationSectionId(firstRequiredVerificationSectionId(saved));
         setMessage({ tone: "warning", text: "Complete this required check before continuing." });
+      }
+      return;
+    }
+    if (activeStep === "payout_tax") {
+      const saved = await savePayoutTaxDraft({ continueAfter: true });
+      if (!saved) return;
+      if (canCompleteStepSix || ["SUBMITTED", "UNDER_REVIEW", "VERIFIED"].includes(saved.payoutTaxReview?.status ?? "")) {
+        setActiveStep("partner_agreement");
+      } else {
+        setMessage({ tone: "warning", text: "Complete the required payout and tax details before continuing." });
       }
       return;
     }
@@ -1378,7 +1471,7 @@ export default function PartnerApplicationWorkspaceClient({
                 onFocusSectionHandled={() => setFocusedVerificationSectionId(null)}
               />
             ) : activeStep === "payout_tax" ? (
-              <PayoutTaxPlaceholder />
+              <PayoutTaxStep form={payoutTaxForm} bundle={activeBundle} canComplete={canCompleteStepSix} onChange={updatePayoutTaxForm} />
             ) : (
               <PlaceholderStep step={workspaceSteps.find((step) => step.id === activeStep) ?? workspaceSteps[1]!} />
             )}
@@ -3230,16 +3323,151 @@ function VerificationComplianceStep({
     </div>
   );
 }
-function PayoutTaxPlaceholder() {
+function PayoutField({ label, value, onChange, placeholder, maxLength }: { label: string; value: string; onChange: (value: string) => void; placeholder?: string; maxLength?: number }) {
   return (
-    <div data-application-active-step="payout_tax" className="rounded-2xl border border-white/10 bg-[#171a20] p-6 shadow-2xl">
-      <p className="text-xs font-black uppercase tracking-[0.16em] text-[#fb923c]">Step 6</p>
-      <h1 className="mt-2 text-2xl font-black sm:text-3xl">Payout & Tax</h1>
-      <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-300">
-        Add the payout and tax details required for your Partner account.
-      </p>
+    <label className="grid gap-2">
+      <span className="text-xs font-black uppercase tracking-[0.1em] text-slate-300">{label}</span>
+      <input value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} maxLength={maxLength} className="h-11 rounded-xl border border-white/10 bg-[#0f1217] px-3 text-sm font-semibold text-white outline-none placeholder:text-slate-600 focus:border-[#f97316] focus:ring-2 focus:ring-[#f97316]/25" />
+    </label>
+  );
+}
+
+function PayoutSelect({ label, value, onChange, children }: { label: string; value: string; onChange: (value: string) => void; children: ReactNode }) {
+  return (
+    <label className="grid gap-2">
+      <span className="text-xs font-black uppercase tracking-[0.1em] text-slate-300">{label}</span>
+      <select value={value} onChange={(event) => onChange(event.target.value)} className="h-11 rounded-xl border border-white/10 bg-[#0f1217] px-3 text-sm font-semibold text-white outline-none focus:border-[#f97316] focus:ring-2 focus:ring-[#f97316]/25">
+        {children}
+      </select>
+    </label>
+  );
+}
+
+function PayoutTaxStep({
+  form,
+  bundle,
+  canComplete,
+  onChange,
+}: {
+  form: PayoutTaxForm;
+  bundle: PartnerOrganizationBundle | null;
+  canComplete: boolean;
+  onChange: (next: Partial<PayoutTaxForm>) => void;
+}) {
+  const isIndiaBank = /^india|^in$/i.test(form.bankCountry);
+  const isIndiaTax = /^india|^in$/i.test(form.taxResidencyCountry);
+  const review = bundle?.payoutTaxReview;
+  const payout = bundle?.payoutProfile;
+  const tax = bundle?.taxProfile;
+  const sections: Array<{ id: PayoutTaxForm["activeSection"]; label: string; done: boolean; detail: string }> = [
+    { id: "country", label: "Payout country and currency", done: Boolean(form.payoutCountry && form.settlementCurrency), detail: `${form.payoutCountry || "Country"} · ${form.settlementCurrency || "Currency"}` },
+    { id: "beneficiary", label: "Who will receive the payout?", done: Boolean(form.beneficiaryType && form.beneficiaryLegalName.trim()), detail: `${form.beneficiaryType === "individual" ? "Individual" : "Business"} beneficiary` },
+    { id: "bank", label: "Bank account details", done: Boolean((payout?.bankAccountMasked || form.bankAccountIdentifier) && (isIndiaBank ? form.ifsc : form.iban || form.swiftBic || form.routingNumber)), detail: payout?.bankAccountMasked ? `Saved as ${payout.bankAccountMasked}` : "Manual review will be used" },
+    { id: "tax", label: "Tax details", done: Boolean(form.legalTaxName && (isIndiaTax ? tax?.indiaPanMasked || form.indiaPan : tax?.foreignTaxIdentifierMasked || form.foreignTaxIdentifier || form.taxIdentifier)), detail: isIndiaTax ? "PAN/GST where applicable" : "Local tax identifier where applicable" },
+    { id: "documents", label: "Supporting documents", done: true, detail: "Use private document upload when requested by review" },
+    { id: "review", label: "Review your details", done: canComplete, detail: review ? payoutTaxStatusLabel(review.status) : "Ready when required fields are complete" },
+  ];
+  const active = sections.find((section) => section.id === form.activeSection) ?? sections[0]!;
+  const routingSummary = isIndiaBank ? `IFSC ${form.ifsc || "not added"}` : form.iban ? "IBAN added" : form.swiftBic ? `SWIFT/BIC ${form.swiftBic}` : form.routingNumber ? "Routing number added" : "Routing code needed";
+  return (
+    <div data-application-active-step="payout_tax" className="rounded-2xl border border-white/10 bg-[#171a20] shadow-2xl">
+      <div className="border-b border-white/10 p-5">
+        <p className="text-xs font-black uppercase tracking-[0.16em] text-[#fb923c]">Step 6</p>
+        <h1 className="mt-2 text-2xl font-black sm:text-3xl">Payout & Tax</h1>
+        <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-slate-300">
+          Add the bank and tax details TPL needs before payouts can be reviewed. This does not activate payouts or move money.
+        </p>
+        <div className="mt-4 flex flex-wrap gap-2 text-xs font-black">
+          <span className="rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-amber-100">Manual review available</span>
+          <span className="rounded-full border border-slate-500/30 bg-slate-500/10 px-3 py-1 text-slate-200">Provider setup pending</span>
+          <span className="rounded-full border border-sky-400/30 bg-sky-400/10 px-3 py-1 text-sky-100">Sensitive values stay masked</span>
+        </div>
+      </div>
+      <div className="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_280px]">
+        <div className="space-y-3">
+          {sections.map((section) => (
+            <section key={section.id} className={`rounded-2xl border ${section.id === form.activeSection ? "border-[#f97316]/45 bg-[#11141a]" : "border-white/10 bg-[#11141a]/70"}`}>
+              <button type="button" onClick={() => onChange({ activeSection: section.id })} className="flex w-full items-center justify-between gap-3 p-4 text-left focus:outline-none focus:ring-2 focus:ring-sky-300">
+                <span>
+                  <span className="block text-sm font-black text-white">{section.label}</span>
+                  <span className="mt-1 block text-xs font-semibold text-slate-400">{section.detail}</span>
+                </span>
+                <span className={`flex h-8 w-8 items-center justify-center rounded-full ${section.done ? "bg-emerald-500/15 text-emerald-200" : "bg-slate-700 text-slate-300"}`}>{section.done ? <Check size={16} /> : <ChevronDown size={16} />}</span>
+              </button>
+              {section.id === active.id ? (
+                <div className="grid gap-4 border-t border-white/10 p-4">
+                  {active.id === "country" ? (
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <PayoutSelect label="Payout country" value={form.payoutCountry} onChange={(value) => onChange({ payoutCountry: value, bankCountry: value, settlementCurrency: value === "India" ? "INR" : form.settlementCurrency || "USD", taxResidencyCountry: value })}>{countryOptions.map((country) => <option key={country.countryCode}>{country.displayName}</option>)}</PayoutSelect>
+                      <PayoutField label="Settlement currency" value={form.settlementCurrency} onChange={(value) => onChange({ settlementCurrency: value.toUpperCase() })} placeholder="INR" maxLength={3} />
+                    </div>
+                  ) : active.id === "beneficiary" ? (
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <PayoutSelect label="Beneficiary type" value={form.beneficiaryType} onChange={(value) => onChange({ beneficiaryType: value as PayoutTaxForm["beneficiaryType"] })}><option value="business">Business</option><option value="individual">Individual</option></PayoutSelect>
+                      <PayoutField label="Account-holder legal name" value={form.beneficiaryLegalName} onChange={(value) => onChange({ beneficiaryLegalName: value })} placeholder="Legal name on bank account" />
+                    </div>
+                  ) : active.id === "bank" ? (
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <PayoutSelect label="Bank country" value={form.bankCountry} onChange={(value) => onChange({ bankCountry: value })}>{countryOptions.map((country) => <option key={country.countryCode}>{country.displayName}</option>)}</PayoutSelect>
+                      <PayoutField label="Bank name" value={form.bankName} onChange={(value) => onChange({ bankName: value })} placeholder="Bank name" />
+                      <PayoutField label={payout?.bankAccountMasked ? `Saved account ${payout.bankAccountMasked}` : "Bank account number"} value={form.bankAccountIdentifier} onChange={(value) => onChange({ bankAccountIdentifier: value })} placeholder={payout?.bankAccountMasked ? "Enter only to replace" : "Enter account number"} />
+                      <PayoutField label="Re-enter account number" value={form.bankAccountConfirmation} onChange={(value) => onChange({ bankAccountConfirmation: value })} placeholder="Confirm account number" />
+                      {isIndiaBank ? <PayoutField label="IFSC" value={form.ifsc} onChange={(value) => onChange({ ifsc: value.toUpperCase() })} placeholder="ABCD0123456" /> : <><PayoutField label="IBAN" value={form.iban} onChange={(value) => onChange({ iban: value.toUpperCase() })} placeholder="If used in your country" /><PayoutField label="SWIFT/BIC or routing number" value={form.swiftBic || form.routingNumber} onChange={(value) => onChange({ swiftBic: value.toUpperCase(), routingNumber: value.toUpperCase() })} placeholder="Bank routing code" /></>}
+                      <PayoutField label="Account type" value={form.accountType} onChange={(value) => onChange({ accountType: value })} placeholder="Current / Savings / Checking" />
+                    </div>
+                  ) : active.id === "tax" ? (
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <PayoutSelect label="Tax residency" value={form.taxResidencyCountry} onChange={(value) => onChange({ taxResidencyCountry: value, taxIdentifierType: value === "India" ? "PAN" : "TIN" })}>{countryOptions.map((country) => <option key={country.countryCode}>{country.displayName}</option>)}</PayoutSelect>
+                      <PayoutField label="Legal tax name" value={form.legalTaxName} onChange={(value) => onChange({ legalTaxName: value })} placeholder="Name used for tax records" />
+                      {isIndiaTax ? <><PayoutField label={tax?.indiaPanMasked ? `Saved PAN ${tax.indiaPanMasked}` : "PAN"} value={form.indiaPan} onChange={(value) => onChange({ indiaPan: value.toUpperCase() })} placeholder={tax?.indiaPanMasked ? "Enter only to replace" : "ABCDE1234F"} /><label className="flex items-center gap-3 rounded-xl border border-white/10 bg-[#171a20] p-3 text-sm font-bold text-slate-200"><input type="checkbox" checked={form.gstRegistered} onChange={(event) => onChange({ gstRegistered: event.target.checked })} className="h-4 w-4 rounded border-white/20 bg-[#11141a]" />GST registered</label>{form.gstRegistered ? <><PayoutField label={tax?.indiaGstinMasked ? `Saved GSTIN ${tax.indiaGstinMasked}` : "GSTIN"} value={form.indiaGstin} onChange={(value) => onChange({ indiaGstin: value.toUpperCase() })} placeholder="22ABCDE1234F1Z5" /><PayoutField label="GST registration state" value={form.gstRegistrationState} onChange={(value) => onChange({ gstRegistrationState: value })} placeholder="State" /></> : null}</> : <><PayoutField label="Tax identifier type" value={form.taxIdentifierType} onChange={(value) => onChange({ taxIdentifierType: value })} placeholder="TIN / VAT / local tax ID" /><PayoutField label={tax?.foreignTaxIdentifierMasked ? `Saved tax ID ${tax.foreignTaxIdentifierMasked}` : "Tax identifier"} value={form.foreignTaxIdentifier || form.taxIdentifier} onChange={(value) => onChange({ foreignTaxIdentifier: value, taxIdentifier: value })} placeholder="Local tax identifier" /></>}
+                    </div>
+                  ) : active.id === "documents" ? (
+                    <div className="rounded-xl border border-sky-400/20 bg-sky-400/10 p-4 text-sm font-semibold leading-6 text-sky-100">Upload cancelled cheque, bank letter, PAN/GST certificate or local tax evidence only when requested. Documents use the existing private upload flow and are not public.</div>
+                  ) : (
+                    <div className="grid gap-3 rounded-xl border border-white/10 bg-[#171a20] p-4 text-sm font-semibold text-slate-200">
+                      <p>{canComplete ? "Required Step 6 details are ready to submit for manual review." : "Complete the highlighted payout and tax fields before continuing."}</p>
+                      <p>Bank status: {payoutTaxStatusLabel(review?.bankStatus ?? payout?.bankVerificationStatus ?? "NOT_PROVIDED")}</p>
+                      <p>Tax status: {payoutTaxStatusLabel(review?.taxStatus ?? tax?.taxRegistrationStatus ?? "NOT_PROVIDED")}</p>
+                    </div>
+                  )}
+                </div>
+              ) : null}
+            </section>
+          ))}
+        </div>
+        <aside className="h-fit rounded-2xl border border-white/10 bg-[#11141a] p-4">
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-[#fb923c]">Step 6 summary</p>
+          <dl className="mt-4 space-y-3 text-sm">
+            <SummaryRow label="Country" value={`${form.payoutCountry} · ${form.settlementCurrency}`} />
+            <SummaryRow label="Beneficiary" value={`${form.beneficiaryLegalName || "Not added"} · ${form.beneficiaryType}`} />
+            <SummaryRow label="Bank" value={payout?.bankAccountMasked || "Masked after save"} />
+            <SummaryRow label="Routing" value={routingSummary} />
+            <SummaryRow label="Bank review" value={payoutTaxStatusLabel(review?.bankStatus ?? payout?.bankVerificationStatus ?? "NOT_PROVIDED")} />
+            <SummaryRow label="Tax residency" value={form.taxResidencyCountry} />
+            <SummaryRow label="Tax ID" value={tax?.indiaPanMasked || tax?.indiaGstinMasked || tax?.foreignTaxIdentifierMasked || tax?.taxIdentifierMasked || "Masked after save"} />
+            <SummaryRow label="Tax review" value={payoutTaxStatusLabel(review?.taxStatus ?? tax?.taxRegistrationStatus ?? "NOT_PROVIDED")} />
+            <SummaryRow label="Remaining" value={canComplete ? "Ready to continue" : active.label} />
+          </dl>
+        </aside>
+      </div>
     </div>
   );
+}
+
+function SummaryRow({ label, value }: { label: string; value: string }) {
+  return <div className="flex items-start justify-between gap-3 border-b border-white/10 pb-2 last:border-b-0"><dt className="text-slate-400">{label}</dt><dd className="max-w-[150px] break-words text-right font-black text-white">{value}</dd></div>;
+}
+
+function payoutTaxStatusLabel(status: string): string {
+  if (status === "VERIFIED") return "Verified";
+  if (status === "UNDER_REVIEW") return "Under review";
+  if (status === "SUBMITTED") return "Submitted for verification";
+  if (status === "CHANGES_REQUIRED") return "Changes required";
+  if (status === "REJECTED") return "Rejected";
+  if (status === "EXPIRED") return "Expired";
+  if (status === "PROVIDER_SETUP_PENDING") return "Provider setup pending";
+  if (status === "DRAFT") return "Draft";
+  return "Not provided";
 }
 
 function PlaceholderStep({ step }: { step: (typeof workspaceSteps)[number] }) {
@@ -3391,6 +3619,114 @@ function emptyServicesForm(): ServicesForm {
     requestedServices: [],
     requestPanelOpen: false,
   };
+}
+
+function emptyPayoutTaxForm(): PayoutTaxForm {
+  return {
+    activeSection: "country",
+    payoutCountry: "India",
+    settlementCurrency: "INR",
+    beneficiaryType: "business",
+    beneficiaryLegalName: "",
+    bankCountry: "India",
+    bankName: "",
+    bankAccountIdentifier: "",
+    bankAccountConfirmation: "",
+    ifsc: "",
+    swiftBic: "",
+    iban: "",
+    routingNumber: "",
+    accountType: "",
+    taxResidencyCountry: "India",
+    taxpayerType: "",
+    legalTaxName: "",
+    taxIdentifierType: "PAN",
+    taxIdentifier: "",
+    indiaPan: "",
+    gstRegistered: false,
+    indiaGstin: "",
+    gstRegistrationState: "",
+    foreignTaxIdentifier: "",
+    documentIntent: "Manual review available",
+  };
+}
+
+function payoutTaxFormFromBundle(bundle: PartnerOrganizationBundle | null): PayoutTaxForm {
+  const payout = bundle?.payoutProfile;
+  const tax = bundle?.taxProfile;
+  const routing = payout?.routingInfo ?? {};
+  const country = payout?.payoutCountry || bundle?.organization.country || "India";
+  const isIndia = /^india|^in$/i.test(country);
+  return {
+    ...emptyPayoutTaxForm(),
+    organizationId: bundle?.organization.id,
+    activeSection: bundle?.payoutTaxReview?.status === "SUBMITTED" || bundle?.payoutTaxReview?.status === "UNDER_REVIEW" || bundle?.payoutTaxReview?.status === "VERIFIED" ? "review" : "country",
+    payoutCountry: country,
+    settlementCurrency: payout?.settlementCurrency || (isIndia ? "INR" : "USD"),
+    beneficiaryType: payout?.beneficiaryType || (bundle?.organization.organizationType === "Individual Professional" ? "individual" : "business"),
+    beneficiaryLegalName: payout?.beneficiaryLegalName || bundle?.organization.legalName || "",
+    bankCountry: payout?.bankCountry || country,
+    bankName: payout?.bankName || "",
+    bankAccountIdentifier: "",
+    bankAccountConfirmation: "",
+    ifsc: String(routing.ifsc ?? ""),
+    swiftBic: String(routing.swiftBic ?? ""),
+    iban: String(routing.iban ?? ""),
+    routingNumber: String(routing.routingNumber ?? ""),
+    accountType: payout?.accountType || "",
+    taxResidencyCountry: tax?.taxResidencyCountries?.[0] || bundle?.organization.country || country,
+    taxpayerType: tax?.taxpayerType || bundle?.organization.organizationType || "",
+    legalTaxName: tax?.legalTaxName || bundle?.organization.legalName || "",
+    taxIdentifierType: tax?.taxIdentifierType || (isIndia ? "PAN" : "TIN"),
+    taxIdentifier: "",
+    indiaPan: "",
+    gstRegistered: Boolean(tax?.indiaGstinMasked),
+    indiaGstin: "",
+    gstRegistrationState: tax?.gstRegistrationState || "",
+    foreignTaxIdentifier: "",
+    documentIntent: "Manual review available",
+  };
+}
+
+function payoutTaxPayload(form: PayoutTaxForm, continueAfter = false): PartnerPayoutTaxDraftInput {
+  return {
+    organizationId: form.organizationId ?? "",
+    continueAfter,
+    payout: {
+      payoutCountry: form.payoutCountry,
+      settlementCurrency: form.settlementCurrency,
+      beneficiaryType: form.beneficiaryType,
+      beneficiaryLegalName: form.beneficiaryLegalName,
+      bankCountry: form.bankCountry,
+      bankName: form.bankName,
+      bankAccountIdentifier: form.bankAccountIdentifier,
+      bankAccountConfirmation: form.bankAccountConfirmation,
+      routingInfo: { ifsc: form.ifsc, swiftBic: form.swiftBic, iban: form.iban, routingNumber: form.routingNumber },
+      accountType: form.accountType,
+    },
+    tax: {
+      taxResidencyCountries: [form.taxResidencyCountry],
+      taxpayerType: form.taxpayerType,
+      taxIdentifierType: form.taxIdentifierType,
+      taxIdentifier: form.taxIdentifier,
+      indiaPan: form.indiaPan,
+      gstRegistered: form.gstRegistered,
+      indiaGstin: form.indiaGstin,
+      gstRegistrationState: form.gstRegistrationState,
+      foreignTaxIdentifier: form.foreignTaxIdentifier,
+      legalTaxName: form.legalTaxName,
+      withholdingDeclaration: { payoutActivationAllowed: false },
+    },
+  };
+}
+
+function isPayoutTaxComplete(form: PayoutTaxForm): boolean {
+  const indiaBank = /^india|^in$/i.test(form.bankCountry);
+  const indiaTax = /^india|^in$/i.test(form.taxResidencyCountry);
+  const accountReady = Boolean(form.bankAccountIdentifier || form.bankAccountConfirmation);
+  const routingReady = indiaBank ? Boolean(form.ifsc.trim()) : Boolean(form.iban.trim() || form.swiftBic.trim() || form.routingNumber.trim());
+  const taxReady = indiaTax ? Boolean(form.indiaPan.trim()) && (!form.gstRegistered || Boolean(form.indiaGstin.trim())) : Boolean(form.foreignTaxIdentifier.trim() || form.taxIdentifier.trim());
+  return Boolean(form.beneficiaryLegalName.trim() && accountReady && routingReady && form.legalTaxName.trim() && taxReady);
 }
 
 function businessFormFromBundle(bundle: PartnerOrganizationBundle | null): BusinessIdentityForm {
@@ -4186,7 +4522,7 @@ function isWorkspaceStep(value: unknown): value is WorkspaceStepId {
   return typeof value === "string" && workspaceSteps.some((step) => step.id === value);
 }
 
-function readQaDraft(): { form: AccountContactForm; businessForm: BusinessIdentityForm; locationForm: BusinessLocationForm; servicesForm: ServicesForm; verified: { mobile: boolean; email: boolean }; activeStep: WorkspaceStepId; state: PartnerQaPreviewState; savedAt: string } | null {
+function readQaDraft(): { form: AccountContactForm; businessForm: BusinessIdentityForm; locationForm: BusinessLocationForm; servicesForm: ServicesForm; payoutTaxForm?: PayoutTaxForm; verified: { mobile: boolean; email: boolean }; activeStep: WorkspaceStepId; state: PartnerQaPreviewState; savedAt: string } | null {
   try {
     const raw = window.localStorage.getItem(qaDraftStorageKey);
     if (!raw) return null;
@@ -4208,7 +4544,7 @@ function readQaDraft(): { form: AccountContactForm; businessForm: BusinessIdenti
   }
 }
 
-function writeQaDraft(input: { form: AccountContactForm; businessForm: BusinessIdentityForm; locationForm: BusinessLocationForm; servicesForm: ServicesForm; verified: { mobile: boolean; email: boolean }; activeStep: WorkspaceStepId; state: PartnerQaPreviewState; savedAt: string }) {
+function writeQaDraft(input: { form: AccountContactForm; businessForm: BusinessIdentityForm; locationForm: BusinessLocationForm; servicesForm: ServicesForm; payoutTaxForm?: PayoutTaxForm; verified: { mobile: boolean; email: boolean }; activeStep: WorkspaceStepId; state: PartnerQaPreviewState; savedAt: string }) {
   window.localStorage.setItem(qaDraftStorageKey, JSON.stringify(input));
 }
 
