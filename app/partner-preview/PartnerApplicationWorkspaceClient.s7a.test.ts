@@ -133,6 +133,39 @@ test("Website Experience Step 7 uses dedicated path-based content pages", () => 
   expect(websiteExperienceSource).toContain("partnerApplicationBackLabel");
 });
 
+test("Agreement template upload uses verified backend upload before showing Uploaded", () => {
+  const apiClientSource = readFileSync(join(process.cwd(), "app/lib/admin/adminApiClient.ts"), "utf8");
+  expect(apiClientSource).toContain("/api/v1/admin/partners/agreement-templates/upload?");
+  expect(apiClientSource).toContain("body: input.file");
+  expect(apiClientSource).toContain('uploadStatus: "UPLOADED"');
+  expect(websiteExperienceSource).toContain('type TemplateUploadState = "idle" | "selected" | "preparing" | "uploading" | "verifying" | "uploaded" | "failed"');
+  expect(websiteExperienceSource).toContain('data-agreement-template-upload-state={uploadState}');
+  expect(websiteExperienceSource).toContain('result.data.uploadStatus !== "UPLOADED"');
+  expect(websiteExperienceSource).toContain("Storage verification failed. Retry the upload.");
+  expect(websiteExperienceSource).toContain("Wait for the selected file to finish uploading before saving this draft.");
+});
+
+test("Agreement template Save Draft hands off to the central Draft queue exactly once", () => {
+  const apiClientSource = readFileSync(join(process.cwd(), "app/lib/admin/adminApiClient.ts"), "utf8");
+  expect(apiClientSource).toContain("AdminAgreementTemplateCentralDraft");
+  expect(apiClientSource).toContain("centralDraft:");
+  expect(websiteExperienceSource).toContain('data-agreement-template-central-draft-handoff="ready"');
+  expect(websiteExperienceSource).toContain("Open Draft");
+  expect(websiteExperienceSource).toContain("Open saved draft");
+  expect(websiteExperienceSource).toContain("result.data.centralDraft?.route");
+  expect(websiteExperienceSource).not.toContain("setMessage(result.data.safeMessage);\\n    onSaveDraft();");
+});
+
+test("Central Draft queue exposes draft actions and hides editor audit clutter", () => {
+  expect(websiteExperienceSource).toContain("Not ready for approval yet:");
+  expect(websiteExperienceSource).toContain("row.draftContent.agreementTemplateDraft.readinessMissing");
+  expect(websiteExperienceSource).toContain("Send for Approval");
+  expect(websiteExperienceSource).toContain("Full activity remains in central History.");
+  const templatePanel = websiteExperienceSource.slice(websiteExperienceSource.indexOf("function AgreementTemplateDraftPanel"), websiteExperienceSource.indexOf("const defaultAgreementPlaceholders"));
+  expect(templatePanel).not.toContain("Recent Audit Log");
+  expect(templatePanel).not.toContain("Version History");
+});
+
 test("Step 7 Admin copy hides developer language on normal pages", () => {
   const visibleCopy = websiteExperienceSource
     .replace(/type AgreementTemplateDraftState[\s\S]*?function AgreementTemplateDraftPanel/, "function AgreementTemplateDraftPanel")

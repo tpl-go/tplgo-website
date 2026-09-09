@@ -689,6 +689,14 @@ export type WebsiteExperienceContent = {
   footerTrustLine: string;
   active: boolean;
   applicationTree?: PartnerApplicationContentTree;
+  agreementTemplateDraft?: {
+    templateId: string;
+    title: string;
+    targetLabel: string;
+    readinessMissing: string[];
+    centralDraftRoute: string;
+    updatedAt?: string;
+  };
 };
 
 export type WebsiteExperienceAdminContext = {
@@ -2794,63 +2802,81 @@ export type AdminAgreementTemplateUploadSession = {
   executionStatus: string;
 };
 
+export type AdminAgreementTemplateUploadedDocument = AdminAgreementTemplateUploadSession & {
+  filename: string;
+  mimeType: string;
+  sizeBytes: number;
+  uploadStatus: "UPLOADED";
+  verified: true;
+  checksumSha256?: string;
+};
+
+export type AdminAgreementTemplateCentralDraft = {
+  id: string;
+  targetLabel: string;
+  route: string;
+  status: string;
+  draftVersion: number;
+  savedAt: string;
+} | null;
+
 export async function getAdminAgreementTemplates(): Promise<AdminApiResult<AdminAgreementTemplateManagerResponse>> {
   return adminApiRequest<AdminAgreementTemplateManagerResponse>("/api/v1/admin/partners/agreement-templates");
 }
 
-export async function saveAdminAgreementTemplateDraft(input: Partial<AdminAgreementTemplate> & { title: string }): Promise<AdminApiResult<{ template: AdminAgreementTemplate; targetLabel: string; safeMessage: string }>> {
-  return adminApiRequest<{ template: AdminAgreementTemplate; targetLabel: string; safeMessage: string }>("/api/v1/admin/partners/agreement-templates/draft", {
+export async function saveAdminAgreementTemplateDraft(input: Partial<AdminAgreementTemplate> & { title: string }): Promise<AdminApiResult<{ template: AdminAgreementTemplate; targetLabel: string; centralDraft: AdminAgreementTemplateCentralDraft; safeMessage: string }>> {
+  return adminApiRequest<{ template: AdminAgreementTemplate; targetLabel: string; centralDraft: AdminAgreementTemplateCentralDraft; safeMessage: string }>("/api/v1/admin/partners/agreement-templates/draft", {
     method: "POST",
     body: input,
   });
 }
 
-export async function uploadAdminAgreementTemplateDocument(input: { file: File }): Promise<AdminApiResult<AdminAgreementTemplateUploadSession & { filename: string; mimeType: string; sizeBytes: number }>> {
-  const session = await adminApiRequest<AdminAgreementTemplateUploadSession>("/api/v1/admin/partners/agreement-templates/upload-session", {
-    method: "POST",
-    body: {
-      filename: input.file.name,
-      mimeType: input.file.type || "application/octet-stream",
-      sizeBytes: input.file.size,
-    },
-  });
-  if (!session.ok) return session as AdminApiResult<AdminAgreementTemplateUploadSession & { filename: string; mimeType: string; sizeBytes: number }>;
-  if (session.data.uploadMode !== "signed_url" || !session.data.upload?.url) {
-    return {
-      ok: true,
-      data: { ...session.data, filename: input.file.name, mimeType: input.file.type || "application/octet-stream", sizeBytes: input.file.size },
-      meta: session.meta,
-      status: session.status,
-      requestId: session.requestId,
-    };
+export async function uploadAdminAgreementTemplateDocument(input: { file: File }): Promise<AdminApiResult<AdminAgreementTemplateUploadedDocument>> {
+  const requestId = createAdminRequestId();
+  if (!API_BASE_URL) {
+    return failure(requestId, 0, {
+      code: "ADMIN_API_NOT_CONFIGURED",
+      message: "TPL API base URL is not configured.",
+    });
   }
+  const token = readAdminSession()?.session.token;
+  if (!token) {
+    return failure(requestId, 401, {
+      code: "ADMIN_UNAUTHORIZED",
+      message: "Admin session expired or is not authorized. Sign in again.",
+    });
+  }
+  const params = new URLSearchParams({ filename: input.file.name });
   try {
-    const uploadResponse = await fetch(session.data.upload.url, {
-      method: session.data.upload.method || "PUT",
-      headers: session.data.upload.headers ?? { "Content-Type": input.file.type || "application/octet-stream" },
+    const response = await fetch(`${API_BASE_URL}/api/v1/admin/partners/agreement-templates/upload?${params.toString()}`, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+        "Content-Type": input.file.type || "application/octet-stream",
+        "X-Request-Id": requestId,
+      },
       body: input.file,
     });
-    if (!uploadResponse.ok) {
+    const payload = await readJson(response);
+    const responseRequestId = readRequestId(payload) || response.headers.get("x-request-id") || requestId;
+    if (response.ok && payload?.ok === true) {
       return {
-        ok: false,
-        error: { code: "ADMIN_AGREEMENT_TEMPLATE_UPLOAD_FAILED", message: "Agreement template upload failed. Try again or choose a supported PDF/DOCX file." },
-        status: uploadResponse.status,
-        requestId: session.requestId,
+        ok: true,
+        data: payload.data as AdminAgreementTemplateUploadedDocument,
+        meta: payload.meta as AdminApiMeta,
+        status: response.status,
+        requestId: responseRequestId,
       };
     }
-    return {
-      ok: true,
-      data: { ...session.data, filename: input.file.name, mimeType: input.file.type || "application/octet-stream", sizeBytes: input.file.size },
-      meta: session.meta,
-      status: session.status,
-      requestId: session.requestId,
-    };
-  } catch {
+    if (response.status === 401) clearAdminSession();
+    return failure(responseRequestId, response.status, readError(payload, response.status));
+  } catch (error) {
     return {
       ok: false,
-      error: { code: "ADMIN_AGREEMENT_TEMPLATE_UPLOAD_FAILED", message: "Agreement template upload failed. Check the file and try again." },
+      error: { code: "ADMIN_AGREEMENT_TEMPLATE_UPLOAD_FAILED", message: error instanceof Error ? error.message : "Agreement template upload failed. Check the file and try again." },
       status: 0,
-      requestId: session.requestId,
+      requestId,
     };
   }
 }

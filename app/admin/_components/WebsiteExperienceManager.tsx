@@ -230,16 +230,17 @@ export function WebsiteExperienceManager({
     void load();
   };
 
-  const workflowAction = async (action: "submit" | "approve" | "request-changes" | "delete-draft" | "archive" | "restore") => {
+  const workflowAction = async (action: "submit" | "approve" | "request-changes" | "delete-draft" | "archive" | "restore", contextOverride?: WebsiteExperienceContext) => {
+    const targetContext = contextOverride ?? activeContext;
     setBusyAction(action);
     setMessage("");
     const result =
-      action === "submit" ? await submitAdminWebsiteExperienceApproval(activeContext, reviewNote)
-      : action === "approve" ? await approveAdminWebsiteExperienceDraft(activeContext, reviewNote)
-      : action === "request-changes" ? await requestAdminWebsiteExperienceChanges(activeContext, reviewNote)
-      : action === "delete-draft" ? await deleteAdminWebsiteExperienceDraft(activeContext)
-      : action === "archive" ? await archiveAdminWebsiteExperienceContext(activeContext, reviewNote)
-      : await restoreAdminWebsiteExperienceContext(activeContext, reviewNote);
+      action === "submit" ? await submitAdminWebsiteExperienceApproval(targetContext, reviewNote)
+      : action === "approve" ? await approveAdminWebsiteExperienceDraft(targetContext, reviewNote)
+      : action === "request-changes" ? await requestAdminWebsiteExperienceChanges(targetContext, reviewNote)
+      : action === "delete-draft" ? await deleteAdminWebsiteExperienceDraft(targetContext)
+      : action === "archive" ? await archiveAdminWebsiteExperienceContext(targetContext, reviewNote)
+      : await restoreAdminWebsiteExperienceContext(targetContext, reviewNote);
     setBusyAction("");
     if (!result.ok) {
       setMessage(result.error.message);
@@ -324,6 +325,10 @@ export function WebsiteExperienceManager({
         catalogue={catalogueState.data}
         onOpen={openDraft}
         onPreview={openDraft}
+        onSubmit={(context) => {
+          setActiveContext(context);
+          void workflowAction("submit", context);
+        }}
       />
     );
   }
@@ -700,12 +705,14 @@ function WorkflowQueueView({
   catalogue,
   onOpen,
   onPreview,
+  onSubmit,
 }: {
   view: WorkflowView;
   data: WebsiteExperienceAdminResponse;
   catalogue?: AdminPartnerServiceCatalogueResponse | null;
   onOpen: (context: WebsiteExperienceContext, origin?: WorkflowView) => void;
   onPreview: (context: WebsiteExperienceContext, origin?: WorkflowView) => void;
+  onSubmit?: (context: WebsiteExperienceContext) => void;
 }) {
   const selected = workflowViews.find((item) => item.key === view) ?? workflowViews[0];
   const rows = workflowRowsForView(data, view);
@@ -756,6 +763,14 @@ function WorkflowQueueView({
               <p className="mt-1 text-sm leading-6 text-slate-400">{publishScope(row.context)}</p>
               <p className="mt-1 text-xs font-semibold text-slate-500">Draft v{row.draftVersion} - Published v{row.publishedVersion} - Changed {row.updatedAt ? formatDateTime(row.updatedAt) : "not available"}</p>
               {row.review?.note ? <p className="mt-2 rounded border border-orange-300/20 bg-orange-400/10 p-2 text-xs font-semibold text-orange-100">Review note: {row.review.note}</p> : null}
+              {row.draftContent.agreementTemplateDraft?.readinessMissing?.length ? (
+                <div className="mt-2 rounded border border-amber-300/20 bg-amber-400/10 p-2 text-xs font-semibold text-amber-100">
+                  <p>Not ready for approval yet:</p>
+                  <ul className="mt-1 grid gap-1">
+                    {row.draftContent.agreementTemplateDraft.readinessMissing.map((item) => <li key={item}>• {item}</li>)}
+                  </ul>
+                </div>
+              ) : null}
             </div>
             <div className="flex shrink-0 flex-wrap gap-2">
               <button type="button" onClick={() => onPreview(row.context, view)} className="inline-flex h-9 items-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-400/10 px-3 text-xs font-black text-cyan-100">
@@ -766,6 +781,12 @@ function WorkflowQueueView({
                 <Pencil className="h-4 w-4" />
                 Open/Edit
               </button>
+              {view === "drafts" ? (
+                <button type="button" disabled={Boolean(row.draftContent.agreementTemplateDraft?.readinessMissing?.length)} onClick={() => onSubmit?.(row.context)} className="inline-flex h-9 items-center gap-2 rounded-xl border border-emerald-300/20 bg-emerald-400/10 px-3 text-xs font-black text-emerald-100 disabled:cursor-not-allowed disabled:opacity-50">
+                  <Send className="h-4 w-4" />
+                  Send for Approval
+                </button>
+              ) : null}
             </div>
           </div>
         </div>
@@ -1059,7 +1080,6 @@ function PartnerApplicationTreeEditor({
           busyAction={busyAction}
           onNodeChange={(patch) => updateNode(selectedNode.id, patch)}
           onCtaChange={(key, value) => updateCta(selectedNode.id, key, value)}
-          onSaveDraft={onSaveDraft}
         />
       ) : null}
       <div className="space-y-3">
@@ -1159,7 +1179,6 @@ function StepSevenContentUnits({
   busyAction,
   onNodeChange,
   onCtaChange,
-  onSaveDraft,
 }: {
   activeUnit?: string;
   templateId?: string;
@@ -1168,7 +1187,6 @@ function StepSevenContentUnits({
   busyAction: string;
   onNodeChange: (patch: Record<string, string>) => void;
   onCtaChange: (key: string, value: string) => void;
-  onSaveDraft: () => void;
 }) {
   if (!activeUnit) {
     return (
@@ -1211,7 +1229,7 @@ function StepSevenContentUnits({
       </div>
       <section className="rounded border border-slate-200 bg-slate-50 p-4" data-step7-content-unit-editor={activeUnit}>
         {activeUnit === "agreement-templates" ? (
-          <AgreementTemplateDraftPanel canWrite={canWrite} busyAction={busyAction} templateId={templateId} onSaveDraft={onSaveDraft} />
+          <AgreementTemplateDraftPanel canWrite={canWrite} busyAction={busyAction} templateId={templateId} />
         ) : activeUnit === "signer-instructions" ? (
           <Field label="Signer instructions" value={node.rightHelpCopy} maxLength={300} onChange={(value) => onNodeChange({ rightHelpCopy: value })} />
         ) : activeUnit === "signing-methods" ? (
@@ -1258,14 +1276,19 @@ type AgreementTemplateDraftState = {
   sourceDocument?: Record<string, unknown> | null;
 };
 
-function AgreementTemplateDraftPanel({ canWrite, busyAction, templateId, onSaveDraft }: { canWrite: boolean; busyAction: string; templateId?: string; onSaveDraft: () => void }) {
+type TemplateUploadState = "idle" | "selected" | "preparing" | "uploading" | "verifying" | "uploaded" | "failed";
+
+function AgreementTemplateDraftPanel({ canWrite, busyAction, templateId }: { canWrite: boolean; busyAction: string; templateId?: string }) {
   const [templates, setTemplates] = useState<AdminAgreementTemplate[]>([]);
   const [supportedPlaceholders, setSupportedPlaceholders] = useState<string[]>([]);
   const [draft, setDraft] = useState<AgreementTemplateDraftState>(() => newAgreementTemplateDraft());
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [uploading, setUploading] = useState(false);
+  const [uploadState, setUploadState] = useState<TemplateUploadState>("idle");
+  const [uploadMessage, setUploadMessage] = useState("");
   const [saving, setSaving] = useState(false);
+  const [savedDraftRoute, setSavedDraftRoute] = useState("");
+  const [savedDraftLabel, setSavedDraftLabel] = useState("");
   useEffect(() => {
     let active = true;
     getAdminAgreementTemplates().then((result) => {
@@ -1283,6 +1306,7 @@ function AgreementTemplateDraftPanel({ canWrite, busyAction, templateId, onSaveD
         const selected = result.data.rows.find((item) => item.id === templateId);
         if (selected) {
           setDraft(draftFromAgreementTemplate(selected));
+          setUploadState(selected.metadata?.sourceDocument ? "uploaded" : "idle");
           setError("");
         } else {
           setError("This agreement template was not found.");
@@ -1298,12 +1322,34 @@ function AgreementTemplateDraftPanel({ canWrite, busyAction, templateId, onSaveD
   const updateDraft = (patch: Partial<AgreementTemplateDraftState>) => setDraft((current) => ({ ...current, ...patch }));
   const uploadTemplate = async (file: File | null) => {
     if (!file) return;
-    setUploading(true);
+    setUploadState("selected");
+    setUploadMessage("Selected");
     setError("");
+    const localValidation = validateAgreementTemplateUploadFile(file);
+    if (localValidation) {
+      setUploadState("failed");
+      setUploadMessage("Upload failed — Retry");
+      setError(localValidation);
+      return;
+    }
+    setUploadState("preparing");
+    setUploadMessage("Preparing upload");
+    await Promise.resolve();
+    setUploadState("uploading");
+    setUploadMessage("Uploading");
     const result = await uploadAdminAgreementTemplateDocument({ file });
-    setUploading(false);
     if (!result.ok) {
+      setUploadState("failed");
+      setUploadMessage("Upload failed — Retry");
       setError(result.error.message);
+      return;
+    }
+    setUploadState("verifying");
+    setUploadMessage("Verifying");
+    if (result.data.uploadStatus !== "UPLOADED" || result.data.verified !== true || !result.data.storageReference) {
+      setUploadState("failed");
+      setUploadMessage("Upload failed — Retry");
+      setError("Storage verification failed. Retry the upload.");
       return;
     }
     updateDraft({
@@ -1312,12 +1358,21 @@ function AgreementTemplateDraftPanel({ canWrite, busyAction, templateId, onSaveD
         filename: result.data.filename,
         mimeType: result.data.mimeType,
         sizeBytes: result.data.sizeBytes,
+        uploadStatus: result.data.uploadStatus,
+        verified: result.data.verified,
         publicUrl: null,
       },
     });
-    setMessage("Template document uploaded privately. Save as Draft keeps the reference with this template.");
+    setUploadState("uploaded");
+    setUploadMessage("Uploaded");
+    setMessage("Template document uploaded privately and verified. Save as Draft keeps the reference with this template.");
   };
   const saveTemplate = async () => {
+    const draftError = validateInitialAgreementTemplateDraft(draft, uploadState);
+    if (draftError) {
+      setError(draftError);
+      return;
+    }
     setSaving(true);
     setError("");
     const result = await saveAdminAgreementTemplateDraft({
@@ -1348,9 +1403,17 @@ function AgreementTemplateDraftPanel({ canWrite, busyAction, templateId, onSaveD
     }
     setTemplates((current) => [result.data.template, ...current.filter((item) => item.id !== result.data.template.id)]);
     setDraft(draftFromAgreementTemplate(result.data.template));
+    setSavedDraftRoute(result.data.centralDraft?.route ?? "");
+    setSavedDraftLabel(result.data.centralDraft?.targetLabel ?? result.data.targetLabel);
     setMessage(result.data.safeMessage);
-    onSaveDraft();
   };
+  const removeSourceDocument = () => {
+    updateDraft({ sourceDocument: null });
+    setUploadState("idle");
+    setUploadMessage("");
+    setMessage("Source document removed from this draft. Save as Draft to keep the change.");
+  };
+  const readiness = templateReadinessChecklist(draft);
   const preview = renderTemplatePreview(draft);
   return (
     <div className="grid gap-4" data-agreement-template-manager="functional">
@@ -1386,12 +1449,12 @@ function AgreementTemplateDraftPanel({ canWrite, busyAction, templateId, onSaveD
             <div>
               <h4 className="text-base font-black text-slate-950">{templateId === "new" ? "Add Agreement Template" : "Edit Agreement Template"}</h4>
               <p className="mt-1 text-sm leading-6 text-slate-600">One field per row. Draft templates cannot be issued to Partners until approved and published in the central workflow.</p>
+              <p className="mt-2 text-xs font-semibold text-slate-500">Version {draft.id ? "saved" : "new"} · Last saved after a successful Save as Draft · Full activity remains in central History.</p>
             </div>
             <AdminBackButton href={stepSevenUnitHref("agreement-templates")} label="Back to Agreement Templates" className="border-slate-300 bg-white text-slate-800" />
           </div>
           <div className="grid gap-4">
             <Field label="Template name" value={draft.title} maxLength={120} onChange={(value) => updateDraft({ title: value })} />
-            <Field label="Template reference (advanced)" value={draft.stableKey} maxLength={120} onChange={(value) => updateDraft({ stableKey: value })} />
             <TemplateSelect label="Who this agreement is for" value={draft.agreementRole} options={["Base Agreement", "Service Schedule/Appendix", "Separate Agreement Required"]} onChange={(value) => updateDraft({ agreementRole: value })} />
             <TemplateSelect label="Source document type" value={draft.templateSourceType} options={["structured_autofill", "static_pdf", "docx_source"]} onChange={(value) => updateDraft({ templateSourceType: value })} />
             <Field label="Agreement type" value={draft.agreementType} maxLength={80} onChange={(value) => updateDraft({ agreementType: value })} />
@@ -1405,10 +1468,24 @@ function AgreementTemplateDraftPanel({ canWrite, busyAction, templateId, onSaveD
             <TemplateTextArea label="Signing requirements" value={draft.signingPolicy} maxLength={600} onChange={(value) => updateDraft({ signingPolicy: value })} />
             <label className="grid gap-2">
               <span className="text-xs font-black uppercase tracking-[0.1em] text-slate-500">Upload template document</span>
-              <input disabled={!canWrite || uploading} type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={(event) => uploadTemplate(event.target.files?.[0] ?? null)} className="rounded border border-slate-300 bg-white p-3 text-sm text-slate-800 disabled:cursor-not-allowed disabled:opacity-60" />
-              <span className="text-xs leading-5 text-slate-600">PDF/DOCX only. Stored privately. Static PDFs need a cover and signature page for company details.</span>
-              {draft.sourceDocument ? <span className="rounded border border-emerald-200 bg-emerald-50 p-2 text-xs font-semibold text-emerald-800">Saved source: {sourceDocumentName(draft.sourceDocument)}</span> : null}
+              <input disabled={!canWrite || ["preparing", "uploading", "verifying"].includes(uploadState)} type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={(event) => uploadTemplate(event.target.files?.[0] ?? null)} className="rounded border border-slate-300 bg-white p-3 text-sm text-slate-800 disabled:cursor-not-allowed disabled:opacity-60" />
+              <span className="text-xs leading-5 text-slate-600">PDF/DOCX only. Stored privately. Choose another file to replace the current source document.</span>
+              {uploadMessage ? <span data-agreement-template-upload-state={uploadState} className={`rounded border p-2 text-xs font-semibold ${uploadState === "uploaded" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : uploadState === "failed" ? "border-red-200 bg-red-50 text-red-700" : "border-amber-200 bg-amber-50 text-amber-800"}`}>{uploadMessage}</span> : null}
+              {draft.sourceDocument ? (
+                <span className="flex flex-col gap-2 rounded border border-emerald-200 bg-emerald-50 p-2 text-xs font-semibold text-emerald-800 sm:flex-row sm:items-center sm:justify-between">
+                  <span>Saved source: {sourceDocumentName(draft.sourceDocument)}</span>
+                  <button type="button" disabled={!canWrite} onClick={removeSourceDocument} className="rounded border border-emerald-300 bg-white px-2 py-1 text-emerald-900 disabled:opacity-50">Remove file</button>
+                </span>
+              ) : null}
             </label>
+            <div className="rounded border border-amber-200 bg-amber-50 p-3">
+              <p className="text-xs font-black uppercase tracking-[0.1em] text-amber-800">Readiness before approval</p>
+              {readiness.length ? (
+                <ul className="mt-2 grid gap-1 text-xs font-semibold text-amber-900">
+                  {readiness.map((item) => <li key={item}>• {item}</li>)}
+                </ul>
+              ) : <p className="mt-2 text-xs font-semibold text-emerald-800">Ready to preview and send for approval from the central Draft.</p>}
+            </div>
             <div className="rounded border border-slate-200 bg-white p-3">
               <p className="text-xs font-black uppercase tracking-[0.1em] text-slate-500">Company details added automatically</p>
               <div className="mt-2 flex flex-wrap gap-2">
@@ -1421,12 +1498,22 @@ function AgreementTemplateDraftPanel({ canWrite, busyAction, templateId, onSaveD
             </div>
             {message ? <p className="rounded border border-emerald-200 bg-emerald-50 p-3 text-sm font-semibold text-emerald-800">{message}</p> : null}
             {error ? <p className="rounded border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</p> : null}
+            {savedDraftRoute ? (
+              <div className="rounded border border-cyan-200 bg-cyan-50 p-3" data-agreement-template-central-draft-handoff="ready">
+                <p className="text-sm font-semibold text-cyan-950">Saved Draft: {savedDraftLabel || "Partner Application agreement template"}</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button type="button" onClick={() => setMessage("Continue editing this saved draft. Open Draft is available when you are ready.")} className="inline-flex h-10 items-center rounded border border-cyan-300 bg-white px-4 text-sm font-semibold text-cyan-900">Continue Editing</button>
+                  <Link href={savedDraftRoute} className="inline-flex h-10 items-center rounded bg-cyan-700 px-4 text-sm font-semibold text-white">Open Draft</Link>
+                </div>
+              </div>
+            ) : null}
             <div className="flex flex-wrap gap-3">
               <a href="#website-experience-preview" className="inline-flex h-10 items-center gap-2 rounded border border-cyan-300 bg-white px-4 text-sm font-semibold text-cyan-900 focus:outline-none focus:ring-2 focus:ring-cyan-400">
                 <Eye className="h-4 w-4" />
                 Preview
               </a>
-              <button type="button" disabled={!canWrite || busyAction === "save" || saving || uploading} onClick={saveTemplate} className="inline-flex h-10 items-center gap-2 rounded bg-slate-900 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300">
+              {savedDraftRoute ? <Link href={savedDraftRoute} className="inline-flex h-10 items-center gap-2 rounded border border-cyan-300 bg-white px-4 text-sm font-semibold text-cyan-900">Open saved draft</Link> : null}
+              <button type="button" disabled={!canWrite || busyAction === "save" || saving || ["preparing", "uploading", "verifying"].includes(uploadState)} onClick={saveTemplate} className="inline-flex h-10 items-center gap-2 rounded bg-slate-900 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300">
                 <Save className="h-4 w-4" />
                 Save as Draft
               </button>
@@ -1479,6 +1566,36 @@ function draftFromAgreementTemplate(template: AdminAgreementTemplate): Agreement
     active: template.metadata?.active !== false,
     sourceDocument: (template.metadata?.sourceDocument as Record<string, unknown> | undefined) ?? null,
   };
+}
+
+function validateAgreementTemplateUploadFile(file: File): string {
+  const name = file.name.trim().toLowerCase();
+  const isPdf = name.endsWith(".pdf") && file.type === "application/pdf";
+  const isDocx = name.endsWith(".docx") && file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  if (!isPdf && !isDocx) return "Only PDF or DOCX agreement templates can be uploaded.";
+  if (file.size <= 0) return "Choose a non-empty file.";
+  if (file.size > 10 * 1024 * 1024) return "Use a file up to 10 MB.";
+  return "";
+}
+
+function validateInitialAgreementTemplateDraft(draft: AgreementTemplateDraftState, uploadState: TemplateUploadState): string {
+  if (!draft.title.trim()) return "Agreement name is required.";
+  if (!draft.agreementRole.trim()) return "Agreement type is required.";
+  if (["selected", "preparing", "uploading", "verifying"].includes(uploadState)) return "Wait for the selected file to finish uploading before saving this draft.";
+  if (!draft.sourceDocument && !draft.sectionBody.trim()) return "Add editable agreement text or upload a PDF/DOCX before saving this draft.";
+  return "";
+}
+
+function templateReadinessChecklist(draft: AgreementTemplateDraftState): string[] {
+  const missing: string[] = [];
+  if (!draft.country.trim()) missing.push("Choose where this agreement applies.");
+  if (!draft.entityType.trim()) missing.push("Choose who this agreement is for.");
+  if (draft.agreementRole !== "Base Agreement" && !splitCsv(draft.mappedServices).length) missing.push("Choose the services covered.");
+  if (!draft.sourceDocument && !draft.sectionBody.trim()) missing.push("Add agreement text or a source document.");
+  if (!draft.signingPolicy.trim()) missing.push("Add signing requirements.");
+  if (!draft.introduction.trim()) missing.push("Add introduction text.");
+  if (renderTemplatePreview(draft).includes("Missing insert option:")) missing.push("Remove or replace unknown company detail insert options.");
+  return missing;
 }
 
 function splitCsv(value: string): string[] {
