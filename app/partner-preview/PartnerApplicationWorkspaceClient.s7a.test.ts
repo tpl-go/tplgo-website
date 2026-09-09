@@ -82,12 +82,15 @@ test("Website Experience Partner Application removes local workflow controls and
   expect(websiteExperienceSource).not.toContain("Open one Partner Application section.");
   expect(websiteExperienceSource).not.toContain("Open one application section at a time.");
   expect(websiteExperienceSource).toContain("function LocalStepEditorActions");
-  expect(websiteExperienceSource).toContain("Approval, publishing, scheduling and history are handled from the central Website Experience workflow.");
+  expect(websiteExperienceSource).toContain("Preview your changes, then save a draft.");
   expect(websiteExperienceSource).toContain('href="#website-experience-preview"');
   expect(websiteExperienceSource).toContain("Save as Draft");
-  const partnerEditorSlice = websiteExperienceSource.slice(websiteExperienceSource.indexOf("function PartnerApplicationTreeEditor"), websiteExperienceSource.indexOf("function partnerApplicationSectionDescription"));
+  const partnerEditorSlice = websiteExperienceSource.slice(websiteExperienceSource.indexOf("function PartnerApplicationTreeEditor"), websiteExperienceSource.indexOf("function partnerApplicationDisplayLabel"));
   expect(partnerEditorSlice).not.toContain("<WorkflowActions");
   expect(partnerEditorSlice).not.toContain("<CentralSchedulePanel");
+  expect(partnerEditorSlice).not.toContain("editable fields");
+  expect(partnerEditorSlice).not.toContain("Step 4 preview source");
+  expect(partnerEditorSlice).not.toContain("lockedFields");
 });
 
 test("Website Experience Step 7 content units expose Agreement Templates under the Partner hierarchy", () => {
@@ -116,9 +119,9 @@ test("Website Experience Step 7 content units expose Agreement Templates under t
   expect(websiteExperienceSource).toContain("Back to Step 7");
   expect(websiteExperienceSource).toContain("stepSevenUnitIds");
   expect(websiteExperienceSource).toContain("Company details added automatically");
-  expect(websiteExperienceSource).toContain("approval, publishing, scheduling and history stay there");
-  expect(websiteExperienceSource).toContain('Website Experience &gt; Pages &gt; Partner &gt; Partner Application &gt; {selectedNodeDisplayLabel}');
-  expect(websiteExperienceSource).toContain('label="Back to Partner Application"');
+  expect(websiteExperienceSource).toContain("Choose one area to edit. Each item opens on its own page.");
+  expect(websiteExperienceSource).not.toContain('Website Experience &gt; Pages &gt; Partner &gt; Partner Application &gt; {selectedNodeDisplayLabel}');
+  expect(websiteExperienceSource).not.toContain('label="Back to Partner Application" className="border-slate-300 bg-slate-950 text-sky-100"');
 });
 
 test("Website Experience Step 7 uses dedicated path-based content pages", () => {
@@ -131,9 +134,9 @@ test("Website Experience Step 7 uses dedicated path-based content pages", () => 
   expect(websiteExperienceSource).toContain('data-step7-content-unit-editor={activeUnit}');
   expect(websiteExperienceSource).toContain('${stepSevenUnitHref("agreement-templates")}/new');
   expect(websiteExperienceSource).toContain('${stepSevenUnitHref("agreement-templates")}/${template.id}');
-  expect(websiteExperienceSource).toContain('label="Back to Agreement Templates"');
   expect(websiteExperienceSource).toContain("partnerApplicationBackHref");
   expect(websiteExperienceSource).toContain("partnerApplicationBackLabel");
+  expect(websiteExperienceSource).not.toContain('label="Back to Agreement Templates" className="border-slate-300 bg-white text-slate-800"');
 });
 
 test("Agreement template upload uses verified backend upload before showing Uploaded", () => {
@@ -186,9 +189,9 @@ test("Central Draft queue exposes draft actions and hides editor audit clutter",
   expect(websiteExperienceSource).toContain("Not ready for approval yet:");
   expect(websiteExperienceSource).toContain("row.draftContent.agreementTemplateDraft.readinessMissing");
   expect(websiteExperienceSource).toContain("Send for Approval");
-  expect(websiteExperienceSource).toContain("Full activity remains in central History.");
-  expect(websiteExperienceSource).toContain("CompactEditorMetadata");
-  expect(websiteExperienceSource).toContain('mode === "partner-application" ? <CompactEditorMetadata activeRow={activeRow} /> : <AuditList rows={state.data.recentAudit} />');
+  expect(websiteExperienceSource).not.toContain("Full activity remains in central History.");
+  expect(websiteExperienceSource).not.toContain("CompactEditorMetadata");
+  expect(websiteExperienceSource).not.toContain("AuditList");
   expect(websiteExperienceSource).toContain("WorkflowQueueRow");
   expect(websiteExperienceSource).toContain("data-central-draft-open-edit={workflowDraftIdForContext(row)}");
   expect(websiteExperienceSource).toContain("This saved Draft is missing its direct agreement-template link.");
@@ -196,6 +199,7 @@ test("Central Draft queue exposes draft actions and hides editor audit clutter",
   const templatePanel = websiteExperienceSource.slice(websiteExperienceSource.indexOf("function AgreementTemplateDraftPanel"), websiteExperienceSource.indexOf("const defaultAgreementPlaceholders"));
   expect(templatePanel).not.toContain("Recent Audit Log");
   expect(templatePanel).not.toContain("Version History");
+  expect(templatePanel).not.toContain("Step 7 Partner Agreement</h4>");
 });
 
 test("Step 7 Admin copy hides developer language on normal pages", () => {

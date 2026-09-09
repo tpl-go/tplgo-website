@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { CentralSchedulePanel } from "./CentralSchedulePanel";
 import {
   ArrowRight,
   BadgeCheck,
@@ -18,39 +17,27 @@ import {
   Layers3,
   Monitor,
   Pencil,
-  RotateCcw,
   Save,
   Send,
   ShieldCheck,
   Smartphone,
   Tablet,
-  Trash2,
   Upload,
-  XCircle,
   type LucideIcon,
 } from "lucide-react";
 import { AdminBackButton } from "./AdminBackButton";
 import {
-  cancelAdminWebsiteExperienceSchedule,
-  approveAdminWebsiteExperienceDraft,
-  archiveAdminWebsiteExperienceContext,
-  deleteAdminWebsiteExperienceDraft,
   getAdminAgreementTemplates,
   getAdminPartnerServiceCatalogue,
   getAdminWebsiteExperienceLoginSignup,
-  publishAdminWebsiteExperienceContext,
-  requestAdminWebsiteExperienceChanges,
-  restoreAdminWebsiteExperienceContext,
   saveAdminAgreementTemplateDraft,
   saveAdminWebsiteExperienceDraft,
-  scheduleAdminWebsiteExperienceContext,
   submitAdminWebsiteExperienceApproval,
   uploadAdminAgreementTemplateDocument,
   uploadAdminWebsiteExperienceMedia,
   type AdminAgreementTemplate,
   type AdminApiError,
   type AdminPartnerServiceCatalogueResponse,
-  type PartnerRegistrationIntakeView,
   type WebsiteExperienceAdminContext,
   type WebsiteExperienceAdminResponse,
   type WebsiteExperienceBenefit,
@@ -107,14 +94,6 @@ const mediaSlots = {
   mobile: "auth_promo_mobile_hero",
 };
 
-const defaultSchedule = {
-  date: "",
-  time: "",
-  endDate: "",
-  endTime: "",
-  timezone: "Asia/Kolkata",
-};
-
 const contextLabels: Record<WebsiteExperienceContext, string> = {
   user_login: "User Login",
   partner_login: "Partner Login",
@@ -153,11 +132,8 @@ export function WebsiteExperienceManager({
   const [workflowOrigin, setWorkflowOrigin] = useState<WorkflowView | null>(routeWorkflowView);
   const [previewDevice, setPreviewDevice] = useState<PreviewDevice>("desktop");
   const [drafts, setDrafts] = useState<Partial<Record<WebsiteExperienceContext, WebsiteExperienceContent>>>({});
-  const [schedule, setSchedule] = useState(defaultSchedule);
   const [message, setMessage] = useState("");
   const [busyAction, setBusyAction] = useState("");
-  const [reviewNote, setReviewNote] = useState("");
-  const [bypassReason, setBypassReason] = useState("");
   const shouldRedirectCanonicalWorkflow = mode === "login-signup" && Boolean(routeWorkflowView) && !routeWorkflowDraftId;
 
   const load = useCallback(async () => {
@@ -194,7 +170,6 @@ export function WebsiteExperienceManager({
   const activeRow = contextRows.find((item) => item.context === activeContext) ?? state.data?.contexts.find((item) => item.context === activeContext);
   const permissions = state.data?.permissions;
   const canWrite = Boolean(permissions?.canWrite);
-  const canPublish = Boolean(permissions?.canPublish);
 
   const updateDraft = (patch: Partial<WebsiteExperienceContent>) => {
     if (!activeDraft) return;
@@ -236,80 +211,23 @@ export function WebsiteExperienceManager({
       setMessage(result.error.message);
       return;
     }
-    setMessage(mode === "partner-application" ? "Draft saved. Partner Application presentation stays unchanged until Publish Now or the scheduled time." : "Draft saved. Public Login & Signup stays unchanged until Publish Now or the scheduled time.");
+    setMessage("Draft saved.");
     setEditorView("editor");
     void load();
   };
 
-  const publish = async () => {
-    setBusyAction("publish");
-    setMessage("");
-    const result = await publishAdminWebsiteExperienceContext(activeContext, bypassReason ? { reason: bypassReason } : undefined);
-    setBusyAction("");
-    if (!result.ok) {
-      setMessage(result.error.message);
-      return;
-    }
-    setMessage(mode === "partner-application" ? "Published now. Partner Application presentation uses this version." : "Published now. The public Login & Signup content uses this version.");
-    void load();
-  };
-
-  const workflowAction = async (action: "submit" | "approve" | "request-changes" | "delete-draft" | "archive" | "restore", contextOverride?: WebsiteExperienceContext) => {
+  const workflowAction = async (action: "submit", contextOverride?: WebsiteExperienceContext) => {
     const targetContext = contextOverride ?? activeContext;
     setBusyAction(action);
     setMessage("");
-    const result =
-      action === "submit" ? await submitAdminWebsiteExperienceApproval(targetContext, reviewNote)
-      : action === "approve" ? await approveAdminWebsiteExperienceDraft(targetContext, reviewNote)
-      : action === "request-changes" ? await requestAdminWebsiteExperienceChanges(targetContext, reviewNote)
-      : action === "delete-draft" ? await deleteAdminWebsiteExperienceDraft(targetContext)
-      : action === "archive" ? await archiveAdminWebsiteExperienceContext(targetContext, reviewNote)
-      : await restoreAdminWebsiteExperienceContext(targetContext, reviewNote);
+    const result = await submitAdminWebsiteExperienceApproval(targetContext, "");
     setBusyAction("");
     if (!result.ok) {
       setMessage(result.error.message);
       return;
     }
-    setMessage(statusMessage(action));
-    setReviewNote("");
+    setMessage(statusMessage());
     setEditorView("editor");
-    void load();
-  };
-
-  const schedulePublish = async () => {
-    const publishAt = buildIso(schedule.date, schedule.time);
-    const endAt = schedule.endDate && schedule.endTime ? buildIso(schedule.endDate, schedule.endTime) : undefined;
-    if (!publishAt) {
-      setMessage("Choose a publish date and time before scheduling.");
-      return;
-    }
-    setBusyAction("schedule");
-    setMessage("");
-    const result = await scheduleAdminWebsiteExperienceContext(activeContext, {
-      publishAt,
-      ...(endAt ? { endAt } : {}),
-      timezone: schedule.timezone,
-      ...(bypassReason ? { reason: bypassReason } : {}),
-    });
-    setBusyAction("");
-    if (!result.ok) {
-      setMessage(result.error.message);
-      return;
-    }
-    setMessage("Scheduled. Current published content stays live until the scheduled time.");
-    void load();
-  };
-
-  const cancelSchedule = async () => {
-    setBusyAction("cancel-schedule");
-    setMessage("");
-    const result = await cancelAdminWebsiteExperienceSchedule(activeContext);
-    setBusyAction("");
-    if (!result.ok) {
-      setMessage(result.error.message);
-      return;
-    }
-    setMessage("Schedule cancelled. The current published version remains live.");
     void load();
   };
 
@@ -342,7 +260,6 @@ export function WebsiteExperienceManager({
   };
 
   if (editorView === "workflow" && workflowView) {
-    if (workflowView === "scheduled") return <div className="space-y-4"><Link href="/admin/website-experience">Back to Website Experience</Link><CentralSchedulePanel /></div>;
     if (workflowView === "drafts" && routeWorkflowDraftId) {
       return (
         <WorkflowDraftDetailView
@@ -469,47 +386,15 @@ export function WebsiteExperienceManager({
             label={mode === "partner-application" ? partnerApplicationBackLabel(partnerApplicationNodeId, partnerApplicationUnitId, partnerAgreementTemplateId) : workflowOrigin ? `Back to ${workflowViewLabel(workflowOrigin)}` : `Back to ${contextLabels[activeContext]}`}
           />
         </div>
-        <div className="mt-4 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-200">{mode === "partner-application" ? "Pages / Partner" : "Global Experience / Login & Signup"}</p>
-            <h2 className="mt-1 text-2xl font-black text-cyan-100">{mode === "partner-application" ? partnerApplicationRouteTitle(activeDraft, partnerApplicationNodeId, partnerApplicationUnitId, partnerAgreementTemplateId) : blocks.find((block) => block.key === activeBlock)?.label ?? "Editable Item"}</h2>
-            <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-300">
-              {mode === "partner-application"
-                ? "Manage safe Partner Application presentation fields. Eligibility, validation, approval, and service activation stay locked outside this editor."
-                : "Manage shared login presentation used across TPL GO. Auth behavior, OTP, RBAC, and provider settings stay locked outside this editor."}
-            </p>
+        {!isAgreementTemplateEditor(partnerApplicationUnitId, partnerAgreementTemplateId) ? (
+          <div className="mt-4 flex flex-wrap justify-end gap-2">
+            <ItemStatusStrip activeRow={activeRow} />
           </div>
-          <ItemStatusStrip activeRow={activeRow} />
-        </div>
+        ) : null}
       </div>
 
       <div className="grid gap-5 2xl:grid-cols-[minmax(0,1fr)_28rem]">
         <div className="space-y-4 min-w-0">
-          {mode === "partner-application" ? null : (
-            <section className="rounded-2xl border border-sky-300/15 bg-[#0b1628] p-5 shadow-xl shadow-black/20">
-              <CentralSchedulePanel targetType="website_experience" targetId={activeContext} onChanged={() => void load()} />
-              <WorkflowActionBar
-                canWrite={canWrite}
-                canPublish={canPublish}
-                schedule={schedule}
-                activeRow={activeRow}
-                busyAction={busyAction}
-                message={message}
-                reviewNote={reviewNote}
-                bypassReason={bypassReason}
-                onScheduleChange={setSchedule}
-                onSaveDraft={saveDraft}
-                onPublish={publish}
-                onSchedule={schedulePublish}
-                onCancelSchedule={cancelSchedule}
-                onReviewNoteChange={setReviewNote}
-                onBypassReasonChange={setBypassReason}
-                onWorkflowAction={workflowAction}
-                onPreview={() => setMessage(activeRow.hasUnpublishedChanges ? "Draft Preview is shown beside this editor and is not live." : "Unsaved Preview is shown beside this editor and is not live.")}
-              />
-            </section>
-          )}
-
           <section className="rounded-2xl border border-sky-300/15 bg-white p-5 shadow-sm">
             <BlockEditor
               block={activeBlock ?? "brand"}
@@ -518,34 +403,20 @@ export function WebsiteExperienceManager({
               partnerApplicationUnitId={partnerApplicationUnitId}
               partnerAgreementTemplateId={partnerAgreementTemplateId}
               canWrite={canWrite}
-              canPublish={canPublish}
-              schedule={schedule}
               activeRow={activeRow}
               busyAction={busyAction}
               message={message}
-              reviewNote={reviewNote}
-              bypassReason={bypassReason}
               onContentChange={updateDraft}
               onBenefitChange={updateBenefit}
               onUploaded={applyUploadedMedia}
-              onScheduleChange={setSchedule}
               onSaveDraft={saveDraft}
-              onPublish={publish}
-              onSchedule={schedulePublish}
-              onCancelSchedule={cancelSchedule}
-              onReviewNoteChange={setReviewNote}
-              onBypassReasonChange={setBypassReason}
-              onWorkflowAction={workflowAction}
             />
           </section>
-
-          {mode === "login-signup" ? <PartnerRegistrationIntakes rows={state.data.partnerRegistrationIntakes} /> : null}
+          {mode === "login-signup" ? <LocalStepEditorActions canWrite={canWrite} busyAction={busyAction} message={message} onSaveDraft={saveDraft} /> : null}
         </div>
 
         <aside className="space-y-4 xl:col-span-2 2xl:col-span-1">
-          <PreviewPanel content={activeDraft} device={previewDevice} onDeviceChange={setPreviewDevice} />
-          <LockedSecurity fields={state.data.schema.lockedSecurityFields} />
-          {mode === "partner-application" ? <CompactEditorMetadata activeRow={activeRow} /> : <AuditList rows={state.data.recentAudit} />}
+          <PreviewPanel content={activeDraft} selectedNodeId={partnerApplicationNodeId} device={previewDevice} onDeviceChange={setPreviewDevice} />
         </aside>
       </div>
     </section>
@@ -609,16 +480,17 @@ function Breadcrumbs({
     }
     return <HierarchyBreadcrumb items={items} />;
   }
-  const items = ["Website Experience", "Global Experience", "Login & Signup", activeContext, activeBlock];
+  const activeContextKey = Object.entries(contextLabels).find(([, label]) => label === activeContext)?.[0];
   return (
-    <nav className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-400" aria-label="Website Experience breadcrumbs">
-      {items.map((item, index) => (
-        <span key={`${item}:${index}`} className="flex items-center gap-2">
-          {index > 0 ? <span className="text-slate-600">&gt;</span> : null}
-          <span className={index === items.length - 1 ? "text-cyan-100" : ""}>{item}</span>
-        </span>
-      ))}
-    </nav>
+    <HierarchyBreadcrumb
+      items={[
+        { label: "Website Experience", href: "/admin/website-experience" },
+        { label: "Global Experience", href: "/admin/website-experience/global" },
+        { label: "Login & Signup", href: "/admin/website-experience/login-signup" },
+        { label: activeContext, href: activeContextKey ? `/admin/website-experience/login-signup?context=${activeContextKey}` : undefined },
+        { label: activeBlock },
+      ]}
+    />
   );
 }
 
@@ -973,24 +845,13 @@ function BlockEditor({
   partnerApplicationUnitId,
   partnerAgreementTemplateId,
   canWrite,
-  canPublish,
-  schedule,
   activeRow,
   busyAction,
   message,
   onContentChange,
   onBenefitChange,
   onUploaded,
-  onScheduleChange,
   onSaveDraft,
-  onPublish,
-  onSchedule,
-  onCancelSchedule,
-  reviewNote,
-  bypassReason,
-  onReviewNoteChange,
-  onBypassReasonChange,
-  onWorkflowAction,
 }: {
   block: BlockKey;
   content: WebsiteExperienceContent;
@@ -998,24 +859,13 @@ function BlockEditor({
   partnerApplicationUnitId?: string;
   partnerAgreementTemplateId?: string;
   canWrite: boolean;
-  canPublish: boolean;
-  schedule: typeof defaultSchedule;
   activeRow: WebsiteExperienceAdminContext;
   busyAction: string;
   message: string;
-  reviewNote: string;
-  bypassReason: string;
   onContentChange: (patch: Partial<WebsiteExperienceContent>) => void;
   onBenefitChange: (index: number, patch: Partial<WebsiteExperienceBenefit>) => void;
   onUploaded: (media: { slot: string; url: string; altText?: string }) => void;
-  onScheduleChange: (value: typeof defaultSchedule) => void;
   onSaveDraft: () => void;
-  onPublish: () => void;
-  onSchedule: () => void;
-  onCancelSchedule: () => void;
-  onReviewNoteChange: (value: string) => void;
-  onBypassReasonChange: (value: string) => void;
-  onWorkflowAction: (action: "submit" | "approve" | "request-changes" | "delete-draft" | "archive" | "restore") => void;
 }) {
   if (content.context === "partner_application") {
     return (
@@ -1038,7 +888,7 @@ function BlockEditor({
 
   if (block === "brand") {
     return (
-      <EditorSection title="Brand" detail="Manage the brand image slot and fallback label. This is presentation-only media.">
+      <EditorSection title="Brand" detail="Manage the brand image and fallback label.">
         <div className="grid gap-4 lg:grid-cols-2">
           <Field label="Brand label fallback" value={content.brandLabel} maxLength={40} onChange={(value) => onContentChange({ brandLabel: value })} />
           <Field label="Brand image alt text" value={content.brandLogoAlt || ""} maxLength={120} onChange={(value) => onContentChange({ brandLogoAlt: value })} />
@@ -1120,28 +970,7 @@ function BlockEditor({
     );
   }
 
-  return (
-      <EditorSection title="Workflow" detail="Save a private draft, publish immediately, or schedule the draft for a future time.">
-      <WorkflowActions
-        canWrite={canWrite}
-        canPublish={canPublish}
-        schedule={schedule}
-        activeRow={activeRow}
-        busyAction={busyAction}
-        message={message}
-        reviewNote={reviewNote}
-        bypassReason={bypassReason}
-        onScheduleChange={onScheduleChange}
-        onSaveDraft={onSaveDraft}
-        onPublish={onPublish}
-        onSchedule={onSchedule}
-        onCancelSchedule={onCancelSchedule}
-        onReviewNoteChange={onReviewNoteChange}
-        onBypassReasonChange={onBypassReasonChange}
-        onWorkflowAction={onWorkflowAction}
-      />
-    </EditorSection>
-  );
+  return null;
 }
 
 function PartnerApplicationSectionList({ content, activeRow }: { content: WebsiteExperienceContent; activeRow: WebsiteExperienceAdminContext }) {
@@ -1207,7 +1036,6 @@ function PartnerApplicationTreeEditor({
       },
     });
   };
-  const stepFour = tree?.children.find((node) => node.id === "step-4-services");
   const selectedNode = selectedNodeId ? tree?.children.find((node) => node.id === selectedNodeId) : undefined;
   if (!selectedNodeId) {
     return <PartnerApplicationSectionList content={content} activeRow={activeRow} />;
@@ -1216,19 +1044,16 @@ function PartnerApplicationTreeEditor({
   if (!selectedNode) {
     return (
       <EditorSection title="Partner Application" detail="The requested Partner Application section was not found.">
-        <AdminBackButton href="/admin/website-experience/pages/partner/application" label="Back to Partner Application" className="border-slate-300 bg-slate-950 text-sky-100" />
+        <p className="rounded border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">This Partner Application section was not found.</p>
       </EditorSection>
     );
   }
 
   const selectedNodeDisplayLabel = partnerApplicationDisplayLabel(selectedNode.id, selectedNode.label);
-  return (
-    <EditorSection title={selectedNodeDisplayLabel} detail="Edit this Partner Application section.">
-      <div className="rounded border border-blue-100 bg-blue-50 p-3 text-sm text-blue-900">
-        Website Experience &gt; Pages &gt; Partner &gt; Partner Application &gt; {selectedNodeDisplayLabel}
-      </div>
-      <AdminBackButton href="/admin/website-experience/pages/partner/application" label="Back to Partner Application" className="border-slate-300 bg-slate-950 text-sky-100" />
-      {selectedNode.id === "step-7-partner-agreement" ? (
+  if (selectedNode.id === "step-7-partner-agreement") {
+    const showStepSevenSaveActions = Boolean(selectedStepSevenUnitId) && selectedStepSevenUnitId !== "agreement-templates" && !selectedAgreementTemplateId;
+    return (
+      <div className="space-y-4">
         <StepSevenContentUnits
           activeUnit={selectedStepSevenUnitId}
           templateId={selectedAgreementTemplateId}
@@ -1238,14 +1063,16 @@ function PartnerApplicationTreeEditor({
           onNodeChange={(patch) => updateNode(selectedNode.id, patch)}
           onCtaChange={(key, value) => updateCta(selectedNode.id, key, value)}
         />
-      ) : null}
+        {showStepSevenSaveActions ? <LocalStepEditorActions canWrite={canWrite} busyAction={busyAction} message={message} onSaveDraft={onSaveDraft} /> : null}
+      </div>
+    );
+  }
+
+  return (
+    <EditorSection title={selectedNodeDisplayLabel} detail="">
       <div className="space-y-3">
         {[selectedNode].map((node) => (
-          <section key={node.id} className={node.id === "step-7-partner-agreement" ? "sr-only" : "rounded border border-slate-200 bg-slate-50 p-3"}>
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h4 className="text-sm font-semibold text-slate-950">{node.label}</h4>
-              <span className="rounded bg-white px-2 py-1 text-[11px] font-semibold text-slate-500">{node.editableFields.length} editable fields</span>
-            </div>
+          <section key={node.id} className="rounded border border-slate-200 bg-slate-50 p-3">
             <div className="mt-3 grid gap-3">
               <Field label="Title" value={node.title} maxLength={80} onChange={(value) => updateNode(node.id, { title: value })} />
               <Field label="Subtitle" value={node.subtitle} maxLength={180} onChange={(value) => updateNode(node.id, { subtitle: value })} />
@@ -1263,16 +1090,16 @@ function PartnerApplicationTreeEditor({
                 </>
               ) : null}
             </div>
-            <div className="mt-3 flex flex-wrap gap-1">
-              {node.lockedFields.slice(0, 6).map((field) => <span key={field} className="rounded bg-orange-50 px-2 py-1 text-[10px] font-semibold text-orange-800">{field}</span>)}
-            </div>
           </section>
         ))}
       </div>
-      {stepFour ? <p className="rounded border border-slate-200 bg-white p-3 text-xs text-slate-600">Step 4 preview source: {stepFour.title} - {stepFour.subtitle}</p> : null}
       <LocalStepEditorActions canWrite={canWrite} busyAction={busyAction} message={message} onSaveDraft={onSaveDraft} />
     </EditorSection>
   );
+}
+
+function isAgreementTemplateEditor(unitId?: string, templateId?: string): boolean {
+  return unitId === "agreement-templates" && Boolean(templateId);
 }
 
 function partnerApplicationDisplayLabel(nodeId: string, label: string): string {
@@ -1295,7 +1122,7 @@ function agreementTemplateWorkflowLabel(title: string): string {
 function LocalStepEditorActions({ canWrite, busyAction, message, onSaveDraft }: { canWrite: boolean; busyAction: string; message: string; onSaveDraft: () => void }) {
   return (
     <div className="rounded border border-cyan-200 bg-cyan-50 p-4">
-      <p className="text-sm font-semibold text-cyan-950">Preview this item beside the editor, then save changes as a draft. Approval, publishing, scheduling and history are handled from the central Website Experience workflow.</p>
+      <p className="text-sm font-semibold text-cyan-950">Preview your changes, then save a draft.</p>
       <div className="mt-3 flex flex-wrap gap-3">
         <a href="#website-experience-preview" className="inline-flex h-10 items-center gap-2 rounded border border-cyan-300 bg-white px-4 text-sm font-semibold text-cyan-900 focus:outline-none focus:ring-2 focus:ring-cyan-400">
           <Eye className="h-4 w-4" />
@@ -1350,8 +1177,9 @@ function StepSevenContentUnits({
   if (!activeUnit) {
     return (
       <div className="grid gap-4" data-step7-overview-page="true">
+        <h3 className="text-lg font-semibold text-slate-950">Step 7 Partner Agreement</h3>
         <div className="rounded border border-blue-100 bg-blue-50 p-3 text-sm leading-6 text-blue-950">
-          Choose one area to edit. Each item opens on its own page. Preview and Save as Draft are available inside the editor; approval and publishing stay in the central workflow.
+          Choose one area to edit. Each item opens on its own page.
         </div>
         <div className="space-y-3" data-step7-content-unit-list="vertical">
           {stepSevenUnits.map(([id, label, detail]) => (
@@ -1372,20 +1200,20 @@ function StepSevenContentUnits({
     return (
       <div className="grid gap-4" data-step7-content-unit-editor="not-found">
         <p className="rounded border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">This Step 7 content page was not found.</p>
-        <AdminBackButton href="/admin/website-experience/pages/partner/application/step-7-partner-agreement" label="Back to Step 7" className="border-slate-300 bg-slate-950 text-sky-100" />
       </div>
     );
   }
 
   return (
     <div className="grid gap-4" data-step7-dedicated-page={activeUnit}>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h4 className="text-base font-black text-slate-950">{stepSevenUnitTitles[activeUnit]}</h4>
-          <p className="mt-1 text-sm leading-6 text-slate-600">Edit this content area only. Preview and Save as Draft keep the central Website Experience workflow unchanged.</p>
+      {activeUnit === "agreement-templates" && templateId ? null : (
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h4 className="text-base font-black text-slate-950">{stepSevenUnitTitles[activeUnit]}</h4>
+            <p className="mt-1 text-sm leading-6 text-slate-600">Edit this content area.</p>
+          </div>
         </div>
-        <AdminBackButton href="/admin/website-experience/pages/partner/application/step-7-partner-agreement" label="Back to Step 7" className="border-slate-300 bg-white text-slate-800" />
-      </div>
+      )}
       <section className="rounded border border-slate-200 bg-slate-50 p-4" data-step7-content-unit-editor={activeUnit}>
         {activeUnit === "agreement-templates" ? (
           <AgreementTemplateDraftPanel canWrite={canWrite} busyAction={busyAction} templateId={templateId} />
@@ -1585,7 +1413,7 @@ function AgreementTemplateDraftPanel({ canWrite, busyAction, templateId }: { can
       {!templateId ? (
         <>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm leading-6 text-slate-700">Create and edit agreement templates here. Save as Draft sends changes to the central Website Experience workflow; approval, publishing, scheduling and history stay there.</p>
+            <p className="text-sm leading-6 text-slate-700">Create and edit agreement templates for Partner onboarding.</p>
             <Link aria-disabled={!canWrite} href={canWrite ? `${stepSevenUnitHref("agreement-templates")}/new` : stepSevenUnitHref("agreement-templates")} className={`inline-flex h-10 items-center justify-center rounded px-4 text-sm font-bold ${canWrite ? "bg-slate-950 text-white" : "cursor-not-allowed bg-slate-300 text-slate-600"}`}>Add Agreement Template</Link>
           </div>
           <div className="space-y-3">
@@ -1612,11 +1440,10 @@ function AgreementTemplateDraftPanel({ canWrite, busyAction, templateId }: { can
         <>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h4 className="text-base font-black text-slate-950">{templateId === "new" ? "Add Agreement Template" : "Edit Agreement Template"}</h4>
-              <p className="mt-1 text-sm leading-6 text-slate-600">One field per row. Draft templates cannot be issued to Partners until approved and published in the central workflow.</p>
-              <p className="mt-2 text-xs font-semibold text-slate-500">Version {draft.id ? "saved" : "new"} · Last saved after a successful Save as Draft · Full activity remains in central History.</p>
+              <p className="text-xs font-black uppercase tracking-[0.1em] text-slate-500">{templateId === "new" ? "New template" : "Edit Agreement Template"}</p>
+              <h4 className="mt-1 text-base font-black text-slate-950">{templateId === "new" ? "Add Agreement Template" : draft.title || "Agreement Template"}</h4>
+              <p className="mt-2 text-xs font-semibold text-slate-500">{draft.id ? "Saved draft" : "New draft"}</p>
             </div>
-            <AdminBackButton href={stepSevenUnitHref("agreement-templates")} label="Back to Agreement Templates" className="border-slate-300 bg-white text-slate-800" />
           </div>
           <div className="grid gap-4">
             <Field label="Template name" value={draft.title} maxLength={120} onChange={(value) => updateDraft({ title: value })} />
@@ -1632,7 +1459,7 @@ function AgreementTemplateDraftPanel({ canWrite, busyAction, templateId }: { can
             <TemplateTextArea label="Agreement body" value={draft.sectionBody} maxLength={8000} onChange={(value) => updateDraft({ sectionBody: value })} />
             <TemplateTextArea label="Signing requirements" value={draft.signingPolicy} maxLength={600} onChange={(value) => updateDraft({ signingPolicy: value })} />
             <label className="grid gap-2">
-              <span className="text-xs font-black uppercase tracking-[0.1em] text-slate-500">Upload template document</span>
+              <span className="text-xs font-black uppercase tracking-[0.1em] text-slate-500">{draft.sourceDocument ? "Replace file" : "Upload template document"}</span>
               <input disabled={!canWrite || ["preparing", "uploading", "verifying"].includes(uploadState)} type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={(event) => uploadTemplate(event.target.files?.[0] ?? null)} className="rounded border border-slate-300 bg-white p-3 text-sm text-slate-800 disabled:cursor-not-allowed disabled:opacity-60" />
               <span className="text-xs leading-5 text-slate-600">PDF/DOCX only. Stored privately. Choose another file to replace the current source document.</span>
               {uploadMessage ? <span data-agreement-template-upload-state={uploadState} className={`rounded border p-2 text-xs font-semibold ${uploadState === "uploaded" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : uploadState === "failed" ? "border-red-200 bg-red-50 text-red-700" : "border-amber-200 bg-amber-50 text-amber-800"}`}>{uploadMessage}</span> : null}
@@ -1892,311 +1719,12 @@ function TemplateTextArea({ label, value, maxLength, onChange }: { label: string
   );
 }
 
-function WorkflowActionBar({
-  canWrite,
-  canPublish,
-  schedule,
-  activeRow,
-  busyAction,
-  message,
-  reviewNote,
-  bypassReason,
-  onScheduleChange,
-  onSaveDraft,
-  onPublish,
-  onSchedule,
-  onCancelSchedule,
-  onReviewNoteChange,
-  onBypassReasonChange,
-  onWorkflowAction,
-  onPreview,
-}: {
-  canWrite: boolean;
-  canPublish: boolean;
-  schedule: typeof defaultSchedule;
-  activeRow: WebsiteExperienceAdminContext;
-  busyAction: string;
-  message: string;
-  reviewNote: string;
-  bypassReason: string;
-  onScheduleChange: (value: typeof defaultSchedule) => void;
-  onSaveDraft: () => void;
-  onPublish: () => void;
-  onSchedule: () => void;
-  onCancelSchedule: () => void;
-  onReviewNoteChange: (value: string) => void;
-  onBypassReasonChange: (value: string) => void;
-  onWorkflowAction: (action: "submit" | "approve" | "request-changes" | "delete-draft" | "archive" | "restore") => void;
-  onPreview: () => void;
-}) {
-  const workflowState = activeRow.workflowState ?? activeRow.status;
-  const isDraftLike = workflowState === "draft" || workflowState === "working_changes" || workflowState === "changes_requested";
-  const isInReview = workflowState === "in_review";
-  const isApproved = workflowState === "approved";
-  const isScheduled = workflowState === "scheduled" || Boolean(activeRow.scheduledFor);
-  const isPublished = workflowState === "published" && !activeRow.hasUnpublishedChanges;
-  const isArchived = workflowState === "archived";
-  const previewLabel = activeRow.hasUnpublishedChanges ? "Draft Preview" : "Unsaved Preview";
-
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-        <div>
-          <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-200">Item workflow</p>
-          <h3 className="mt-1 text-xl font-black text-cyan-100">{workflowLabel(workflowState)}</h3>
-          <p className="mt-1 text-sm leading-6 text-slate-400">{publishScope(activeRow.context)}. Preview is not live content.</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <StatusChip label={`Published v${activeRow.publishedVersion}`} tone="published" />
-          <StatusChip label={`Draft v${activeRow.draftVersion}`} tone="draft" />
-        </div>
-      </div>
-
-      {activeRow.review?.note ? (
-        <div className="rounded-xl border border-orange-300/25 bg-orange-400/10 p-3 text-sm font-semibold text-orange-100">
-          Review note: {activeRow.review.note}
-        </div>
-      ) : null}
-
-      <div className="flex flex-wrap items-center gap-3">
-        <button type="button" onClick={onPreview} className="inline-flex h-10 items-center gap-2 rounded-xl border border-cyan-300/25 bg-cyan-400/10 px-4 text-sm font-black text-cyan-100 hover:border-cyan-200 focus:outline-none focus:ring-2 focus:ring-cyan-300">
-          <Eye className="h-4 w-4" />
-          Preview Changes
-        </button>
-
-        {isDraftLike ? (
-          <button type="button" disabled={!canWrite || busyAction === "save"} onClick={onSaveDraft} className="inline-flex h-10 items-center gap-2 rounded-xl bg-orange-500 px-4 text-sm font-black text-slate-950 disabled:cursor-not-allowed disabled:bg-slate-600 disabled:text-slate-300">
-            <Save className="h-4 w-4" />
-            Save as Draft
-          </button>
-        ) : null}
-
-        {activeRow.hasUnpublishedChanges && isDraftLike ? (
-          <button type="button" disabled={!canWrite || busyAction === "submit"} onClick={() => onWorkflowAction("submit")} className="inline-flex h-10 items-center gap-2 rounded-xl border border-cyan-300/25 bg-sky-500/15 px-4 text-sm font-black text-sky-100 disabled:cursor-not-allowed disabled:opacity-50">
-            <Send className="h-4 w-4" />
-            {workflowState === "changes_requested" ? "Resubmit for Approval" : "Send for Approval"}
-          </button>
-        ) : null}
-
-        {isInReview && canPublish ? (
-          <>
-            <button type="button" disabled={busyAction === "approve"} onClick={() => onWorkflowAction("approve")} className="inline-flex h-10 items-center gap-2 rounded-xl bg-emerald-500 px-4 text-sm font-black text-slate-950 disabled:cursor-not-allowed disabled:opacity-50">
-              <BadgeCheck className="h-4 w-4" />
-              Approve
-            </button>
-            <button type="button" disabled={busyAction === "request-changes" || !reviewNote.trim()} onClick={() => onWorkflowAction("request-changes")} className="inline-flex h-10 items-center gap-2 rounded-xl border border-orange-300/30 bg-orange-400/10 px-4 text-sm font-black text-orange-100 disabled:cursor-not-allowed disabled:opacity-50">
-              <XCircle className="h-4 w-4" />
-              Request Changes
-            </button>
-          </>
-        ) : null}
-
-        {isApproved && canPublish ? (
-          <>
-            <button type="button" disabled={busyAction === "publish"} onClick={onPublish} className="inline-flex h-10 items-center gap-2 rounded-xl bg-orange-500 px-4 text-sm font-black text-slate-950 disabled:cursor-not-allowed disabled:opacity-50">
-              <Send className="h-4 w-4" />
-              Publish Now
-            </button>
-            <button type="button" disabled={busyAction === "schedule"} onClick={onSchedule} className="inline-flex h-10 items-center gap-2 rounded-xl border border-amber-300/30 bg-amber-400/10 px-4 text-sm font-black text-amber-100 disabled:cursor-not-allowed disabled:opacity-50">
-              <CalendarClock className="h-4 w-4" />
-              Schedule
-            </button>
-          </>
-        ) : null}
-
-        {isScheduled && canPublish ? (
-          <button type="button" disabled={busyAction === "cancel-schedule"} onClick={onCancelSchedule} className="inline-flex h-10 items-center gap-2 rounded-xl border border-amber-300/30 bg-amber-400/10 px-4 text-sm font-black text-amber-100 disabled:cursor-not-allowed disabled:opacity-50">
-            <XCircle className="h-4 w-4" />
-            Cancel Schedule
-          </button>
-        ) : null}
-
-        {isPublished ? (
-          <button type="button" onClick={onPreview} className="inline-flex h-10 items-center gap-2 rounded-xl border border-emerald-300/25 bg-emerald-400/10 px-4 text-sm font-black text-emerald-100">
-            <Globe2 className="h-4 w-4" />
-            View Published
-          </button>
-        ) : null}
-
-        {isArchived && canWrite ? (
-          <button type="button" disabled={busyAction === "restore"} onClick={() => onWorkflowAction("restore")} className="inline-flex h-10 items-center gap-2 rounded-xl border border-emerald-300/25 bg-emerald-400/10 px-4 text-sm font-black text-emerald-100 disabled:cursor-not-allowed disabled:opacity-50">
-            <RotateCcw className="h-4 w-4" />
-            Restore as Draft
-          </button>
-        ) : null}
-      </div>
-
-      {(isInReview || workflowState === "changes_requested") ? (
-        <Field label={isInReview ? "Review note" : "Submission note"} value={reviewNote} maxLength={500} onChange={onReviewNoteChange} />
-      ) : null}
-
-      {(isApproved || isScheduled) ? (
-        <div className="rounded-xl border border-amber-300/20 bg-amber-400/10 p-4">
-          <div className="grid gap-3 md:grid-cols-3">
-            <ScheduleField label="Publish date" type="date" value={schedule.date} onChange={(date) => onScheduleChange({ ...schedule, date })} />
-            <ScheduleField label="Publish time" type="time" value={schedule.time} onChange={(time) => onScheduleChange({ ...schedule, time })} />
-            <Field label="Timezone" value={schedule.timezone} maxLength={64} onChange={(timezone) => onScheduleChange({ ...schedule, timezone })} />
-          </div>
-          {activeRow.scheduledFor ? <p className="mt-2 text-xs font-semibold text-amber-100">Scheduled for {formatDateTime(activeRow.scheduledFor)} {activeRow.scheduledTimezone || ""}</p> : null}
-        </div>
-      ) : null}
-
-      <details className="rounded-xl border border-slate-700 bg-slate-950/45 p-4">
-        <summary className="cursor-pointer text-sm font-black text-slate-100">More Actions</summary>
-        <div className="mt-3 space-y-3">
-          {canPublish ? <Field label="Super Admin bypass reason" value={bypassReason} maxLength={500} onChange={onBypassReasonChange} /> : null}
-          <div className="flex flex-wrap gap-3">
-            <button type="button" disabled={!canWrite || !activeRow.hasUnpublishedChanges || busyAction === "delete-draft"} onClick={() => window.confirm("This will remove only this unpublished draft. The currently published website content will remain unchanged.") && onWorkflowAction("delete-draft")} className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-600 bg-slate-900 px-4 text-sm font-black text-slate-200 disabled:cursor-not-allowed disabled:opacity-50">
-              <Trash2 className="h-4 w-4" />
-              Delete Draft
-            </button>
-            <button type="button" disabled={!canPublish || busyAction === "archive"} onClick={() => window.confirm("Archive this content through the Website Experience workflow? Historical versions and audit remain preserved.") && onWorkflowAction("archive")} className="inline-flex h-10 items-center gap-2 rounded-xl border border-red-300/25 bg-red-500/10 px-4 text-sm font-black text-red-100 disabled:cursor-not-allowed disabled:opacity-50">
-              <Archive className="h-4 w-4" />
-              Archive
-            </button>
-            <button type="button" onClick={onPreview} className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-600 bg-slate-900 px-4 text-sm font-black text-slate-200">
-              <Clock3 className="h-4 w-4" />
-              Version History
-            </button>
-          </div>
-        </div>
-      </details>
-
-      {message ? <p className="rounded-xl border border-cyan-300/20 bg-cyan-400/10 p-3 text-sm font-semibold text-cyan-100">{message}</p> : null}
-      <p className="text-xs font-semibold text-slate-500">{previewLabel} is available in the preview panel beside this editor. It is not live content.</p>
-    </div>
-  );
-}
-
-function WorkflowActions({
-  canWrite,
-  canPublish,
-  schedule,
-  activeRow,
-  busyAction,
-  message,
-  reviewNote,
-  bypassReason,
-  onScheduleChange,
-  onSaveDraft,
-  onPublish,
-  onSchedule,
-  onCancelSchedule,
-  onReviewNoteChange,
-  onBypassReasonChange,
-  onWorkflowAction,
-}: {
-  canWrite: boolean;
-  canPublish: boolean;
-  schedule: typeof defaultSchedule;
-  activeRow: WebsiteExperienceAdminContext;
-  busyAction: string;
-  message: string;
-  reviewNote: string;
-  bypassReason: string;
-  onScheduleChange: (value: typeof defaultSchedule) => void;
-  onSaveDraft: () => void;
-  onPublish: () => void;
-  onSchedule: () => void;
-  onCancelSchedule: () => void;
-  onReviewNoteChange: (value: string) => void;
-  onBypassReasonChange: (value: string) => void;
-  onWorkflowAction: (action: "submit" | "approve" | "request-changes" | "delete-draft" | "archive" | "restore") => void;
-}) {
-  const workflowState = activeRow.workflowState ?? activeRow.status;
-  return (
-    <>
-      <div className="grid gap-3 md:grid-cols-4">
-        <WorkflowCard label="Status" value={workflowLabel(workflowState)} detail={activeRow.hasUnpublishedChanges ? "Unpublished changes exist" : "No saved draft changes"} />
-        <WorkflowCard label="Draft" value={`v${activeRow.draftVersion}`} detail="Editable working version" />
-        <WorkflowCard label="Published" value={`v${activeRow.publishedVersion}`} detail={activeRow.publishedAt ? formatDateTime(activeRow.publishedAt) : "Default content"} />
-        <WorkflowCard label="Scheduled" value={activeRow.scheduledVersion ? `v${activeRow.scheduledVersion}` : "None"} detail={activeRow.scheduledFor ? `${formatDateTime(activeRow.scheduledFor)} ${activeRow.scheduledTimezone || ""}` : "No future publish"} />
-      </div>
-      {activeRow.review?.note ? (
-        <div className="rounded border border-orange-200 bg-orange-50 p-3 text-sm font-semibold text-orange-900">
-          Review note: {activeRow.review.note}
-        </div>
-      ) : null}
-      <Field label="Review note / bypass reason" value={reviewNote} maxLength={500} onChange={onReviewNoteChange} />
-      <div className="flex flex-wrap items-center gap-3">
-        <button type="button" disabled={!canWrite || busyAction === "save"} onClick={onSaveDraft} className="inline-flex h-10 items-center gap-2 rounded bg-slate-900 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300">
-          <Save className="h-4 w-4" />
-          Save Draft
-        </button>
-        <button type="button" disabled={!canWrite || busyAction === "submit"} onClick={() => onWorkflowAction("submit")} className="inline-flex h-10 items-center gap-2 rounded border border-cyan-300 bg-cyan-50 px-4 text-sm font-semibold text-cyan-900 disabled:cursor-not-allowed disabled:opacity-50">
-          <Send className="h-4 w-4" />
-          Send for Approval
-        </button>
-        <button type="button" disabled={!canPublish || busyAction === "approve"} onClick={() => onWorkflowAction("approve")} className="inline-flex h-10 items-center gap-2 rounded bg-emerald-600 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-emerald-200">
-          <BadgeCheck className="h-4 w-4" />
-          Approve
-        </button>
-        <button type="button" disabled={!canPublish || busyAction === "request-changes"} onClick={() => onWorkflowAction("request-changes")} className="inline-flex h-10 items-center gap-2 rounded border border-orange-300 bg-orange-50 px-4 text-sm font-semibold text-orange-900 disabled:cursor-not-allowed disabled:opacity-50">
-          <XCircle className="h-4 w-4" />
-          Request Changes
-        </button>
-        <button type="button" disabled={!canPublish || busyAction === "publish"} onClick={onPublish} className="inline-flex h-10 items-center gap-2 rounded bg-blue-600 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-blue-200">
-          <Send className="h-4 w-4" />
-          Publish Now
-        </button>
-      </div>
-      <details className="rounded border border-slate-200 bg-slate-50 p-4">
-        <summary className="cursor-pointer text-sm font-semibold text-slate-900">Super Admin bypass and More Actions</summary>
-        <div className="mt-3 space-y-3">
-          <Field label="Super Admin bypass reason" value={bypassReason} maxLength={500} onChange={onBypassReasonChange} />
-          <p className="text-xs leading-5 text-slate-600">Delete Draft removes only the draft. Published content remains unchanged. Archive hides a context according to the current Website Experience active flag. Restore returns an archived context to Draft.</p>
-          <div className="flex flex-wrap gap-3">
-            <button type="button" disabled={!canWrite || busyAction === "delete-draft"} onClick={() => window.confirm("This removes only the draft. Published content remains unchanged.") && onWorkflowAction("delete-draft")} className="inline-flex h-10 items-center gap-2 rounded border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50">
-              <Trash2 className="h-4 w-4" />
-              Delete Draft
-            </button>
-            <button type="button" disabled={!canPublish || busyAction === "archive"} onClick={() => window.confirm("Archive this Website Experience context? Historical versions and audit remain preserved.") && onWorkflowAction("archive")} className="inline-flex h-10 items-center gap-2 rounded border border-orange-300 bg-orange-50 px-4 text-sm font-semibold text-orange-900 disabled:cursor-not-allowed disabled:opacity-50">
-              <Archive className="h-4 w-4" />
-              Archive
-            </button>
-            <button type="button" disabled={!canWrite || busyAction === "restore"} onClick={() => onWorkflowAction("restore")} className="inline-flex h-10 items-center gap-2 rounded border border-emerald-300 bg-emerald-50 px-4 text-sm font-semibold text-emerald-900 disabled:cursor-not-allowed disabled:opacity-50">
-              <BadgeCheck className="h-4 w-4" />
-              Restore to Draft
-            </button>
-          </div>
-        </div>
-      </details>
-      <div className="rounded border border-amber-200 bg-amber-50 p-4">
-        <div className="flex items-center gap-2 text-sm font-semibold text-amber-900">
-          <CalendarClock className="h-4 w-4" />
-          Schedule
-        </div>
-        <div className="mt-3 grid gap-3 md:grid-cols-3">
-          <ScheduleField label="Publish date" type="date" value={schedule.date} onChange={(date) => onScheduleChange({ ...schedule, date })} />
-          <ScheduleField label="Publish time" type="time" value={schedule.time} onChange={(time) => onScheduleChange({ ...schedule, time })} />
-          <Field label="Timezone" value={schedule.timezone} maxLength={64} onChange={(timezone) => onScheduleChange({ ...schedule, timezone })} />
-          <ScheduleField label="Optional end date" type="date" value={schedule.endDate} onChange={(endDate) => onScheduleChange({ ...schedule, endDate })} />
-          <ScheduleField label="Optional end time" type="time" value={schedule.endTime} onChange={(endTime) => onScheduleChange({ ...schedule, endTime })} />
-        </div>
-        <div className="mt-3 flex flex-wrap gap-3">
-          <button type="button" disabled={!canPublish || busyAction === "schedule"} onClick={onSchedule} className="inline-flex h-10 items-center gap-2 rounded bg-amber-600 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-amber-200">
-            <Clock3 className="h-4 w-4" />
-            Schedule
-          </button>
-          {activeRow.scheduledFor ? (
-            <button type="button" disabled={!canPublish || busyAction === "cancel-schedule"} onClick={onCancelSchedule} className="inline-flex h-10 items-center gap-2 rounded border border-amber-300 bg-white px-4 text-sm font-semibold text-amber-800 disabled:cursor-not-allowed disabled:opacity-50">
-              <XCircle className="h-4 w-4" />
-              Cancel Schedule
-            </button>
-          ) : null}
-        </div>
-      </div>
-      {message ? <p className="rounded border border-slate-200 bg-slate-50 p-3 text-sm font-semibold text-slate-700">{message}</p> : null}
-    </>
-  );
-}
-
 function EditorSection({ title, detail, children }: { title: string; detail: string; children: React.ReactNode }) {
   return (
     <div className="space-y-4">
       <div>
         <h3 className="text-lg font-semibold text-slate-950">{title}</h3>
-        <p className="mt-1 text-sm leading-6 text-slate-600">{detail}</p>
+        {detail ? <p className="mt-1 text-sm leading-6 text-slate-600">{detail}</p> : null}
       </div>
       {children}
     </div>
@@ -2208,15 +1736,6 @@ function Field({ label, value, maxLength, onChange }: { label: string; value: st
     <label className="space-y-1 text-xs font-semibold uppercase text-slate-500">
       <span>{label}</span>
       <input value={value} maxLength={maxLength} onChange={(event) => onChange(event.target.value.replace(/[<>]/g, ""))} className="h-10 w-full rounded border border-slate-200 bg-white px-3 text-sm font-medium normal-case text-slate-900 outline-none focus:border-blue-500" />
-    </label>
-  );
-}
-
-function ScheduleField({ label, type, value, onChange }: { label: string; type: "date" | "time"; value: string; onChange: (value: string) => void }) {
-  return (
-    <label className="space-y-1 text-xs font-semibold uppercase text-slate-500">
-      <span>{label}</span>
-      <input type={type} value={value} onChange={(event) => onChange(event.target.value)} className="h-10 w-full rounded border border-slate-200 bg-white px-3 text-sm font-medium normal-case text-slate-900 outline-none focus:border-blue-500" />
     </label>
   );
 }
@@ -2253,7 +1772,7 @@ function MediaUpload({
     }
     setUploaded(result.data);
     onUploaded({ slot: result.data.slot, url: result.data.url, altText: result.data.altText });
-    setMessage("Uploaded into draft. Save Draft keeps it private until Publish Now or Schedule.");
+    setMessage("Uploaded into draft. Save as Draft keeps this image private until the saved content is published.");
   };
 
   return (
@@ -2282,7 +1801,7 @@ function MediaUpload({
       {uploaded ? (
         <div className="mt-3 flex items-center gap-3 rounded border border-slate-100 bg-white p-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={uploaded.url} alt={uploaded.altText || "Uploaded presentation media"} className="h-14 w-20 rounded bg-white object-cover" />
+          <img src={uploaded.url} alt={uploaded.altText || "Uploaded image"} className="h-14 w-20 rounded bg-white object-cover" />
           <div className="min-w-0 text-xs text-slate-600">
             <p className="truncate font-semibold text-slate-900">{uploaded.originalFilename || "Uploaded image"}</p>
             <p>{uploaded.width && uploaded.height ? `${uploaded.width} x ${uploaded.height}px` : "Dimensions unavailable"} - {(uploaded.sizeBytes / 1024).toFixed(1)} KB</p>
@@ -2299,7 +1818,7 @@ function ImageReference({ label, value, onRemove }: { label: string; value: stri
     <div className="flex items-center justify-between gap-3 rounded border border-slate-200 bg-white p-3">
       <div className="min-w-0">
         <p className="text-xs font-semibold uppercase text-slate-500">{label}</p>
-        <p className="truncate text-sm text-slate-700">{value}</p>
+        <p className="text-sm text-slate-700">Saved image</p>
       </div>
       <button type="button" onClick={onRemove} className="shrink-0 rounded border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600">
         Remove
@@ -2308,7 +1827,7 @@ function ImageReference({ label, value, onRemove }: { label: string; value: stri
   );
 }
 
-function PreviewPanel({ content, device, onDeviceChange }: { content: WebsiteExperienceContent; device: PreviewDevice; onDeviceChange: (device: PreviewDevice) => void }) {
+function PreviewPanel({ content, selectedNodeId, device, onDeviceChange }: { content: WebsiteExperienceContent; selectedNodeId?: string; device: PreviewDevice; onDeviceChange: (device: PreviewDevice) => void }) {
   const deviceOptions: Array<{ key: PreviewDevice; label: string; icon: LucideIcon }> = [
     { key: "desktop", label: "Desktop", icon: Monitor },
     { key: "tablet", label: "Tablet", icon: Tablet },
@@ -2342,29 +1861,31 @@ function PreviewPanel({ content, device, onDeviceChange }: { content: WebsiteExp
       <p className="mt-2 text-xs font-semibold text-slate-600">Preview Changes shows the current editor draft and never publishes content.</p>
       <div className="mt-4 rounded bg-slate-100 p-3">
         <div className={`mx-auto overflow-hidden rounded border border-slate-300 bg-white ${frameClass}`}>
-          <PromoPreview content={content} compact={device !== "desktop"} />
+          <PromoPreview content={content} selectedNodeId={selectedNodeId} compact={device !== "desktop"} />
         </div>
       </div>
     </section>
   );
 }
 
-function PromoPreview({ content, compact }: { content: WebsiteExperienceContent; compact: boolean }) {
+function PromoPreview({ content, selectedNodeId, compact }: { content: WebsiteExperienceContent; selectedNodeId?: string; compact: boolean }) {
   if (content.context === "partner_application" && content.applicationTree) {
-    const stepFour = content.applicationTree.children.find((node) => node.id === "step-4-services");
+    const selectedNode = selectedNodeId
+      ? content.applicationTree.children.find((node) => node.id === selectedNodeId)
+      : content.applicationTree.children.find((node) => node.id === "application-shell");
     return (
       <div className="min-h-[420px] bg-slate-950 p-4 text-white">
-        <p className="text-[10px] font-bold uppercase text-sky-300">{content.applicationTree.root}</p>
+        <p className="text-[10px] font-bold uppercase text-sky-300">Partner Application</p>
         <h5 className={compact ? "mt-2 text-xl font-black" : "mt-2 text-2xl font-black"}>Partner Application</h5>
         <div className="mt-4 space-y-2">
           {content.applicationTree.children.slice(0, compact ? 5 : 9).map((node) => (
-            <div key={node.id} className={`rounded border p-2 ${node.id === "step-4-services" ? "border-sky-400 bg-sky-500/15" : "border-white/10 bg-white/5"}`}>
-              <b className="block text-xs">{node.label}</b>
+            <div key={node.id} className={`rounded border p-2 ${node.id === selectedNode?.id ? "border-sky-400 bg-sky-500/15" : "border-white/10 bg-white/5"}`}>
+              <b className="block text-xs">{partnerApplicationDisplayLabel(node.id, node.label)}</b>
               <span className="block text-[11px] text-blue-100">{node.title}</span>
             </div>
           ))}
         </div>
-        {stepFour ? <p className="mt-4 rounded bg-white/10 p-2 text-[11px] text-blue-100">{stepFour.subtitle}</p> : null}
+        {selectedNode ? <p className="mt-4 rounded bg-white/10 p-2 text-[11px] text-blue-100">{selectedNode.subtitle}</p> : null}
       </div>
     );
   }
@@ -2396,93 +1917,6 @@ function PromoPreview({ content, compact }: { content: WebsiteExperienceContent;
         </div>
         <p className="text-xs font-semibold text-blue-100">{content.footerTrustLine}</p>
       </div>
-    </div>
-  );
-}
-
-function LockedSecurity({ fields }: { fields: string[] }) {
-  return (
-    <section className="rounded border border-emerald-200 bg-emerald-50 p-4">
-      <div className="flex items-center gap-2">
-        <ShieldCheck className="h-4 w-4 text-emerald-700" />
-        <h4 className="text-sm font-semibold text-emerald-950">Security Boundary</h4>
-      </div>
-      <div className="mt-3 flex flex-wrap gap-2">
-        {fields.map((field) => <span key={field} className="rounded bg-white px-2 py-1 text-[11px] font-semibold text-emerald-800">{field}</span>)}
-      </div>
-    </section>
-  );
-}
-
-function AuditList({ rows }: { rows: WebsiteExperienceAdminResponse["recentAudit"] }) {
-  return (
-    <section className="rounded border border-slate-200 bg-white p-4">
-      <h4 className="text-sm font-semibold text-slate-950">Recent Audit</h4>
-      <div className="mt-3 space-y-2">
-        {rows.length ? rows.map((row) => (
-          <div key={row.id} className="rounded bg-slate-50 p-2 text-xs text-slate-600">
-            <b className="text-slate-900">{row.action}</b>
-            <span className="block">{row.changeSummary || row.context || row.entityId}</span>
-          </div>
-        )) : <p className="text-xs text-slate-500">No content actions recorded yet.</p>}
-      </div>
-    </section>
-  );
-}
-
-function CompactEditorMetadata({ activeRow }: { activeRow: WebsiteExperienceAdminContext }) {
-  return (
-    <section className="rounded border border-slate-200 bg-white p-4">
-      <h4 className="text-sm font-semibold text-slate-950">Content status</h4>
-      <div className="mt-3 grid gap-2 text-xs font-semibold text-slate-600">
-        <span>Version: Draft v{activeRow.draftVersion}</span>
-        <span>Last saved: {activeRow.updatedAt ? formatDateTime(activeRow.updatedAt) : "Not available"}</span>
-        <span>Last published: {activeRow.publishedAt ? formatDateTime(activeRow.publishedAt) : "Not published yet"}</span>
-        <span>Updated by: recorded in central History</span>
-      </div>
-      <p className="mt-3 text-xs leading-5 text-slate-500">Full activity is available from the central History area.</p>
-    </section>
-  );
-}
-
-function PartnerRegistrationIntakes({ rows }: { rows: PartnerRegistrationIntakeView[] }) {
-  const others = useMemo(() => rows.filter((row) => row.primaryCategory === "OTHER"), [rows]);
-  return (
-    <section className="rounded border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="flex items-center gap-2">
-        <Globe2 className="h-4 w-4 text-slate-500" />
-        <h4 className="text-sm font-semibold text-slate-950">Recent Others Service Suggestions</h4>
-      </div>
-      <p className="mt-1 text-xs leading-5 text-slate-500">Read-only intake visibility. Official service taxonomy mapping remains deferred.</p>
-      <div className="mt-3 overflow-x-auto">
-        <table className="min-w-full text-left text-xs">
-          <thead className="text-slate-500">
-            <tr>{["Legal name", "Primary category", "Requested service", "Email", "Status"].map((header) => <th key={header} className="border-b border-slate-100 px-2 py-2 font-semibold">{header}</th>)}</tr>
-          </thead>
-          <tbody>
-            {(others.length ? others : rows.slice(0, 5)).map((row) => (
-              <tr key={row.id} className="border-b border-slate-50">
-                <td className="px-2 py-2 font-semibold text-slate-900">{row.legalName}</td>
-                <td className="px-2 py-2 text-slate-600">{row.primaryCategory === "OTHER" ? "Others" : row.primaryCategory}</td>
-                <td className="px-2 py-2 text-slate-600">{row.requestedServiceName || "-"}</td>
-                <td className="px-2 py-2 text-slate-600">{row.businessEmail}</td>
-                <td className="px-2 py-2 text-slate-600">{row.status}</td>
-              </tr>
-            ))}
-            {rows.length === 0 ? <tr><td colSpan={5} className="px-2 py-5 text-center text-slate-500">No registration intakes yet.</td></tr> : null}
-          </tbody>
-        </table>
-      </div>
-    </section>
-  );
-}
-
-function WorkflowCard({ label, value, detail }: { label: string; value: string; detail: string }) {
-  return (
-    <div className="rounded border border-slate-200 bg-slate-50 p-3">
-      <p className="text-xs font-semibold uppercase text-slate-500">{label}</p>
-      <p className="mt-1 text-lg font-semibold text-slate-950">{value}</p>
-      <p className="mt-1 text-xs leading-5 text-slate-500">{detail}</p>
     </div>
   );
 }
@@ -2639,13 +2073,8 @@ function workflowViewLabel(view: WorkflowView) {
   return workflowViews.find((item) => item.key === view)?.label ?? "Website Experience";
 }
 
-function statusMessage(action: "submit" | "approve" | "request-changes" | "delete-draft" | "archive" | "restore") {
-  if (action === "submit") return "Sent for approval. Publish and Schedule remain controlled by authorized users.";
-  if (action === "approve") return "Approved. Publish Now or Schedule can use this approved draft.";
-  if (action === "request-changes") return "Changes requested. The draft returned to the editor workflow.";
-  if (action === "delete-draft") return "Draft deleted. Published content remains unchanged.";
-  if (action === "archive") return "Archived. History and audit remain preserved.";
-  return "Restored to Draft. Publish is still required before live content changes.";
+function statusMessage() {
+  return "Sent for approval.";
 }
 
 function PanelNotice({ text, tone = "default" }: { text: string; tone?: "default" | "danger" }) {
@@ -2657,12 +2086,6 @@ function toneClass(tone: WebsiteExperienceBenefit["tone"]) {
   if (tone === "amber") return "bg-amber-400";
   if (tone === "violet") return "bg-violet-400";
   return "bg-sky-400";
-}
-
-function buildIso(date: string, time: string): string | null {
-  if (!date || !time) return null;
-  const parsed = new Date(`${date}T${time}:00`);
-  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
 }
 
 function formatDateTime(value: string) {

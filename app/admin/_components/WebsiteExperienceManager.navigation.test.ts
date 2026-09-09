@@ -45,9 +45,9 @@ test("WebsiteExperienceManager Login & Signup third-level screen uses immediate-
   expect(source).toContain('breadcrumb={<HierarchyBreadcrumb items={[');
   expect(source).toContain('{ label: "Website Experience", href: "/admin/website-experience" }');
   expect(source).toContain('{ label: "Global Experience", href: "/admin/website-experience/global" }');
-  expect(source).toContain('{ label: "Login & Signup" }');
+  expect(source).toContain('{ label: "Login & Signup", href: "/admin/website-experience/login-signup" }');
   expect(source).toContain('title="Login & Signup"');
-  expect(source).toContain('detail="Choose an experience to manage."');
+  expect(source).toContain('detail="Choose an area."');
   expect(source).toContain('backHref="/admin/website-experience/global"');
   expect(source).toContain('backLabel="Back to Global Experience"');
   expect(source).toContain('user_login: "Manage the content shown on the User Login screen."');

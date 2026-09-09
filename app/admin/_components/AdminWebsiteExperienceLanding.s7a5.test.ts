@@ -213,3 +213,69 @@ test("S7A5 keeps local editors limited to Preview and Save as Draft", () => {
   expect(localActionSlice).not.toContain("Schedule");
   expect(localActionSlice).not.toContain("History");
 });
+
+test("S7A5.4 removes local workflow, audit, security and unrelated intake clutter", () => {
+  const forbidden = [
+    "Publication schedules",
+    "Item workflow",
+    "More Actions",
+    "Recent Others Service Suggestions",
+    "Security Boundary",
+    "Recent Audit",
+    "recorded in central History",
+    "presentation-only media",
+    "safe Partner Application presentation fields",
+    "Step 4 preview source",
+    "authenticationRoutes",
+    "otpProvider",
+    "msg91Configuration",
+    "googleClientSecret",
+    "emailProviderCredentials",
+    "privateR2Credentials",
+    "9 editable fields",
+  ];
+  for (const text of forbidden) {
+    expect(managerSource).not.toContain(text);
+  }
+  expect(managerSource).toContain("Preview your changes, then save a draft.");
+  expect(managerSource).toContain("Saved image");
+  expect(managerSource).not.toContain("<PartnerRegistrationIntakes");
+  expect(managerSource).not.toContain("<LockedSecurity");
+  expect(managerSource).not.toContain("<AuditList");
+});
+
+test("S7A5.4 Partner Application editors render selected-section fields without duplicate technical panels", () => {
+  const editorSlice = managerSource.slice(managerSource.indexOf("function PartnerApplicationTreeEditor"), managerSource.indexOf("function isAgreementTemplateEditor"));
+  expect(editorSlice).toContain("partnerApplicationDisplayLabel(selectedNode.id, selectedNode.label)");
+  expect(editorSlice).toContain("LocalStepEditorActions");
+  expect(editorSlice).not.toContain("lockedFields");
+  expect(editorSlice).not.toContain("editableFields.length");
+  expect(editorSlice).not.toContain("Step 4 preview source");
+  expect(editorSlice).not.toContain("Website Experience &gt; Pages &gt; Partner &gt; Partner Application");
+  expect(managerSource).toContain("Application Overview");
+  expect(managerSource).not.toContain("Application Shell");
+});
+
+test("S7A5.4 Partner Application preview follows the selected section", () => {
+  const previewSlice = managerSource.slice(managerSource.indexOf("function PromoPreview"), managerSource.indexOf("function StatusChip"));
+  expect(previewSlice).toContain("selectedNodeId");
+  expect(previewSlice).toContain('content.applicationTree.children.find((node) => node.id === selectedNodeId)');
+  expect(previewSlice).toContain('content.applicationTree.children.find((node) => node.id === "application-shell")');
+  expect(previewSlice).not.toContain('node.id === "step-4-services"');
+  expect(previewSlice).not.toContain("stepFour");
+});
+
+test("S7A5.4 Agreement Template editor is not composed with generic Step 7 editor content", () => {
+  const templatePanel = managerSource.slice(managerSource.indexOf("function AgreementTemplateDraftPanel"), managerSource.indexOf("const defaultAgreementPlaceholders"));
+  expect(templatePanel).toContain("Upload template document");
+  expect(templatePanel).toContain("Replace file");
+  expect(templatePanel).toContain("Remove file");
+  expect(templatePanel).toContain("Open saved draft");
+  expect(templatePanel).toContain("Company details added automatically");
+  expect(templatePanel).not.toContain("Step 7 Partner Agreement</h4>");
+  expect(templatePanel).not.toContain("Page Content");
+  expect(templatePanel).not.toContain("Recent Audit");
+  expect(templatePanel).not.toContain("Version History");
+  const stepSevenSlice = managerSource.slice(managerSource.indexOf("function StepSevenContentUnits"), managerSource.indexOf("type AgreementTemplateDraftState"));
+  expect(stepSevenSlice).toContain('activeUnit === "agreement-templates" && templateId ? null');
+});
