@@ -2,10 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowRight,
   BookOpen,
-  CalendarClock,
   Car,
   Compass,
   FilePenLine,
@@ -62,6 +62,7 @@ type CentralWorkflowContentType = "all" | "website_experience" | "agreement_temp
 type CentralWorkflowItem = {
   id: string;
   stage: Exclude<CentralWorkflowStage, "all">;
+  publishedInventory: boolean;
   contentType: Exclude<CentralWorkflowContentType, "all">;
   title: string;
   hierarchy: string;
@@ -112,13 +113,20 @@ const contextLabels: Record<WebsiteExperienceContext, string> = {
 };
 
 export function AdminWebsiteExperienceLanding({ view = "root" }: { view?: LandingView }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [state, setState] = useState<LoadState>({ status: "loading", data: null, error: null });
   const [catalogueState, setCatalogueState] = useState<CatalogueLoadState>({ status: "loading", data: null });
   const [policyWorkflowState, setPolicyWorkflowState] = useState<PolicyWorkflowLoadState>({ status: "loading", data: null });
   const [search, setSearch] = useState("");
   const [dashboardSearch, setDashboardSearch] = useState("");
-  const [dashboardStage, setDashboardStage] = useState<CentralWorkflowStage>("all");
   const [dashboardType, setDashboardType] = useState<CentralWorkflowContentType>("all");
+  const dashboardStage = centralWorkflowStageFromValue(searchParams.get("view")) ?? "published";
+  const setDashboardStage = useCallback((nextStage: CentralWorkflowStage) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("view", nextStage);
+    router.push(`/admin/website-experience?${params.toString()}`, { scroll: false });
+  }, [router, searchParams]);
 
   const loadWebsiteExperience = useCallback((active: { current: boolean }) => {
     void getAdminWebsiteExperienceLoginSignup().then((result) => {
@@ -175,7 +183,8 @@ export function AdminWebsiteExperienceLanding({ view = "root" }: { view?: Landin
   const filteredDashboardItems = useMemo(() => {
     const query = dashboardSearch.trim().toLowerCase();
     return dashboardItems.filter((item) => {
-      const matchesStage = dashboardStage === "all" || item.stage === dashboardStage;
+      const matchesStage = dashboardStage === "all"
+        || (dashboardStage === "published" ? item.publishedInventory : item.stage === dashboardStage);
       const matchesType = dashboardType === "all" || item.contentType === dashboardType;
       const haystack = `${item.title} ${item.hierarchy} ${item.module} ${item.detail} ${item.status} ${item.changedBy ?? ""}`.toLowerCase();
       return matchesStage && matchesType && (!query || haystack.includes(query));
@@ -260,9 +269,7 @@ export function AdminWebsiteExperienceLanding({ view = "root" }: { view?: Landin
       <AdminBackButton href="/admin" label="Back to Admin" />
       <section className="rounded-2xl border border-sky-300/10 bg-[#0b1628] p-5 shadow-xl shadow-black/20">
         <div className="min-w-0">
-          <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-200">Website Experience</p>
-          <h2 className="mt-2 text-3xl font-black tracking-normal text-sky-100">Website Experience</h2>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">Manage content from Draft to approval, publication, scheduling and central history.</p>
+          <h2 className="text-3xl font-black tracking-normal text-sky-100">Website Experience</h2>
         </div>
       </section>
 
@@ -299,21 +306,18 @@ export function AdminWebsiteExperienceLanding({ view = "root" }: { view?: Landin
         onContentTypeChange={setDashboardType}
         onClear={() => {
           setDashboardSearch("");
-          setDashboardStage("all");
+          setDashboardStage("published");
           setDashboardType("all");
         }}
       />
 
       <section className="rounded-2xl border border-sky-300/10 bg-[#0b1628]/95 p-4 shadow-xl shadow-black/20" data-compact-website-experience-navigation="true">
         <div className="mb-3">
-          <h3 className="text-lg font-black text-cyan-100">Content and records</h3>
-          <p className="mt-1 text-sm leading-6 text-slate-400">Compact access to editing areas, publication schedule and central history.</p>
+          <h3 className="text-lg font-black text-cyan-100">Content areas</h3>
         </div>
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-3 md:grid-cols-2">
           <CompactNavLink icon={MonitorCog} title="Global Experience" detail="Login and registration content" href="/admin/website-experience/global" />
           <CompactNavLink icon={LayoutTemplate} title="Pages" detail="Page-specific website content" href="/admin/website-experience/pages" />
-          <CompactNavLink icon={CalendarClock} title="Publication Schedule" detail="Scheduled publication queue" href="/admin/website-experience/login-signup?workflow=scheduled" />
-          <CompactNavLink icon={Clock3} title="Central History" detail="Versions and workflow activity" href="/admin/website-experience/versions-audit" />
         </div>
       </section>
     </div>
@@ -359,26 +363,18 @@ function CentralWorkflowDashboard({
 }) {
   return (
     <section className="space-y-4 rounded-2xl border border-sky-300/10 bg-[#0b1628]/95 p-5 shadow-xl shadow-black/20" data-central-workflow-dashboard="real-data">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-        <div className="min-w-0">
-          <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-200">Central workflow dashboard</p>
-          <h3 className="mt-1 text-2xl font-black text-cyan-100">Draft, approval and publishing operations</h3>
-          <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-400">
-            One operational view for saved Drafts, review, approval, scheduled publication, published content and activity.
-          </p>
-        </div>
-        <Link href="/admin/website-experience/versions-audit" className="inline-flex h-10 items-center justify-center rounded-xl border border-sky-300/20 bg-sky-400/10 px-4 text-sm font-black text-sky-100 hover:bg-sky-400/15 focus:outline-none focus:ring-2 focus:ring-sky-300">
-          Open History
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8" aria-label="Website Experience workflow navigation" data-authoritative-workflow-overview="true">
+        <DashboardCountCard label="Published" value={`${counts.publishedContent}`} selected={stage === "published"} onClick={() => onStageChange("published")} tone="green" />
+        <DashboardCountCard label="Drafts" value={`${counts.drafts}`} selected={stage === "drafts"} onClick={() => onStageChange("drafts")} tone="amber" />
+        <DashboardCountCard label="Awaiting Approval" value={`${counts.in_review}`} selected={stage === "in_review"} onClick={() => onStageChange("in_review")} tone="sky" />
+        <DashboardCountCard label="Changes Requested" value={`${counts.changes_requested}`} selected={stage === "changes_requested"} onClick={() => onStageChange("changes_requested")} tone="orange" />
+        <DashboardCountCard label="Approved" value={`${counts.approved}`} selected={stage === "approved"} onClick={() => onStageChange("approved")} tone="emerald" />
+        <DashboardCountCard label="Scheduled" value={`${counts.scheduled}`} selected={stage === "scheduled"} onClick={() => onStageChange("scheduled")} tone="violet" />
+        <DashboardCountCard label="Archived" value={`${counts.archived}`} selected={stage === "archived"} onClick={() => onStageChange("archived")} tone="slate" />
+        <Link href="/admin/website-experience/versions-audit" className="rounded-xl border border-sky-300/15 bg-[#081427] p-3 text-slate-200 transition hover:bg-white/[0.04] focus:outline-none focus:ring-2 focus:ring-sky-300">
+          <span className="block text-xl font-black">History</span>
+          <span className="mt-0.5 block text-[11px] font-black uppercase tracking-[0.12em]">Activity</span>
         </Link>
-      </div>
-
-      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-6" aria-label="Website Experience workflow overview" data-authoritative-workflow-overview="true">
-        <DashboardCountCard label="Drafts" value={`${counts.drafts}`} href="/admin/website-experience/login-signup?workflow=drafts" tone="amber" />
-        <DashboardCountCard label="Awaiting Approval" value={`${counts.in_review}`} href="/admin/website-experience/login-signup?workflow=in_review" tone="sky" />
-        <DashboardCountCard label="Changes Requested" value={`${counts.changes_requested}`} href="/admin/website-experience/login-signup?workflow=drafts" tone="orange" />
-        <DashboardCountCard label="Approved" value={`${counts.approved}`} href="/admin/website-experience/login-signup?workflow=approved" tone="emerald" />
-        <DashboardCountCard label="Scheduled" value={`${counts.scheduled}`} href="/admin/website-experience/login-signup?workflow=scheduled" tone="violet" />
-        <DashboardCountCard label="Published content" value={counts.publishedContent} href="/admin/website-experience/login-signup?workflow=published" tone="green" />
       </div>
 
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_12rem_14rem_auto]" data-central-workflow-filters="true">
@@ -395,13 +391,12 @@ function CentralWorkflowDashboard({
         <label className="block">
           <span className="sr-only">Filter by status</span>
           <select value={stage} onChange={(event) => onStageChange(event.target.value as CentralWorkflowStage)} className="h-11 w-full rounded-xl border border-sky-300/15 bg-[#081427] px-3 text-sm font-bold text-slate-100 outline-none focus:border-sky-300">
-            <option value="all">All statuses</option>
+            <option value="published">Published</option>
             <option value="drafts">Drafts</option>
+            <option value="in_review">Awaiting Approval</option>
             <option value="changes_requested">Changes Requested</option>
-            <option value="in_review">In Review</option>
             <option value="approved">Approved</option>
             <option value="scheduled">Scheduled</option>
-            <option value="published">Published</option>
             <option value="archived">Archived</option>
           </select>
         </label>
@@ -424,10 +419,10 @@ function CentralWorkflowDashboard({
         {loading ? (
           <p className="rounded-2xl border border-sky-300/10 bg-[#081427] p-4 text-sm font-semibold text-slate-300">Loading workflow items...</p>
         ) : items.length ? (
-          items.map((item) => <CentralWorkflowQueueItem key={item.id} item={item} />)
+          items.map((item) => <CentralWorkflowQueueItem key={item.id} item={item} selectedStage={stage} />)
         ) : (
           <div className="rounded-2xl border border-sky-300/10 bg-[#081427] p-5">
-            <h4 className="text-base font-black text-sky-50">No matching workflow items</h4>
+            <h4 className="text-base font-black text-sky-50">{stage === "published" ? "No published content matches the current filters." : "No matching workflow items"}</h4>
             <p className="mt-1 text-sm leading-6 text-slate-400">Clear filters or search for another content area.</p>
           </div>
         )}
@@ -436,7 +431,7 @@ function CentralWorkflowDashboard({
   );
 }
 
-function DashboardCountCard({ label, value, href, tone }: { label: string; value: string; href: string; tone: "amber" | "sky" | "orange" | "emerald" | "violet" | "green" }) {
+function DashboardCountCard({ label, value, selected, onClick, tone }: { label: string; value: string; selected: boolean; onClick: () => void; tone: "amber" | "sky" | "orange" | "emerald" | "violet" | "green" | "slate" }) {
   const toneClass = {
     amber: "border-amber-300/25 bg-amber-400/10 text-amber-100",
     sky: "border-sky-300/25 bg-sky-400/10 text-sky-100",
@@ -444,24 +439,27 @@ function DashboardCountCard({ label, value, href, tone }: { label: string; value
     emerald: "border-emerald-300/25 bg-emerald-400/10 text-emerald-100",
     violet: "border-violet-300/25 bg-violet-400/10 text-violet-100",
     green: "border-green-300/25 bg-green-400/10 text-green-100",
+    slate: "border-slate-600 bg-slate-900 text-slate-200",
   }[tone];
   return (
-    <Link href={href} className={`rounded-xl border p-3 transition hover:bg-white/[0.04] focus:outline-none focus:ring-2 focus:ring-sky-300 ${toneClass}`}>
+    <button type="button" aria-pressed={selected} onClick={onClick} className={`rounded-xl border p-3 text-left transition hover:bg-white/[0.04] focus:outline-none focus:ring-2 focus:ring-sky-300 ${toneClass} ${selected ? "ring-2 ring-orange-200" : ""}`}>
       <span className="block text-xl font-black">{value}</span>
       <span className="mt-0.5 block text-[11px] font-black uppercase tracking-[0.12em]">{label}</span>
-    </Link>
+    </button>
   );
 }
 
-function CentralWorkflowQueueItem({ item }: { item: CentralWorkflowItem }) {
+function CentralWorkflowQueueItem({ item, selectedStage }: { item: CentralWorkflowItem; selectedStage: CentralWorkflowStage }) {
   const hasMissing = item.missing.length > 0;
+  const activeVersionLabel = selectedStage === "published" && item.stage !== "published" ? `New version: ${item.status} ${item.draftVersion}` : item.status;
+  const primaryAction = selectedStage === "published" ? "Open" : item.primaryAction;
   return (
     <article className="rounded-xl border border-sky-300/10 bg-[#081427] p-3" data-central-workflow-item={item.id}>
       <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_13rem]">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h4 className="text-sm font-black text-sky-50">{item.title}</h4>
-            <span className={`rounded-full border px-2.5 py-1 text-[11px] font-black ${centralStageTone(item.stage)}`}>{item.status}</span>
+            <span className={`rounded-full border px-2.5 py-1 text-[11px] font-black ${centralStageTone(item.stage)}`}>{activeVersionLabel}</span>
             <span className="rounded-full border border-sky-300/10 bg-white/[0.04] px-2.5 py-1 text-[11px] font-black text-slate-300">{contentTypeLabel(item.contentType)}</span>
           </div>
           <p className="mt-1 text-xs leading-5 text-slate-400">{item.hierarchy}</p>
@@ -485,7 +483,7 @@ function CentralWorkflowQueueItem({ item }: { item: CentralWorkflowItem }) {
         <div className="flex flex-wrap gap-2 xl:items-start xl:justify-end">
           <Link href={item.href} className="inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-orange-300/20 bg-orange-400/10 px-3 text-xs font-black text-orange-100 hover:bg-orange-400/15 focus:outline-none focus:ring-2 focus:ring-orange-200">
             <Pencil className="h-4 w-4" />
-            {item.primaryAction}
+            {primaryAction}
           </Link>
           {item.previewHref ? (
             <Link href={item.previewHref} className="inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-cyan-300/20 bg-cyan-400/10 px-3 text-xs font-black text-cyan-100 hover:bg-cyan-400/15 focus:outline-none focus:ring-2 focus:ring-cyan-200">
@@ -528,6 +526,7 @@ function buildCentralWorkflowItems(
     items.push({
       id: marker?.centralDraftId ?? `${row.context}:${row.draftVersion}:${stage}`,
       stage,
+      publishedInventory: row.publishedVersion > 0,
       contentType: marker ? "agreement_template" : "website_experience",
       title,
       hierarchy: marker ? "Website Experience > Pages > Partner > Partner Application > Step 7 Partner Agreement" : `Website Experience > ${row.context === "partner_application" ? "Pages > Partner > Partner Application" : "Global Experience > Login & Signup"}`,
@@ -554,6 +553,7 @@ function buildCentralWorkflowItems(
     items.push({
       id: `service_catalogue:${catalogue.draftVersion}:${stage}`,
       stage,
+      publishedInventory: catalogue.publishedVersion > 0,
       contentType: "service_catalogue",
       title: "Service Catalogue",
       hierarchy: "Website Experience > Pages > Partner > Service Catalogue",
@@ -577,6 +577,7 @@ function buildCentralWorkflowItems(
     items.push({
       id: `verification_policy:${policy.workflowRecord.draftVersionId ?? policy.published.version}:${stage}`,
       stage,
+      publishedInventory: Boolean(policy.published.version),
       contentType: "verification_rules",
       title: "Verification Rules",
       hierarchy: "Website Experience > Partner Operations > Verification Rules",
@@ -602,8 +603,6 @@ function buildCentralWorkflowItems(
 }
 
 function countCentralWorkflowStages(items: CentralWorkflowItem[], website: WebsiteExperienceAdminResponse | null): CentralWorkflowCounts {
-  const publishedContexts = website?.contexts.filter((context) => context.publishedVersion > 0).length ?? 0;
-  const totalContexts = website?.contexts.length ?? 0;
   return {
     drafts: items.filter((item) => item.stage === "drafts").length,
     changes_requested: items.filter((item) => item.stage === "changes_requested").length,
@@ -611,8 +610,21 @@ function countCentralWorkflowStages(items: CentralWorkflowItem[], website: Websi
     approved: items.filter((item) => item.stage === "approved").length,
     scheduled: items.filter((item) => item.stage === "scheduled").length,
     archived: items.filter((item) => item.stage === "archived").length,
-    publishedContent: totalContexts ? `${publishedContexts}/${totalContexts}` : "Loading",
+    publishedContent: website ? `${items.filter((item) => item.publishedInventory).length}` : "Loading",
   };
+}
+
+function centralWorkflowStageFromValue(value: string | null): CentralWorkflowStage | null {
+  return value === "drafts"
+    || value === "in_review"
+    || value === "changes_requested"
+    || value === "approved"
+    || value === "scheduled"
+    || value === "published"
+    || value === "archived"
+    || value === "all"
+    ? value
+    : null;
 }
 
 function displayActor(value?: string) {

@@ -2537,7 +2537,7 @@ function workflowRowsForView(data: WebsiteExperienceAdminResponse, view: Workflo
     const state = context.workflowState ?? context.status;
     if (view === "drafts") return context.hasUnpublishedChanges && (state === "draft" || state === "working_changes" || state === "changes_requested");
     if (view === "scheduled") return Boolean(context.scheduledFor) || state === "scheduled";
-    if (view === "published") return context.publishedVersion > 0 && state === "published";
+    if (view === "published") return context.publishedVersion > 0;
     if (view === "archive") return state === "archived";
     return state === view;
   });
@@ -2551,6 +2551,7 @@ function catalogueWorkflowRow(catalogue: AdminPartnerServiceCatalogueResponse | 
     view === "drafts" ? catalogue.hasUnpublishedChanges && (state === "draft" || state === "changes_requested")
     : view === "in_review" ? state === "in_review"
     : view === "approved" ? state === "approved"
+    : view === "published" ? catalogue.publishedVersion > 0
     : false;
   if (!matches) return null;
   const domainId = record.sourceRecordId && record.sourceRecordId !== "default" ? record.sourceRecordId : catalogue.review?.domainId;

@@ -18,11 +18,13 @@ test("S7A5 dashboard renders real summary counts and stage filters", () => {
   expect(landingSource).toContain("DashboardCountCard");
   expect(landingSource).toContain("countCentralWorkflowStages");
   expect(landingSource).toContain('data-authoritative-workflow-overview="true"');
-  for (const label of ["Drafts", "Awaiting Approval", "Changes Requested", "Approved", "Scheduled", "Published content"]) {
+  for (const label of ["Published", "Drafts", "Awaiting Approval", "Changes Requested", "Approved", "Scheduled", "Archived", "History"]) {
     expect(landingSource).toContain(label);
   }
   expect(landingSource).toContain("publishedContent");
   expect(landingSource).not.toContain('label="Published" value={`${counts.published}`}');
+  expect(landingSource).not.toContain("3/4");
+  expect(landingSource).not.toContain("3/3");
   expect(landingSource).toContain('data-central-workflow-filters="true"');
   expect(landingSource).toContain("Clear Filters");
   expect(landingSource).toContain("Search by content, page, template or editor");
@@ -54,10 +56,43 @@ test("S7A5.1 fixes wording, count semantics and raw actor display", () => {
   expect(landingSource).toContain("displayActor");
   expect(landingSource).toContain("System administrator");
   expect(landingSource).toContain("Recorded in audit");
-  expect(landingSource).toContain("publishedContexts");
+  expect(landingSource).toContain("publishedInventory");
+  expect(landingSource).toContain('items.filter((item) => item.publishedInventory).length');
   expect(landingSource).not.toContain("Readys");
   expect(landingSource).not.toContain("Scheduleds");
   expect(landingSource).not.toContain("changedBy: catalogue.review?.changedByAdminId");
+});
+
+test("S7A5.2 root dashboard defaults to Published inventory through URL state", () => {
+  expect(landingSource).toContain('centralWorkflowStageFromValue(searchParams.get("view")) ?? "published"');
+  expect(landingSource).toContain('params.set("view", nextStage)');
+  expect(landingSource).toContain('setDashboardStage("published")');
+  expect(landingSource).toContain('selected={stage === "published"}');
+  expect(landingSource).not.toContain('useState<CentralWorkflowStage>("all")');
+  expect(landingSource).not.toContain('<option value="all">All statuses</option>');
+});
+
+test("S7A5.2 Published inventory is independent from active workflow stage", () => {
+  expect(landingSource).toContain('dashboardStage === "published" ? item.publishedInventory : item.stage === dashboardStage');
+  expect(landingSource).toContain("publishedInventory: row.publishedVersion > 0");
+  expect(landingSource).toContain("publishedInventory: catalogue.publishedVersion > 0");
+  expect(landingSource).toContain("publishedInventory: Boolean(policy.published.version)");
+  expect(landingSource).toContain('selectedStage === "published" && item.stage !== "published" ? `New version: ${item.status} ${item.draftVersion}` : item.status');
+});
+
+test("S7A5.2 Published route shows published inventory even with newer workflow versions", () => {
+  expect(managerSource).toContain('if (view === "published") return context.publishedVersion > 0;');
+  expect(managerSource).toContain('view === "published" ? catalogue.publishedVersion > 0');
+  expect(managerSource).not.toContain('if (view === "published") return context.publishedVersion > 0 && state === "published";');
+});
+
+test("S7A5.2 removes unnecessary Home dashboard copy", () => {
+  expect(landingSource).not.toContain("Central workflow dashboard");
+  expect(landingSource).not.toContain("Draft, approval and publishing operations");
+  expect(landingSource).not.toContain("One operational view for saved Drafts, review, approval, scheduled publication, published content and activity.");
+  expect(landingSource).not.toContain("Manage content from Draft to approval, publication, scheduling and central history.");
+  expect(landingSource).not.toContain("Open History");
+  expect(landingSource).not.toContain("Compact access to editing areas, publication schedule and central history.");
 });
 
 test("S7A5 preserves exact Agreement Template draft routing and reactive navigation", () => {
