@@ -262,7 +262,6 @@ export function AdminWebsiteExperienceLanding({ view = "root" }: { view?: Landin
         onContentTypeChange={setDashboardType}
         onClear={() => {
           setDashboardSearch("");
-          setDashboardStage("published");
           setDashboardType("all");
         }}
       />
@@ -354,9 +353,11 @@ function CentralWorkflowDashboard({
             <option value="verification_rules">Verification Rules</option>
           </select>
         </label>
-        <button type="button" disabled={!search.trim() && contentType === "all"} onClick={onClear} className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-600 bg-slate-900 px-4 text-sm font-black text-slate-200 hover:border-sky-300/30 hover:text-sky-100 focus:outline-none focus:ring-2 focus:ring-sky-300 disabled:cursor-not-allowed disabled:opacity-50">
-          Clear Filters
-        </button>
+        {search.trim() || contentType !== "all" ? (
+          <button type="button" onClick={onClear} className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-600 bg-slate-900 px-4 text-sm font-black text-slate-200 hover:border-sky-300/30 hover:text-sky-100 focus:outline-none focus:ring-2 focus:ring-sky-300">
+            Clear Filters
+          </button>
+        ) : null}
       </div>
 
       <div className="space-y-3" data-central-workflow-queue="authoritative">

@@ -77,7 +77,10 @@ test("Step 7 save feedback uses one non-blocking top-layer toast", () => {
 });
 
 test("Website Experience Partner Application removes local workflow controls and keeps central drafting", () => {
-  expect(websiteExperienceSource).toContain("Open one Partner Application section.");
+  expect(websiteExperienceSource).toContain("PartnerApplicationSectionList");
+  expect(websiteExperienceSource).toContain("Application Overview");
+  expect(websiteExperienceSource).not.toContain("Open one Partner Application section.");
+  expect(websiteExperienceSource).not.toContain("Open one application section at a time.");
   expect(websiteExperienceSource).toContain("function LocalStepEditorActions");
   expect(websiteExperienceSource).toContain("Approval, publishing, scheduling and history are handled from the central Website Experience workflow.");
   expect(websiteExperienceSource).toContain('href="#website-experience-preview"');
@@ -114,7 +117,7 @@ test("Website Experience Step 7 content units expose Agreement Templates under t
   expect(websiteExperienceSource).toContain("stepSevenUnitIds");
   expect(websiteExperienceSource).toContain("Company details added automatically");
   expect(websiteExperienceSource).toContain("approval, publishing, scheduling and history stay there");
-  expect(websiteExperienceSource).toContain('Website Experience &gt; Pages &gt; Partner &gt; Partner Application &gt; {selectedNode.label}');
+  expect(websiteExperienceSource).toContain('Website Experience &gt; Pages &gt; Partner &gt; Partner Application &gt; {selectedNodeDisplayLabel}');
   expect(websiteExperienceSource).toContain('label="Back to Partner Application"');
 });
 

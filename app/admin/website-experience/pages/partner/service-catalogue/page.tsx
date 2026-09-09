@@ -7,7 +7,7 @@ import { AdminPartnerServiceCatalogueClient } from "../../../../partners/service
 export default function AdminWebsiteExperiencePartnerServiceCataloguePage() {
   return (
     <AdminProtected requiredPermissions={["partner_service_catalogue.read"]}>
-      <AdminShell title="Service Catalogue">
+      <AdminShell title="Website Experience">
         <div className="catalogueRouteChrome mb-4">
           <AdminBackButton href="/admin/website-experience/pages/partner" label="Back to Partner" />
         </div>

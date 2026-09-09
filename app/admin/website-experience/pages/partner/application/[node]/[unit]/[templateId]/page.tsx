@@ -10,7 +10,7 @@ export default async function AdminWebsiteExperiencePartnerApplicationTemplatePa
   const { node, unit, templateId } = await params;
   return (
     <AdminProtected requiredPermissions={["content.read"]}>
-      <AdminShell title="Partner Application">
+      <AdminShell title="Website Experience">
         <WebsiteExperienceManager
           mode="partner-application"
           partnerApplicationNodeId={node}

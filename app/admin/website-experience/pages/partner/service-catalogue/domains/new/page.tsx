@@ -5,7 +5,7 @@ import { AdminPartnerServiceCatalogueDomainEditorClient } from "../../../../../.
 export default function AdminWebsiteExperiencePartnerServiceCatalogueAddDomainPage() {
   return (
     <AdminProtected requiredPermissions={["partner_service_catalogue.manage"]}>
-      <AdminShell title="Add Domain">
+      <AdminShell title="Website Experience">
         <AdminPartnerServiceCatalogueDomainEditorClient mode="new" />
       </AdminShell>
     </AdminProtected>

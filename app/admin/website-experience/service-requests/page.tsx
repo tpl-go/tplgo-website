@@ -5,7 +5,7 @@ import { AdminWebsiteExperienceServiceRequestsClient } from "../../_components/A
 export default function AdminWebsiteExperienceServiceRequestsPage() {
   return (
     <AdminProtected requiredPermissions={["partner_service_catalogue.read"]}>
-      <AdminShell title="Service Requests">
+      <AdminShell title="Website Experience">
         <AdminWebsiteExperienceServiceRequestsClient />
       </AdminShell>
     </AdminProtected>

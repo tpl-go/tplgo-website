@@ -10,7 +10,7 @@ export default async function AdminWebsiteExperiencePartnerServiceCatalogueEditS
   const { serviceId } = await params;
   return (
     <AdminProtected requiredPermissions={["partner_service_catalogue.manage"]}>
-      <AdminShell title="Edit Service">
+      <AdminShell title="Website Experience">
         <AdminPartnerServiceCatalogueServiceEditorClient mode="edit" serviceId={decodeURIComponent(serviceId)} />
       </AdminShell>
     </AdminProtected>

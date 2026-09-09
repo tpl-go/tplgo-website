@@ -17,7 +17,7 @@ export default async function AdminWebsiteExperiencePartnerApplicationNodePage({
   }
   return (
     <AdminProtected requiredPermissions={["content.read"]}>
-      <AdminShell title="Partner Application">
+      <AdminShell title="Website Experience">
         <WebsiteExperienceManager mode="partner-application" partnerApplicationNodeId={node} />
       </AdminShell>
     </AdminProtected>

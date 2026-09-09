@@ -13,7 +13,7 @@ export default async function AdminWebsiteExperiencePartnerServiceCatalogueAddSe
   const { parent } = await searchParams;
   return (
     <AdminProtected requiredPermissions={["partner_service_catalogue.manage"]}>
-      <AdminShell title="Add Service">
+      <AdminShell title="Website Experience">
         <AdminPartnerServiceCatalogueServiceEditorClient mode="new" domainId={decodeURIComponent(domainId)} parentCode={parent ? decodeURIComponent(parent) : undefined} />
       </AdminShell>
     </AdminProtected>

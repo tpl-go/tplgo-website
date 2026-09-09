@@ -429,25 +429,20 @@ export function WebsiteExperienceManager({
   if (mode === "partner-application" && !partnerApplicationNodeId && editorView === "blocks") {
     return (
       <ContentListShell
-        eyebrow="Website Experience > Pages > Partner"
+        eyebrow="Website Experience > Pages > Partner > Partner Application"
+        breadcrumb={<HierarchyBreadcrumb items={[
+          { label: "Website Experience", href: "/admin/website-experience" },
+          { label: "Pages", href: "/admin/website-experience/pages" },
+          { label: "Partner", href: "/admin/website-experience/pages/partner" },
+          { label: "Partner Application" },
+        ]} />}
         title="Partner Application"
-        detail="Open one Partner Application section."
+        detail=""
         backHref="/admin/website-experience/pages/partner"
         backLabel="Back to Partner"
       >
         <ItemStatusStrip activeRow={activeRow} />
-        <PartnerApplicationTreeEditor
-          content={activeDraft}
-          selectedNodeId={undefined}
-          selectedStepSevenUnitId={undefined}
-          selectedAgreementTemplateId={undefined}
-          canWrite={canWrite}
-          activeRow={activeRow}
-          busyAction={busyAction}
-          message={message}
-          onContentChange={updateDraft}
-          onSaveDraft={saveDraft}
-        />
+        <PartnerApplicationSectionList content={activeDraft} activeRow={activeRow} />
       </ContentListShell>
     );
   }
@@ -671,7 +666,7 @@ function ContentListShell({
       <div>
         {breadcrumb ?? <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-200">{eyebrow}</p>}
         <h2 className="mt-1 text-2xl font-black text-cyan-100">{title}</h2>
-        <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-400">{detail}</p>
+        {detail ? <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-400">{detail}</p> : null}
       </div>
       <div className="space-y-3">{children}</div>
     </section>
@@ -707,7 +702,7 @@ function ContentDrilldownRow({
         </span>
         <span className="min-w-0">
           <span className="block text-base font-black text-sky-50">{title}</span>
-          <span className="mt-1 block text-sm leading-6 text-slate-400">{detail}</span>
+          {detail ? <span className="mt-1 block text-sm leading-6 text-slate-400">{detail}</span> : null}
           <span className="mt-1 block text-xs font-semibold text-slate-500">{meta}</span>
         </span>
       </span>
@@ -887,7 +882,7 @@ function WorkflowDraftDetailView({
     return (
       <ContentListShell
         eyebrow="Website Experience > Drafts"
-        breadcrumb={<WorkflowBreadcrumb current="Drafts" />}
+        breadcrumb={<WorkflowBreadcrumb current="Draft not found" />}
         title="Draft not found"
         detail="The saved Draft could not be found. Return to Drafts and choose another item."
         backHref="/admin/website-experience?view=drafts"
@@ -898,16 +893,17 @@ function WorkflowDraftDetailView({
     );
   }
   const missing = marker?.readinessMissing ?? [];
-  const targetLabel = marker?.targetLabel ?? row.label;
+  const draftTitle = marker?.title?.trim() || row.label;
+  const contextLabel = marker ? "Partner Application > Step 7 Partner Agreement > Agreement Templates" : row.label;
   const editHref = marker?.templateId
     ? `${stepSevenUnitHref("agreement-templates")}/${encodeURIComponent(marker.templateId)}`
     : "/admin/website-experience/pages/partner/application";
   return (
     <ContentListShell
       eyebrow="Website Experience > Drafts"
-      breadcrumb={<WorkflowBreadcrumb current={targetLabel} />}
-      title={targetLabel}
-      detail={marker ? "Partner Application > Step 7 Partner Agreement > Agreement Templates" : "Saved draft"}
+      breadcrumb={<WorkflowBreadcrumb current={draftTitle} />}
+      title={draftTitle}
+      detail={contextLabel}
       backHref="/admin/website-experience?view=drafts"
       backLabel="Back to Drafts"
     >
@@ -959,6 +955,10 @@ function WorkflowBreadcrumb({ current }: { current: string }) {
     <nav className="flex flex-wrap items-center gap-2 text-xs font-black text-slate-400" aria-label="Website Experience breadcrumbs">
       <Link href="/admin/website-experience" className="rounded text-sky-200 hover:text-orange-100 focus:outline-none focus:ring-2 focus:ring-sky-300">
         Website Experience
+      </Link>
+      <span aria-hidden="true" className="text-slate-600">&gt;</span>
+      <Link href="/admin/website-experience?view=drafts" className="rounded text-sky-200 hover:text-orange-100 focus:outline-none focus:ring-2 focus:ring-sky-300">
+        Drafts
       </Link>
       <span aria-hidden="true" className="text-slate-600">&gt;</span>
       <span aria-current="page" className="text-slate-300">{current}</span>
@@ -1144,6 +1144,27 @@ function BlockEditor({
   );
 }
 
+function PartnerApplicationSectionList({ content, activeRow }: { content: WebsiteExperienceContent; activeRow: WebsiteExperienceAdminContext }) {
+  const tree = content.applicationTree;
+  return (
+    <div className="space-y-3" data-partner-application-section-list="operator">
+      {(tree?.children ?? []).map((node) => (
+        <Link
+          key={node.id}
+          href={`/admin/website-experience/pages/partner/application/${node.id}`}
+          className="flex min-h-16 w-full flex-col justify-between gap-3 rounded-2xl border border-sky-300/10 bg-[#081427] p-4 text-left shadow-lg shadow-black/10 transition hover:border-sky-300/35 hover:bg-[#0b1b33] focus:outline-none focus:ring-2 focus:ring-sky-300 sm:flex-row sm:items-center"
+        >
+          <span className="min-w-0">
+            <span className="block text-base font-black text-sky-50">{partnerApplicationDisplayLabel(node.id, node.label)}</span>
+            <span className="mt-2 inline-flex rounded-full border border-sky-300/10 bg-white/[0.04] px-2.5 py-1 text-[11px] font-black text-slate-300">{partnerApplicationWorkflowLabel(activeRow)}</span>
+          </span>
+          <ArrowRight className="h-4 w-4 shrink-0 text-cyan-200" />
+        </Link>
+      ))}
+    </div>
+  );
+}
+
 function PartnerApplicationTreeEditor({
   content,
   selectedNodeId,
@@ -1189,29 +1210,7 @@ function PartnerApplicationTreeEditor({
   const stepFour = tree?.children.find((node) => node.id === "step-4-services");
   const selectedNode = selectedNodeId ? tree?.children.find((node) => node.id === selectedNodeId) : undefined;
   if (!selectedNodeId) {
-    return (
-      <EditorSection title="Partner Application" detail="Open one application section at a time.">
-        <div className="rounded border border-blue-100 bg-blue-50 p-3 text-sm text-blue-900">
-          Website Experience &gt; Pages &gt; Partner &gt; Partner Application
-        </div>
-        <div className="space-y-3">
-          {(tree?.children ?? []).map((node) => (
-            <Link
-              key={node.id}
-              href={`/admin/website-experience/pages/partner/application/${node.id}`}
-              className="flex min-h-20 w-full flex-col justify-between gap-4 rounded border border-slate-200 bg-slate-50 p-4 text-left hover:border-blue-300 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-400 sm:flex-row sm:items-center"
-            >
-              <span className="min-w-0">
-                <span className="block text-sm font-semibold text-slate-950">{node.label}</span>
-                <span className="mt-1 block text-xs leading-5 text-slate-600">{partnerApplicationSectionDescription(node.id, node.editableFields.length)}</span>
-                <span className="mt-2 inline-flex rounded-full bg-white px-2 py-1 text-[11px] font-semibold text-slate-600">{partnerApplicationWorkflowLabel(activeRow)}</span>
-              </span>
-              <ArrowRight className="h-4 w-4 text-blue-700" />
-            </Link>
-          ))}
-        </div>
-      </EditorSection>
-    );
+    return <PartnerApplicationSectionList content={content} activeRow={activeRow} />;
   }
 
   if (!selectedNode) {
@@ -1222,10 +1221,11 @@ function PartnerApplicationTreeEditor({
     );
   }
 
+  const selectedNodeDisplayLabel = partnerApplicationDisplayLabel(selectedNode.id, selectedNode.label);
   return (
-    <EditorSection title={selectedNode.label} detail="Edit only this Partner Application section's safe presentation fields.">
+    <EditorSection title={selectedNodeDisplayLabel} detail="Edit this Partner Application section.">
       <div className="rounded border border-blue-100 bg-blue-50 p-3 text-sm text-blue-900">
-        Website Experience &gt; Pages &gt; Partner &gt; Partner Application &gt; {selectedNode.label}
+        Website Experience &gt; Pages &gt; Partner &gt; Partner Application &gt; {selectedNodeDisplayLabel}
       </div>
       <AdminBackButton href="/admin/website-experience/pages/partner/application" label="Back to Partner Application" className="border-slate-300 bg-slate-950 text-sky-100" />
       {selectedNode.id === "step-7-partner-agreement" ? (
@@ -1275,11 +1275,9 @@ function PartnerApplicationTreeEditor({
   );
 }
 
-function partnerApplicationSectionDescription(nodeId: string, editableFields: number): string {
-  if (nodeId === "application-shell") return "Application shell, progress and shared guidance.";
-  if (nodeId === "step-7-partner-agreement") return "Page content, agreement templates, signing instructions and declarations.";
-  if (nodeId === "step-8-review-submit") return "Review and Submit guidance for the final onboarding step.";
-  return `${editableFields} editable presentation fields.`;
+function partnerApplicationDisplayLabel(nodeId: string, label: string): string {
+  if (nodeId === "application-shell") return "Application Overview";
+  return label;
 }
 
 function partnerApplicationWorkflowLabel(activeRow: WebsiteExperienceAdminContext): string {
@@ -2534,7 +2532,8 @@ function publishScope(context: WebsiteExperienceContext) {
 
 function partnerApplicationNodeLabel(content: WebsiteExperienceContent, selectedNodeId?: string) {
   if (!selectedNodeId) return "Partner Application";
-  return content.applicationTree?.children.find((node) => node.id === selectedNodeId)?.label ?? "Partner Application Item";
+  const node = content.applicationTree?.children.find((item) => item.id === selectedNodeId);
+  return node ? partnerApplicationDisplayLabel(node.id, node.label) : "Partner Application Item";
 }
 
 function partnerApplicationRouteTitle(content: WebsiteExperienceContent, selectedNodeId?: string, selectedUnitId?: string, templateId?: string): string {

@@ -166,6 +166,7 @@ export default function AdminShell({
     await adminLogout();
     router.replace("/admin/login");
   };
+  const isWebsiteExperienceRoute = pathname.startsWith("/admin/website-experience");
 
   return (
     <div className="tpl-admin-shell min-h-screen bg-[#050b16] text-slate-100">
@@ -370,7 +371,7 @@ export default function AdminShell({
         <header className={serviceCatalogueShell ? "sticky top-0 z-20 flex h-16 items-center justify-between border-b border-sky-300/10 bg-[#07111f]/95 px-4 text-slate-100 backdrop-blur lg:px-8" : "sticky top-0 z-20 flex h-16 items-center justify-between border-b border-slate-200 bg-white px-4 lg:px-8"}>
           <div>
             <h1 className={serviceCatalogueShell ? "text-base font-semibold text-sky-100" : "text-base font-semibold text-slate-950"}>{title}</h1>
-            <p className={serviceCatalogueShell ? "text-xs text-orange-200" : "text-xs text-slate-500"}>Staging workspace</p>
+            {!isWebsiteExperienceRoute ? <p className={serviceCatalogueShell ? "text-xs text-orange-200" : "text-xs text-slate-500"}>Staging workspace</p> : null}
           </div>
           <div className="flex items-center gap-3">
             <div className={serviceCatalogueShell ? "hidden items-center gap-2 rounded border border-sky-300/15 bg-white/[0.04] px-3 py-2 text-xs text-slate-300 md:flex" : "hidden items-center gap-2 rounded border border-slate-200 px-3 py-2 text-xs text-slate-600 md:flex"}>

@@ -5,7 +5,7 @@ import { WebsiteExperienceManager } from "../../../../_components/WebsiteExperie
 export default function AdminWebsiteExperiencePartnerApplicationPage() {
   return (
     <AdminProtected requiredPermissions={["content.read"]}>
-      <AdminShell title="Partner Application">
+      <AdminShell title="Website Experience">
         <WebsiteExperienceManager mode="partner-application" />
       </AdminShell>
     </AdminProtected>

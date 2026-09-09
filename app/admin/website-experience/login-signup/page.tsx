@@ -5,7 +5,7 @@ import { WebsiteExperienceManager } from "../../_components/WebsiteExperienceMan
 export default function AdminWebsiteExperienceLoginSignupPage() {
   return (
     <AdminProtected requiredPermissions={["content.read"]}>
-      <AdminShell title="Login & Signup">
+      <AdminShell title="Website Experience">
         <WebsiteExperienceManager />
       </AdminShell>
     </AdminProtected>

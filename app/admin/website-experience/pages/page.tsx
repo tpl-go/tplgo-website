@@ -5,7 +5,7 @@ import { AdminWebsiteExperienceLanding } from "../../_components/AdminWebsiteExp
 export default function AdminWebsiteExperiencePagesPage() {
   return (
     <AdminProtected requiredPermissions={["content.read"]}>
-      <AdminShell title="Pages">
+      <AdminShell title="Website Experience">
         <AdminWebsiteExperienceLanding view="pages" />
       </AdminShell>
     </AdminProtected>
