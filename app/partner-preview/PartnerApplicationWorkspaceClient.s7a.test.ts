@@ -7,6 +7,9 @@ const apiSource = readFileSync(join(process.cwd(), "app/lib/partner/partnerApiCl
 const adminAgreementSource = readFileSync(join(process.cwd(), "app/admin/partners/agreements/page.tsx"), "utf8");
 const adminShellSource = readFileSync(join(process.cwd(), "app/admin/_components/AdminShell.tsx"), "utf8");
 const websiteExperienceSource = readFileSync(join(process.cwd(), "app/admin/_components/WebsiteExperienceManager.tsx"), "utf8");
+const stepSevenNodeRoute = readFileSync(join(process.cwd(), "app/admin/website-experience/pages/partner/application/[node]/page.tsx"), "utf8");
+const stepSevenUnitRoute = readFileSync(join(process.cwd(), "app/admin/website-experience/pages/partner/application/[node]/[unit]/page.tsx"), "utf8");
+const stepSevenTemplateRoute = readFileSync(join(process.cwd(), "app/admin/website-experience/pages/partner/application/[node]/[unit]/[templateId]/page.tsx"), "utf8");
 
 test("Step 7 renders a guided six-section Partner agreement flow", () => {
   expect(workspaceSource).toContain("function AgreementStep");
@@ -85,7 +88,9 @@ test("Website Experience Partner Application removes local workflow controls and
 });
 
 test("Website Experience Step 7 content units expose Agreement Templates under the Partner hierarchy", () => {
+  const stepSevenSlice = websiteExperienceSource.slice(websiteExperienceSource.indexOf("const stepSevenUnits"), websiteExperienceSource.indexOf("type AgreementTemplateDraftState"));
   expect(websiteExperienceSource).toContain('data-step7-content-unit-list="vertical"');
+  expect(websiteExperienceSource).toContain('data-step7-overview-page="true"');
   expect(websiteExperienceSource).toContain("Page Content");
   expect(websiteExperienceSource).toContain("Agreement Templates");
   expect(websiteExperienceSource).toContain("Signer Instructions");
@@ -94,19 +99,52 @@ test("Website Experience Step 7 content units expose Agreement Templates under t
   expect(websiteExperienceSource).toContain("Declarations");
   expect(websiteExperienceSource).toContain("Agreement Status Messages");
   expect(websiteExperienceSource).toContain("Summary Guidance");
+  expect(stepSevenSlice).toContain("stepSevenUnitHref(id)");
+  expect(stepSevenSlice).not.toContain("onActiveUnitChange");
+  expect(stepSevenSlice).not.toContain("window.history.replaceState");
+  expect(stepSevenSlice).not.toContain("url.searchParams.set");
   expect(websiteExperienceSource).toContain("data-agreement-template-manager=\"functional\"");
   expect(websiteExperienceSource).toContain("getAdminAgreementTemplates");
   expect(websiteExperienceSource).toContain("saveAdminAgreementTemplateDraft");
   expect(websiteExperienceSource).toContain("uploadAdminAgreementTemplateDocument");
   expect(websiteExperienceSource).toContain("mappedServices");
   expect(websiteExperienceSource).toContain("renderTemplatePreview");
-  expect(websiteExperienceSource).toContain("Unsupported placeholder");
-  expect(websiteExperienceSource).toContain("Back to Step 7 Content");
+  expect(websiteExperienceSource).toContain("Missing insert option");
+  expect(websiteExperienceSource).toContain("Back to Step 7");
   expect(websiteExperienceSource).toContain("stepSevenUnitIds");
-  expect(websiteExperienceSource).toContain("Supported autofill placeholders");
-  expect(websiteExperienceSource).toContain("approval, publish, schedule and history remain central");
+  expect(websiteExperienceSource).toContain("Company details added automatically");
+  expect(websiteExperienceSource).toContain("approval, publishing, scheduling and history stay there");
   expect(websiteExperienceSource).toContain('Website Experience &gt; Pages &gt; Partner &gt; Partner Application &gt; {selectedNode.label}');
   expect(websiteExperienceSource).toContain('label="Back to Partner Application"');
+});
+
+test("Website Experience Step 7 uses dedicated path-based content pages", () => {
+  expect(stepSevenNodeRoute).toContain("searchParams");
+  expect(stepSevenNodeRoute).toContain("redirect(`/admin/website-experience/pages/partner/application/${node}/${unit}`)");
+  expect(stepSevenUnitRoute).toContain("partnerApplicationUnitId={unit}");
+  expect(stepSevenUnitRoute).toContain("agreement-status-messages");
+  expect(stepSevenTemplateRoute).toContain("partnerAgreementTemplateId={templateId}");
+  expect(websiteExperienceSource).toContain('data-step7-dedicated-page={activeUnit}');
+  expect(websiteExperienceSource).toContain('data-step7-content-unit-editor={activeUnit}');
+  expect(websiteExperienceSource).toContain('${stepSevenUnitHref("agreement-templates")}/new');
+  expect(websiteExperienceSource).toContain('${stepSevenUnitHref("agreement-templates")}/${template.id}');
+  expect(websiteExperienceSource).toContain('label="Back to Agreement Templates"');
+  expect(websiteExperienceSource).toContain("partnerApplicationBackHref");
+  expect(websiteExperienceSource).toContain("partnerApplicationBackLabel");
+});
+
+test("Step 7 Admin copy hides developer language on normal pages", () => {
+  const visibleCopy = websiteExperienceSource
+    .replace(/type AgreementTemplateDraftState[\s\S]*?function AgreementTemplateDraftPanel/, "function AgreementTemplateDraftPanel")
+    .replace(/metadata:\s*\{[\s\S]*?\}\s*,\n\s*\}\);/g, "");
+  expect(visibleCopy).not.toContain("Mapped stable service IDs");
+  expect(visibleCopy).not.toContain("Supported autofill placeholders");
+  expect(visibleCopy).not.toContain("Unsupported placeholder");
+  expect(visibleCopy).not.toContain("structured content/autofill");
+  expect(visibleCopy).toContain("Services covered");
+  expect(visibleCopy).toContain("Where this agreement applies");
+  expect(visibleCopy).toContain("Company details added automatically");
+  expect(visibleCopy).toContain("Source document");
 });
 
 test("Admin Agreements area is protected and uses Partner agreement routes", () => {

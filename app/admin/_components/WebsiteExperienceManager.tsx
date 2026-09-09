@@ -120,9 +120,13 @@ const contextDescriptions: Partial<Record<WebsiteExperienceContext, string>> = {
 export function WebsiteExperienceManager({
   mode = "login-signup",
   partnerApplicationNodeId,
+  partnerApplicationUnitId,
+  partnerAgreementTemplateId,
 }: {
   mode?: "login-signup" | "partner-application";
   partnerApplicationNodeId?: string;
+  partnerApplicationUnitId?: string;
+  partnerAgreementTemplateId?: string;
 }) {
   const initialWorkflowView = readInitialWorkflowView();
   const [state, setState] = useState<LoadState>({ status: "loading", data: null, error: null });
@@ -393,6 +397,8 @@ export function WebsiteExperienceManager({
         <PartnerApplicationTreeEditor
           content={activeDraft}
           selectedNodeId={undefined}
+          selectedStepSevenUnitId={undefined}
+          selectedAgreementTemplateId={undefined}
           canWrite={canWrite}
           activeRow={activeRow}
           busyAction={busyAction}
@@ -407,21 +413,29 @@ export function WebsiteExperienceManager({
   return (
     <section className="space-y-5">
       <div className="rounded-2xl border border-sky-300/15 bg-[#081427] p-5 shadow-xl shadow-black/20">
-        <Breadcrumbs mode={mode} workflowOrigin={workflowOrigin} activeContext={contextLabels[activeContext]} activeBlock={mode === "partner-application" ? partnerApplicationNodeLabel(activeDraft, partnerApplicationNodeId) : blocks.find((block) => block.key === activeBlock)?.label ?? "Editable Item"} />
+        <Breadcrumbs
+          mode={mode}
+          workflowOrigin={workflowOrigin}
+          activeContext={contextLabels[activeContext]}
+          activeBlock={mode === "partner-application" ? partnerApplicationRouteTitle(activeDraft, partnerApplicationNodeId, partnerApplicationUnitId, partnerAgreementTemplateId) : blocks.find((block) => block.key === activeBlock)?.label ?? "Editable Item"}
+          partnerApplicationNodeId={partnerApplicationNodeId}
+          partnerApplicationUnitId={partnerApplicationUnitId}
+          partnerAgreementTemplateId={partnerAgreementTemplateId}
+        />
         <div className="mt-4">
           <AdminBackButton
-            href={mode === "partner-application" ? "/admin/website-experience/pages/partner/application" : undefined}
+            href={mode === "partner-application" ? partnerApplicationBackHref(partnerApplicationNodeId, partnerApplicationUnitId, partnerAgreementTemplateId) : undefined}
             onClick={mode === "partner-application" ? undefined : workflowOrigin ? () => {
               setWorkflowView(workflowOrigin);
               setEditorView("workflow");
             } : () => setEditorView("blocks")}
-            label={mode === "partner-application" ? "Back to Partner Application" : workflowOrigin ? `Back to ${workflowViewLabel(workflowOrigin)}` : `Back to ${contextLabels[activeContext]}`}
+            label={mode === "partner-application" ? partnerApplicationBackLabel(partnerApplicationNodeId, partnerApplicationUnitId, partnerAgreementTemplateId) : workflowOrigin ? `Back to ${workflowViewLabel(workflowOrigin)}` : `Back to ${contextLabels[activeContext]}`}
           />
         </div>
         <div className="mt-4 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-200">{mode === "partner-application" ? "Pages / Partner" : "Global Experience / Login & Signup"}</p>
-            <h2 className="mt-1 text-2xl font-black text-cyan-100">{mode === "partner-application" ? partnerApplicationNodeLabel(activeDraft, partnerApplicationNodeId) : blocks.find((block) => block.key === activeBlock)?.label ?? "Editable Item"}</h2>
+            <h2 className="mt-1 text-2xl font-black text-cyan-100">{mode === "partner-application" ? partnerApplicationRouteTitle(activeDraft, partnerApplicationNodeId, partnerApplicationUnitId, partnerAgreementTemplateId) : blocks.find((block) => block.key === activeBlock)?.label ?? "Editable Item"}</h2>
             <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-300">
               {mode === "partner-application"
                 ? "Manage safe Partner Application presentation fields. Eligibility, validation, approval, and service activation stay locked outside this editor."
@@ -464,6 +478,8 @@ export function WebsiteExperienceManager({
               block={activeBlock ?? "brand"}
               content={activeDraft}
               partnerApplicationNodeId={partnerApplicationNodeId}
+              partnerApplicationUnitId={partnerApplicationUnitId}
+              partnerAgreementTemplateId={partnerAgreementTemplateId}
               canWrite={canWrite}
               canPublish={canPublish}
               schedule={schedule}
@@ -499,7 +515,23 @@ export function WebsiteExperienceManager({
   );
 }
 
-function Breadcrumbs({ mode, workflowOrigin, activeContext, activeBlock }: { mode: "login-signup" | "partner-application"; workflowOrigin?: WorkflowView | null; activeContext: string; activeBlock: string }) {
+function Breadcrumbs({
+  mode,
+  workflowOrigin,
+  activeContext,
+  activeBlock,
+  partnerApplicationNodeId,
+  partnerApplicationUnitId,
+  partnerAgreementTemplateId,
+}: {
+  mode: "login-signup" | "partner-application";
+  workflowOrigin?: WorkflowView | null;
+  activeContext: string;
+  activeBlock: string;
+  partnerApplicationNodeId?: string;
+  partnerApplicationUnitId?: string;
+  partnerAgreementTemplateId?: string;
+}) {
   if (workflowOrigin && mode === "login-signup") {
     const originLabel = workflowViewLabel(workflowOrigin);
     return (
@@ -516,9 +548,31 @@ function Breadcrumbs({ mode, workflowOrigin, activeContext, activeBlock }: { mod
       </nav>
     );
   }
-  const items = mode === "partner-application"
-    ? ["Website Experience", "Pages", "Partner", "Partner Application", activeContext]
-    : ["Website Experience", "Global Experience", "Login & Signup", activeContext, activeBlock];
+  if (mode === "partner-application") {
+    const items: Array<{ label: string; href?: string }> = [
+      { label: "Website Experience", href: "/admin/website-experience" },
+      { label: "Pages", href: "/admin/website-experience/pages" },
+      { label: "Partner", href: "/admin/website-experience/pages/partner" },
+      { label: "Partner Application", href: "/admin/website-experience/pages/partner/application" },
+    ];
+    if (partnerApplicationNodeId) {
+      items.push({
+        label: partnerApplicationNodeId === "step-7-partner-agreement" ? "Step 7 Partner Agreement" : activeBlock,
+        href: partnerApplicationUnitId ? `/admin/website-experience/pages/partner/application/${partnerApplicationNodeId}` : undefined,
+      });
+    }
+    if (partnerApplicationUnitId) {
+      items.push({
+        label: stepSevenUnitTitles[partnerApplicationUnitId] ?? activeBlock,
+        href: partnerAgreementTemplateId ? stepSevenUnitHref(partnerApplicationUnitId) : undefined,
+      });
+    }
+    if (partnerAgreementTemplateId) {
+      items.push({ label: partnerAgreementTemplateId === "new" ? "Add Agreement Template" : "Edit Agreement Template" });
+    }
+    return <HierarchyBreadcrumb items={items} />;
+  }
+  const items = ["Website Experience", "Global Experience", "Login & Signup", activeContext, activeBlock];
   return (
     <nav className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-400" aria-label="Website Experience breadcrumbs">
       {items.map((item, index) => (
@@ -738,6 +792,8 @@ function BlockEditor({
   block,
   content,
   partnerApplicationNodeId,
+  partnerApplicationUnitId,
+  partnerAgreementTemplateId,
   canWrite,
   canPublish,
   schedule,
@@ -761,6 +817,8 @@ function BlockEditor({
   block: BlockKey;
   content: WebsiteExperienceContent;
   partnerApplicationNodeId?: string;
+  partnerApplicationUnitId?: string;
+  partnerAgreementTemplateId?: string;
   canWrite: boolean;
   canPublish: boolean;
   schedule: typeof defaultSchedule;
@@ -787,6 +845,8 @@ function BlockEditor({
         <PartnerApplicationTreeEditor
           content={content}
           selectedNodeId={partnerApplicationNodeId}
+          selectedStepSevenUnitId={partnerApplicationUnitId}
+          selectedAgreementTemplateId={partnerAgreementTemplateId}
           canWrite={canWrite}
           activeRow={activeRow}
           busyAction={busyAction}
@@ -909,6 +969,8 @@ function BlockEditor({
 function PartnerApplicationTreeEditor({
   content,
   selectedNodeId,
+  selectedStepSevenUnitId,
+  selectedAgreementTemplateId,
   canWrite,
   activeRow,
   busyAction,
@@ -918,6 +980,8 @@ function PartnerApplicationTreeEditor({
 }: {
   content: WebsiteExperienceContent;
   selectedNodeId?: string;
+  selectedStepSevenUnitId?: string;
+  selectedAgreementTemplateId?: string;
   canWrite: boolean;
   activeRow: WebsiteExperienceAdminContext;
   busyAction: string;
@@ -925,18 +989,6 @@ function PartnerApplicationTreeEditor({
   onContentChange: (patch: Partial<WebsiteExperienceContent>) => void;
   onSaveDraft: () => void;
 }) {
-  const [activeStepSevenUnit, setActiveStepSevenUnit] = useState(() => {
-    if (typeof window === "undefined") return "page-content";
-    const unit = new URLSearchParams(window.location.search).get("unit");
-    return unit && stepSevenUnitIds.has(unit) ? unit : "page-content";
-  });
-  const selectStepSevenUnit = (unit: string) => {
-    setActiveStepSevenUnit(unit);
-    if (typeof window === "undefined") return;
-    const url = new URL(window.location.href);
-    url.searchParams.set("unit", unit);
-    window.history.replaceState(null, "", url.toString());
-  };
   const tree = content.applicationTree;
   const updateNode = (nodeId: string, patch: Record<string, string>) => {
     if (!tree) return;
@@ -1000,11 +1052,11 @@ function PartnerApplicationTreeEditor({
       <AdminBackButton href="/admin/website-experience/pages/partner/application" label="Back to Partner Application" className="border-slate-300 bg-slate-950 text-sky-100" />
       {selectedNode.id === "step-7-partner-agreement" ? (
         <StepSevenContentUnits
-          activeUnit={activeStepSevenUnit}
+          activeUnit={selectedStepSevenUnitId}
+          templateId={selectedAgreementTemplateId}
           node={selectedNode}
           canWrite={canWrite}
           busyAction={busyAction}
-          onActiveUnitChange={selectStepSevenUnit}
           onNodeChange={(patch) => updateNode(selectedNode.id, patch)}
           onCtaChange={(key, value) => updateCta(selectedNode.id, key, value)}
           onSaveDraft={onSaveDraft}
@@ -1080,58 +1132,86 @@ function LocalStepEditorActions({ canWrite, busyAction, message, onSaveDraft }: 
   );
 }
 
-const stepSevenUnitIds = new Set(["page-content", "agreement-templates", "signer-instructions", "signing-methods", "signed-document-instructions", "declarations", "status-messages", "summary-guidance"]);
+const stepSevenUnits = [
+  ["page-content", "Page Content", "Title, subtitle and page help text."],
+  ["agreement-templates", "Agreement Templates", "Create, review and save agreement templates."],
+  ["signer-instructions", "Signer Instructions", "Signer and authority guidance."],
+  ["signing-methods", "Signing Methods", "Acceptance, signed document and future eSign guidance."],
+  ["signed-document-instructions", "Signed Document Instructions", "Private signed PDF upload guidance."],
+  ["declarations", "Declarations", "Partner acceptance declaration copy."],
+  ["agreement-status-messages", "Agreement Status Messages", "Human status and next-action messages."],
+  ["summary-guidance", "Summary Guidance", "Right-side summary labels and guidance."],
+] as const;
+
+const stepSevenUnitIds = new Set<string>(stepSevenUnits.map(([id]) => id));
+
+const stepSevenUnitTitles = Object.fromEntries(stepSevenUnits.map(([id, label]) => [id, label])) as Record<string, string>;
+
+function stepSevenUnitHref(unit: string) {
+  return `/admin/website-experience/pages/partner/application/step-7-partner-agreement/${unit}`;
+}
 
 function StepSevenContentUnits({
   activeUnit,
+  templateId,
   node,
   canWrite,
   busyAction,
-  onActiveUnitChange,
   onNodeChange,
   onCtaChange,
   onSaveDraft,
 }: {
-  activeUnit: string;
+  activeUnit?: string;
+  templateId?: string;
   node: NonNullable<WebsiteExperienceContent["applicationTree"]>["children"][number];
   canWrite: boolean;
   busyAction: string;
-  onActiveUnitChange: (unit: string) => void;
   onNodeChange: (patch: Record<string, string>) => void;
   onCtaChange: (key: string, value: string) => void;
   onSaveDraft: () => void;
 }) {
-  const units = [
-    ["page-content", "Page Content", "Title, subtitle and page help text."],
-    ["agreement-templates", "Agreement Templates", "Draft, preview and upload the governed master template."],
-    ["signer-instructions", "Signer Instructions", "Signer and authority guidance."],
-    ["signing-methods", "Signing Methods", "Authenticated acceptance, manual signed document and future eSign copy."],
-    ["signed-document-instructions", "Signed Document Instructions", "Private signed PDF upload guidance."],
-    ["declarations", "Declarations", "Partner acceptance declaration copy."],
-    ["status-messages", "Agreement Status Messages", "Human status and next-action messages."],
-    ["summary-guidance", "Summary Guidance", "Right-side summary labels and guidance."],
-  ];
+  if (!activeUnit) {
+    return (
+      <div className="grid gap-4" data-step7-overview-page="true">
+        <div className="rounded border border-blue-100 bg-blue-50 p-3 text-sm leading-6 text-blue-950">
+          Choose one area to edit. Each item opens on its own page. Preview and Save as Draft are available inside the editor; approval and publishing stay in the central workflow.
+        </div>
+        <div className="space-y-3" data-step7-content-unit-list="vertical">
+          {stepSevenUnits.map(([id, label, detail]) => (
+            <Link key={id} href={stepSevenUnitHref(id)} data-step7-content-unit-row={id} className="flex min-h-16 w-full items-center justify-between gap-4 rounded border border-slate-200 bg-slate-50 p-4 text-left hover:border-blue-300 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-cyan-300">
+              <span>
+                <span className="block text-sm font-semibold text-slate-950">{label}</span>
+                <span className="mt-1 block text-xs leading-5 text-slate-600">{detail}</span>
+              </span>
+              <ArrowRight className="h-4 w-4 text-blue-700" />
+            </Link>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (!stepSevenUnitIds.has(activeUnit)) {
+    return (
+      <div className="grid gap-4" data-step7-content-unit-editor="not-found">
+        <p className="rounded border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">This Step 7 content page was not found.</p>
+        <AdminBackButton href="/admin/website-experience/pages/partner/application/step-7-partner-agreement" label="Back to Step 7" className="border-slate-300 bg-slate-950 text-sky-100" />
+      </div>
+    );
+  }
+
   return (
-    <div className="grid gap-4">
-      <div className="space-y-3" data-step7-content-unit-list="vertical">
-        {units.map(([id, label, detail]) => (
-          <button key={id} type="button" aria-pressed={activeUnit === id} onClick={() => onActiveUnitChange(id)} className={`flex min-h-16 w-full items-center justify-between gap-4 rounded border p-4 text-left focus:outline-none focus:ring-2 focus:ring-cyan-300 ${activeUnit === id ? "border-cyan-300 bg-slate-950 shadow-sm ring-1 ring-cyan-300/30" : "border-slate-200 bg-slate-50 hover:border-blue-300 hover:bg-blue-50"}`}>
-            <span>
-              <span className={`block text-sm font-semibold ${activeUnit === id ? "text-white" : "text-slate-950"}`}>{label}</span>
-              <span className={`mt-1 block text-xs leading-5 ${activeUnit === id ? "text-cyan-100/80" : "text-slate-600"}`}>{detail}</span>
-            </span>
-            <ArrowRight className={`h-4 w-4 ${activeUnit === id ? "text-orange-300" : "text-blue-700"}`} />
-          </button>
-        ))}
+    <div className="grid gap-4" data-step7-dedicated-page={activeUnit}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h4 className="text-base font-black text-slate-950">{stepSevenUnitTitles[activeUnit]}</h4>
+          <p className="mt-1 text-sm leading-6 text-slate-600">Edit this content area only. Preview and Save as Draft keep the central Website Experience workflow unchanged.</p>
+        </div>
+        <AdminBackButton href="/admin/website-experience/pages/partner/application/step-7-partner-agreement" label="Back to Step 7" className="border-slate-300 bg-white text-slate-800" />
       </div>
       <section className="rounded border border-slate-200 bg-slate-50 p-4" data-step7-content-unit-editor={activeUnit}>
-        {activeUnit !== "page-content" ? (
-          <button type="button" onClick={() => onActiveUnitChange("page-content")} className="mb-4 inline-flex rounded border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-300">
-            Back to Step 7 Content
-          </button>
-        ) : null}
         {activeUnit === "agreement-templates" ? (
-          <AgreementTemplateDraftPanel canWrite={canWrite} busyAction={busyAction} onSaveDraft={onSaveDraft} />
+          <AgreementTemplateDraftPanel canWrite={canWrite} busyAction={busyAction} templateId={templateId} onSaveDraft={onSaveDraft} />
         ) : activeUnit === "signer-instructions" ? (
           <Field label="Signer instructions" value={node.rightHelpCopy} maxLength={300} onChange={(value) => onNodeChange({ rightHelpCopy: value })} />
         ) : activeUnit === "signing-methods" ? (
@@ -1140,7 +1220,7 @@ function StepSevenContentUnits({
           <Field label="Signed document instructions" value={node.sectionDescription} maxLength={260} onChange={(value) => onNodeChange({ sectionDescription: value })} />
         ) : activeUnit === "declarations" ? (
           <Field label="Declaration guidance" value={node.emptyStateCopy} maxLength={180} onChange={(value) => onNodeChange({ emptyStateCopy: value })} />
-        ) : activeUnit === "status-messages" ? (
+        ) : activeUnit === "agreement-status-messages" ? (
           <div className="grid gap-3">
             <Field label="Review ready message" value={node.ctaLabels.reviewReady ?? ""} maxLength={120} onChange={(value) => onCtaChange("reviewReady", value)} />
             <Field label="Review incomplete message" value={node.ctaLabels.reviewIncomplete ?? ""} maxLength={160} onChange={(value) => onCtaChange("reviewIncomplete", value)} />
@@ -1178,11 +1258,10 @@ type AgreementTemplateDraftState = {
   sourceDocument?: Record<string, unknown> | null;
 };
 
-function AgreementTemplateDraftPanel({ canWrite, busyAction, onSaveDraft }: { canWrite: boolean; busyAction: string; onSaveDraft: () => void }) {
+function AgreementTemplateDraftPanel({ canWrite, busyAction, templateId, onSaveDraft }: { canWrite: boolean; busyAction: string; templateId?: string; onSaveDraft: () => void }) {
   const [templates, setTemplates] = useState<AdminAgreementTemplate[]>([]);
   const [supportedPlaceholders, setSupportedPlaceholders] = useState<string[]>([]);
   const [draft, setDraft] = useState<AgreementTemplateDraftState>(() => newAgreementTemplateDraft());
-  const [mode, setMode] = useState<"list" | "editor">("list");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -1197,24 +1276,25 @@ function AgreementTemplateDraftPanel({ canWrite, busyAction, onSaveDraft }: { ca
       }
       setTemplates(result.data.rows);
       setSupportedPlaceholders(result.data.supportedPlaceholders);
-      setError("");
+      if (templateId === "new") {
+        setDraft(newAgreementTemplateDraft());
+        setError("");
+      } else if (templateId) {
+        const selected = result.data.rows.find((item) => item.id === templateId);
+        if (selected) {
+          setDraft(draftFromAgreementTemplate(selected));
+          setError("");
+        } else {
+          setError("This agreement template was not found.");
+        }
+      } else {
+        setError("");
+      }
     });
     return () => {
       active = false;
     };
-  }, []);
-  const openTemplate = (template: AdminAgreementTemplate) => {
-    setDraft(draftFromAgreementTemplate(template));
-    setMode("editor");
-    setMessage("");
-    setError("");
-  };
-  const addTemplate = () => {
-    setDraft(newAgreementTemplateDraft());
-    setMode("editor");
-    setMessage("");
-    setError("");
-  };
+  }, [templateId]);
   const updateDraft = (patch: Partial<AgreementTemplateDraftState>) => setDraft((current) => ({ ...current, ...patch }));
   const uploadTemplate = async (file: File | null) => {
     if (!file) return;
@@ -1274,29 +1354,29 @@ function AgreementTemplateDraftPanel({ canWrite, busyAction, onSaveDraft }: { ca
   const preview = renderTemplatePreview(draft);
   return (
     <div className="grid gap-4" data-agreement-template-manager="functional">
-      {mode === "list" ? (
+      {!templateId ? (
         <>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm leading-6 text-slate-700">Create and edit master agreement templates here. Save as Draft attaches the template to the central Website Experience workflow; approval, publish, schedule and history remain central.</p>
-            <button type="button" disabled={!canWrite} onClick={addTemplate} className="h-10 rounded bg-slate-950 px-4 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-300">Add Template</button>
+            <p className="text-sm leading-6 text-slate-700">Create and edit agreement templates here. Save as Draft sends changes to the central Website Experience workflow; approval, publishing, scheduling and history stay there.</p>
+            <Link aria-disabled={!canWrite} href={canWrite ? `${stepSevenUnitHref("agreement-templates")}/new` : stepSevenUnitHref("agreement-templates")} className={`inline-flex h-10 items-center justify-center rounded px-4 text-sm font-bold ${canWrite ? "bg-slate-950 text-white" : "cursor-not-allowed bg-slate-300 text-slate-600"}`}>Add Agreement Template</Link>
           </div>
           <div className="space-y-3">
             {templates.length === 0 ? <p className="rounded border border-slate-200 bg-white p-4 text-sm text-slate-600">No agreement templates found. Add a draft template to begin.</p> : null}
             {templates.map((template) => (
-              <button key={template.id} type="button" onClick={() => openTemplate(template)} className="flex w-full flex-col gap-3 rounded border border-slate-200 bg-white p-4 text-left hover:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-300">
+              <Link key={template.id} href={`${stepSevenUnitHref("agreement-templates")}/${template.id}`} className="flex w-full flex-col gap-3 rounded border border-slate-200 bg-white p-4 text-left hover:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-300">
                 <span className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <span className="text-sm font-black text-slate-950">{template.title}</span>
-                  <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700">{template.lifecycleStatus} · v{template.versionNumber}</span>
+                  <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700">{humanAgreementStatus(template.lifecycleStatus)} · version {template.versionNumber}</span>
                 </span>
                 <span className="grid gap-1 text-xs leading-5 text-slate-600 sm:grid-cols-2">
-                  <span>Type: {template.agreementType}</span>
-                  <span>Role: {String(template.metadata?.agreementRole ?? "Base Agreement")}</span>
-                  <span>Country: {template.country}</span>
-                  <span>Entity: {template.entityType}</span>
-                  <span>Mapped services: {displayList(template.serviceScheduleRefs)}</span>
-                  <span>Source: {sourceDocumentName(template.metadata?.sourceDocument)}</span>
+                  <span>Agreement type: {humanLabel(template.agreementType)}</span>
+                  <span>Who this agreement is for: {String(template.metadata?.agreementRole ?? "Base Agreement")}</span>
+                  <span>Where this agreement applies: {template.country}</span>
+                  <span>Entity type: {template.entityType === "ANY" ? "Any entity type" : template.entityType}</span>
+                  <span>Services covered: {displayList(template.serviceScheduleRefs)}</span>
+                  <span>Source document: {sourceDocumentName(template.metadata?.sourceDocument)}</span>
                 </span>
-              </button>
+              </Link>
             ))}
           </div>
         </>
@@ -1304,35 +1384,35 @@ function AgreementTemplateDraftPanel({ canWrite, busyAction, onSaveDraft }: { ca
         <>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h4 className="text-base font-black text-slate-950">Agreement Template Editor</h4>
-              <p className="mt-1 text-sm leading-6 text-slate-600">One field per row. Draft templates cannot be issued to Partners until centrally approved and published.</p>
+              <h4 className="text-base font-black text-slate-950">{templateId === "new" ? "Add Agreement Template" : "Edit Agreement Template"}</h4>
+              <p className="mt-1 text-sm leading-6 text-slate-600">One field per row. Draft templates cannot be issued to Partners until approved and published in the central workflow.</p>
             </div>
-            <button type="button" onClick={() => setMode("list")} className="h-10 rounded border border-slate-300 bg-white px-4 text-sm font-bold text-slate-700">Back to templates</button>
+            <AdminBackButton href={stepSevenUnitHref("agreement-templates")} label="Back to Agreement Templates" className="border-slate-300 bg-white text-slate-800" />
           </div>
           <div className="grid gap-4">
             <Field label="Template name" value={draft.title} maxLength={120} onChange={(value) => updateDraft({ title: value })} />
-            <Field label="Stable template key" value={draft.stableKey} maxLength={120} onChange={(value) => updateDraft({ stableKey: value })} />
-            <TemplateSelect label="Agreement role" value={draft.agreementRole} options={["Base Agreement", "Service Schedule/Appendix", "Separate Agreement Required"]} onChange={(value) => updateDraft({ agreementRole: value })} />
-            <TemplateSelect label="Template source type" value={draft.templateSourceType} options={["structured_autofill", "static_pdf", "docx_source"]} onChange={(value) => updateDraft({ templateSourceType: value })} />
+            <Field label="Template reference (advanced)" value={draft.stableKey} maxLength={120} onChange={(value) => updateDraft({ stableKey: value })} />
+            <TemplateSelect label="Who this agreement is for" value={draft.agreementRole} options={["Base Agreement", "Service Schedule/Appendix", "Separate Agreement Required"]} onChange={(value) => updateDraft({ agreementRole: value })} />
+            <TemplateSelect label="Source document type" value={draft.templateSourceType} options={["structured_autofill", "static_pdf", "docx_source"]} onChange={(value) => updateDraft({ templateSourceType: value })} />
             <Field label="Agreement type" value={draft.agreementType} maxLength={80} onChange={(value) => updateDraft({ agreementType: value })} />
-            <Field label="Country scope" value={draft.country} maxLength={80} onChange={(value) => updateDraft({ country: value })} />
-            <Field label="Entity type scope" value={draft.entityType} maxLength={80} onChange={(value) => updateDraft({ entityType: value })} />
-            <Field label="Mapped stable service IDs" value={draft.mappedServices} maxLength={260} onChange={(value) => updateDraft({ mappedServices: value, serviceScheduleRefs: value })} />
-            <Field label="Service schedule references" value={draft.serviceScheduleRefs} maxLength={260} onChange={(value) => updateDraft({ serviceScheduleRefs: value })} />
+            <Field label="Where this agreement applies" value={draft.country} maxLength={80} onChange={(value) => updateDraft({ country: value })} />
+            <Field label="Entity type" value={draft.entityType} maxLength={80} onChange={(value) => updateDraft({ entityType: value })} />
+            <Field label="Services covered" value={draft.mappedServices} maxLength={260} onChange={(value) => updateDraft({ mappedServices: value, serviceScheduleRefs: value })} />
+            <Field label="Service schedule names" value={draft.serviceScheduleRefs} maxLength={260} onChange={(value) => updateDraft({ serviceScheduleRefs: value })} />
             <Field label="Priority" value={draft.priority} maxLength={4} onChange={(value) => updateDraft({ priority: value.replace(/\D/g, "") })} />
             <TemplateTextArea label="Introduction" value={draft.introduction} maxLength={2000} onChange={(value) => updateDraft({ introduction: value })} />
-            <TemplateTextArea label="Structured template body" value={draft.sectionBody} maxLength={8000} onChange={(value) => updateDraft({ sectionBody: value })} />
-            <TemplateTextArea label="Signing policy guidance" value={draft.signingPolicy} maxLength={600} onChange={(value) => updateDraft({ signingPolicy: value })} />
+            <TemplateTextArea label="Agreement body" value={draft.sectionBody} maxLength={8000} onChange={(value) => updateDraft({ sectionBody: value })} />
+            <TemplateTextArea label="Signing requirements" value={draft.signingPolicy} maxLength={600} onChange={(value) => updateDraft({ signingPolicy: value })} />
             <label className="grid gap-2">
               <span className="text-xs font-black uppercase tracking-[0.1em] text-slate-500">Upload template document</span>
               <input disabled={!canWrite || uploading} type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={(event) => uploadTemplate(event.target.files?.[0] ?? null)} className="rounded border border-slate-300 bg-white p-3 text-sm text-slate-800 disabled:cursor-not-allowed disabled:opacity-60" />
-              <span className="text-xs leading-5 text-slate-600">PDF/DOCX only. Stored in private storage; no public permanent URL is returned. Static PDFs need a generated cover/signature flow for Partner-specific details.</span>
+              <span className="text-xs leading-5 text-slate-600">PDF/DOCX only. Stored privately. Static PDFs need a cover and signature page for company details.</span>
               {draft.sourceDocument ? <span className="rounded border border-emerald-200 bg-emerald-50 p-2 text-xs font-semibold text-emerald-800">Saved source: {sourceDocumentName(draft.sourceDocument)}</span> : null}
             </label>
             <div className="rounded border border-slate-200 bg-white p-3">
-              <p className="text-xs font-black uppercase tracking-[0.1em] text-slate-500">Supported autofill placeholders</p>
+              <p className="text-xs font-black uppercase tracking-[0.1em] text-slate-500">Company details added automatically</p>
               <div className="mt-2 flex flex-wrap gap-2">
-                {(supportedPlaceholders.length ? supportedPlaceholders : defaultAgreementPlaceholders).map((placeholder) => <code key={placeholder} className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">{`{{${placeholder}}}`}</code>)}
+                {(supportedPlaceholders.length ? supportedPlaceholders : defaultAgreementPlaceholders).map((placeholder) => <span key={placeholder} className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">{humanPlaceholderLabel(placeholder)}</span>)}
               </div>
             </div>
             <div className="rounded border border-cyan-200 bg-cyan-50 p-3">
@@ -1409,8 +1489,57 @@ function displayList(values?: string[]): string {
   return values && values.length ? values.join(", ") : "All selected services";
 }
 
+function humanAgreementStatus(value?: string): string {
+  const normalized = (value ?? "").toLowerCase();
+  if (normalized === "published") return "Published";
+  if (normalized === "draft") return "Draft changes";
+  if (normalized === "archived") return "Archived";
+  if (normalized === "approved") return "Approved";
+  if (normalized === "scheduled") return "Scheduled";
+  return humanLabel(value ?? "Current status");
+}
+
+function humanLabel(value: string): string {
+  const known: Record<string, string> = {
+    structured_autofill: "Editable agreement text",
+    static_pdf: "Static PDF",
+    docx_source: "DOCX source file",
+    partner_master_services: "Partner master services agreement",
+    GLOBAL: "All countries",
+    ANY: "Any entity type",
+  };
+  if (known[value]) return known[value];
+  return value
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function humanPlaceholderLabel(value: string): string {
+  const labels: Record<string, string> = {
+    "partner.legal_name": "Company legal name",
+    "partner.brand_name": "Brand name",
+    "partner.entity_type": "Entity type",
+    "partner.registration_reference": "Registration reference",
+    "partner.registered_address": "Registered address",
+    "partner.country": "Country",
+    "partner.authorized_signer_name": "Authorized signer",
+    "partner.authorized_signer_role": "Signer role",
+    "partner.selected_services": "Selected services",
+    "partner.service_schedule_summary": "Service schedule summary",
+    "partner.payout_country": "Payout country",
+    "partner.tax_residency": "Tax residency",
+    "agreement.id": "Agreement reference",
+    "agreement.version": "Agreement version",
+    "agreement.issue_date": "Agreement date",
+    "agreement.effective_date": "Effective date",
+  };
+  return labels[value] ?? humanLabel(value);
+}
+
 function sourceDocumentName(value: unknown): string {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return "Structured content";
+  if (!value || typeof value !== "object" || Array.isArray(value)) return "Editable agreement text";
   const filename = (value as Record<string, unknown>).filename;
   return typeof filename === "string" && filename.trim() ? filename : "Private template document";
 }
@@ -1434,7 +1563,7 @@ function renderTemplatePreview(draft: AgreementTemplateDraftState): string {
     "agreement.issue_date": "Sample issue date",
     "agreement.effective_date": "Sample effective date",
   };
-  return draft.sectionBody.replace(/\{\{\s*([^{}]+?)\s*\}\}/g, (_match, key: string) => samples[key.trim()] ?? `Unsupported placeholder: ${key.trim()}`);
+  return draft.sectionBody.replace(/\{\{\s*([^{}]+?)\s*\}\}/g, (_match, key: string) => samples[key.trim()] ?? `Missing insert option: ${key.trim()}`);
 }
 
 function TemplateSelect({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (value: string) => void }) {
@@ -1442,7 +1571,7 @@ function TemplateSelect({ label, value, options, onChange }: { label: string; va
     <label className="space-y-1 text-xs font-semibold uppercase text-slate-500">
       <span>{label}</span>
       <select value={value} onChange={(event) => onChange(event.target.value)} className="h-10 w-full rounded border border-slate-200 bg-white px-3 text-sm font-medium normal-case text-slate-900 outline-none focus:border-blue-500">
-        {options.map((option) => <option key={option} value={option}>{option}</option>)}
+        {options.map((option) => <option key={option} value={option}>{humanLabel(option)}</option>)}
       </select>
     </label>
   );
@@ -2076,6 +2205,26 @@ function publishScope(context: WebsiteExperienceContext) {
 function partnerApplicationNodeLabel(content: WebsiteExperienceContent, selectedNodeId?: string) {
   if (!selectedNodeId) return "Partner Application";
   return content.applicationTree?.children.find((node) => node.id === selectedNodeId)?.label ?? "Partner Application Item";
+}
+
+function partnerApplicationRouteTitle(content: WebsiteExperienceContent, selectedNodeId?: string, selectedUnitId?: string, templateId?: string): string {
+  if (templateId) return templateId === "new" ? "Add Agreement Template" : "Edit Agreement Template";
+  if (selectedUnitId) return stepSevenUnitTitles[selectedUnitId] ?? "Step 7 Content";
+  return partnerApplicationNodeLabel(content, selectedNodeId);
+}
+
+function partnerApplicationBackHref(selectedNodeId?: string, selectedUnitId?: string, templateId?: string): string {
+  if (templateId) return stepSevenUnitHref("agreement-templates");
+  if (selectedUnitId) return "/admin/website-experience/pages/partner/application/step-7-partner-agreement";
+  if (selectedNodeId) return "/admin/website-experience/pages/partner/application";
+  return "/admin/website-experience/pages/partner";
+}
+
+function partnerApplicationBackLabel(selectedNodeId?: string, selectedUnitId?: string, templateId?: string): string {
+  if (templateId) return "Back to Agreement Templates";
+  if (selectedUnitId) return "Back to Step 7";
+  if (selectedNodeId) return "Back to Partner Application";
+  return "Back to Partner";
 }
 
 function workflowRowsForView(data: WebsiteExperienceAdminResponse, view: WorkflowView) {
