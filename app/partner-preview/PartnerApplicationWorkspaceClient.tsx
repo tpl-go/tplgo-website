@@ -3058,7 +3058,7 @@ function WorkspaceToast({ tone, text, onDismiss }: { tone: "success" | "info" | 
   const toneClass = tone === "success" ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-100" : tone === "error" ? "border-red-500/40 bg-red-500/10 text-red-100" : tone === "warning" ? "border-[#f97316]/50 bg-[#f97316]/10 text-[#fed7aa]" : "border-sky-500/40 bg-sky-500/10 text-sky-100";
   if (typeof document === "undefined") return null;
   return createPortal(
-    <div data-save-draft-toast-layer="true" className="pointer-events-none fixed inset-x-0 top-4 z-[120] flex justify-center px-4 sm:justify-end sm:px-6" aria-label="Application message">
+    <div data-save-draft-toast-layer="true" data-save-draft-toast-position="content-top-center" className="pointer-events-none fixed inset-x-0 top-20 z-[120] flex justify-center px-4" aria-label="Application message">
       <div role="status" aria-live="polite" className={`pointer-events-auto w-[min(92vw,420px)] rounded-xl border bg-[#171a20] p-4 shadow-2xl backdrop-blur ${toneClass}`}>
         <div className="flex items-start gap-3">
           <span className="mt-0.5 h-5 w-1 rounded-full bg-[#f97316]" />

@@ -65,8 +65,9 @@ test("Step 7 blocks unsigned continuation while preserving draft save", () => {
 
 test("Step 7 save feedback uses one non-blocking top-layer toast", () => {
   expect(workspaceSource).toContain("data-save-draft-toast-layer");
+  expect(workspaceSource).toContain('data-save-draft-toast-position="content-top-center"');
   expect(workspaceSource).toContain("z-[120]");
-  expect(workspaceSource).toContain("pointer-events-none fixed inset-x-0 top-4");
+  expect(workspaceSource).toContain("pointer-events-none fixed inset-x-0 top-20");
   expect(workspaceSource).not.toContain("data-save-draft-modal-layer");
   expect(workspaceSource).not.toContain('aria-modal="true"');
   expect(workspaceSource).not.toContain('document.body.style.overflow = "hidden"');
@@ -93,8 +94,17 @@ test("Website Experience Step 7 content units expose Agreement Templates under t
   expect(websiteExperienceSource).toContain("Declarations");
   expect(websiteExperienceSource).toContain("Agreement Status Messages");
   expect(websiteExperienceSource).toContain("Summary Guidance");
+  expect(websiteExperienceSource).toContain("data-agreement-template-manager=\"functional\"");
+  expect(websiteExperienceSource).toContain("getAdminAgreementTemplates");
+  expect(websiteExperienceSource).toContain("saveAdminAgreementTemplateDraft");
+  expect(websiteExperienceSource).toContain("uploadAdminAgreementTemplateDocument");
+  expect(websiteExperienceSource).toContain("mappedServices");
+  expect(websiteExperienceSource).toContain("renderTemplatePreview");
+  expect(websiteExperienceSource).toContain("Unsupported placeholder");
+  expect(websiteExperienceSource).toContain("Back to Step 7 Content");
+  expect(websiteExperienceSource).toContain("stepSevenUnitIds");
   expect(websiteExperienceSource).toContain("Supported autofill placeholders");
-  expect(websiteExperienceSource).toContain("Publishing, scheduling, superseding and history happen only through the central workflow");
+  expect(websiteExperienceSource).toContain("approval, publish, schedule and history remain central");
   expect(websiteExperienceSource).toContain('Website Experience &gt; Pages &gt; Partner &gt; Partner Application &gt; {selectedNode.label}');
   expect(websiteExperienceSource).toContain('label="Back to Partner Application"');
 });

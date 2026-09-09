@@ -233,12 +233,16 @@ export type PartnerAgreement = {
 export type PartnerAgreementTemplate = {
   id: string;
   stableKey: string;
+  country?: string;
+  entityType?: string;
   agreementType: string;
   versionNumber: number;
   lifecycleStatus: string;
   title: string;
   introduction: string;
   sections: Array<Record<string, unknown>>;
+  serviceScheduleRefs?: string[];
+  metadata?: Record<string, unknown>;
 };
 
 export type PartnerVerificationEvent = {

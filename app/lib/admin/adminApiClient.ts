@@ -2753,6 +2753,108 @@ export async function uploadAdminWebsiteExperienceMedia(input: {
   }
 }
 
+export type AdminAgreementTemplate = {
+  id: string;
+  stableKey: string;
+  country: string;
+  entityType: string;
+  agreementType: string;
+  versionNumber: number;
+  lifecycleStatus: "DRAFT" | "AWAITING_APPROVAL" | "PUBLISHED" | "ARCHIVED" | string;
+  title: string;
+  introduction: string;
+  sections: Array<Record<string, unknown>>;
+  serviceScheduleRefs: string[];
+  metadata: Record<string, unknown>;
+  publishedAt?: string | null;
+  updatedAt?: string;
+};
+
+export type AdminAgreementTemplateManagerResponse = {
+  rows: AdminAgreementTemplate[];
+  permissions: {
+    canRead: boolean;
+    canReview: boolean;
+    canManage: boolean;
+    canPublishTemplate: boolean;
+    canSensitiveRead: boolean;
+    canCountersign: boolean;
+  };
+  supportedPlaceholders: string[];
+  safeMessage: string;
+};
+
+export type AdminAgreementTemplateUploadSession = {
+  uploadSessionId: string;
+  storageReference: string;
+  uploadMode: "signed_url" | "provider_required";
+  upload?: { url: string; method: string; headers?: Record<string, string>; expiresAt: string };
+  publicUrl: null;
+  expiresAt: string;
+  executionStatus: string;
+};
+
+export async function getAdminAgreementTemplates(): Promise<AdminApiResult<AdminAgreementTemplateManagerResponse>> {
+  return adminApiRequest<AdminAgreementTemplateManagerResponse>("/api/v1/admin/partners/agreement-templates");
+}
+
+export async function saveAdminAgreementTemplateDraft(input: Partial<AdminAgreementTemplate> & { title: string }): Promise<AdminApiResult<{ template: AdminAgreementTemplate; targetLabel: string; safeMessage: string }>> {
+  return adminApiRequest<{ template: AdminAgreementTemplate; targetLabel: string; safeMessage: string }>("/api/v1/admin/partners/agreement-templates/draft", {
+    method: "POST",
+    body: input,
+  });
+}
+
+export async function uploadAdminAgreementTemplateDocument(input: { file: File }): Promise<AdminApiResult<AdminAgreementTemplateUploadSession & { filename: string; mimeType: string; sizeBytes: number }>> {
+  const session = await adminApiRequest<AdminAgreementTemplateUploadSession>("/api/v1/admin/partners/agreement-templates/upload-session", {
+    method: "POST",
+    body: {
+      filename: input.file.name,
+      mimeType: input.file.type || "application/octet-stream",
+      sizeBytes: input.file.size,
+    },
+  });
+  if (!session.ok) return session as AdminApiResult<AdminAgreementTemplateUploadSession & { filename: string; mimeType: string; sizeBytes: number }>;
+  if (session.data.uploadMode !== "signed_url" || !session.data.upload?.url) {
+    return {
+      ok: true,
+      data: { ...session.data, filename: input.file.name, mimeType: input.file.type || "application/octet-stream", sizeBytes: input.file.size },
+      meta: session.meta,
+      status: session.status,
+      requestId: session.requestId,
+    };
+  }
+  try {
+    const uploadResponse = await fetch(session.data.upload.url, {
+      method: session.data.upload.method || "PUT",
+      headers: session.data.upload.headers ?? { "Content-Type": input.file.type || "application/octet-stream" },
+      body: input.file,
+    });
+    if (!uploadResponse.ok) {
+      return {
+        ok: false,
+        error: { code: "ADMIN_AGREEMENT_TEMPLATE_UPLOAD_FAILED", message: "Agreement template upload failed. Try again or choose a supported PDF/DOCX file." },
+        status: uploadResponse.status,
+        requestId: session.requestId,
+      };
+    }
+    return {
+      ok: true,
+      data: { ...session.data, filename: input.file.name, mimeType: input.file.type || "application/octet-stream", sizeBytes: input.file.size },
+      meta: session.meta,
+      status: session.status,
+      requestId: session.requestId,
+    };
+  } catch {
+    return {
+      ok: false,
+      error: { code: "ADMIN_AGREEMENT_TEMPLATE_UPLOAD_FAILED", message: "Agreement template upload failed. Check the file and try again." },
+      status: 0,
+      requestId: session.requestId,
+    };
+  }
+}
+
 export async function listAdminPartnerRegistrationIntakes(): Promise<AdminApiResult<PartnerAdminRegistrationIntakesResponse>> {
   return adminApiRequest<PartnerAdminRegistrationIntakesResponse>("/api/v1/admin/partners/registration-intakes");
 }
