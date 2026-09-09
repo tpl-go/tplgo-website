@@ -77,7 +77,7 @@ test("Step 7 save feedback uses one non-blocking top-layer toast", () => {
 });
 
 test("Website Experience Partner Application removes local workflow controls and keeps central drafting", () => {
-  expect(websiteExperienceSource).toContain("Open one Partner Application section. Save changes as a draft here; approval, publishing, scheduling and history stay in the central workflow.");
+  expect(websiteExperienceSource).toContain("Open one Partner Application section.");
   expect(websiteExperienceSource).toContain("function LocalStepEditorActions");
   expect(websiteExperienceSource).toContain("Approval, publishing, scheduling and history are handled from the central Website Experience workflow.");
   expect(websiteExperienceSource).toContain('href="#website-experience-preview"');
@@ -173,9 +173,12 @@ test("Agreement template Save Draft hands off to the central Draft queue exactly
 test("Central Draft queue exposes draft actions and hides editor audit clutter", () => {
   expect(websiteExperienceSource).toContain("WorkflowDraftDetailView");
   expect(websiteExperienceSource).toContain('data-central-draft-detail={draftId}');
-  expect(websiteExperienceSource).toContain("Human-readable target");
-  expect(websiteExperienceSource).toContain("Agreement Template name");
-  expect(websiteExperienceSource).toContain("Readiness status");
+  expect(websiteExperienceSource).toContain('label="Draft version"');
+  expect(websiteExperienceSource).toContain('label="Saved"');
+  expect(websiteExperienceSource).toContain('label="Readiness"');
+  expect(websiteExperienceSource).toContain('backHref="/admin/website-experience?view=drafts"');
+  expect(websiteExperienceSource).not.toContain("Human-readable target");
+  expect(websiteExperienceSource).not.toContain("Last editor recorded in audit");
   expect(websiteExperienceSource).toContain("Missing before approval:");
   expect(websiteExperienceSource).toContain("Not ready for approval yet:");
   expect(websiteExperienceSource).toContain("row.draftContent.agreementTemplateDraft.readinessMissing");

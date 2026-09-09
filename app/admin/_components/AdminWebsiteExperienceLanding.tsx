@@ -3,29 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import {
-  ArrowRight,
-  BookOpen,
-  Car,
-  Compass,
-  FilePenLine,
-  Eye,
-  Globe2,
-  Home,
-  LayoutTemplate,
-  MonitorCog,
-  Navigation,
-  PanelTop,
-  Pencil,
-  Plane,
-  Search,
-  ShoppingBag,
-  Sparkles,
-  Tags,
-  Clock3,
-  Users,
-  type LucideIcon,
-} from "lucide-react";
+import { ArrowRight, FilePenLine, Eye, LayoutTemplate, MonitorCog, Pencil, Search, Tags, Users, type LucideIcon } from "lucide-react";
 import { AdminBackButton } from "./AdminBackButton";
 import {
   getAdminWebsiteExperienceLoginSignup,
@@ -87,22 +65,8 @@ type CentralWorkflowCounts = Record<Exclude<CentralWorkflowStage, "all" | "publi
   publishedContent: string;
 };
 
-const futureGlobalModules = [
-  { label: "Header & Navigation", description: "Manage website header and navigation content.", icon: Navigation },
-  { label: "Footer", description: "Manage website footer content.", icon: Tags },
-  { label: "Global Notices", description: "Manage notices displayed across the website.", icon: PanelTop },
-];
-
 const pageModules = [
-  { label: "Homepage", path: "/", icon: Home, sections: ["Hero", "Search", "Themes", "Offers"], description: "Manage homepage sections." },
-  { label: "Flights", path: "/flights", icon: Plane, sections: ["Search", "Results", "Review"], description: "Manage flight-page content." },
-  { label: "Hotels", path: "/hotels/results", icon: Globe2, sections: ["Search", "Results", "Booking"], description: "Manage hotel-page content." },
   { label: "Partner", path: "/partner-preview", icon: Users, sections: ["Partner Page", "Partner Application", "Service Catalogue"], description: "Manage Partner experience content." },
-  { label: "Creator", path: "/creators", icon: BookOpen, sections: ["Catalog", "Licensing", "Checkout"], description: "Manage creator-page content." },
-  { label: "Smart Planner", path: "/smart-planner", icon: Sparkles, sections: ["Planner", "Workspace", "Review"], description: "Manage Smart Planner content." },
-  { label: "Marketplace", path: "/local-market", icon: ShoppingBag, sections: ["Catalog", "Seller", "Compliance"], description: "Manage marketplace content." },
-  { label: "Local Life", path: "/local-life", icon: Compass, sections: ["Experiences", "Creators", "Local"], description: "Manage Local Life content." },
-  { label: "Cab", path: "/cab/result", icon: Car, sections: ["Search", "Results", "Booking"], description: "Manage cab-page content." },
 ];
 
 const contextLabels: Record<WebsiteExperienceContext, string> = {
@@ -124,7 +88,7 @@ export function AdminWebsiteExperienceLanding({ view = "root" }: { view?: Landin
   const dashboardStage = centralWorkflowStageFromValue(searchParams.get("view")) ?? "published";
   const setDashboardStage = useCallback((nextStage: CentralWorkflowStage) => {
     const params = new URLSearchParams(searchParams.toString());
-    params.set("view", nextStage);
+    params.set("view", centralWorkflowStageToUrlValue(nextStage));
     router.push(`/admin/website-experience?${params.toString()}`, { scroll: false });
   }, [router, searchParams]);
 
@@ -211,9 +175,6 @@ export function AdminWebsiteExperienceLanding({ view = "root" }: { view?: Landin
           count="3 experiences"
           href="/admin/website-experience/login-signup"
         />
-        {futureGlobalModules.map((item) => (
-          <VerticalEntry key={item.label} icon={item.icon} title={item.label} detail={item.description} count="Available soon" disabled />
-        ))}
       </ListingShell>
     );
   }
@@ -257,7 +218,6 @@ export function AdminWebsiteExperienceLanding({ view = "root" }: { view?: Landin
         title="Partner"
         detail="Choose a Partner area to manage."
       >
-        <VerticalEntry icon={Users} title="Partner Page" detail="Management for this area will be available soon." count="Available soon" disabled disabledHelp="Management for this area will be available soon." />
         <VerticalEntry icon={FilePenLine} title="Partner Application" detail="Manage Partner onboarding content." count={partnerContext ? `Draft v${partnerContext.draftVersion}` : "Loading"} href="/admin/website-experience/pages/partner/application" />
         <VerticalEntry icon={Tags} title="Service Catalogue" detail="Manage Partner service domains and services." count="Management" href="/admin/website-experience/pages/partner/service-catalogue" />
       </ListingShell>
@@ -267,11 +227,7 @@ export function AdminWebsiteExperienceLanding({ view = "root" }: { view?: Landin
   return (
     <div className="space-y-5">
       <AdminBackButton href="/admin" label="Back to Admin" />
-      <section className="rounded-2xl border border-sky-300/10 bg-[#0b1628] p-5 shadow-xl shadow-black/20">
-        <div className="min-w-0">
-          <h2 className="text-3xl font-black tracking-normal text-sky-100">Website Experience</h2>
-        </div>
-      </section>
+      <h2 className="sr-only">Website Experience</h2>
 
       {state.status === "error" || catalogueState.status === "error" || policyWorkflowState.status === "error" ? (
         <section className="flex flex-col gap-3 rounded-xl border border-orange-300/35 bg-orange-500/10 p-4 text-sm font-semibold text-orange-100 sm:flex-row sm:items-center sm:justify-between">
@@ -377,7 +333,7 @@ function CentralWorkflowDashboard({
         </Link>
       </div>
 
-      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_12rem_14rem_auto]" data-central-workflow-filters="true">
+      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_14rem_auto]" data-central-workflow-filters="true">
         <label className="relative block">
           <Search className="absolute left-3 top-3 h-4 w-4 text-slate-500" />
           <span className="sr-only">Search workflow items</span>
@@ -389,19 +345,7 @@ function CentralWorkflowDashboard({
           />
         </label>
         <label className="block">
-          <span className="sr-only">Filter by status</span>
-          <select value={stage} onChange={(event) => onStageChange(event.target.value as CentralWorkflowStage)} className="h-11 w-full rounded-xl border border-sky-300/15 bg-[#081427] px-3 text-sm font-bold text-slate-100 outline-none focus:border-sky-300">
-            <option value="published">Published</option>
-            <option value="drafts">Drafts</option>
-            <option value="in_review">Awaiting Approval</option>
-            <option value="changes_requested">Changes Requested</option>
-            <option value="approved">Approved</option>
-            <option value="scheduled">Scheduled</option>
-            <option value="archived">Archived</option>
-          </select>
-        </label>
-        <label className="block">
-          <span className="sr-only">Filter by content type</span>
+          <span className="sr-only">Content type</span>
           <select value={contentType} onChange={(event) => onContentTypeChange(event.target.value as CentralWorkflowContentType)} className="h-11 w-full rounded-xl border border-sky-300/15 bg-[#081427] px-3 text-sm font-bold text-slate-100 outline-none focus:border-sky-300">
             <option value="all">All content types</option>
             <option value="website_experience">Website Experience</option>
@@ -410,7 +354,7 @@ function CentralWorkflowDashboard({
             <option value="verification_rules">Verification Rules</option>
           </select>
         </label>
-        <button type="button" onClick={onClear} className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-600 bg-slate-900 px-4 text-sm font-black text-slate-200 hover:border-sky-300/30 hover:text-sky-100 focus:outline-none focus:ring-2 focus:ring-sky-300">
+        <button type="button" disabled={!search.trim() && contentType === "all"} onClick={onClear} className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-600 bg-slate-900 px-4 text-sm font-black text-slate-200 hover:border-sky-300/30 hover:text-sky-100 focus:outline-none focus:ring-2 focus:ring-sky-300 disabled:cursor-not-allowed disabled:opacity-50">
           Clear Filters
         </button>
       </div>
@@ -451,24 +395,54 @@ function DashboardCountCard({ label, value, selected, onClick, tone }: { label: 
 
 function CentralWorkflowQueueItem({ item, selectedStage }: { item: CentralWorkflowItem; selectedStage: CentralWorkflowStage }) {
   const hasMissing = item.missing.length > 0;
-  const activeVersionLabel = selectedStage === "published" && item.stage !== "published" ? `New version: ${item.status} ${item.draftVersion}` : item.status;
+  const newerVersionLabel = selectedStage === "published" && item.stage !== "published" ? `New version: ${item.status} ${item.draftVersion}` : "";
   const primaryAction = selectedStage === "published" ? "Open" : item.primaryAction;
+  if (selectedStage === "published") {
+    return (
+      <article className="rounded-xl border border-sky-300/10 bg-[#081427] p-3" data-central-workflow-item={item.id}>
+        <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_10rem]">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h4 className="text-sm font-black text-sky-50">{item.title}</h4>
+              <span className="rounded-full border border-emerald-300/25 bg-emerald-400/10 px-2.5 py-1 text-[11px] font-black text-emerald-100">Published {item.publishedVersion}</span>
+              {newerVersionLabel ? <span className={`rounded-full border px-2.5 py-1 text-[11px] font-black ${centralStageTone(item.stage)}`}>{newerVersionLabel}</span> : null}
+              <span className="rounded-full border border-sky-300/10 bg-white/[0.04] px-2.5 py-1 text-[11px] font-black text-slate-300">{contentTypeLabel(item.contentType)}</span>
+            </div>
+            <p className="mt-1 text-xs leading-5 text-slate-400">{item.hierarchy}</p>
+            {item.changedAt ? <p className="mt-2 text-xs font-semibold text-slate-300">Updated {formatDateTime(item.changedAt)}</p> : null}
+          </div>
+          <div className="flex flex-wrap gap-2 xl:items-start xl:justify-end">
+            <Link href={item.href} className="inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-orange-300/20 bg-orange-400/10 px-3 text-xs font-black text-orange-100 hover:bg-orange-400/15 focus:outline-none focus:ring-2 focus:ring-orange-200">
+              <Pencil className="h-4 w-4" />
+              {primaryAction}
+            </Link>
+            {item.previewHref ? (
+              <Link href={item.previewHref} className="inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-cyan-300/20 bg-cyan-400/10 px-3 text-xs font-black text-cyan-100 hover:bg-cyan-400/15 focus:outline-none focus:ring-2 focus:ring-cyan-200">
+                <Eye className="h-4 w-4" />
+                Preview
+              </Link>
+            ) : null}
+          </div>
+        </div>
+      </article>
+    );
+  }
   return (
     <article className="rounded-xl border border-sky-300/10 bg-[#081427] p-3" data-central-workflow-item={item.id}>
       <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_13rem]">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h4 className="text-sm font-black text-sky-50">{item.title}</h4>
-            <span className={`rounded-full border px-2.5 py-1 text-[11px] font-black ${centralStageTone(item.stage)}`}>{activeVersionLabel}</span>
+            <span className={`rounded-full border px-2.5 py-1 text-[11px] font-black ${centralStageTone(item.stage)}`}>{item.status}</span>
             <span className="rounded-full border border-sky-300/10 bg-white/[0.04] px-2.5 py-1 text-[11px] font-black text-slate-300">{contentTypeLabel(item.contentType)}</span>
           </div>
           <p className="mt-1 text-xs leading-5 text-slate-400">{item.hierarchy}</p>
-          <p className="mt-1 text-xs font-semibold text-slate-500">{item.module} · {item.detail}</p>
+          <p className="mt-1 text-xs font-semibold text-slate-500">{item.module}{item.detail ? ` · ${item.detail}` : ""}</p>
           <div className="mt-2 grid gap-2 text-xs font-semibold text-slate-300 sm:grid-cols-2 xl:grid-cols-4">
-            <span>Draft: {item.draftVersion}</span>
+            <span>Draft version: {item.draftVersion}</span>
             <span>Published: {item.publishedVersion}</span>
             <span>Changed: {item.changedAt ? formatDateTime(item.changedAt) : "Not available"}</span>
-            <span>Editor: {item.changedBy || "Recorded in audit"}</span>
+            {item.changedBy ? <span>Saved by: {item.changedBy}</span> : null}
           </div>
           {item.scheduledFor ? <p className="mt-2 text-xs font-bold text-amber-100">Scheduled for {formatDateTime(item.scheduledFor)} {item.scheduledTimezone ?? ""}</p> : null}
           <div className={`mt-2 rounded-lg border px-3 py-2 text-xs font-semibold ${hasMissing ? "border-amber-300/25 bg-amber-400/10 text-amber-100" : "border-emerald-300/20 bg-emerald-400/10 text-emerald-100"}`}>
@@ -494,10 +468,6 @@ function CentralWorkflowQueueItem({ item, selectedStage }: { item: CentralWorkfl
           {item.secondaryAction ? (
             <span className="rounded-lg border border-sky-300/10 bg-white/[0.04] px-3 py-2 text-xs font-semibold text-slate-300">{item.secondaryAction}</span>
           ) : null}
-          <Link href="/admin/website-experience/versions-audit" className="inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-slate-600 bg-slate-900 px-3 text-xs font-black text-slate-200 hover:border-sky-300/30 focus:outline-none focus:ring-2 focus:ring-sky-300">
-            <Clock3 className="h-4 w-4" />
-            History
-          </Link>
         </div>
       </div>
     </article>
@@ -617,21 +587,29 @@ function countCentralWorkflowStages(items: CentralWorkflowItem[], website: Websi
 function centralWorkflowStageFromValue(value: string | null): CentralWorkflowStage | null {
   return value === "drafts"
     || value === "in_review"
+    || value === "awaiting-approval"
     || value === "changes_requested"
+    || value === "changes-requested"
     || value === "approved"
     || value === "scheduled"
     || value === "published"
     || value === "archived"
     || value === "all"
-    ? value
+    ? value === "awaiting-approval" ? "in_review" : value === "changes-requested" ? "changes_requested" : value
     : null;
+}
+
+function centralWorkflowStageToUrlValue(value: CentralWorkflowStage) {
+  if (value === "in_review") return "awaiting-approval";
+  if (value === "changes_requested") return "changes-requested";
+  return value;
 }
 
 function displayActor(value?: string) {
   if (!value) return undefined;
   if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)) return "System administrator";
   if (/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i.test(value)) return value;
-  return value.length > 48 ? "Recorded in audit" : value;
+  return value.length > 48 ? "System administrator" : value;
 }
 
 function centralStageFromState(state: string | undefined, scheduled: boolean, hasDraftChanges: boolean): Exclude<CentralWorkflowStage, "all"> {
@@ -656,7 +634,7 @@ function centralStageLabel(stage: Exclude<CentralWorkflowStage, "all">) {
 }
 
 function readinessForStage(stage: Exclude<CentralWorkflowStage, "all">) {
-  if (stage === "drafts") return "Ready to preview and prepare for approval";
+  if (stage === "drafts") return "Ready for approval";
   if (stage === "changes_requested") return "Editor action required before resubmission";
   if (stage === "in_review") return "Waiting for authorized approval";
   if (stage === "approved") return "Ready for Publish Now or Schedule";
@@ -739,7 +717,7 @@ function VerticalEntry({
   count,
   href,
   disabled = false,
-  disabledHelp = "Editing for this area will be available soon.",
+  disabledHelp = "This area is not available yet.",
   highlight = false,
 }: {
   icon: LucideIcon;

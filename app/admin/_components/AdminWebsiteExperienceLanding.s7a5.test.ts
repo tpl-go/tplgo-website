@@ -49,13 +49,16 @@ test("S7A5 dashboard queue shows human-readable target details and actions", () 
   expect(landingSource).toContain("Open Draft");
   expect(landingSource).toContain("Publish or Schedule");
   expect(landingSource).toContain("Reschedule or cancel from Scheduled");
+  expect(landingSource).toContain('selectedStage === "published"');
+  expect(landingSource).toContain("Published {item.publishedVersion}");
+  expect(landingSource).not.toContain("Ready to preview and prepare for approval");
 });
 
 test("S7A5.1 fixes wording, count semantics and raw actor display", () => {
   expect(landingSource).toContain("CentralWorkflowCounts");
   expect(landingSource).toContain("displayActor");
   expect(landingSource).toContain("System administrator");
-  expect(landingSource).toContain("Recorded in audit");
+  expect(landingSource).not.toContain("Recorded in audit");
   expect(landingSource).toContain("publishedInventory");
   expect(landingSource).toContain('items.filter((item) => item.publishedInventory).length');
   expect(landingSource).not.toContain("Readys");
@@ -65,7 +68,7 @@ test("S7A5.1 fixes wording, count semantics and raw actor display", () => {
 
 test("S7A5.2 root dashboard defaults to Published inventory through URL state", () => {
   expect(landingSource).toContain('centralWorkflowStageFromValue(searchParams.get("view")) ?? "published"');
-  expect(landingSource).toContain('params.set("view", nextStage)');
+  expect(landingSource).toContain('params.set("view", centralWorkflowStageToUrlValue(nextStage))');
   expect(landingSource).toContain('setDashboardStage("published")');
   expect(landingSource).toContain('selected={stage === "published"}');
   expect(landingSource).not.toContain('useState<CentralWorkflowStage>("all")');
@@ -77,7 +80,7 @@ test("S7A5.2 Published inventory is independent from active workflow stage", () 
   expect(landingSource).toContain("publishedInventory: row.publishedVersion > 0");
   expect(landingSource).toContain("publishedInventory: catalogue.publishedVersion > 0");
   expect(landingSource).toContain("publishedInventory: Boolean(policy.published.version)");
-  expect(landingSource).toContain('selectedStage === "published" && item.stage !== "published" ? `New version: ${item.status} ${item.draftVersion}` : item.status');
+  expect(landingSource).toContain('selectedStage === "published" && item.stage !== "published" ? `New version: ${item.status} ${item.draftVersion}` : ""');
 });
 
 test("S7A5.2 Published route shows published inventory even with newer workflow versions", () => {
@@ -93,6 +96,35 @@ test("S7A5.2 removes unnecessary Home dashboard copy", () => {
   expect(landingSource).not.toContain("Manage content from Draft to approval, publication, scheduling and central history.");
   expect(landingSource).not.toContain("Open History");
   expect(landingSource).not.toContain("Compact access to editing areas, publication schedule and central history.");
+});
+
+test("S7A5.3 canonical workflow tabs replace duplicate status controls", () => {
+  expect(landingSource).toContain('centralWorkflowStageToUrlValue(nextStage)');
+  expect(landingSource).toContain('if (value === "in_review") return "awaiting-approval";');
+  expect(landingSource).toContain('if (value === "changes_requested") return "changes-requested";');
+  expect(landingSource).not.toContain("Filter by status");
+  expect(landingSource).not.toContain("Draft: {item.draftVersion}");
+  expect(landingSource).not.toContain('href="/admin/website-experience/versions-audit" className="inline-flex min-h-9');
+  expect(landingSource).toContain('disabled={!search.trim() && contentType === "all"}');
+});
+
+test("S7A5.3 legacy workflow lists redirect to the canonical root dashboard", () => {
+  expect(managerSource).toContain("shouldRedirectCanonicalWorkflow");
+  expect(managerSource).toContain('`/admin/website-experience?view=${canonicalWorkflowViewMap[routeWorkflowView]}`');
+  expect(managerSource).toContain('backHref="/admin/website-experience?view=drafts"');
+  expect(managerSource).toContain('workflowView === "drafts" && routeWorkflowDraftId');
+  expect(managerSource).not.toContain('backHref="/admin/website-experience/login-signup?workflow=drafts"');
+});
+
+test("S7A5.3 Draft detail removes developer-facing labels", () => {
+  const draftDetailSlice = managerSource.slice(managerSource.indexOf("function WorkflowDraftDetailView"), managerSource.indexOf("function DraftDetailLine"));
+  expect(draftDetailSlice).toContain('label="Draft version"');
+  expect(draftDetailSlice).toContain('label="Saved"');
+  expect(draftDetailSlice).toContain('label="Readiness"');
+  expect(draftDetailSlice).toContain("displaySafeActor");
+  expect(draftDetailSlice).not.toContain("Human-readable target");
+  expect(draftDetailSlice).not.toContain("Last editor recorded in audit");
+  expect(draftDetailSlice).not.toContain("Recorded in audit");
 });
 
 test("S7A5 preserves exact Agreement Template draft routing and reactive navigation", () => {

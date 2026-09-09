@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { CentralSchedulePanel } from "./CentralSchedulePanel";
 import {
   ArrowRight,
@@ -91,6 +91,16 @@ const workflowViews: Array<{ key: WorkflowView; label: string; detail: string; i
   { key: "versions", label: "Versions & Audit", detail: "Human-readable version and audit history.", icon: Clock3 },
 ];
 
+const canonicalWorkflowViewMap: Record<WorkflowView, string> = {
+  drafts: "drafts",
+  in_review: "awaiting-approval",
+  approved: "approved",
+  scheduled: "scheduled",
+  published: "published",
+  archive: "archived",
+  versions: "history",
+};
+
 const mediaSlots = {
   brand: "auth_promo_brand_image",
   desktop: "auth_promo_desktop_hero",
@@ -129,6 +139,7 @@ export function WebsiteExperienceManager({
   partnerApplicationUnitId?: string;
   partnerAgreementTemplateId?: string;
 }) {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const routeWorkflowView = workflowViewFromValue(searchParams.get("workflow"));
   const routeContext = contextFromValue(searchParams.get("context"), mode);
@@ -147,6 +158,7 @@ export function WebsiteExperienceManager({
   const [busyAction, setBusyAction] = useState("");
   const [reviewNote, setReviewNote] = useState("");
   const [bypassReason, setBypassReason] = useState("");
+  const shouldRedirectCanonicalWorkflow = mode === "login-signup" && Boolean(routeWorkflowView) && !routeWorkflowDraftId;
 
   const load = useCallback(async () => {
     const [result, catalogueResult] = await Promise.all([
@@ -165,6 +177,14 @@ export function WebsiteExperienceManager({
   useEffect(() => {
     void Promise.resolve().then(load);
   }, [load]);
+
+  useEffect(() => {
+    if (!shouldRedirectCanonicalWorkflow || !routeWorkflowView) return;
+    const target = routeWorkflowView === "versions"
+      ? "/admin/website-experience/versions-audit"
+      : `/admin/website-experience?view=${canonicalWorkflowViewMap[routeWorkflowView]}`;
+    router.replace(target, { scroll: false });
+  }, [routeWorkflowView, router, shouldRedirectCanonicalWorkflow]);
 
   const activeDraft = drafts[activeContext];
   const contextRows = useMemo(() => {
@@ -296,6 +316,7 @@ export function WebsiteExperienceManager({
   if (state.status === "loading" && !state.data) return <PanelNotice text="Loading Website Experience..." />;
   if (state.status === "error") return <PanelNotice tone="danger" text={state.error.message} />;
   if (!state.data || !activeDraft || !activeRow) return null;
+  if (shouldRedirectCanonicalWorkflow) return <PanelNotice text="Opening the central workflow view..." />;
 
   const selectContext = (context: WebsiteExperienceContext) => {
     setActiveContext(context);
@@ -359,7 +380,7 @@ export function WebsiteExperienceManager({
           { label: "Login & Signup" },
         ]} />}
         title="Login & Signup"
-        detail="Choose an experience to manage."
+        detail="Choose an area."
         backHref="/admin/website-experience/global"
         backLabel="Back to Global Experience"
       >
@@ -384,7 +405,7 @@ export function WebsiteExperienceManager({
       <ContentListShell
         eyebrow="Website Experience > Global Experience > Login & Signup"
         title={contextLabels[activeContext]}
-        detail="Open one editable item. The item editor contains Preview Changes, Save as Draft, approval, publish, schedule, delete draft, archive, and version history controls."
+        detail="Open one editable item."
         backLabel="Back to Login & Signup"
         onBack={() => setEditorView("contexts")}
       >
@@ -410,7 +431,7 @@ export function WebsiteExperienceManager({
       <ContentListShell
         eyebrow="Website Experience > Pages > Partner"
         title="Partner Application"
-        detail="Open one Partner Application section. Save changes as a draft here; approval, publishing, scheduling and history stay in the central workflow."
+        detail="Open one Partner Application section."
         backHref="/admin/website-experience/pages/partner"
         backLabel="Back to Partner"
       >
@@ -866,10 +887,10 @@ function WorkflowDraftDetailView({
     return (
       <ContentListShell
         eyebrow="Website Experience > Drafts"
-        breadcrumb={<WorkflowBreadcrumb current="Draft Detail" />}
+        breadcrumb={<WorkflowBreadcrumb current="Drafts" />}
         title="Draft not found"
         detail="The saved Draft could not be found. Return to Drafts and choose another item."
-        backHref="/admin/website-experience/login-signup?workflow=drafts"
+        backHref="/admin/website-experience?view=drafts"
         backLabel="Back to Drafts"
       >
         <PanelNotice tone="danger" text="This saved Draft is no longer available." />
@@ -884,20 +905,18 @@ function WorkflowDraftDetailView({
   return (
     <ContentListShell
       eyebrow="Website Experience > Drafts"
-      breadcrumb={<WorkflowBreadcrumb current="Draft Detail" />}
+      breadcrumb={<WorkflowBreadcrumb current={targetLabel} />}
       title={targetLabel}
-      detail="Review this saved Draft before sending it for approval. Publishing and scheduling remain central."
-      backHref="/admin/website-experience/login-signup?workflow=drafts"
+      detail={marker ? "Partner Application > Step 7 Partner Agreement > Agreement Templates" : "Saved draft"}
+      backHref="/admin/website-experience?view=drafts"
       backLabel="Back to Drafts"
     >
       <div className="rounded-2xl border border-sky-300/10 bg-[#081427] p-5" data-central-draft-detail={draftId}>
         <div className="grid gap-3 text-sm text-slate-300">
-          <DraftDetailLine label="Human-readable target" value={targetLabel} />
-          <DraftDetailLine label="Agreement Template name" value={marker?.title ?? "Partner Application"} />
-          <DraftDetailLine label="Current version" value={`Draft v${row.draftVersion}`} />
-          <DraftDetailLine label="Saved date/time" value={row.updatedAt ? formatDateTime(row.updatedAt) : "Not available"} />
-          <DraftDetailLine label="Saved by" value={row.review?.submittedByAdminId ?? row.review?.reviewedByAdminId ?? "Last editor recorded in audit"} />
-          <DraftDetailLine label="Readiness status" value={missing.length ? "Needs more details before approval" : "Ready for approval review"} />
+          <DraftDetailLine label="Draft version" value={`v${row.draftVersion}`} />
+          <DraftDetailLine label="Saved" value={row.updatedAt ? formatDateTime(row.updatedAt) : "Not available"} />
+          {displaySafeActor(row.review?.submittedByAdminId ?? row.review?.reviewedByAdminId) ? <DraftDetailLine label="Saved by" value={displaySafeActor(row.review?.submittedByAdminId ?? row.review?.reviewedByAdminId) ?? ""} /> : null}
+          <DraftDetailLine label="Readiness" value={missing.length ? "Needs more details before approval" : "Ready for approval review"} />
         </div>
         {missing.length ? (
           <div className="mt-4 rounded border border-amber-300/20 bg-amber-400/10 p-3 text-xs font-semibold text-amber-100">
@@ -2499,6 +2518,13 @@ function workflowTone(status: string): "draft" | "published" | "scheduled" | "re
   if (status === "changes_requested") return "changes";
   if (status === "archived") return "archived";
   return "draft";
+}
+
+function displaySafeActor(value?: string | null) {
+  if (!value) return "";
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)) return "";
+  if (/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i.test(value)) return value;
+  return value.length > 48 ? "" : value;
 }
 
 function publishScope(context: WebsiteExperienceContext) {
