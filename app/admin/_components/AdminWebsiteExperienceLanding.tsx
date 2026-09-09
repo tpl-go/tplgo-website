@@ -7,7 +7,6 @@ import {
   BookOpen,
   CalendarClock,
   Car,
-  CheckCircle2,
   Compass,
   FilePenLine,
   Eye,
@@ -23,14 +22,10 @@ import {
   ShoppingBag,
   Sparkles,
   Tags,
-  Archive,
   Clock3,
-  Send,
-  ClipboardList,
   Users,
   type LucideIcon,
 } from "lucide-react";
-import { CentralSchedulePanel } from "./CentralSchedulePanel";
 import { AdminBackButton } from "./AdminBackButton";
 import {
   getAdminWebsiteExperienceLoginSignup,
@@ -39,7 +34,6 @@ import {
   type AdminApiError,
   type AdminPartnerServiceCatalogueResponse,
   type AdminVerificationPolicyWorkflowView,
-  type WebsiteExperienceAdminContext,
   type WebsiteExperienceAdminResponse,
   type WebsiteExperienceContext,
 } from "../../lib/admin/adminApiClient";
@@ -86,6 +80,10 @@ type CentralWorkflowItem = {
   previewHref?: string;
   primaryAction: string;
   secondaryAction?: string;
+};
+
+type CentralWorkflowCounts = Record<Exclude<CentralWorkflowStage, "all" | "published">, number> & {
+  publishedContent: string;
 };
 
 const futureGlobalModules = [
@@ -169,8 +167,6 @@ export function AdminWebsiteExperienceLanding({ view = "root" }: { view?: Landin
     };
   }, [loadPolicyWorkflowSummary]);
 
-  const summary = useMemo(() => buildLoginSignupSummary(state.status === "ready" ? state.data.contexts.filter((context) => context.context !== "partner_application") : []), [state]);
-  const workflowSummary = useMemo(() => mergeWorkflowSummary(summary, catalogueState.status === "ready" ? catalogueState.data : null, policyWorkflowState.status === "ready" ? policyWorkflowState.data : null), [catalogueState, policyWorkflowState, summary]);
   const dashboardItems = useMemo(() => buildCentralWorkflowItems(
     state.status === "ready" ? state.data : null,
     catalogueState.status === "ready" ? catalogueState.data : null,
@@ -185,7 +181,7 @@ export function AdminWebsiteExperienceLanding({ view = "root" }: { view?: Landin
       return matchesStage && matchesType && (!query || haystack.includes(query));
     });
   }, [dashboardItems, dashboardSearch, dashboardStage, dashboardType]);
-  const dashboardCounts = useMemo(() => countCentralWorkflowStages(dashboardItems), [dashboardItems]);
+  const dashboardCounts = useMemo(() => countCentralWorkflowStages(dashboardItems, state.status === "ready" ? state.data : null), [dashboardItems, state]);
   const partnerContext = state.status === "ready" ? state.data.contexts.find((context) => context.context === "partner_application") : undefined;
   const visiblePages = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -263,36 +259,16 @@ export function AdminWebsiteExperienceLanding({ view = "root" }: { view?: Landin
     <div className="space-y-5">
       <AdminBackButton href="/admin" label="Back to Admin" />
       <section className="rounded-2xl border border-sky-300/10 bg-[#0b1628] p-5 shadow-xl shadow-black/20">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div className="min-w-0">
-            <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-200">Website Experience</p>
-            <h2 className="mt-2 text-3xl font-black tracking-normal text-sky-100">Website Experience</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-300">Manage website content and publishing.</p>
-          </div>
-          <StatusSummary summary={workflowSummary} loading={state.status === "loading" || catalogueState.status === "loading" || policyWorkflowState.status === "loading"} />
+        <div className="min-w-0">
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-200">Website Experience</p>
+          <h2 className="mt-2 text-3xl font-black tracking-normal text-sky-100">Website Experience</h2>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">Manage content from Draft to approval, publication, scheduling and central history.</p>
         </div>
       </section>
 
-      <CentralWorkflowDashboard
-        items={filteredDashboardItems}
-        counts={dashboardCounts}
-        loading={state.status === "loading" || catalogueState.status === "loading" || policyWorkflowState.status === "loading"}
-        search={dashboardSearch}
-        stage={dashboardStage}
-        contentType={dashboardType}
-        onSearchChange={setDashboardSearch}
-        onStageChange={setDashboardStage}
-        onContentTypeChange={setDashboardType}
-        onClear={() => {
-          setDashboardSearch("");
-          setDashboardStage("all");
-          setDashboardType("all");
-        }}
-      />
-
       {state.status === "error" || catalogueState.status === "error" || policyWorkflowState.status === "error" ? (
         <section className="flex flex-col gap-3 rounded-xl border border-orange-300/35 bg-orange-500/10 p-4 text-sm font-semibold text-orange-100 sm:flex-row sm:items-center sm:justify-between">
-          <span>Some counts could not load. Navigation is still available.</span>
+          <span>Some workflow data could not load. Navigation is still available.</span>
           <button
             type="button"
             onClick={() => {
@@ -311,32 +287,50 @@ export function AdminWebsiteExperienceLanding({ view = "root" }: { view?: Landin
         </section>
       ) : null}
 
-      <section className="space-y-3">
-        <SectionLabel title="Content" detail="Choose what you want to manage." />
-        <VerticalEntry icon={MonitorCog} title="Global Experience" detail="Shared content used across the website." count={`${summary.publishedLabel} published`} href="/admin/website-experience/global" />
-        <VerticalEntry icon={LayoutTemplate} title="Pages" detail="Manage page-specific content." count={`${pageModules.length} pages`} href="/admin/website-experience/pages" />
-      </section>
+      <CentralWorkflowDashboard
+        items={filteredDashboardItems}
+        counts={dashboardCounts}
+        loading={state.status === "loading" || catalogueState.status === "loading" || policyWorkflowState.status === "loading"}
+        search={dashboardSearch}
+        stage={dashboardStage}
+        contentType={dashboardType}
+        onSearchChange={setDashboardSearch}
+        onStageChange={setDashboardStage}
+        onContentTypeChange={setDashboardType}
+        onClear={() => {
+          setDashboardSearch("");
+          setDashboardStage("all");
+          setDashboardType("all");
+        }}
+      />
 
-      <section className="space-y-3">
-        <SectionLabel title="Work Queue" detail="Continue or review pending changes." />
-        <CentralSchedulePanel />
-        <VerticalEntry icon={FilePenLine} title="Drafts" detail="Continue editing saved changes." count={formatCountLabel(workflowSummary.draftLabel, "Draft")} href="/admin/website-experience/login-signup?workflow=drafts" highlight={isPendingCount(workflowSummary.draftLabel)} />
-        <VerticalEntry icon={ClipboardList} title="Service Requests" detail="Review services requested by Partners." count={formatCountLabel(workflowSummary.serviceRequestLabel, "Service Request")} href="/admin/website-experience/service-requests" highlight={isPendingCount(workflowSummary.serviceRequestLabel)} />
-        <VerticalEntry icon={Send} title="Needs Approval" detail="Review changes waiting for approval." count={formatCountLabel(workflowSummary.reviewLabel, "Needs Approval")} href="/admin/website-experience/login-signup?workflow=in_review" highlight={isPendingCount(workflowSummary.reviewLabel)} />
-        <VerticalEntry icon={CheckCircle2} title="Ready to Publish" detail="Publish or schedule approved changes." count={formatCountLabel(workflowSummary.approvedLabel, "Ready")} href="/admin/website-experience/login-signup?workflow=approved" highlight={isPendingCount(workflowSummary.approvedLabel)} />
-        <VerticalEntry icon={CalendarClock} title="Scheduled" detail="View upcoming publications." count={formatCountLabel(workflowSummary.scheduledLabel, "Scheduled")} href="/admin/website-experience/login-signup?workflow=scheduled" highlight={isPendingCount(workflowSummary.scheduledLabel)} />
-        {policyWorkflowState.status !== "denied" ? (
-          <VerticalEntry icon={ClipboardList} title="Verification Rules" detail="Central policy work item for Partner verification requirements." count={policyWorkflowState.status === "ready" ? policyStatusLabel(policyWorkflowState.data) : "Loading"} href="/admin/partner-verification/rules" highlight={policyWorkflowState.status === "ready" && policyWorkflowState.data.published.status !== "PUBLISHED"} />
-        ) : null}
-      </section>
-
-      <section className="space-y-3">
-        <SectionLabel title="Records" detail="View published content and change history." />
-        <VerticalEntry icon={Globe2} title="Published Content" detail="View content currently published." count={workflowSummary.publishedLabel} href="/admin/website-experience/login-signup?workflow=published" />
-        <VerticalEntry icon={Archive} title="Archive" detail="Archived content and restore workflow." count={workflowSummary.archiveLabel} href="/admin/website-experience/login-signup?workflow=archive" />
-        <VerticalEntry icon={Clock3} title="Versions & Audit" detail="Human-readable content history." count={state.status === "ready" ? String(state.data.recentAudit.length + (catalogueState.status === "ready" ? catalogueState.data.audit.length + catalogueState.data.versions.length : 0)) : "Loading"} href="/admin/website-experience/versions-audit" />
+      <section className="rounded-2xl border border-sky-300/10 bg-[#0b1628]/95 p-4 shadow-xl shadow-black/20" data-compact-website-experience-navigation="true">
+        <div className="mb-3">
+          <h3 className="text-lg font-black text-cyan-100">Content and records</h3>
+          <p className="mt-1 text-sm leading-6 text-slate-400">Compact access to editing areas, publication schedule and central history.</p>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <CompactNavLink icon={MonitorCog} title="Global Experience" detail="Login and registration content" href="/admin/website-experience/global" />
+          <CompactNavLink icon={LayoutTemplate} title="Pages" detail="Page-specific website content" href="/admin/website-experience/pages" />
+          <CompactNavLink icon={CalendarClock} title="Publication Schedule" detail="Scheduled publication queue" href="/admin/website-experience/login-signup?workflow=scheduled" />
+          <CompactNavLink icon={Clock3} title="Central History" detail="Versions and workflow activity" href="/admin/website-experience/versions-audit" />
+        </div>
       </section>
     </div>
+  );
+}
+
+function CompactNavLink({ icon: Icon, title, detail, href }: { icon: LucideIcon; title: string; detail: string; href: string }) {
+  return (
+    <Link href={href} className="flex min-h-16 items-center gap-3 rounded-2xl border border-sky-300/10 bg-[#081427] p-3 text-left transition hover:border-sky-300/35 hover:bg-[#0b1b33] focus:outline-none focus:ring-2 focus:ring-sky-300">
+      <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sky-400/10 text-cyan-200 ring-1 ring-sky-300/20">
+        <Icon className="h-4 w-4" />
+      </span>
+      <span className="min-w-0">
+        <span className="block text-sm font-black text-sky-50">{title}</span>
+        <span className="mt-0.5 block text-xs leading-5 text-slate-400">{detail}</span>
+      </span>
+    </Link>
   );
 }
 
@@ -353,7 +347,7 @@ function CentralWorkflowDashboard({
   onClear,
 }: {
   items: CentralWorkflowItem[];
-  counts: Record<Exclude<CentralWorkflowStage, "all">, number>;
+  counts: CentralWorkflowCounts;
   loading: boolean;
   search: string;
   stage: CentralWorkflowStage;
@@ -378,13 +372,13 @@ function CentralWorkflowDashboard({
         </Link>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6" aria-label="Website Experience workflow overview">
-        <DashboardCountCard label="Drafts" value={counts.drafts} href="/admin/website-experience/login-signup?workflow=drafts" tone="amber" />
-        <DashboardCountCard label="Awaiting Approval" value={counts.in_review} href="/admin/website-experience/login-signup?workflow=in_review" tone="sky" />
-        <DashboardCountCard label="Changes Requested" value={counts.changes_requested} href="/admin/website-experience/login-signup?workflow=drafts" tone="orange" />
-        <DashboardCountCard label="Approved" value={counts.approved} href="/admin/website-experience/login-signup?workflow=approved" tone="emerald" />
-        <DashboardCountCard label="Scheduled" value={counts.scheduled} href="/admin/website-experience/login-signup?workflow=scheduled" tone="violet" />
-        <DashboardCountCard label="Published" value={counts.published} href="/admin/website-experience/login-signup?workflow=published" tone="green" />
+      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-6" aria-label="Website Experience workflow overview" data-authoritative-workflow-overview="true">
+        <DashboardCountCard label="Drafts" value={`${counts.drafts}`} href="/admin/website-experience/login-signup?workflow=drafts" tone="amber" />
+        <DashboardCountCard label="Awaiting Approval" value={`${counts.in_review}`} href="/admin/website-experience/login-signup?workflow=in_review" tone="sky" />
+        <DashboardCountCard label="Changes Requested" value={`${counts.changes_requested}`} href="/admin/website-experience/login-signup?workflow=drafts" tone="orange" />
+        <DashboardCountCard label="Approved" value={`${counts.approved}`} href="/admin/website-experience/login-signup?workflow=approved" tone="emerald" />
+        <DashboardCountCard label="Scheduled" value={`${counts.scheduled}`} href="/admin/website-experience/login-signup?workflow=scheduled" tone="violet" />
+        <DashboardCountCard label="Published content" value={counts.publishedContent} href="/admin/website-experience/login-signup?workflow=published" tone="green" />
       </div>
 
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_12rem_14rem_auto]" data-central-workflow-filters="true">
@@ -442,7 +436,7 @@ function CentralWorkflowDashboard({
   );
 }
 
-function DashboardCountCard({ label, value, href, tone }: { label: string; value: number; href: string; tone: "amber" | "sky" | "orange" | "emerald" | "violet" | "green" }) {
+function DashboardCountCard({ label, value, href, tone }: { label: string; value: string; href: string; tone: "amber" | "sky" | "orange" | "emerald" | "violet" | "green" }) {
   const toneClass = {
     amber: "border-amber-300/25 bg-amber-400/10 text-amber-100",
     sky: "border-sky-300/25 bg-sky-400/10 text-sky-100",
@@ -452,9 +446,9 @@ function DashboardCountCard({ label, value, href, tone }: { label: string; value
     green: "border-green-300/25 bg-green-400/10 text-green-100",
   }[tone];
   return (
-    <Link href={href} className={`rounded-2xl border p-4 transition hover:bg-white/[0.04] focus:outline-none focus:ring-2 focus:ring-sky-300 ${toneClass}`}>
-      <span className="block text-2xl font-black">{value}</span>
-      <span className="mt-1 block text-xs font-black uppercase tracking-[0.12em]">{label}</span>
+    <Link href={href} className={`rounded-xl border p-3 transition hover:bg-white/[0.04] focus:outline-none focus:ring-2 focus:ring-sky-300 ${toneClass}`}>
+      <span className="block text-xl font-black">{value}</span>
+      <span className="mt-0.5 block text-[11px] font-black uppercase tracking-[0.12em]">{label}</span>
     </Link>
   );
 }
@@ -462,24 +456,24 @@ function DashboardCountCard({ label, value, href, tone }: { label: string; value
 function CentralWorkflowQueueItem({ item }: { item: CentralWorkflowItem }) {
   const hasMissing = item.missing.length > 0;
   return (
-    <article className="rounded-2xl border border-sky-300/10 bg-[#081427] p-4" data-central-workflow-item={item.id}>
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]">
+    <article className="rounded-xl border border-sky-300/10 bg-[#081427] p-3" data-central-workflow-item={item.id}>
+      <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_13rem]">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h4 className="text-base font-black text-sky-50">{item.title}</h4>
+            <h4 className="text-sm font-black text-sky-50">{item.title}</h4>
             <span className={`rounded-full border px-2.5 py-1 text-[11px] font-black ${centralStageTone(item.stage)}`}>{item.status}</span>
             <span className="rounded-full border border-sky-300/10 bg-white/[0.04] px-2.5 py-1 text-[11px] font-black text-slate-300">{contentTypeLabel(item.contentType)}</span>
           </div>
-          <p className="mt-1 text-sm leading-6 text-slate-400">{item.hierarchy}</p>
+          <p className="mt-1 text-xs leading-5 text-slate-400">{item.hierarchy}</p>
           <p className="mt-1 text-xs font-semibold text-slate-500">{item.module} · {item.detail}</p>
-          <div className="mt-3 grid gap-2 text-xs font-semibold text-slate-300 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="mt-2 grid gap-2 text-xs font-semibold text-slate-300 sm:grid-cols-2 xl:grid-cols-4">
             <span>Draft: {item.draftVersion}</span>
             <span>Published: {item.publishedVersion}</span>
             <span>Changed: {item.changedAt ? formatDateTime(item.changedAt) : "Not available"}</span>
             <span>Editor: {item.changedBy || "Recorded in audit"}</span>
           </div>
           {item.scheduledFor ? <p className="mt-2 text-xs font-bold text-amber-100">Scheduled for {formatDateTime(item.scheduledFor)} {item.scheduledTimezone ?? ""}</p> : null}
-          <div className={`mt-3 rounded-xl border p-3 text-xs font-semibold ${hasMissing ? "border-amber-300/25 bg-amber-400/10 text-amber-100" : "border-emerald-300/20 bg-emerald-400/10 text-emerald-100"}`}>
+          <div className={`mt-2 rounded-lg border px-3 py-2 text-xs font-semibold ${hasMissing ? "border-amber-300/25 bg-amber-400/10 text-amber-100" : "border-emerald-300/20 bg-emerald-400/10 text-emerald-100"}`}>
             <p>{item.readiness}</p>
             {hasMissing ? (
               <ul className="mt-2 grid gap-1">
@@ -488,21 +482,21 @@ function CentralWorkflowQueueItem({ item }: { item: CentralWorkflowItem }) {
             ) : null}
           </div>
         </div>
-        <div className="flex flex-col gap-2 xl:items-stretch">
-          <Link href={item.href} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-orange-300/20 bg-orange-400/10 px-3 text-sm font-black text-orange-100 hover:bg-orange-400/15 focus:outline-none focus:ring-2 focus:ring-orange-200">
+        <div className="flex flex-wrap gap-2 xl:items-start xl:justify-end">
+          <Link href={item.href} className="inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-orange-300/20 bg-orange-400/10 px-3 text-xs font-black text-orange-100 hover:bg-orange-400/15 focus:outline-none focus:ring-2 focus:ring-orange-200">
             <Pencil className="h-4 w-4" />
             {item.primaryAction}
           </Link>
           {item.previewHref ? (
-            <Link href={item.previewHref} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-400/10 px-3 text-sm font-black text-cyan-100 hover:bg-cyan-400/15 focus:outline-none focus:ring-2 focus:ring-cyan-200">
+            <Link href={item.previewHref} className="inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-cyan-300/20 bg-cyan-400/10 px-3 text-xs font-black text-cyan-100 hover:bg-cyan-400/15 focus:outline-none focus:ring-2 focus:ring-cyan-200">
               <Eye className="h-4 w-4" />
               Preview
             </Link>
           ) : null}
           {item.secondaryAction ? (
-            <span className="rounded-xl border border-sky-300/10 bg-white/[0.04] px-3 py-2 text-xs font-semibold text-slate-300">{item.secondaryAction}</span>
+            <span className="rounded-lg border border-sky-300/10 bg-white/[0.04] px-3 py-2 text-xs font-semibold text-slate-300">{item.secondaryAction}</span>
           ) : null}
-          <Link href="/admin/website-experience/versions-audit" className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-slate-600 bg-slate-900 px-3 text-sm font-black text-slate-200 hover:border-sky-300/30 focus:outline-none focus:ring-2 focus:ring-sky-300">
+          <Link href="/admin/website-experience/versions-audit" className="inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-slate-600 bg-slate-900 px-3 text-xs font-black text-slate-200 hover:border-sky-300/30 focus:outline-none focus:ring-2 focus:ring-sky-300">
             <Clock3 className="h-4 w-4" />
             History
           </Link>
@@ -543,7 +537,7 @@ function buildCentralWorkflowItems(
       draftVersion: `v${row.draftVersion}`,
       publishedVersion: row.publishedVersion > 0 ? `v${row.publishedVersion}` : "Not published",
       changedAt: marker?.updatedAt ?? row.updatedAt,
-      changedBy: row.review?.submittedByAdminId ?? row.review?.reviewedByAdminId,
+      changedBy: displayActor(row.review?.submittedByAdminId ?? row.review?.reviewedByAdminId),
       readiness: marker?.readinessMissing?.length ? "Needs more details before approval" : readinessForStage(stage),
       missing: marker?.readinessMissing ?? [],
       scheduledFor: row.scheduledFor,
@@ -569,7 +563,7 @@ function buildCentralWorkflowItems(
       draftVersion: `v${catalogue.draftVersion}`,
       publishedVersion: catalogue.publishedVersion > 0 ? `v${catalogue.publishedVersion}` : "Not published",
       changedAt: catalogue.review?.changedAt,
-      changedBy: catalogue.review?.changedByAdminId ?? catalogue.review?.submittedByAdminId ?? catalogue.review?.reviewedByAdminId,
+      changedBy: displayActor(catalogue.review?.changedByAdminId ?? catalogue.review?.submittedByAdminId ?? catalogue.review?.reviewedByAdminId),
       readiness: catalogue.hasUnpublishedChanges ? "Draft changes are available for central review" : readinessForStage(stage),
       missing: [],
       href: "/admin/website-experience/pages/partner/service-catalogue",
@@ -607,16 +601,25 @@ function buildCentralWorkflowItems(
   });
 }
 
-function countCentralWorkflowStages(items: CentralWorkflowItem[]): Record<Exclude<CentralWorkflowStage, "all">, number> {
+function countCentralWorkflowStages(items: CentralWorkflowItem[], website: WebsiteExperienceAdminResponse | null): CentralWorkflowCounts {
+  const publishedContexts = website?.contexts.filter((context) => context.publishedVersion > 0).length ?? 0;
+  const totalContexts = website?.contexts.length ?? 0;
   return {
     drafts: items.filter((item) => item.stage === "drafts").length,
     changes_requested: items.filter((item) => item.stage === "changes_requested").length,
     in_review: items.filter((item) => item.stage === "in_review").length,
     approved: items.filter((item) => item.stage === "approved").length,
     scheduled: items.filter((item) => item.stage === "scheduled").length,
-    published: items.filter((item) => item.stage === "published").length,
     archived: items.filter((item) => item.stage === "archived").length,
+    publishedContent: totalContexts ? `${publishedContexts}/${totalContexts}` : "Loading",
   };
+}
+
+function displayActor(value?: string) {
+  if (!value) return undefined;
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)) return "System administrator";
+  if (/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i.test(value)) return value;
+  return value.length > 48 ? "Recorded in audit" : value;
 }
 
 function centralStageFromState(state: string | undefined, scheduled: boolean, hasDraftChanges: boolean): Exclude<CentralWorkflowStage, "all"> {
@@ -682,57 +685,6 @@ function formatDateTime(value: string) {
   }
 }
 
-function buildLoginSignupSummary(contexts: WebsiteExperienceAdminContext[]) {
-  const published = contexts.filter((context) => context.publishedVersion > 0).length;
-  const draftChanges = contexts.filter((context) => context.draftVersion > context.publishedVersion).length;
-  const scheduled = contexts.filter((context) => context.scheduledFor).length;
-  const review = contexts.filter((context) => context.workflowState === "in_review").length;
-  const approved = contexts.filter((context) => context.workflowState === "approved").length;
-  const archived = contexts.filter((context) => context.workflowState === "archived" || context.status === "archived").length;
-  return {
-    publishedLabel: contexts.length ? `${published}/${contexts.length}` : "Loading",
-    draftLabel: contexts.length ? String(draftChanges) : "Loading",
-    reviewLabel: contexts.length ? String(review) : "Loading",
-    approvedLabel: contexts.length ? String(approved) : "Loading",
-    scheduledLabel: contexts.length ? String(scheduled) : "Loading",
-    archiveLabel: contexts.length ? String(archived) : "Loading",
-    serviceRequestLabel: "Loading",
-  };
-}
-
-function mergeWorkflowSummary(summary: ReturnType<typeof buildLoginSignupSummary>, catalogue: AdminPartnerServiceCatalogueResponse | null, policy: AdminVerificationPolicyWorkflowView | null) {
-  const catalogueState = catalogue?.workflowState ?? (catalogue?.hasUnpublishedChanges ? "draft" : "published");
-  const policyState = policy?.workflowRecord?.workflowState ?? policy?.published.status;
-  const add = (value: string, amount: number) => Number.isFinite(Number(value)) ? String(Number(value) + amount) : value;
-  return {
-    publishedLabel: summary.publishedLabel,
-    draftLabel: add(summary.draftLabel, (catalogue?.hasUnpublishedChanges && ["draft", "changes_requested"].includes(catalogueState) ? 1 : 0) + (policyState === "DRAFT" ? 1 : 0)),
-    reviewLabel: add(summary.reviewLabel, (catalogueState === "in_review" ? 1 : 0) + (policyState === "PENDING_APPROVAL" ? 1 : 0)),
-    approvedLabel: add(summary.approvedLabel, (catalogueState === "approved" ? 1 : 0) + (policyState === "APPROVED" ? 1 : 0)),
-    scheduledLabel: add(summary.scheduledLabel, policyState === "SCHEDULED" ? 1 : 0),
-    archiveLabel: add(summary.archiveLabel, (catalogueState === "archived" ? 1 : 0) + (policyState === "ARCHIVED" ? 1 : 0)),
-    serviceRequestLabel: catalogue ? String(catalogue.requestedServices.filter((request) => !request.resolution && !["closed", "rejected", "mapped", "draft_created"].includes(request.status)).length) : "Loading",
-  };
-}
-
-function policyStatusLabel(policy: AdminVerificationPolicyWorkflowView) {
-  const state = policy.workflowRecord?.workflowState ?? policy.published.status;
-  if (state === "DRAFT") return "Draft";
-  if (state === "PENDING_APPROVAL") return "Needs Approval";
-  if (state === "APPROVED") return "Ready to Publish";
-  if (state === "SCHEDULED") return "Scheduled";
-  return `${policy.totals.activeRequirements} published rules`;
-}
-
-function SectionLabel({ title, detail }: { title: string; detail: string }) {
-  return (
-    <div>
-      <h3 className="text-lg font-black text-cyan-100">{title}</h3>
-      <p className="mt-1 text-sm leading-6 text-slate-400">{detail}</p>
-    </div>
-  );
-}
-
 function ListingShell({ current, parent, title, detail, children }: { current: "Global Experience" | "Pages" | "Partner"; parent?: { label: string; href: string }; title: string; detail: string; children: React.ReactNode }) {
   const backTarget = parent ?? { label: "Website Experience", href: "/admin/website-experience" };
   return (
@@ -765,32 +717,6 @@ function BreadcrumbTrail({ current, parent }: { current: "Global Experience" | "
       ) : null}
       <span aria-current="page" className="text-slate-300">{current}</span>
     </nav>
-  );
-}
-
-function StatusSummary({ summary, loading }: { summary: ReturnType<typeof mergeWorkflowSummary>; loading: boolean }) {
-  const chips = [
-    { label: "Drafts", value: summary.draftLabel, countLabel: formatCountLabel(summary.draftLabel, "Draft"), href: "/admin/website-experience/login-signup?workflow=drafts" },
-    { label: "Service Requests", value: summary.serviceRequestLabel, countLabel: formatCountLabel(summary.serviceRequestLabel, "Service Request"), href: "/admin/website-experience/service-requests" },
-    { label: "Needs Approval", value: summary.reviewLabel, countLabel: formatCountLabel(summary.reviewLabel, "Needs Approval", "Needs Approval"), href: "/admin/website-experience/login-signup?workflow=in_review" },
-    { label: "Scheduled", value: summary.scheduledLabel, countLabel: formatCountLabel(summary.scheduledLabel, "Scheduled", "Scheduled"), href: "/admin/website-experience/login-signup?workflow=scheduled" },
-  ];
-  return (
-    <div className="flex flex-wrap gap-2" aria-label={loading ? "Workflow counts loading" : "Workflow status summary"}>
-      {chips.map((chip) => (
-        <Link
-          key={chip.label}
-          href={chip.href}
-          className={`inline-flex min-h-10 items-center gap-2 rounded-full border px-3 text-xs font-black transition focus:outline-none focus:ring-2 focus:ring-sky-300 ${
-            isPendingCount(chip.value)
-              ? "border-orange-300/30 bg-orange-400/10 text-orange-100 hover:bg-orange-400/15"
-              : "border-sky-300/10 bg-white/[0.04] text-slate-300 hover:border-sky-300/25"
-          }`}
-        >
-          <span>{chip.countLabel}</span>
-        </Link>
-      ))}
-    </div>
   );
 }
 
@@ -840,16 +766,4 @@ function VerticalEntry({
     );
   }
   return <Link href={href} className={className}>{body}</Link>;
-}
-
-function formatCountLabel(value: string, singular: string, plural = `${singular}s`) {
-  if (value === "Loading") return "Loading";
-  const count = Number(value);
-  if (!Number.isFinite(count)) return value;
-  return `${count} ${count === 1 ? singular : plural}`;
-}
-
-function isPendingCount(value: string) {
-  const count = Number(value);
-  return Number.isFinite(count) && count > 0;
 }
