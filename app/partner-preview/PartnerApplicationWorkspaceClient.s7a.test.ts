@@ -160,6 +160,9 @@ test("Agreement template Save Draft hands off to the central Draft queue exactly
   expect(websiteExperienceSource).toContain("centralDraftRouteFromTemplate(selected)");
   expect(websiteExperienceSource).toContain("agreementTemplateCentralDraftRoute(template.id)");
   expect(websiteExperienceSource).toContain("readInitialWorkflowDraftId");
+  expect(websiteExperienceSource).toContain("centralDraftHrefForRow");
+  expect(websiteExperienceSource).toContain("marker.centralDraftRoute?.startsWith(\"/admin/\")");
+  expect(websiteExperienceSource).toContain("marker.centralDraftId");
   expect(websiteExperienceSource).not.toContain("setMessage(result.data.safeMessage);\\n    onSaveDraft();");
 });
 
@@ -176,7 +179,10 @@ test("Central Draft queue exposes draft actions and hides editor audit clutter",
   expect(websiteExperienceSource).toContain("Full activity remains in central History.");
   expect(websiteExperienceSource).toContain("CompactEditorMetadata");
   expect(websiteExperienceSource).toContain('mode === "partner-application" ? <CompactEditorMetadata activeRow={activeRow} /> : <AuditList rows={state.data.recentAudit} />');
-  expect(websiteExperienceSource).toContain('row.draftContent.agreementTemplateDraft?.templateId ? (');
+  expect(websiteExperienceSource).toContain("WorkflowQueueRow");
+  expect(websiteExperienceSource).toContain("data-central-draft-open-edit={workflowDraftIdForContext(row)}");
+  expect(websiteExperienceSource).toContain("This saved Draft is missing its direct agreement-template link.");
+  expect(websiteExperienceSource).not.toContain('row.draftContent.agreementTemplateDraft?.templateId ? (');
   const templatePanel = websiteExperienceSource.slice(websiteExperienceSource.indexOf("function AgreementTemplateDraftPanel"), websiteExperienceSource.indexOf("const defaultAgreementPlaceholders"));
   expect(templatePanel).not.toContain("Recent Audit Log");
   expect(templatePanel).not.toContain("Version History");

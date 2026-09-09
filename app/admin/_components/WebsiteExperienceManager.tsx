@@ -767,7 +767,32 @@ function WorkflowQueueView({
         </div>
       ) : null}
       {rows.length ? rows.map((row) => (
-        <div key={`${view}:${row.context}`} className="rounded-2xl border border-sky-300/10 bg-[#081427] p-4">
+        <WorkflowQueueRow key={`${view}:${row.context}`} row={row} view={view} onOpen={onOpen} onPreview={onPreview} onSubmit={onSubmit} />
+      )) : !hasRows ? (
+        <p className="rounded-2xl border border-sky-300/10 bg-[#081427] p-4 text-sm font-semibold text-slate-300">No {selected.label.toLowerCase()} items.</p>
+      ) : null}
+    </ContentListShell>
+  );
+}
+
+function WorkflowQueueRow({
+  row,
+  view,
+  onOpen,
+  onPreview,
+  onSubmit,
+}: {
+  row: WebsiteExperienceAdminContext;
+  view: WorkflowView;
+  onOpen: (context: WebsiteExperienceContext, origin?: WorkflowView) => void;
+  onPreview: (context: WebsiteExperienceContext, origin?: WorkflowView) => void;
+  onSubmit?: (context: WebsiteExperienceContext) => void;
+}) {
+  const agreementDraftHref = centralDraftHrefForRow(row);
+  const isPartnerApplicationDraft = view === "drafts" && row.context === "partner_application";
+  const missingAgreementDraftRoute = isPartnerApplicationDraft && Boolean(row.draftContent.agreementTemplateDraft) && !agreementDraftHref;
+  return (
+        <div className="rounded-2xl border border-sky-300/10 bg-[#081427] p-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
@@ -785,17 +810,27 @@ function WorkflowQueueView({
                   </ul>
                 </div>
               ) : null}
+              {missingAgreementDraftRoute ? (
+                <p className="mt-2 rounded border border-red-300/20 bg-red-400/10 p-2 text-xs font-semibold text-red-100">
+                  This saved Draft is missing its direct agreement-template link. Reopen the Agreement Template editor and use Open saved draft.
+                </p>
+              ) : null}
             </div>
             <div className="flex shrink-0 flex-wrap gap-2">
               <button type="button" onClick={() => onPreview(row.context, view)} className="inline-flex h-9 items-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-400/10 px-3 text-xs font-black text-cyan-100">
                 <Eye className="h-4 w-4" />
                 {view === "approved" ? "Preview Approved Version" : "Preview Draft"}
               </button>
-              {row.draftContent.agreementTemplateDraft?.templateId ? (
-                <Link href={agreementTemplateCentralDraftRoute(row.draftContent.agreementTemplateDraft.templateId)} className="inline-flex h-9 items-center gap-2 rounded-xl border border-orange-300/20 bg-orange-400/10 px-3 text-xs font-black text-orange-100">
+              {agreementDraftHref ? (
+                <a href={agreementDraftHref} className="inline-flex h-9 items-center gap-2 rounded-xl border border-orange-300/20 bg-orange-400/10 px-3 text-xs font-black text-orange-100" data-central-draft-open-edit={workflowDraftIdForContext(row)}>
                   <Pencil className="h-4 w-4" />
                   Open/Edit
-                </Link>
+                </a>
+              ) : missingAgreementDraftRoute ? (
+                <button type="button" disabled className="inline-flex h-9 cursor-not-allowed items-center gap-2 rounded-xl border border-slate-600 bg-slate-800 px-3 text-xs font-black text-slate-400">
+                  <Pencil className="h-4 w-4" />
+                  Open/Edit
+                </button>
               ) : (
                 <button type="button" onClick={() => onOpen(row.context, view)} className="inline-flex h-9 items-center gap-2 rounded-xl border border-orange-300/20 bg-orange-400/10 px-3 text-xs font-black text-orange-100">
                   <Pencil className="h-4 w-4" />
@@ -811,10 +846,6 @@ function WorkflowQueueView({
             </div>
           </div>
         </div>
-      )) : !hasRows ? (
-        <p className="rounded-2xl border border-sky-300/10 bg-[#081427] p-4 text-sm font-semibold text-slate-300">No {selected.label.toLowerCase()} items.</p>
-      ) : null}
-    </ContentListShell>
   );
 }
 
@@ -2570,9 +2601,19 @@ function centralDraftRouteFromTemplate(template: AdminAgreementTemplate): string
   return route.startsWith("/admin/") ? route : agreementTemplateCentralDraftRoute(template.id);
 }
 
+function centralDraftHrefForRow(row: WebsiteExperienceAdminContext): string | null {
+  const marker = row.draftContent.agreementTemplateDraft;
+  if (!marker) return null;
+  if (marker.centralDraftRoute?.startsWith("/admin/")) return marker.centralDraftRoute;
+  if (marker.centralDraftId) {
+    return `/admin/website-experience/login-signup?workflow=drafts&context=partner_application&draftId=${encodeURIComponent(marker.centralDraftId)}`;
+  }
+  return marker.templateId ? agreementTemplateCentralDraftRoute(marker.templateId) : null;
+}
+
 function workflowDraftIdForContext(row: WebsiteExperienceAdminContext): string {
   const marker = row.draftContent.agreementTemplateDraft;
-  return marker?.templateId ? agreementTemplateDraftId(marker.templateId) : row.context;
+  return marker?.centralDraftId || (marker?.templateId ? agreementTemplateDraftId(marker.templateId) : row.context);
 }
 
 function workflowViewLabel(view: WorkflowView) {
