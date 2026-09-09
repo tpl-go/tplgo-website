@@ -159,7 +159,11 @@ test("Agreement template Save Draft hands off to the central Draft queue exactly
   expect(websiteExperienceSource).toContain("result.data.centralDraft?.route");
   expect(websiteExperienceSource).toContain("centralDraftRouteFromTemplate(selected)");
   expect(websiteExperienceSource).toContain("agreementTemplateCentralDraftRoute(template.id)");
-  expect(websiteExperienceSource).toContain("readInitialWorkflowDraftId");
+  expect(websiteExperienceSource).toContain("useSearchParams");
+  expect(websiteExperienceSource).toContain("routeWorkflowDraftId");
+  expect(websiteExperienceSource).toContain("workflowView === \"drafts\" && routeWorkflowDraftId");
+  expect(websiteExperienceSource).toContain("workflowViewFromValue(searchParams.get(\"workflow\"))");
+  expect(websiteExperienceSource).toContain("contextFromValue(searchParams.get(\"context\"), mode)");
   expect(websiteExperienceSource).toContain("centralDraftHrefForRow");
   expect(websiteExperienceSource).toContain("marker.centralDraftRoute?.startsWith(\"/admin/\")");
   expect(websiteExperienceSource).toContain("marker.centralDraftId");

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { CentralSchedulePanel } from "./CentralSchedulePanel";
 import {
   ArrowRight,
@@ -128,16 +129,17 @@ export function WebsiteExperienceManager({
   partnerApplicationUnitId?: string;
   partnerAgreementTemplateId?: string;
 }) {
-  const initialWorkflowView = readInitialWorkflowView();
-  const initialContext = readInitialContext(mode);
-  const initialWorkflowDraftId = readInitialWorkflowDraftId();
+  const searchParams = useSearchParams();
+  const routeWorkflowView = workflowViewFromValue(searchParams.get("workflow"));
+  const routeContext = contextFromValue(searchParams.get("context"), mode);
+  const routeWorkflowDraftId = searchParams.get("draftId") ?? "";
   const [state, setState] = useState<LoadState>({ status: "loading", data: null, error: null });
   const [catalogueState, setCatalogueState] = useState<CatalogueQueueState>({ status: "idle", data: null });
-  const [activeContext, setActiveContext] = useState<WebsiteExperienceContext>(initialContext);
+  const [activeContext, setActiveContext] = useState<WebsiteExperienceContext>(routeContext);
   const [activeBlock, setActiveBlock] = useState<BlockKey | null>(partnerApplicationNodeId ? "copy" : null);
-  const [editorView, setEditorView] = useState<EditorView>(initialWorkflowView ? "workflow" : mode === "partner-application" ? "blocks" : "contexts");
-  const [workflowView, setWorkflowView] = useState<WorkflowView | null>(initialWorkflowView);
-  const [workflowOrigin, setWorkflowOrigin] = useState<WorkflowView | null>(initialWorkflowView);
+  const [editorView, setEditorView] = useState<EditorView>(routeWorkflowView ? "workflow" : mode === "partner-application" ? "blocks" : "contexts");
+  const [workflowView, setWorkflowView] = useState<WorkflowView | null>(routeWorkflowView);
+  const [workflowOrigin, setWorkflowOrigin] = useState<WorkflowView | null>(routeWorkflowView);
   const [previewDevice, setPreviewDevice] = useState<PreviewDevice>("desktop");
   const [drafts, setDrafts] = useState<Partial<Record<WebsiteExperienceContext, WebsiteExperienceContent>>>({});
   const [schedule, setSchedule] = useState(defaultSchedule);
@@ -320,10 +322,10 @@ export function WebsiteExperienceManager({
 
   if (editorView === "workflow" && workflowView) {
     if (workflowView === "scheduled") return <div className="space-y-4"><Link href="/admin/website-experience">Back to Website Experience</Link><CentralSchedulePanel /></div>;
-    if (workflowView === "drafts" && initialWorkflowDraftId) {
+    if (workflowView === "drafts" && routeWorkflowDraftId) {
       return (
         <WorkflowDraftDetailView
-          draftId={initialWorkflowDraftId}
+          draftId={routeWorkflowDraftId}
           data={state.data}
           onSubmit={(context) => {
             setActiveContext(context);
@@ -2568,24 +2570,15 @@ function catalogueWorkflowRow(catalogue: AdminPartnerServiceCatalogueResponse | 
   };
 }
 
-function readInitialWorkflowView(): WorkflowView | null {
-  if (typeof window === "undefined") return null;
-  const view = new URLSearchParams(window.location.search).get("workflow") as WorkflowView | null;
-  return view && workflowViews.some((item) => item.key === view) ? view : null;
+function workflowViewFromValue(value: string | null): WorkflowView | null {
+  return value && workflowViews.some((item) => item.key === value) ? (value as WorkflowView) : null;
 }
 
-function readInitialContext(mode: "login-signup" | "partner-application"): WebsiteExperienceContext {
+function contextFromValue(value: string | null, mode: "login-signup" | "partner-application"): WebsiteExperienceContext {
   if (mode === "partner-application") return "partner_application";
-  if (typeof window === "undefined") return "user_login";
-  const context = new URLSearchParams(window.location.search).get("context");
-  return context === "partner_application" || context === "partner_registration" || context === "partner_login" || context === "user_login"
-    ? context
+  return value === "partner_application" || value === "partner_registration" || value === "partner_login" || value === "user_login"
+    ? value
     : "user_login";
-}
-
-function readInitialWorkflowDraftId(): string {
-  if (typeof window === "undefined") return "";
-  return new URLSearchParams(window.location.search).get("draftId") ?? "";
 }
 
 function agreementTemplateDraftId(templateId: string): string {
