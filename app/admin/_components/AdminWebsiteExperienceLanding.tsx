@@ -10,12 +10,14 @@ import {
   CheckCircle2,
   Compass,
   FilePenLine,
+  Eye,
   Globe2,
   Home,
   LayoutTemplate,
   MonitorCog,
   Navigation,
   PanelTop,
+  Pencil,
   Plane,
   Search,
   ShoppingBag,
@@ -39,6 +41,7 @@ import {
   type AdminVerificationPolicyWorkflowView,
   type WebsiteExperienceAdminContext,
   type WebsiteExperienceAdminResponse,
+  type WebsiteExperienceContext,
 } from "../../lib/admin/adminApiClient";
 
 type LandingView = "root" | "global" | "pages" | "partner";
@@ -59,6 +62,32 @@ type PolicyWorkflowLoadState =
   | { status: "denied"; data: null }
   | { status: "error"; data: null };
 
+type CentralWorkflowStage = "all" | "drafts" | "in_review" | "changes_requested" | "approved" | "scheduled" | "published" | "archived";
+type CentralWorkflowContentType = "all" | "website_experience" | "agreement_template" | "service_catalogue" | "verification_rules";
+
+type CentralWorkflowItem = {
+  id: string;
+  stage: Exclude<CentralWorkflowStage, "all">;
+  contentType: Exclude<CentralWorkflowContentType, "all">;
+  title: string;
+  hierarchy: string;
+  module: string;
+  detail: string;
+  status: string;
+  draftVersion: string;
+  publishedVersion: string;
+  changedAt?: string;
+  changedBy?: string;
+  readiness: string;
+  missing: string[];
+  scheduledFor?: string;
+  scheduledTimezone?: string;
+  href: string;
+  previewHref?: string;
+  primaryAction: string;
+  secondaryAction?: string;
+};
+
 const futureGlobalModules = [
   { label: "Header & Navigation", description: "Manage website header and navigation content.", icon: Navigation },
   { label: "Footer", description: "Manage website footer content.", icon: Tags },
@@ -77,11 +106,21 @@ const pageModules = [
   { label: "Cab", path: "/cab/result", icon: Car, sections: ["Search", "Results", "Booking"], description: "Manage cab-page content." },
 ];
 
+const contextLabels: Record<WebsiteExperienceContext, string> = {
+  user_login: "User Login",
+  partner_login: "Partner Login",
+  partner_registration: "Partner Registration",
+  partner_application: "Partner Application",
+};
+
 export function AdminWebsiteExperienceLanding({ view = "root" }: { view?: LandingView }) {
   const [state, setState] = useState<LoadState>({ status: "loading", data: null, error: null });
   const [catalogueState, setCatalogueState] = useState<CatalogueLoadState>({ status: "loading", data: null });
   const [policyWorkflowState, setPolicyWorkflowState] = useState<PolicyWorkflowLoadState>({ status: "loading", data: null });
   const [search, setSearch] = useState("");
+  const [dashboardSearch, setDashboardSearch] = useState("");
+  const [dashboardStage, setDashboardStage] = useState<CentralWorkflowStage>("all");
+  const [dashboardType, setDashboardType] = useState<CentralWorkflowContentType>("all");
 
   const loadWebsiteExperience = useCallback((active: { current: boolean }) => {
     void getAdminWebsiteExperienceLoginSignup().then((result) => {
@@ -132,6 +171,21 @@ export function AdminWebsiteExperienceLanding({ view = "root" }: { view?: Landin
 
   const summary = useMemo(() => buildLoginSignupSummary(state.status === "ready" ? state.data.contexts.filter((context) => context.context !== "partner_application") : []), [state]);
   const workflowSummary = useMemo(() => mergeWorkflowSummary(summary, catalogueState.status === "ready" ? catalogueState.data : null, policyWorkflowState.status === "ready" ? policyWorkflowState.data : null), [catalogueState, policyWorkflowState, summary]);
+  const dashboardItems = useMemo(() => buildCentralWorkflowItems(
+    state.status === "ready" ? state.data : null,
+    catalogueState.status === "ready" ? catalogueState.data : null,
+    policyWorkflowState.status === "ready" ? policyWorkflowState.data : null,
+  ), [catalogueState, policyWorkflowState, state]);
+  const filteredDashboardItems = useMemo(() => {
+    const query = dashboardSearch.trim().toLowerCase();
+    return dashboardItems.filter((item) => {
+      const matchesStage = dashboardStage === "all" || item.stage === dashboardStage;
+      const matchesType = dashboardType === "all" || item.contentType === dashboardType;
+      const haystack = `${item.title} ${item.hierarchy} ${item.module} ${item.detail} ${item.status} ${item.changedBy ?? ""}`.toLowerCase();
+      return matchesStage && matchesType && (!query || haystack.includes(query));
+    });
+  }, [dashboardItems, dashboardSearch, dashboardStage, dashboardType]);
+  const dashboardCounts = useMemo(() => countCentralWorkflowStages(dashboardItems), [dashboardItems]);
   const partnerContext = state.status === "ready" ? state.data.contexts.find((context) => context.context === "partner_application") : undefined;
   const visiblePages = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -219,6 +273,23 @@ export function AdminWebsiteExperienceLanding({ view = "root" }: { view?: Landin
         </div>
       </section>
 
+      <CentralWorkflowDashboard
+        items={filteredDashboardItems}
+        counts={dashboardCounts}
+        loading={state.status === "loading" || catalogueState.status === "loading" || policyWorkflowState.status === "loading"}
+        search={dashboardSearch}
+        stage={dashboardStage}
+        contentType={dashboardType}
+        onSearchChange={setDashboardSearch}
+        onStageChange={setDashboardStage}
+        onContentTypeChange={setDashboardType}
+        onClear={() => {
+          setDashboardSearch("");
+          setDashboardStage("all");
+          setDashboardType("all");
+        }}
+      />
+
       {state.status === "error" || catalogueState.status === "error" || policyWorkflowState.status === "error" ? (
         <section className="flex flex-col gap-3 rounded-xl border border-orange-300/35 bg-orange-500/10 p-4 text-sm font-semibold text-orange-100 sm:flex-row sm:items-center sm:justify-between">
           <span>Some counts could not load. Navigation is still available.</span>
@@ -267,6 +338,348 @@ export function AdminWebsiteExperienceLanding({ view = "root" }: { view?: Landin
       </section>
     </div>
   );
+}
+
+function CentralWorkflowDashboard({
+  items,
+  counts,
+  loading,
+  search,
+  stage,
+  contentType,
+  onSearchChange,
+  onStageChange,
+  onContentTypeChange,
+  onClear,
+}: {
+  items: CentralWorkflowItem[];
+  counts: Record<Exclude<CentralWorkflowStage, "all">, number>;
+  loading: boolean;
+  search: string;
+  stage: CentralWorkflowStage;
+  contentType: CentralWorkflowContentType;
+  onSearchChange: (value: string) => void;
+  onStageChange: (value: CentralWorkflowStage) => void;
+  onContentTypeChange: (value: CentralWorkflowContentType) => void;
+  onClear: () => void;
+}) {
+  return (
+    <section className="space-y-4 rounded-2xl border border-sky-300/10 bg-[#0b1628]/95 p-5 shadow-xl shadow-black/20" data-central-workflow-dashboard="real-data">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div className="min-w-0">
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-200">Central workflow dashboard</p>
+          <h3 className="mt-1 text-2xl font-black text-cyan-100">Draft, approval and publishing operations</h3>
+          <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-400">
+            One operational view for saved Drafts, review, approval, scheduled publication, published content and activity.
+          </p>
+        </div>
+        <Link href="/admin/website-experience/versions-audit" className="inline-flex h-10 items-center justify-center rounded-xl border border-sky-300/20 bg-sky-400/10 px-4 text-sm font-black text-sky-100 hover:bg-sky-400/15 focus:outline-none focus:ring-2 focus:ring-sky-300">
+          Open History
+        </Link>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6" aria-label="Website Experience workflow overview">
+        <DashboardCountCard label="Drafts" value={counts.drafts} href="/admin/website-experience/login-signup?workflow=drafts" tone="amber" />
+        <DashboardCountCard label="Awaiting Approval" value={counts.in_review} href="/admin/website-experience/login-signup?workflow=in_review" tone="sky" />
+        <DashboardCountCard label="Changes Requested" value={counts.changes_requested} href="/admin/website-experience/login-signup?workflow=drafts" tone="orange" />
+        <DashboardCountCard label="Approved" value={counts.approved} href="/admin/website-experience/login-signup?workflow=approved" tone="emerald" />
+        <DashboardCountCard label="Scheduled" value={counts.scheduled} href="/admin/website-experience/login-signup?workflow=scheduled" tone="violet" />
+        <DashboardCountCard label="Published" value={counts.published} href="/admin/website-experience/login-signup?workflow=published" tone="green" />
+      </div>
+
+      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_12rem_14rem_auto]" data-central-workflow-filters="true">
+        <label className="relative block">
+          <Search className="absolute left-3 top-3 h-4 w-4 text-slate-500" />
+          <span className="sr-only">Search workflow items</span>
+          <input
+            value={search}
+            onChange={(event) => onSearchChange(event.target.value)}
+            placeholder="Search by content, page, template or editor"
+            className="h-11 w-full rounded-xl border border-sky-300/15 bg-[#081427] pl-9 pr-3 text-sm font-medium text-slate-100 outline-none placeholder:text-slate-500 focus:border-sky-300"
+          />
+        </label>
+        <label className="block">
+          <span className="sr-only">Filter by status</span>
+          <select value={stage} onChange={(event) => onStageChange(event.target.value as CentralWorkflowStage)} className="h-11 w-full rounded-xl border border-sky-300/15 bg-[#081427] px-3 text-sm font-bold text-slate-100 outline-none focus:border-sky-300">
+            <option value="all">All statuses</option>
+            <option value="drafts">Drafts</option>
+            <option value="changes_requested">Changes Requested</option>
+            <option value="in_review">In Review</option>
+            <option value="approved">Approved</option>
+            <option value="scheduled">Scheduled</option>
+            <option value="published">Published</option>
+            <option value="archived">Archived</option>
+          </select>
+        </label>
+        <label className="block">
+          <span className="sr-only">Filter by content type</span>
+          <select value={contentType} onChange={(event) => onContentTypeChange(event.target.value as CentralWorkflowContentType)} className="h-11 w-full rounded-xl border border-sky-300/15 bg-[#081427] px-3 text-sm font-bold text-slate-100 outline-none focus:border-sky-300">
+            <option value="all">All content types</option>
+            <option value="website_experience">Website Experience</option>
+            <option value="agreement_template">Agreement Templates</option>
+            <option value="service_catalogue">Service Catalogue</option>
+            <option value="verification_rules">Verification Rules</option>
+          </select>
+        </label>
+        <button type="button" onClick={onClear} className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-600 bg-slate-900 px-4 text-sm font-black text-slate-200 hover:border-sky-300/30 hover:text-sky-100 focus:outline-none focus:ring-2 focus:ring-sky-300">
+          Clear Filters
+        </button>
+      </div>
+
+      <div className="space-y-3" data-central-workflow-queue="authoritative">
+        {loading ? (
+          <p className="rounded-2xl border border-sky-300/10 bg-[#081427] p-4 text-sm font-semibold text-slate-300">Loading workflow items...</p>
+        ) : items.length ? (
+          items.map((item) => <CentralWorkflowQueueItem key={item.id} item={item} />)
+        ) : (
+          <div className="rounded-2xl border border-sky-300/10 bg-[#081427] p-5">
+            <h4 className="text-base font-black text-sky-50">No matching workflow items</h4>
+            <p className="mt-1 text-sm leading-6 text-slate-400">Clear filters or search for another content area.</p>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function DashboardCountCard({ label, value, href, tone }: { label: string; value: number; href: string; tone: "amber" | "sky" | "orange" | "emerald" | "violet" | "green" }) {
+  const toneClass = {
+    amber: "border-amber-300/25 bg-amber-400/10 text-amber-100",
+    sky: "border-sky-300/25 bg-sky-400/10 text-sky-100",
+    orange: "border-orange-300/25 bg-orange-400/10 text-orange-100",
+    emerald: "border-emerald-300/25 bg-emerald-400/10 text-emerald-100",
+    violet: "border-violet-300/25 bg-violet-400/10 text-violet-100",
+    green: "border-green-300/25 bg-green-400/10 text-green-100",
+  }[tone];
+  return (
+    <Link href={href} className={`rounded-2xl border p-4 transition hover:bg-white/[0.04] focus:outline-none focus:ring-2 focus:ring-sky-300 ${toneClass}`}>
+      <span className="block text-2xl font-black">{value}</span>
+      <span className="mt-1 block text-xs font-black uppercase tracking-[0.12em]">{label}</span>
+    </Link>
+  );
+}
+
+function CentralWorkflowQueueItem({ item }: { item: CentralWorkflowItem }) {
+  const hasMissing = item.missing.length > 0;
+  return (
+    <article className="rounded-2xl border border-sky-300/10 bg-[#081427] p-4" data-central-workflow-item={item.id}>
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h4 className="text-base font-black text-sky-50">{item.title}</h4>
+            <span className={`rounded-full border px-2.5 py-1 text-[11px] font-black ${centralStageTone(item.stage)}`}>{item.status}</span>
+            <span className="rounded-full border border-sky-300/10 bg-white/[0.04] px-2.5 py-1 text-[11px] font-black text-slate-300">{contentTypeLabel(item.contentType)}</span>
+          </div>
+          <p className="mt-1 text-sm leading-6 text-slate-400">{item.hierarchy}</p>
+          <p className="mt-1 text-xs font-semibold text-slate-500">{item.module} · {item.detail}</p>
+          <div className="mt-3 grid gap-2 text-xs font-semibold text-slate-300 sm:grid-cols-2 xl:grid-cols-4">
+            <span>Draft: {item.draftVersion}</span>
+            <span>Published: {item.publishedVersion}</span>
+            <span>Changed: {item.changedAt ? formatDateTime(item.changedAt) : "Not available"}</span>
+            <span>Editor: {item.changedBy || "Recorded in audit"}</span>
+          </div>
+          {item.scheduledFor ? <p className="mt-2 text-xs font-bold text-amber-100">Scheduled for {formatDateTime(item.scheduledFor)} {item.scheduledTimezone ?? ""}</p> : null}
+          <div className={`mt-3 rounded-xl border p-3 text-xs font-semibold ${hasMissing ? "border-amber-300/25 bg-amber-400/10 text-amber-100" : "border-emerald-300/20 bg-emerald-400/10 text-emerald-100"}`}>
+            <p>{item.readiness}</p>
+            {hasMissing ? (
+              <ul className="mt-2 grid gap-1">
+                {item.missing.slice(0, 4).map((missing) => <li key={missing}>• {missing}</li>)}
+              </ul>
+            ) : null}
+          </div>
+        </div>
+        <div className="flex flex-col gap-2 xl:items-stretch">
+          <Link href={item.href} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-orange-300/20 bg-orange-400/10 px-3 text-sm font-black text-orange-100 hover:bg-orange-400/15 focus:outline-none focus:ring-2 focus:ring-orange-200">
+            <Pencil className="h-4 w-4" />
+            {item.primaryAction}
+          </Link>
+          {item.previewHref ? (
+            <Link href={item.previewHref} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-400/10 px-3 text-sm font-black text-cyan-100 hover:bg-cyan-400/15 focus:outline-none focus:ring-2 focus:ring-cyan-200">
+              <Eye className="h-4 w-4" />
+              Preview
+            </Link>
+          ) : null}
+          {item.secondaryAction ? (
+            <span className="rounded-xl border border-sky-300/10 bg-white/[0.04] px-3 py-2 text-xs font-semibold text-slate-300">{item.secondaryAction}</span>
+          ) : null}
+          <Link href="/admin/website-experience/versions-audit" className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-slate-600 bg-slate-900 px-3 text-sm font-black text-slate-200 hover:border-sky-300/30 focus:outline-none focus:ring-2 focus:ring-sky-300">
+            <Clock3 className="h-4 w-4" />
+            History
+          </Link>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function buildCentralWorkflowItems(
+  website: WebsiteExperienceAdminResponse | null,
+  catalogue: AdminPartnerServiceCatalogueResponse | null,
+  policy: AdminVerificationPolicyWorkflowView | null,
+): CentralWorkflowItem[] {
+  const items: CentralWorkflowItem[] = [];
+  for (const row of website?.contexts ?? []) {
+    const marker = row.draftContent.agreementTemplateDraft;
+    const stage = centralStageFromState(row.workflowState ?? row.status, Boolean(row.scheduledFor), Boolean(row.hasUnpublishedChanges));
+    const centralDraftId = marker?.centralDraftId ?? (marker?.templateId ? `agreement_template:${marker.templateId}` : row.context);
+    const draftHref = marker?.centralDraftRoute?.startsWith("/admin/")
+      ? marker.centralDraftRoute
+      : `/admin/website-experience/login-signup?workflow=drafts&context=${row.context}&draftId=${encodeURIComponent(centralDraftId)}`;
+    const editHref = marker?.templateId
+      ? `/admin/website-experience/pages/partner/application/step-7-partner-agreement/agreement-templates/${encodeURIComponent(marker.templateId)}`
+      : row.context === "partner_application"
+        ? "/admin/website-experience/pages/partner/application"
+        : "/admin/website-experience/login-signup";
+    const title = marker?.targetLabel ?? row.label;
+    items.push({
+      id: marker?.centralDraftId ?? `${row.context}:${row.draftVersion}:${stage}`,
+      stage,
+      contentType: marker ? "agreement_template" : "website_experience",
+      title,
+      hierarchy: marker ? "Website Experience > Pages > Partner > Partner Application > Step 7 Partner Agreement" : `Website Experience > ${row.context === "partner_application" ? "Pages > Partner > Partner Application" : "Global Experience > Login & Signup"}`,
+      module: row.context === "partner_application" ? "Partner Application" : contextLabels[row.context],
+      detail: marker ? `Agreement Template: ${marker.title}` : publishScope(row.context),
+      status: centralStageLabel(stage),
+      draftVersion: `v${row.draftVersion}`,
+      publishedVersion: row.publishedVersion > 0 ? `v${row.publishedVersion}` : "Not published",
+      changedAt: marker?.updatedAt ?? row.updatedAt,
+      changedBy: row.review?.submittedByAdminId ?? row.review?.reviewedByAdminId,
+      readiness: marker?.readinessMissing?.length ? "Needs more details before approval" : readinessForStage(stage),
+      missing: marker?.readinessMissing ?? [],
+      scheduledFor: row.scheduledFor,
+      scheduledTimezone: row.scheduledTimezone,
+      href: stage === "drafts" && marker ? draftHref : editHref,
+      previewHref: `${editHref}#website-experience-preview`,
+      primaryAction: stage === "drafts" ? "Open Draft" : stage === "in_review" ? "Review" : stage === "approved" ? "Publish or Schedule" : stage === "scheduled" ? "Manage Schedule" : stage === "published" ? "View Published" : "Open",
+      secondaryAction: stage === "scheduled" ? "Reschedule or cancel from Scheduled" : undefined,
+    });
+  }
+
+  if (catalogue) {
+    const stage = centralStageFromState(catalogue.workflowState ?? catalogue.status, false, Boolean(catalogue.hasUnpublishedChanges));
+    items.push({
+      id: `service_catalogue:${catalogue.draftVersion}:${stage}`,
+      stage,
+      contentType: "service_catalogue",
+      title: "Service Catalogue",
+      hierarchy: "Website Experience > Pages > Partner > Service Catalogue",
+      module: "Partner Services",
+      detail: `${catalogue.draft.items.length} draft items · ${catalogue.published.items.length} published items`,
+      status: centralStageLabel(stage),
+      draftVersion: `v${catalogue.draftVersion}`,
+      publishedVersion: catalogue.publishedVersion > 0 ? `v${catalogue.publishedVersion}` : "Not published",
+      changedAt: catalogue.review?.changedAt,
+      changedBy: catalogue.review?.changedByAdminId ?? catalogue.review?.submittedByAdminId ?? catalogue.review?.reviewedByAdminId,
+      readiness: catalogue.hasUnpublishedChanges ? "Draft changes are available for central review" : readinessForStage(stage),
+      missing: [],
+      href: "/admin/website-experience/pages/partner/service-catalogue",
+      previewHref: "/admin/website-experience/pages/partner/service-catalogue?preview=1",
+      primaryAction: stage === "approved" ? "Publish or Schedule" : stage === "in_review" ? "Review" : "Open",
+    });
+  }
+
+  if (policy?.workflowRecord) {
+    const stage = centralStageFromState(policy.workflowRecord.workflowState, Boolean(policy.workflowRecord.scheduledFor), policy.workflowRecord.workflowState === "DRAFT");
+    items.push({
+      id: `verification_policy:${policy.workflowRecord.draftVersionId ?? policy.published.version}:${stage}`,
+      stage,
+      contentType: "verification_rules",
+      title: "Verification Rules",
+      hierarchy: "Website Experience > Partner Operations > Verification Rules",
+      module: "Partner Verification",
+      detail: policy.workflowRecord.changeSummary || `${policy.totals.activeRequirements} active rules`,
+      status: centralStageLabel(stage),
+      draftVersion: policy.workflowRecord.draftVersionId ?? policy.draft?.version ?? "No draft",
+      publishedVersion: policy.published.version,
+      changedAt: policy.workflowRecord.updatedAt,
+      readiness: policy.totals.validationIssues.length ? "Needs policy corrections before approval" : readinessForStage(stage),
+      missing: policy.totals.validationIssues,
+      scheduledFor: policy.workflowRecord.scheduledFor ?? undefined,
+      href: policy.workflowRecord.editorReturnRoute || "/admin/partner-verification/rules",
+      previewHref: "/admin/partner-verification/rules",
+      primaryAction: stage === "approved" ? "Publish or Schedule" : stage === "in_review" ? "Review" : "Open",
+    });
+  }
+
+  return items.sort((a, b) => {
+    const stageRank = { drafts: 1, changes_requested: 2, in_review: 3, approved: 4, scheduled: 5, published: 6, archived: 7 };
+    return stageRank[a.stage] - stageRank[b.stage] || Date.parse(b.changedAt ?? "1970-01-01") - Date.parse(a.changedAt ?? "1970-01-01");
+  });
+}
+
+function countCentralWorkflowStages(items: CentralWorkflowItem[]): Record<Exclude<CentralWorkflowStage, "all">, number> {
+  return {
+    drafts: items.filter((item) => item.stage === "drafts").length,
+    changes_requested: items.filter((item) => item.stage === "changes_requested").length,
+    in_review: items.filter((item) => item.stage === "in_review").length,
+    approved: items.filter((item) => item.stage === "approved").length,
+    scheduled: items.filter((item) => item.stage === "scheduled").length,
+    published: items.filter((item) => item.stage === "published").length,
+    archived: items.filter((item) => item.stage === "archived").length,
+  };
+}
+
+function centralStageFromState(state: string | undefined, scheduled: boolean, hasDraftChanges: boolean): Exclude<CentralWorkflowStage, "all"> {
+  const normalized = (state ?? "").toLowerCase();
+  if (scheduled || normalized === "scheduled") return "scheduled";
+  if (normalized === "in_review" || normalized === "pending_approval") return "in_review";
+  if (normalized === "changes_requested") return "changes_requested";
+  if (normalized === "approved") return "approved";
+  if (normalized === "archived" || normalized === "archive") return "archived";
+  if (hasDraftChanges || normalized === "draft" || normalized === "working_changes" || normalized === "drafts") return "drafts";
+  return "published";
+}
+
+function centralStageLabel(stage: Exclude<CentralWorkflowStage, "all">) {
+  if (stage === "drafts") return "Draft";
+  if (stage === "changes_requested") return "Changes Requested";
+  if (stage === "in_review") return "In Review";
+  if (stage === "approved") return "Approved";
+  if (stage === "scheduled") return "Scheduled";
+  if (stage === "archived") return "Archived";
+  return "Published";
+}
+
+function readinessForStage(stage: Exclude<CentralWorkflowStage, "all">) {
+  if (stage === "drafts") return "Ready to preview and prepare for approval";
+  if (stage === "changes_requested") return "Editor action required before resubmission";
+  if (stage === "in_review") return "Waiting for authorized approval";
+  if (stage === "approved") return "Ready for Publish Now or Schedule";
+  if (stage === "scheduled") return "Scheduled publication is managed centrally";
+  if (stage === "archived") return "Archived content remains available in history";
+  return "Published content is live; create a new draft to change it";
+}
+
+function centralStageTone(stage: Exclude<CentralWorkflowStage, "all">) {
+  if (stage === "drafts" || stage === "changes_requested" || stage === "scheduled") return "border-amber-300/25 bg-amber-400/10 text-amber-100";
+  if (stage === "in_review") return "border-sky-300/25 bg-sky-400/10 text-sky-100";
+  if (stage === "approved" || stage === "published") return "border-emerald-300/25 bg-emerald-400/10 text-emerald-100";
+  return "border-slate-600 bg-slate-900 text-slate-300";
+}
+
+function contentTypeLabel(type: Exclude<CentralWorkflowContentType, "all">) {
+  if (type === "agreement_template") return "Agreement Template";
+  if (type === "service_catalogue") return "Service Catalogue";
+  if (type === "verification_rules") return "Verification Rules";
+  return "Website Experience";
+}
+
+function publishScope(context: WebsiteExperienceContext) {
+  if (context === "partner_application") return "Partner Application onboarding content.";
+  if (context === "partner_login") return "Partner Login content.";
+  if (context === "partner_registration") return "Partner Registration content.";
+  return "User Login content.";
+}
+
+function formatDateTime(value: string) {
+  try {
+    return new Intl.DateTimeFormat("en-IN", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(new Date(value));
+  } catch {
+    return value;
+  }
 }
 
 function buildLoginSignupSummary(contexts: WebsiteExperienceAdminContext[]) {
