@@ -694,6 +694,7 @@ export type WebsiteExperienceContent = {
     title: string;
     targetLabel: string;
     readinessMissing: string[];
+    centralDraftId?: string;
     centralDraftRoute: string;
     updatedAt?: string;
   };
@@ -2813,6 +2814,7 @@ export type AdminAgreementTemplateUploadedDocument = AdminAgreementTemplateUploa
 
 export type AdminAgreementTemplateCentralDraft = {
   id: string;
+  draftId?: string;
   targetLabel: string;
   route: string;
   status: string;

@@ -129,9 +129,11 @@ export function WebsiteExperienceManager({
   partnerAgreementTemplateId?: string;
 }) {
   const initialWorkflowView = readInitialWorkflowView();
+  const initialContext = readInitialContext(mode);
+  const initialWorkflowDraftId = readInitialWorkflowDraftId();
   const [state, setState] = useState<LoadState>({ status: "loading", data: null, error: null });
   const [catalogueState, setCatalogueState] = useState<CatalogueQueueState>({ status: "idle", data: null });
-  const [activeContext, setActiveContext] = useState<WebsiteExperienceContext>(mode === "partner-application" ? "partner_application" : "user_login");
+  const [activeContext, setActiveContext] = useState<WebsiteExperienceContext>(initialContext);
   const [activeBlock, setActiveBlock] = useState<BlockKey | null>(partnerApplicationNodeId ? "copy" : null);
   const [editorView, setEditorView] = useState<EditorView>(initialWorkflowView ? "workflow" : mode === "partner-application" ? "blocks" : "contexts");
   const [workflowView, setWorkflowView] = useState<WorkflowView | null>(initialWorkflowView);
@@ -167,7 +169,7 @@ export function WebsiteExperienceManager({
     const rows = state.data?.contexts ?? [];
     return mode === "partner-application" ? rows.filter((item) => item.context === "partner_application") : rows.filter((item) => item.context !== "partner_application");
   }, [mode, state.data?.contexts]);
-  const activeRow = contextRows.find((item) => item.context === activeContext);
+  const activeRow = contextRows.find((item) => item.context === activeContext) ?? state.data?.contexts.find((item) => item.context === activeContext);
   const permissions = state.data?.permissions;
   const canWrite = Boolean(permissions?.canWrite);
   const canPublish = Boolean(permissions?.canPublish);
@@ -318,6 +320,18 @@ export function WebsiteExperienceManager({
 
   if (editorView === "workflow" && workflowView) {
     if (workflowView === "scheduled") return <div className="space-y-4"><Link href="/admin/website-experience">Back to Website Experience</Link><CentralSchedulePanel /></div>;
+    if (workflowView === "drafts" && initialWorkflowDraftId) {
+      return (
+        <WorkflowDraftDetailView
+          draftId={initialWorkflowDraftId}
+          data={state.data}
+          onSubmit={(context) => {
+            setActiveContext(context);
+            void workflowAction("submit", context);
+          }}
+        />
+      );
+    }
     return (
       <WorkflowQueueView
         view={workflowView}
@@ -513,7 +527,7 @@ export function WebsiteExperienceManager({
         <aside className="space-y-4 xl:col-span-2 2xl:col-span-1">
           <PreviewPanel content={activeDraft} device={previewDevice} onDeviceChange={setPreviewDevice} />
           <LockedSecurity fields={state.data.schema.lockedSecurityFields} />
-          <AuditList rows={state.data.recentAudit} />
+          {mode === "partner-application" ? <CompactEditorMetadata activeRow={activeRow} /> : <AuditList rows={state.data.recentAudit} />}
         </aside>
       </div>
     </section>
@@ -777,10 +791,17 @@ function WorkflowQueueView({
                 <Eye className="h-4 w-4" />
                 {view === "approved" ? "Preview Approved Version" : "Preview Draft"}
               </button>
-              <button type="button" onClick={() => onOpen(row.context, view)} className="inline-flex h-9 items-center gap-2 rounded-xl border border-orange-300/20 bg-orange-400/10 px-3 text-xs font-black text-orange-100">
-                <Pencil className="h-4 w-4" />
-                Open/Edit
-              </button>
+              {row.draftContent.agreementTemplateDraft?.templateId ? (
+                <Link href={agreementTemplateCentralDraftRoute(row.draftContent.agreementTemplateDraft.templateId)} className="inline-flex h-9 items-center gap-2 rounded-xl border border-orange-300/20 bg-orange-400/10 px-3 text-xs font-black text-orange-100">
+                  <Pencil className="h-4 w-4" />
+                  Open/Edit
+                </Link>
+              ) : (
+                <button type="button" onClick={() => onOpen(row.context, view)} className="inline-flex h-9 items-center gap-2 rounded-xl border border-orange-300/20 bg-orange-400/10 px-3 text-xs font-black text-orange-100">
+                  <Pencil className="h-4 w-4" />
+                  Open/Edit
+                </button>
+              )}
               {view === "drafts" ? (
                 <button type="button" disabled={Boolean(row.draftContent.agreementTemplateDraft?.readinessMissing?.length)} onClick={() => onSubmit?.(row.context)} className="inline-flex h-9 items-center gap-2 rounded-xl border border-emerald-300/20 bg-emerald-400/10 px-3 text-xs font-black text-emerald-100 disabled:cursor-not-allowed disabled:opacity-50">
                   <Send className="h-4 w-4" />
@@ -794,6 +815,90 @@ function WorkflowQueueView({
         <p className="rounded-2xl border border-sky-300/10 bg-[#081427] p-4 text-sm font-semibold text-slate-300">No {selected.label.toLowerCase()} items.</p>
       ) : null}
     </ContentListShell>
+  );
+}
+
+function WorkflowDraftDetailView({
+  draftId,
+  data,
+  onSubmit,
+}: {
+  draftId: string;
+  data: WebsiteExperienceAdminResponse;
+  onSubmit: (context: WebsiteExperienceContext) => void;
+}) {
+  const row = data.contexts.find((item) => workflowDraftIdForContext(item) === draftId || item.context === draftId);
+  const marker = row?.draftContent.agreementTemplateDraft;
+  if (!row) {
+    return (
+      <ContentListShell
+        eyebrow="Website Experience > Drafts"
+        breadcrumb={<WorkflowBreadcrumb current="Draft Detail" />}
+        title="Draft not found"
+        detail="The saved Draft could not be found. Return to Drafts and choose another item."
+        backHref="/admin/website-experience/login-signup?workflow=drafts"
+        backLabel="Back to Drafts"
+      >
+        <PanelNotice tone="danger" text="This saved Draft is no longer available." />
+      </ContentListShell>
+    );
+  }
+  const missing = marker?.readinessMissing ?? [];
+  const targetLabel = marker?.targetLabel ?? row.label;
+  const editHref = marker?.templateId
+    ? `${stepSevenUnitHref("agreement-templates")}/${encodeURIComponent(marker.templateId)}`
+    : "/admin/website-experience/pages/partner/application";
+  return (
+    <ContentListShell
+      eyebrow="Website Experience > Drafts"
+      breadcrumb={<WorkflowBreadcrumb current="Draft Detail" />}
+      title={targetLabel}
+      detail="Review this saved Draft before sending it for approval. Publishing and scheduling remain central."
+      backHref="/admin/website-experience/login-signup?workflow=drafts"
+      backLabel="Back to Drafts"
+    >
+      <div className="rounded-2xl border border-sky-300/10 bg-[#081427] p-5" data-central-draft-detail={draftId}>
+        <div className="grid gap-3 text-sm text-slate-300">
+          <DraftDetailLine label="Human-readable target" value={targetLabel} />
+          <DraftDetailLine label="Agreement Template name" value={marker?.title ?? "Partner Application"} />
+          <DraftDetailLine label="Current version" value={`Draft v${row.draftVersion}`} />
+          <DraftDetailLine label="Saved date/time" value={row.updatedAt ? formatDateTime(row.updatedAt) : "Not available"} />
+          <DraftDetailLine label="Saved by" value={row.review?.submittedByAdminId ?? row.review?.reviewedByAdminId ?? "Last editor recorded in audit"} />
+          <DraftDetailLine label="Readiness status" value={missing.length ? "Needs more details before approval" : "Ready for approval review"} />
+        </div>
+        {missing.length ? (
+          <div className="mt-4 rounded border border-amber-300/20 bg-amber-400/10 p-3 text-xs font-semibold text-amber-100">
+            <p>Missing before approval:</p>
+            <ul className="mt-2 grid gap-1">
+              {missing.map((item) => <li key={item}>• {item}</li>)}
+            </ul>
+          </div>
+        ) : null}
+        <div className="mt-5 flex flex-wrap gap-2">
+          <Link href={`${editHref}#website-experience-preview`} className="inline-flex h-9 items-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-400/10 px-3 text-xs font-black text-cyan-100">
+            <Eye className="h-4 w-4" />
+            Preview
+          </Link>
+          <Link href={editHref} className="inline-flex h-9 items-center gap-2 rounded-xl border border-orange-300/20 bg-orange-400/10 px-3 text-xs font-black text-orange-100">
+            <Pencil className="h-4 w-4" />
+            Edit
+          </Link>
+          <button type="button" disabled={Boolean(missing.length)} onClick={() => onSubmit(row.context)} className="inline-flex h-9 items-center gap-2 rounded-xl border border-emerald-300/20 bg-emerald-400/10 px-3 text-xs font-black text-emerald-100 disabled:cursor-not-allowed disabled:opacity-50">
+            <Send className="h-4 w-4" />
+            Send for Approval
+          </button>
+        </div>
+      </div>
+    </ContentListShell>
+  );
+}
+
+function DraftDetailLine({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="grid gap-1 rounded border border-sky-300/10 bg-white/5 p-3 sm:grid-cols-[12rem_minmax(0,1fr)]">
+      <span className="text-xs font-black uppercase tracking-[0.1em] text-slate-500">{label}</span>
+      <span className="font-semibold text-sky-50">{value}</span>
+    </div>
   );
 }
 
@@ -1133,6 +1238,10 @@ function partnerApplicationWorkflowLabel(activeRow: WebsiteExperienceAdminContex
   return "Published";
 }
 
+function agreementTemplateWorkflowLabel(title: string): string {
+  return `Partner Application / Step 7 / Agreement Template / ${title || "Agreement Template"}`;
+}
+
 function LocalStepEditorActions({ canWrite, busyAction, message, onSaveDraft }: { canWrite: boolean; busyAction: string; message: string; onSaveDraft: () => void }) {
   return (
     <div className="rounded border border-cyan-200 bg-cyan-50 p-4">
@@ -1307,6 +1416,8 @@ function AgreementTemplateDraftPanel({ canWrite, busyAction, templateId }: { can
         if (selected) {
           setDraft(draftFromAgreementTemplate(selected));
           setUploadState(selected.metadata?.sourceDocument ? "uploaded" : "idle");
+          setSavedDraftRoute(centralDraftRouteFromTemplate(selected));
+          setSavedDraftLabel(agreementTemplateWorkflowLabel(selected.title));
           setError("");
         } else {
           setError("This agreement template was not found.");
@@ -2269,6 +2380,21 @@ function AuditList({ rows }: { rows: WebsiteExperienceAdminResponse["recentAudit
   );
 }
 
+function CompactEditorMetadata({ activeRow }: { activeRow: WebsiteExperienceAdminContext }) {
+  return (
+    <section className="rounded border border-slate-200 bg-white p-4">
+      <h4 className="text-sm font-semibold text-slate-950">Content status</h4>
+      <div className="mt-3 grid gap-2 text-xs font-semibold text-slate-600">
+        <span>Version: Draft v{activeRow.draftVersion}</span>
+        <span>Last saved: {activeRow.updatedAt ? formatDateTime(activeRow.updatedAt) : "Not available"}</span>
+        <span>Last published: {activeRow.publishedAt ? formatDateTime(activeRow.publishedAt) : "Not published yet"}</span>
+        <span>Updated by: recorded in central History</span>
+      </div>
+      <p className="mt-3 text-xs leading-5 text-slate-500">Full activity is available from the central History area.</p>
+    </section>
+  );
+}
+
 function PartnerRegistrationIntakes({ rows }: { rows: PartnerRegistrationIntakeView[] }) {
   const others = useMemo(() => rows.filter((row) => row.primaryCategory === "OTHER"), [rows]);
   return (
@@ -2415,6 +2541,38 @@ function readInitialWorkflowView(): WorkflowView | null {
   if (typeof window === "undefined") return null;
   const view = new URLSearchParams(window.location.search).get("workflow") as WorkflowView | null;
   return view && workflowViews.some((item) => item.key === view) ? view : null;
+}
+
+function readInitialContext(mode: "login-signup" | "partner-application"): WebsiteExperienceContext {
+  if (mode === "partner-application") return "partner_application";
+  if (typeof window === "undefined") return "user_login";
+  const context = new URLSearchParams(window.location.search).get("context");
+  return context === "partner_application" || context === "partner_registration" || context === "partner_login" || context === "user_login"
+    ? context
+    : "user_login";
+}
+
+function readInitialWorkflowDraftId(): string {
+  if (typeof window === "undefined") return "";
+  return new URLSearchParams(window.location.search).get("draftId") ?? "";
+}
+
+function agreementTemplateDraftId(templateId: string): string {
+  return `agreement_template:${templateId}`;
+}
+
+function agreementTemplateCentralDraftRoute(templateId: string): string {
+  return `/admin/website-experience/login-signup?workflow=drafts&context=partner_application&draftId=${encodeURIComponent(agreementTemplateDraftId(templateId))}`;
+}
+
+function centralDraftRouteFromTemplate(template: AdminAgreementTemplate): string {
+  const route = typeof template.metadata?.centralDraftRoute === "string" ? template.metadata.centralDraftRoute : "";
+  return route.startsWith("/admin/") ? route : agreementTemplateCentralDraftRoute(template.id);
+}
+
+function workflowDraftIdForContext(row: WebsiteExperienceAdminContext): string {
+  const marker = row.draftContent.agreementTemplateDraft;
+  return marker?.templateId ? agreementTemplateDraftId(marker.templateId) : row.context;
 }
 
 function workflowViewLabel(view: WorkflowView) {

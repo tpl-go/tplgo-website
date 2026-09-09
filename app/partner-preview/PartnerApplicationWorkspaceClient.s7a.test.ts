@@ -151,19 +151,32 @@ test("Agreement template upload uses verified backend upload before showing Uplo
 test("Agreement template Save Draft hands off to the central Draft queue exactly once", () => {
   const apiClientSource = readFileSync(join(process.cwd(), "app/lib/admin/adminApiClient.ts"), "utf8");
   expect(apiClientSource).toContain("AdminAgreementTemplateCentralDraft");
+  expect(apiClientSource).toContain("draftId?: string");
   expect(apiClientSource).toContain("centralDraft:");
   expect(websiteExperienceSource).toContain('data-agreement-template-central-draft-handoff="ready"');
   expect(websiteExperienceSource).toContain("Open Draft");
   expect(websiteExperienceSource).toContain("Open saved draft");
   expect(websiteExperienceSource).toContain("result.data.centralDraft?.route");
+  expect(websiteExperienceSource).toContain("centralDraftRouteFromTemplate(selected)");
+  expect(websiteExperienceSource).toContain("agreementTemplateCentralDraftRoute(template.id)");
+  expect(websiteExperienceSource).toContain("readInitialWorkflowDraftId");
   expect(websiteExperienceSource).not.toContain("setMessage(result.data.safeMessage);\\n    onSaveDraft();");
 });
 
 test("Central Draft queue exposes draft actions and hides editor audit clutter", () => {
+  expect(websiteExperienceSource).toContain("WorkflowDraftDetailView");
+  expect(websiteExperienceSource).toContain('data-central-draft-detail={draftId}');
+  expect(websiteExperienceSource).toContain("Human-readable target");
+  expect(websiteExperienceSource).toContain("Agreement Template name");
+  expect(websiteExperienceSource).toContain("Readiness status");
+  expect(websiteExperienceSource).toContain("Missing before approval:");
   expect(websiteExperienceSource).toContain("Not ready for approval yet:");
   expect(websiteExperienceSource).toContain("row.draftContent.agreementTemplateDraft.readinessMissing");
   expect(websiteExperienceSource).toContain("Send for Approval");
   expect(websiteExperienceSource).toContain("Full activity remains in central History.");
+  expect(websiteExperienceSource).toContain("CompactEditorMetadata");
+  expect(websiteExperienceSource).toContain('mode === "partner-application" ? <CompactEditorMetadata activeRow={activeRow} /> : <AuditList rows={state.data.recentAudit} />');
+  expect(websiteExperienceSource).toContain('row.draftContent.agreementTemplateDraft?.templateId ? (');
   const templatePanel = websiteExperienceSource.slice(websiteExperienceSource.indexOf("function AgreementTemplateDraftPanel"), websiteExperienceSource.indexOf("const defaultAgreementPlaceholders"));
   expect(templatePanel).not.toContain("Recent Audit Log");
   expect(templatePanel).not.toContain("Version History");
