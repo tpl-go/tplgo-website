@@ -1340,16 +1340,16 @@ function AgreementTemplateDraftPanel({ canWrite, busyAction, templateId }: { can
     const result = await uploadAdminAgreementTemplateDocument({ file });
     if (!result.ok) {
       setUploadState("failed");
-      setUploadMessage("Upload failed — Retry");
-      setError(result.error.message);
+      setUploadMessage("Document upload needs attention");
+      setError(formatAgreementTemplateUploadError(result.error.message, result.requestId));
       return;
     }
     setUploadState("verifying");
     setUploadMessage("Verifying");
     if (result.data.uploadStatus !== "UPLOADED" || result.data.verified !== true || !result.data.storageReference) {
       setUploadState("failed");
-      setUploadMessage("Upload failed — Retry");
-      setError("Storage verification failed. Retry the upload.");
+      setUploadMessage("Document upload needs attention");
+      setError(`The upload reached storage but could not be verified. Reference: ${result.requestId}`);
       return;
     }
     updateDraft({
@@ -1414,6 +1414,10 @@ function AgreementTemplateDraftPanel({ canWrite, busyAction, templateId }: { can
     setMessage("Source document removed from this draft. Save as Draft to keep the change.");
   };
   const readiness = templateReadinessChecklist(draft);
+  const uploadNeedsAttention = ["selected", "preparing", "uploading", "verifying", "failed"].includes(uploadState);
+  const visibleReadiness = uploadNeedsAttention
+    ? ["Document upload needs attention. Retry the upload or remove the file and use agreement text."]
+    : readiness;
   const preview = renderTemplatePreview(draft);
   return (
     <div className="grid gap-4" data-agreement-template-manager="functional">
@@ -1480,9 +1484,9 @@ function AgreementTemplateDraftPanel({ canWrite, busyAction, templateId }: { can
             </label>
             <div className="rounded border border-amber-200 bg-amber-50 p-3">
               <p className="text-xs font-black uppercase tracking-[0.1em] text-amber-800">Readiness before approval</p>
-              {readiness.length ? (
+              {visibleReadiness.length ? (
                 <ul className="mt-2 grid gap-1 text-xs font-semibold text-amber-900">
-                  {readiness.map((item) => <li key={item}>• {item}</li>)}
+                  {visibleReadiness.map((item) => <li key={item}>• {item}</li>)}
                 </ul>
               ) : <p className="mt-2 text-xs font-semibold text-emerald-800">Ready to preview and send for approval from the central Draft.</p>}
             </div>
@@ -1513,7 +1517,7 @@ function AgreementTemplateDraftPanel({ canWrite, busyAction, templateId }: { can
                 Preview
               </a>
               {savedDraftRoute ? <Link href={savedDraftRoute} className="inline-flex h-10 items-center gap-2 rounded border border-cyan-300 bg-white px-4 text-sm font-semibold text-cyan-900">Open saved draft</Link> : null}
-              <button type="button" disabled={!canWrite || busyAction === "save" || saving || ["preparing", "uploading", "verifying"].includes(uploadState)} onClick={saveTemplate} className="inline-flex h-10 items-center gap-2 rounded bg-slate-900 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300">
+              <button type="button" disabled={!canWrite || busyAction === "save" || saving || ["preparing", "uploading", "verifying", "failed"].includes(uploadState)} onClick={saveTemplate} className="inline-flex h-10 items-center gap-2 rounded bg-slate-900 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300">
                 <Save className="h-4 w-4" />
                 Save as Draft
               </button>
@@ -1582,8 +1586,32 @@ function validateInitialAgreementTemplateDraft(draft: AgreementTemplateDraftStat
   if (!draft.title.trim()) return "Agreement name is required.";
   if (!draft.agreementRole.trim()) return "Agreement type is required.";
   if (["selected", "preparing", "uploading", "verifying"].includes(uploadState)) return "Wait for the selected file to finish uploading before saving this draft.";
+  if (uploadState === "failed") return "Retry the document upload or remove the failed file before saving this draft.";
   if (!draft.sourceDocument && !draft.sectionBody.trim()) return "Add editable agreement text or upload a PDF/DOCX before saving this draft.";
   return "";
+}
+
+function formatAgreementTemplateUploadError(message: string, requestId: string): string {
+  const trimmed = message.trim() || "Agreement template upload failed. Check the file and try again.";
+  if (/failed to fetch|networkerror|load failed/i.test(trimmed)) {
+    return `The server could not read the uploaded file. Check your connection and retry. Reference: ${requestId}`;
+  }
+  if (/unauthorized|sign in|session/i.test(trimmed)) {
+    return `Your session has expired. Sign in again. Reference: ${requestId}`;
+  }
+  if (/permission|forbidden/i.test(trimmed)) {
+    return `You do not have permission to upload agreement documents. Reference: ${requestId}`;
+  }
+  if (/too large|10 MB/i.test(trimmed)) {
+    return `The file is larger than 10 MB. Choose a smaller PDF or DOCX. Reference: ${requestId}`;
+  }
+  if (/not a valid|does not match|PDF|DOCX|format|type/i.test(trimmed)) {
+    return `${trimmed} Reference: ${requestId}`;
+  }
+  if (/storage|verify|verification/i.test(trimmed)) {
+    return `Private document storage is temporarily unavailable or could not verify the upload. Reference: ${requestId}`;
+  }
+  return `${trimmed} Reference: ${requestId}`;
 }
 
 function templateReadinessChecklist(draft: AgreementTemplateDraftState): string[] {

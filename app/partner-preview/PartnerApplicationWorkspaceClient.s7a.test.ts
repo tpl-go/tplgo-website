@@ -141,8 +141,11 @@ test("Agreement template upload uses verified backend upload before showing Uplo
   expect(websiteExperienceSource).toContain('type TemplateUploadState = "idle" | "selected" | "preparing" | "uploading" | "verifying" | "uploaded" | "failed"');
   expect(websiteExperienceSource).toContain('data-agreement-template-upload-state={uploadState}');
   expect(websiteExperienceSource).toContain('result.data.uploadStatus !== "UPLOADED"');
-  expect(websiteExperienceSource).toContain("Storage verification failed. Retry the upload.");
+  expect(websiteExperienceSource).toContain("The upload reached storage but could not be verified.");
   expect(websiteExperienceSource).toContain("Wait for the selected file to finish uploading before saving this draft.");
+  expect(websiteExperienceSource).toContain("Document upload needs attention. Retry the upload or remove the file and use agreement text.");
+  expect(websiteExperienceSource).toContain('uploadState === "failed"');
+  expect(websiteExperienceSource).toContain("formatAgreementTemplateUploadError");
 });
 
 test("Agreement template Save Draft hands off to the central Draft queue exactly once", () => {
