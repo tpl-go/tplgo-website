@@ -348,12 +348,54 @@ test("S7A5.4.1 Agreement Template saved-state action group is deduplicated", () 
 });
 
 test("S7A5.4.1 Agreement Template breadcrumb resolves the existing template name dynamically", () => {
+  const breadcrumbSlice = managerSource.slice(managerSource.indexOf("function Breadcrumbs"), managerSource.indexOf("function HierarchyBreadcrumb"));
+  const routeTitleSlice = managerSource.slice(managerSource.indexOf("function partnerApplicationRouteTitle"), managerSource.length);
+  const templatePanelStart = managerSource.indexOf("function AgreementTemplateDraftPanel");
+  const templateLoadSlice = managerSource.slice(templatePanelStart, managerSource.indexOf("const updateDraft", templatePanelStart));
   expect(managerSource).toContain("resolvedAgreementTemplateTitle");
   expect(managerSource).toContain("onAgreementTemplateTitleResolved={setResolvedAgreementTemplateTitle}");
-  expect(managerSource).toContain("onTitleResolved?.(selected.title)");
+  expect(templateLoadSlice).toContain("onTitleResolved?.(selected.title)");
   expect(managerSource).toContain("onTitleResolved?.(result.data.template.title)");
-  expect(managerSource).toContain('resolvedTemplateTitle || content.agreementTemplateDraft?.title || "Agreement Template"');
+  expect(routeTitleSlice).toContain('resolvedTemplateTitle || content.agreementTemplateDraft?.title || "Agreement Template"');
+  expect(breadcrumbSlice).toContain('activeBlock || "Agreement Template"');
+  expect(breadcrumbSlice).toContain('partnerAgreementTemplateId === "new" ? "Add Agreement Template" : activeBlock || "Agreement Template"');
   expect(managerSource).not.toContain('templateId === "new" ? "Add Agreement Template" : "Edit Agreement Template"');
+});
+
+test("S7A5.4.2 Agreement Template breadcrumb keeps direct URL and central Draft Edit routes equivalent", () => {
+  const routeFileSource = readFileSync(
+    join(process.cwd(), "app/admin/website-experience/pages/partner/application/[node]/[unit]/[templateId]/page.tsx"),
+    "utf8",
+  );
+  const draftDetailSlice = managerSource.slice(managerSource.indexOf("function WorkflowDraftDetailView"), managerSource.indexOf("function DraftDetailLine"));
+  expect(routeFileSource).toContain("const { node, unit, templateId } = await params;");
+  expect(routeFileSource).toContain("partnerAgreementTemplateId={templateId}");
+  expect(routeFileSource).toContain('mode="partner-application"');
+  expect(draftDetailSlice).toContain('`${stepSevenUnitHref("agreement-templates")}/${encodeURIComponent(marker.templateId)}`');
+  expect(draftDetailSlice).toContain("marker?.templateId");
+  expect(managerSource).toContain("onAgreementTemplateTitleResolved={setResolvedAgreementTemplateTitle}");
+});
+
+test("S7A5.4.2 Agreement Template breadcrumb supports new-template mode without stale edit wording", () => {
+  const breadcrumbSlice = managerSource.slice(managerSource.indexOf("function Breadcrumbs"), managerSource.indexOf("function HierarchyBreadcrumb"));
+  const templatePanelStart = managerSource.indexOf("function AgreementTemplateDraftPanel");
+  const templateLoadSlice = managerSource.slice(templatePanelStart, managerSource.indexOf("const updateDraft", templatePanelStart));
+  expect(breadcrumbSlice).toContain('partnerAgreementTemplateId === "new" ? "Add Agreement Template"');
+  expect(templateLoadSlice).toContain('onTitleResolved?.("Add Agreement Template")');
+  expect(breadcrumbSlice).not.toContain("Edit Agreement Template");
+});
+
+test("S7A5.4.2 breadcrumb title updates do not remount or reset Agreement Template editing state", () => {
+  const breadcrumbRenderSlice = managerSource.slice(managerSource.indexOf("<Breadcrumbs"), managerSource.indexOf("<BlockEditor"));
+  const editorRenderSlice = managerSource.slice(managerSource.indexOf("<BlockEditor"), managerSource.indexOf("</main>"));
+  const templatePanelStart = managerSource.indexOf("function AgreementTemplateDraftPanel");
+  const templatePanelSlice = managerSource.slice(templatePanelStart, managerSource.indexOf("const updateDraft", templatePanelStart));
+  expect(breadcrumbRenderSlice).toContain("activeBlock={mode === \"partner-application\" ? partnerApplicationRouteTitle");
+  expect(editorRenderSlice).toContain("onAgreementTemplateTitleResolved={setResolvedAgreementTemplateTitle}");
+  expect(editorRenderSlice).not.toContain("key={resolvedAgreementTemplateTitle}");
+  expect(templatePanelSlice).toContain("const [draft, setDraft]");
+  expect(templatePanelSlice).toContain("const [uploadState, setUploadState]");
+  expect(templatePanelSlice).not.toContain("resolvedAgreementTemplateTitle");
 });
 
 test("S7A5.4.1 Agreement Template preserves central Draft URL and uploaded PDF metadata", () => {

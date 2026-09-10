@@ -478,7 +478,7 @@ function Breadcrumbs({
       });
     }
     if (partnerAgreementTemplateId) {
-      items.push({ label: partnerAgreementTemplateId === "new" ? "Add Agreement Template" : "Edit Agreement Template" });
+      items.push({ label: partnerAgreementTemplateId === "new" ? "Add Agreement Template" : activeBlock || "Agreement Template" });
     }
     return <HierarchyBreadcrumb items={items} />;
   }
