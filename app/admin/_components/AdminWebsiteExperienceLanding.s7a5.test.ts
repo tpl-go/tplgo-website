@@ -270,7 +270,7 @@ test("S7A5.4 Agreement Template editor is not composed with generic Step 7 edito
   expect(templatePanel).toContain("Upload template document");
   expect(templatePanel).toContain("Replace file");
   expect(templatePanel).toContain("Remove file");
-  expect(templatePanel).toContain("Open saved draft");
+  expect(templatePanel).toContain("Open saved Draft");
   expect(templatePanel).toContain("Company details added automatically");
   expect(templatePanel).not.toContain("Step 7 Partner Agreement</h4>");
   expect(templatePanel).not.toContain("Page Content");
@@ -278,4 +278,92 @@ test("S7A5.4 Agreement Template editor is not composed with generic Step 7 edito
   expect(templatePanel).not.toContain("Version History");
   const stepSevenSlice = managerSource.slice(managerSource.indexOf("function StepSevenContentUnits"), managerSource.indexOf("type AgreementTemplateDraftState"));
   expect(stepSevenSlice).toContain('activeUnit === "agreement-templates" && templateId ? null');
+});
+
+test("S7A5.4.1 Awaiting Approval Review stays on the central dashboard item", () => {
+  const queueItemSlice = landingSource.slice(landingSource.indexOf("function CentralWorkflowQueueItem"), landingSource.indexOf("function buildCentralWorkflowItems"));
+  expect(queueItemSlice).toContain('const hasCentralReview = item.stage === "in_review" && item.workflowContext && item.contentType === "website_experience";');
+  expect(queueItemSlice).toContain("data-central-review-inline-action={item.workflowContext}");
+  expect(queueItemSlice).toContain("data-central-review-surface={item.workflowContext}");
+  expect(queueItemSlice).toContain("Review");
+  expect(queueItemSlice).not.toContain('href="/admin/website-experience/login-signup"');
+});
+
+test("S7A5.4.1 central review exposes authorized Approve and Request Changes only from the central surface", () => {
+  const centralReviewSlice = landingSource.slice(landingSource.indexOf('data-central-review-surface={item.workflowContext}'), landingSource.indexOf("function buildCentralWorkflowItems"));
+  expect(centralReviewSlice).toContain("Approve");
+  expect(centralReviewSlice).toContain("Request Changes");
+  expect(centralReviewSlice).toContain("data-central-review-note=\"true\"");
+  expect(centralReviewSlice).toContain("Review note");
+  expect(centralReviewSlice).toContain("disabled={!item.canApprove");
+  expect(centralReviewSlice).toContain("Your role can view this review but cannot approve or request changes.");
+  const localActionSlice = managerSource.slice(managerSource.indexOf("function LocalStepEditorActions"), managerSource.indexOf("const stepSevenUnits"));
+  expect(localActionSlice).not.toContain("Approve");
+  expect(localActionSlice).not.toContain("Request Changes");
+  expect(localActionSlice).not.toContain("Review note");
+});
+
+test("S7A5.4.1 central review reuses existing Website Experience approval contracts and identity", () => {
+  expect(landingSource).toContain("approveAdminWebsiteExperienceDraft");
+  expect(landingSource).toContain("requestAdminWebsiteExperienceChanges");
+  expect(landingSource).toContain('approveAdminWebsiteExperienceDraft(item.workflowContext, note)');
+  expect(landingSource).toContain('requestAdminWebsiteExperienceChanges(item.workflowContext, note)');
+  expect(landingSource).toContain("workflowContext: row.context");
+  expect(landingSource).toContain("data-central-review-version={item.draftVersion}");
+  expect(landingSource).toContain("Submitted draft version: {item.draftVersion}");
+});
+
+test("S7A5.4.1 central review validates notes, surfaces safe errors and refreshes workflow counts", () => {
+  expect(landingSource).toContain('action === "request-changes" && !note');
+  expect(landingSource).toContain("Add a review note before requesting changes.");
+  expect(landingSource).toContain("setTransitionMessage({ itemId: item.id, tone: \"error\", text: result.error.message })");
+  expect(landingSource).toContain("refreshDashboard();");
+  expect(landingSource).toContain("loadWebsiteExperience(active);");
+  expect(landingSource).toContain("loadCatalogueSummary(active);");
+  expect(landingSource).toContain("loadPolicyWorkflowSummary(active);");
+});
+
+test("S7A5.4.1 central stages retain reachable next actions", () => {
+  expect(managerSource).toContain("WorkflowDraftDetailView");
+  expect(managerSource).toContain("Send for Approval");
+  expect(landingSource).toContain("Open Draft");
+  expect(landingSource).toContain("Preview");
+  expect(landingSource).toContain("Publish or Schedule");
+  expect(landingSource).toContain("Manage Schedule");
+  expect(landingSource).toContain("Reschedule or cancel from Scheduled");
+  expect(landingSource).toContain("View Published");
+  expect(landingSource).toContain("History");
+});
+
+test("S7A5.4.1 Agreement Template saved-state action group is deduplicated", () => {
+  const templatePanel = managerSource.slice(managerSource.indexOf("function AgreementTemplateDraftPanel"), managerSource.indexOf("const defaultAgreementPlaceholders"));
+  const handoffSlice = templatePanel.slice(templatePanel.indexOf('data-agreement-template-central-draft-handoff="ready"'), templatePanel.indexOf('<div className="flex flex-wrap gap-3">'));
+  expect(handoffSlice).toContain("Draft saved");
+  expect((handoffSlice.match(/Open saved Draft/g) ?? []).length).toBe(1);
+  expect(handoffSlice).not.toContain(">Open Draft<");
+  expect(handoffSlice).not.toContain("Open saved draft");
+  expect(handoffSlice).not.toContain("Continue Editing");
+  expect(handoffSlice).not.toContain("This saved Draft is missing its direct agreement-template link.");
+  expect(templatePanel).toContain("href={savedDraftRoute}");
+});
+
+test("S7A5.4.1 Agreement Template breadcrumb resolves the existing template name dynamically", () => {
+  expect(managerSource).toContain("resolvedAgreementTemplateTitle");
+  expect(managerSource).toContain("onAgreementTemplateTitleResolved={setResolvedAgreementTemplateTitle}");
+  expect(managerSource).toContain("onTitleResolved?.(selected.title)");
+  expect(managerSource).toContain("onTitleResolved?.(result.data.template.title)");
+  expect(managerSource).toContain('resolvedTemplateTitle || content.agreementTemplateDraft?.title || "Agreement Template"');
+  expect(managerSource).not.toContain('templateId === "new" ? "Add Agreement Template" : "Edit Agreement Template"');
+});
+
+test("S7A5.4.1 Agreement Template preserves central Draft URL and uploaded PDF metadata", () => {
+  expect(managerSource).toContain("centralDraftRouteFromTemplate");
+  expect(managerSource).toContain("route.startsWith(\"/admin/\") ? route : agreementTemplateCentralDraftRoute(template.id)");
+  expect(managerSource).toContain("agreement_template:${templateId}");
+  expect(managerSource).toContain("sourceDocument: draft.sourceDocument ?? null");
+  expect(managerSource).toContain("storageReference: result.data.storageReference");
+  expect(managerSource).toContain("filename: result.data.filename");
+  expect(managerSource).toContain("verified: result.data.verified");
+  expect(managerSource).toContain("Replace file");
+  expect(managerSource).toContain("Remove file");
 });

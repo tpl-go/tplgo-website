@@ -134,6 +134,7 @@ export function WebsiteExperienceManager({
   const [drafts, setDrafts] = useState<Partial<Record<WebsiteExperienceContext, WebsiteExperienceContent>>>({});
   const [message, setMessage] = useState("");
   const [busyAction, setBusyAction] = useState("");
+  const [resolvedAgreementTemplateTitle, setResolvedAgreementTemplateTitle] = useState("");
   const shouldRedirectCanonicalWorkflow = mode === "login-signup" && Boolean(routeWorkflowView) && !routeWorkflowDraftId;
 
   const load = useCallback(async () => {
@@ -371,7 +372,7 @@ export function WebsiteExperienceManager({
           mode={mode}
           workflowOrigin={workflowOrigin}
           activeContext={contextLabels[activeContext]}
-          activeBlock={mode === "partner-application" ? partnerApplicationRouteTitle(activeDraft, partnerApplicationNodeId, partnerApplicationUnitId, partnerAgreementTemplateId) : blocks.find((block) => block.key === activeBlock)?.label ?? "Editable Item"}
+          activeBlock={mode === "partner-application" ? partnerApplicationRouteTitle(activeDraft, partnerApplicationNodeId, partnerApplicationUnitId, partnerAgreementTemplateId, resolvedAgreementTemplateTitle) : blocks.find((block) => block.key === activeBlock)?.label ?? "Editable Item"}
           partnerApplicationNodeId={partnerApplicationNodeId}
           partnerApplicationUnitId={partnerApplicationUnitId}
           partnerAgreementTemplateId={partnerAgreementTemplateId}
@@ -410,6 +411,7 @@ export function WebsiteExperienceManager({
               onBenefitChange={updateBenefit}
               onUploaded={applyUploadedMedia}
               onSaveDraft={saveDraft}
+              onAgreementTemplateTitleResolved={setResolvedAgreementTemplateTitle}
             />
           </section>
           {mode === "login-signup" ? <LocalStepEditorActions canWrite={canWrite} busyAction={busyAction} message={message} onSaveDraft={saveDraft} /> : null}
@@ -852,6 +854,7 @@ function BlockEditor({
   onBenefitChange,
   onUploaded,
   onSaveDraft,
+  onAgreementTemplateTitleResolved,
 }: {
   block: BlockKey;
   content: WebsiteExperienceContent;
@@ -866,6 +869,7 @@ function BlockEditor({
   onBenefitChange: (index: number, patch: Partial<WebsiteExperienceBenefit>) => void;
   onUploaded: (media: { slot: string; url: string; altText?: string }) => void;
   onSaveDraft: () => void;
+  onAgreementTemplateTitleResolved?: (title: string) => void;
 }) {
   if (content.context === "partner_application") {
     return (
@@ -881,6 +885,7 @@ function BlockEditor({
           message={message}
           onContentChange={onContentChange}
           onSaveDraft={onSaveDraft}
+          onAgreementTemplateTitleResolved={onAgreementTemplateTitleResolved}
         />
       </>
     );
@@ -1005,6 +1010,7 @@ function PartnerApplicationTreeEditor({
   message,
   onContentChange,
   onSaveDraft,
+  onAgreementTemplateTitleResolved,
 }: {
   content: WebsiteExperienceContent;
   selectedNodeId?: string;
@@ -1016,6 +1022,7 @@ function PartnerApplicationTreeEditor({
   message: string;
   onContentChange: (patch: Partial<WebsiteExperienceContent>) => void;
   onSaveDraft: () => void;
+  onAgreementTemplateTitleResolved?: (title: string) => void;
 }) {
   const tree = content.applicationTree;
   const updateNode = (nodeId: string, patch: Record<string, string>) => {
@@ -1062,6 +1069,7 @@ function PartnerApplicationTreeEditor({
           busyAction={busyAction}
           onNodeChange={(patch) => updateNode(selectedNode.id, patch)}
           onCtaChange={(key, value) => updateCta(selectedNode.id, key, value)}
+          onAgreementTemplateTitleResolved={onAgreementTemplateTitleResolved}
         />
         {showStepSevenSaveActions ? <LocalStepEditorActions canWrite={canWrite} busyAction={busyAction} message={message} onSaveDraft={onSaveDraft} /> : null}
       </div>
@@ -1165,6 +1173,7 @@ function StepSevenContentUnits({
   busyAction,
   onNodeChange,
   onCtaChange,
+  onAgreementTemplateTitleResolved,
 }: {
   activeUnit?: string;
   templateId?: string;
@@ -1173,6 +1182,7 @@ function StepSevenContentUnits({
   busyAction: string;
   onNodeChange: (patch: Record<string, string>) => void;
   onCtaChange: (key: string, value: string) => void;
+  onAgreementTemplateTitleResolved?: (title: string) => void;
 }) {
   if (!activeUnit) {
     return (
@@ -1216,7 +1226,7 @@ function StepSevenContentUnits({
       )}
       <section className="rounded border border-slate-200 bg-slate-50 p-4" data-step7-content-unit-editor={activeUnit}>
         {activeUnit === "agreement-templates" ? (
-          <AgreementTemplateDraftPanel canWrite={canWrite} busyAction={busyAction} templateId={templateId} />
+          <AgreementTemplateDraftPanel canWrite={canWrite} busyAction={busyAction} templateId={templateId} onTitleResolved={onAgreementTemplateTitleResolved} />
         ) : activeUnit === "signer-instructions" ? (
           <Field label="Signer instructions" value={node.rightHelpCopy} maxLength={300} onChange={(value) => onNodeChange({ rightHelpCopy: value })} />
         ) : activeUnit === "signing-methods" ? (
@@ -1265,7 +1275,7 @@ type AgreementTemplateDraftState = {
 
 type TemplateUploadState = "idle" | "selected" | "preparing" | "uploading" | "verifying" | "uploaded" | "failed";
 
-function AgreementTemplateDraftPanel({ canWrite, busyAction, templateId }: { canWrite: boolean; busyAction: string; templateId?: string }) {
+function AgreementTemplateDraftPanel({ canWrite, busyAction, templateId, onTitleResolved }: { canWrite: boolean; busyAction: string; templateId?: string; onTitleResolved?: (title: string) => void }) {
   const [templates, setTemplates] = useState<AdminAgreementTemplate[]>([]);
   const [supportedPlaceholders, setSupportedPlaceholders] = useState<string[]>([]);
   const [draft, setDraft] = useState<AgreementTemplateDraftState>(() => newAgreementTemplateDraft());
@@ -1288,11 +1298,13 @@ function AgreementTemplateDraftPanel({ canWrite, busyAction, templateId }: { can
       setSupportedPlaceholders(result.data.supportedPlaceholders);
       if (templateId === "new") {
         setDraft(newAgreementTemplateDraft());
+        onTitleResolved?.("Add Agreement Template");
         setError("");
       } else if (templateId) {
         const selected = result.data.rows.find((item) => item.id === templateId);
         if (selected) {
           setDraft(draftFromAgreementTemplate(selected));
+          onTitleResolved?.(selected.title);
           setUploadState(selected.metadata?.sourceDocument ? "uploaded" : "idle");
           setSavedDraftRoute(centralDraftRouteFromTemplate(selected));
           setSavedDraftLabel(agreementTemplateWorkflowLabel(selected.title));
@@ -1301,14 +1313,18 @@ function AgreementTemplateDraftPanel({ canWrite, busyAction, templateId }: { can
           setError("This agreement template was not found.");
         }
       } else {
+        onTitleResolved?.("");
         setError("");
       }
     });
     return () => {
       active = false;
     };
-  }, [templateId]);
-  const updateDraft = (patch: Partial<AgreementTemplateDraftState>) => setDraft((current) => ({ ...current, ...patch }));
+  }, [onTitleResolved, templateId]);
+  const updateDraft = (patch: Partial<AgreementTemplateDraftState>) => {
+    setDraft((current) => ({ ...current, ...patch }));
+    if (typeof patch.title === "string") onTitleResolved?.(patch.title || "Agreement Template");
+  };
   const uploadTemplate = async (file: File | null) => {
     if (!file) return;
     setUploadState("selected");
@@ -1392,6 +1408,7 @@ function AgreementTemplateDraftPanel({ canWrite, busyAction, templateId }: { can
     }
     setTemplates((current) => [result.data.template, ...current.filter((item) => item.id !== result.data.template.id)]);
     setDraft(draftFromAgreementTemplate(result.data.template));
+    onTitleResolved?.(result.data.template.title);
     setSavedDraftRoute(result.data.centralDraft?.route ?? "");
     setSavedDraftLabel(result.data.centralDraft?.targetLabel ?? result.data.targetLabel);
     setMessage(result.data.safeMessage);
@@ -1492,10 +1509,10 @@ function AgreementTemplateDraftPanel({ canWrite, busyAction, templateId }: { can
             {error ? <p className="rounded border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</p> : null}
             {savedDraftRoute ? (
               <div className="rounded border border-cyan-200 bg-cyan-50 p-3" data-agreement-template-central-draft-handoff="ready">
-                <p className="text-sm font-semibold text-cyan-950">Saved Draft: {savedDraftLabel || "Partner Application agreement template"}</p>
+                <p className="text-sm font-semibold text-cyan-950">Draft saved</p>
+                {savedDraftLabel ? <p className="mt-1 text-xs font-semibold text-cyan-800">{savedDraftLabel}</p> : null}
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <button type="button" onClick={() => setMessage("Continue editing this saved draft. Open Draft is available when you are ready.")} className="inline-flex h-10 items-center rounded border border-cyan-300 bg-white px-4 text-sm font-semibold text-cyan-900">Continue Editing</button>
-                  <Link href={savedDraftRoute} className="inline-flex h-10 items-center rounded bg-cyan-700 px-4 text-sm font-semibold text-white">Open Draft</Link>
+                  <Link href={savedDraftRoute} className="inline-flex h-10 items-center rounded bg-cyan-700 px-4 text-sm font-semibold text-white">Open saved Draft</Link>
                 </div>
               </div>
             ) : null}
@@ -1504,7 +1521,6 @@ function AgreementTemplateDraftPanel({ canWrite, busyAction, templateId }: { can
                 <Eye className="h-4 w-4" />
                 Preview
               </a>
-              {savedDraftRoute ? <Link href={savedDraftRoute} className="inline-flex h-10 items-center gap-2 rounded border border-cyan-300 bg-white px-4 text-sm font-semibold text-cyan-900">Open saved draft</Link> : null}
               <button type="button" disabled={!canWrite || busyAction === "save" || saving || ["preparing", "uploading", "verifying", "failed"].includes(uploadState)} onClick={saveTemplate} className="inline-flex h-10 items-center gap-2 rounded bg-slate-900 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300">
                 <Save className="h-4 w-4" />
                 Save as Draft
@@ -1970,8 +1986,8 @@ function partnerApplicationNodeLabel(content: WebsiteExperienceContent, selected
   return node ? partnerApplicationDisplayLabel(node.id, node.label) : "Partner Application Item";
 }
 
-function partnerApplicationRouteTitle(content: WebsiteExperienceContent, selectedNodeId?: string, selectedUnitId?: string, templateId?: string): string {
-  if (templateId) return templateId === "new" ? "Add Agreement Template" : "Edit Agreement Template";
+function partnerApplicationRouteTitle(content: WebsiteExperienceContent, selectedNodeId?: string, selectedUnitId?: string, templateId?: string, resolvedTemplateTitle?: string): string {
+  if (templateId) return templateId === "new" ? "Add Agreement Template" : resolvedTemplateTitle || content.agreementTemplateDraft?.title || "Agreement Template";
   if (selectedUnitId) return stepSevenUnitTitles[selectedUnitId] ?? "Step 7 Content";
   return partnerApplicationNodeLabel(content, selectedNodeId);
 }

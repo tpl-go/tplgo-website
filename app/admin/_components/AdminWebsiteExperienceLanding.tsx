@@ -3,12 +3,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowRight, FilePenLine, Eye, LayoutTemplate, MonitorCog, Pencil, Search, Tags, Users, type LucideIcon } from "lucide-react";
+import { AlertTriangle, ArrowRight, CheckCircle2, FilePenLine, Eye, LayoutTemplate, MonitorCog, Pencil, Search, Tags, Users, type LucideIcon } from "lucide-react";
 import { AdminBackButton } from "./AdminBackButton";
 import {
   getAdminWebsiteExperienceLoginSignup,
+  approveAdminWebsiteExperienceDraft,
   getAdminPartnerServiceCatalogue,
   getAdminVerificationPolicyWorkflow,
+  requestAdminWebsiteExperienceChanges,
   type AdminApiError,
   type AdminPartnerServiceCatalogueResponse,
   type AdminVerificationPolicyWorkflowView,
@@ -59,6 +61,10 @@ type CentralWorkflowItem = {
   previewHref?: string;
   primaryAction: string;
   secondaryAction?: string;
+  workflowContext?: WebsiteExperienceContext;
+  submittedAt?: string;
+  reviewNote?: string;
+  canApprove?: boolean;
 };
 
 type CentralWorkflowCounts = Record<Exclude<CentralWorkflowStage, "all" | "published">, number> & {
@@ -85,6 +91,9 @@ export function AdminWebsiteExperienceLanding({ view = "root" }: { view?: Landin
   const [search, setSearch] = useState("");
   const [dashboardSearch, setDashboardSearch] = useState("");
   const [dashboardType, setDashboardType] = useState<CentralWorkflowContentType>("all");
+  const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
+  const [transitionMessage, setTransitionMessage] = useState<{ itemId: string; tone: "success" | "error"; text: string } | null>(null);
+  const [busyTransition, setBusyTransition] = useState("");
   const dashboardStage = centralWorkflowStageFromValue(searchParams.get("view")) ?? "published";
   const setDashboardStage = useCallback((nextStage: CentralWorkflowStage) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -114,6 +123,34 @@ export function AdminWebsiteExperienceLanding({ view = "root" }: { view?: Landin
       else setPolicyWorkflowState({ status: "error", data: null });
     });
   }, []);
+
+  const refreshDashboard = useCallback(() => {
+    const active = { current: true };
+    loadWebsiteExperience(active);
+    loadCatalogueSummary(active);
+    loadPolicyWorkflowSummary(active);
+  }, [loadCatalogueSummary, loadPolicyWorkflowSummary, loadWebsiteExperience]);
+
+  const runCentralReviewTransition = useCallback(async (item: CentralWorkflowItem, action: "approve" | "request-changes") => {
+    if (!item.workflowContext) return;
+    const note = (reviewNotes[item.id] ?? "").trim();
+    if (action === "request-changes" && !note) {
+      setTransitionMessage({ itemId: item.id, tone: "error", text: "Add a review note before requesting changes." });
+      return;
+    }
+    setBusyTransition(`${item.id}:${action}`);
+    setTransitionMessage(null);
+    const result = action === "approve"
+      ? await approveAdminWebsiteExperienceDraft(item.workflowContext, note)
+      : await requestAdminWebsiteExperienceChanges(item.workflowContext, note);
+    setBusyTransition("");
+    if (!result.ok) {
+      setTransitionMessage({ itemId: item.id, tone: "error", text: result.error.message });
+      return;
+    }
+    setTransitionMessage({ itemId: item.id, tone: "success", text: action === "approve" ? "Approved. The item moved to Approved." : "Changes requested. The item moved to Changes Requested." });
+    refreshDashboard();
+  }, [refreshDashboard, reviewNotes]);
 
   useEffect(() => {
     const active = { current: true };
@@ -260,6 +297,11 @@ export function AdminWebsiteExperienceLanding({ view = "root" }: { view?: Landin
         onSearchChange={setDashboardSearch}
         onStageChange={setDashboardStage}
         onContentTypeChange={setDashboardType}
+        reviewNotes={reviewNotes}
+        busyTransition={busyTransition}
+        transitionMessage={transitionMessage}
+        onReviewNoteChange={(itemId, value) => setReviewNotes((current) => ({ ...current, [itemId]: value }))}
+        onReviewTransition={runCentralReviewTransition}
         onClear={() => {
           setDashboardSearch("");
           setDashboardType("all");
@@ -303,6 +345,11 @@ function CentralWorkflowDashboard({
   onSearchChange,
   onStageChange,
   onContentTypeChange,
+  reviewNotes,
+  busyTransition,
+  transitionMessage,
+  onReviewNoteChange,
+  onReviewTransition,
   onClear,
 }: {
   items: CentralWorkflowItem[];
@@ -314,6 +361,11 @@ function CentralWorkflowDashboard({
   onSearchChange: (value: string) => void;
   onStageChange: (value: CentralWorkflowStage) => void;
   onContentTypeChange: (value: CentralWorkflowContentType) => void;
+  reviewNotes: Record<string, string>;
+  busyTransition: string;
+  transitionMessage: { itemId: string; tone: "success" | "error"; text: string } | null;
+  onReviewNoteChange: (itemId: string, value: string) => void;
+  onReviewTransition: (item: CentralWorkflowItem, action: "approve" | "request-changes") => void;
   onClear: () => void;
 }) {
   return (
@@ -364,7 +416,18 @@ function CentralWorkflowDashboard({
         {loading ? (
           <p className="rounded-2xl border border-sky-300/10 bg-[#081427] p-4 text-sm font-semibold text-slate-300">Loading workflow items...</p>
         ) : items.length ? (
-          items.map((item) => <CentralWorkflowQueueItem key={item.id} item={item} selectedStage={stage} />)
+          items.map((item) => (
+            <CentralWorkflowQueueItem
+              key={item.id}
+              item={item}
+              selectedStage={stage}
+              reviewNote={reviewNotes[item.id] ?? ""}
+              busyTransition={busyTransition}
+              transitionMessage={transitionMessage?.itemId === item.id ? transitionMessage : null}
+              onReviewNoteChange={(value) => onReviewNoteChange(item.id, value)}
+              onReviewTransition={onReviewTransition}
+            />
+          ))
         ) : (
           <div className="rounded-2xl border border-sky-300/10 bg-[#081427] p-5">
             <h4 className="text-base font-black text-sky-50">{stage === "published" ? "No published content matches the current filters." : "No matching workflow items"}</h4>
@@ -394,10 +457,27 @@ function DashboardCountCard({ label, value, selected, onClick, tone }: { label: 
   );
 }
 
-function CentralWorkflowQueueItem({ item, selectedStage }: { item: CentralWorkflowItem; selectedStage: CentralWorkflowStage }) {
+function CentralWorkflowQueueItem({
+  item,
+  selectedStage,
+  reviewNote,
+  busyTransition,
+  transitionMessage,
+  onReviewNoteChange,
+  onReviewTransition,
+}: {
+  item: CentralWorkflowItem;
+  selectedStage: CentralWorkflowStage;
+  reviewNote: string;
+  busyTransition: string;
+  transitionMessage: { itemId: string; tone: "success" | "error"; text: string } | null;
+  onReviewNoteChange: (value: string) => void;
+  onReviewTransition: (item: CentralWorkflowItem, action: "approve" | "request-changes") => void;
+}) {
   const hasMissing = item.missing.length > 0;
   const newerVersionLabel = selectedStage === "published" && item.stage !== "published" ? `New version: ${item.status} ${item.draftVersion}` : "";
   const primaryAction = selectedStage === "published" ? "Open" : item.primaryAction;
+  const hasCentralReview = item.stage === "in_review" && item.workflowContext && item.contentType === "website_experience";
   if (selectedStage === "published") {
     return (
       <article className="rounded-xl border border-sky-300/10 bg-[#081427] p-3" data-central-workflow-item={item.id}>
@@ -430,7 +510,7 @@ function CentralWorkflowQueueItem({ item, selectedStage }: { item: CentralWorkfl
   }
   return (
     <article className="rounded-xl border border-sky-300/10 bg-[#081427] p-3" data-central-workflow-item={item.id}>
-      <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_13rem]">
+        <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_13rem]">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h4 className="text-sm font-black text-sky-50">{item.title}</h4>
@@ -456,10 +536,17 @@ function CentralWorkflowQueueItem({ item, selectedStage }: { item: CentralWorkfl
           </div>
         </div>
         <div className="flex flex-wrap gap-2 xl:items-start xl:justify-end">
-          <Link href={item.href} className="inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-orange-300/20 bg-orange-400/10 px-3 text-xs font-black text-orange-100 hover:bg-orange-400/15 focus:outline-none focus:ring-2 focus:ring-orange-200">
-            <Pencil className="h-4 w-4" />
-            {primaryAction}
-          </Link>
+          {hasCentralReview ? (
+            <span className="inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-orange-300/20 bg-orange-400/10 px-3 text-xs font-black text-orange-100" data-central-review-inline-action={item.workflowContext}>
+              <Pencil className="h-4 w-4" />
+              Review
+            </span>
+          ) : (
+            <Link href={item.href} className="inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-orange-300/20 bg-orange-400/10 px-3 text-xs font-black text-orange-100 hover:bg-orange-400/15 focus:outline-none focus:ring-2 focus:ring-orange-200">
+              <Pencil className="h-4 w-4" />
+              {primaryAction}
+            </Link>
+          )}
           {item.previewHref ? (
             <Link href={item.previewHref} className="inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-cyan-300/20 bg-cyan-400/10 px-3 text-xs font-black text-cyan-100 hover:bg-cyan-400/15 focus:outline-none focus:ring-2 focus:ring-cyan-200">
               <Eye className="h-4 w-4" />
@@ -471,6 +558,43 @@ function CentralWorkflowQueueItem({ item, selectedStage }: { item: CentralWorkfl
           ) : null}
         </div>
       </div>
+      {hasCentralReview ? (
+        <div className="mt-4 rounded-lg border border-sky-300/15 bg-slate-950/35 p-4" data-central-review-surface={item.workflowContext} data-central-review-version={item.draftVersion}>
+          <div className="grid gap-3 text-xs font-semibold text-slate-300 sm:grid-cols-2 xl:grid-cols-4">
+            <span>Item: {item.title}</span>
+            <span>Location: {item.hierarchy}</span>
+            <span>Submitted draft version: {item.draftVersion}</span>
+            <span>Currently published: {item.publishedVersion}</span>
+            <span>Submitted: {item.submittedAt ? formatDateTime(item.submittedAt) : item.changedAt ? formatDateTime(item.changedAt) : "Not available"}</span>
+          </div>
+          {item.reviewNote ? <p className="mt-3 rounded border border-orange-300/20 bg-orange-400/10 p-2 text-xs font-semibold text-orange-100">Existing review note: {item.reviewNote}</p> : null}
+          <label className="mt-3 grid gap-1 text-xs font-black uppercase tracking-[0.1em] text-slate-500" data-central-review-note="true">
+            Review note
+            <textarea
+              value={reviewNote}
+              maxLength={500}
+              onChange={(event) => onReviewNoteChange(event.target.value)}
+              className="min-h-20 rounded-lg border border-sky-300/15 bg-[#081427] p-3 text-sm normal-case tracking-normal text-slate-100 outline-none focus:border-sky-300"
+            />
+          </label>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button type="button" disabled={!item.canApprove || busyTransition === `${item.id}:approve`} onClick={() => onReviewTransition(item, "approve")} className="inline-flex h-9 items-center gap-2 rounded-lg bg-emerald-500 px-3 text-xs font-black text-slate-950 disabled:cursor-not-allowed disabled:opacity-50">
+              <CheckCircle2 className="h-4 w-4" />
+              Approve
+            </button>
+            <button type="button" disabled={!item.canApprove || busyTransition === `${item.id}:request-changes` || !reviewNote.trim()} onClick={() => onReviewTransition(item, "request-changes")} className="inline-flex h-9 items-center gap-2 rounded-lg border border-orange-300/30 bg-orange-400/10 px-3 text-xs font-black text-orange-100 disabled:cursor-not-allowed disabled:opacity-50">
+              <AlertTriangle className="h-4 w-4" />
+              Request Changes
+            </button>
+          </div>
+          {!item.canApprove ? <p className="mt-2 text-xs font-semibold text-slate-500">Your role can view this review but cannot approve or request changes.</p> : null}
+          {transitionMessage ? (
+            <p className={`mt-3 rounded border p-3 text-sm font-semibold ${transitionMessage.tone === "success" ? "border-emerald-300/20 bg-emerald-400/10 text-emerald-100" : "border-red-300/20 bg-red-400/10 text-red-100"}`}>
+              {transitionMessage.text}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
     </article>
   );
 }
@@ -508,6 +632,8 @@ function buildCentralWorkflowItems(
       publishedVersion: row.publishedVersion > 0 ? `v${row.publishedVersion}` : "Not published",
       changedAt: marker?.updatedAt ?? row.updatedAt,
       changedBy: displayActor(row.review?.submittedByAdminId ?? row.review?.reviewedByAdminId),
+      submittedAt: row.review?.submittedAt,
+      reviewNote: row.review?.note,
       readiness: marker?.readinessMissing?.length ? "Needs more details before approval" : readinessForStage(stage),
       missing: marker?.readinessMissing ?? [],
       scheduledFor: row.scheduledFor,
@@ -516,6 +642,8 @@ function buildCentralWorkflowItems(
       previewHref: `${editHref}#website-experience-preview`,
       primaryAction: stage === "drafts" ? "Open Draft" : stage === "in_review" ? "Review" : stage === "approved" ? "Publish or Schedule" : stage === "scheduled" ? "Manage Schedule" : stage === "published" ? "View Published" : "Open",
       secondaryAction: stage === "scheduled" ? "Reschedule or cancel from Scheduled" : undefined,
+      workflowContext: row.context,
+      canApprove: Boolean(website?.permissions.canPublish),
     });
   }
 
