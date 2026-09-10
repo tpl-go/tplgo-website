@@ -75,7 +75,7 @@ const workflowViews: Array<{ key: WorkflowView; label: string; detail: string; i
   { key: "scheduled", label: "Scheduled", detail: "Approved changes scheduled for publication.", icon: CalendarClock },
   { key: "published", label: "Published Content", detail: "Content currently published.", icon: Globe2 },
   { key: "archive", label: "Archive", detail: "Archived contexts and restore-to-draft actions.", icon: Archive },
-  { key: "versions", label: "Versions & Audit", detail: "Human-readable version and audit history.", icon: Clock3 },
+  { key: "versions", label: "History", detail: "Track content changes, approvals and published versions.", icon: Clock3 },
 ];
 
 const canonicalWorkflowViewMap: Record<WorkflowView, string> = {

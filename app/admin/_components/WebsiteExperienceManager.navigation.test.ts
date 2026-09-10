@@ -11,7 +11,8 @@ test("WebsiteExperienceManager maps workflow queues to human-facing labels", () 
   expect(source).toContain('{ key: "scheduled", label: "Scheduled"');
   expect(source).toContain('{ key: "published", label: "Published Content"');
   expect(source).toContain('{ key: "archive", label: "Archive"');
-  expect(source).toContain('{ key: "versions", label: "Versions & Audit"');
+  expect(source).toContain('{ key: "versions", label: "History"');
+  expect(source).toContain('detail: "Track content changes, approvals and published versions."');
   expect(source).not.toContain('label: "In Review"');
   expect(source).not.toContain('label: "Approved"');
   expect(source).not.toContain('label: "Published"');

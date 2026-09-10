@@ -16,7 +16,7 @@ const websiteExperienceRouteFiles = [
   "app/admin/website-experience/pages/partner/application/[node]/[unit]/page.tsx",
   "app/admin/website-experience/pages/partner/application/[node]/[unit]/[templateId]/page.tsx",
   "app/admin/website-experience/versions-audit/page.tsx",
-].map((path) => readFileSync(join(process.cwd(), path), "utf8"));
+].map((path) => ({ path, source: readFileSync(join(process.cwd(), path), "utf8") }));
 
 test("S7A5 central dashboard uses authoritative Website Experience data sources", () => {
   expect(landingSource).toContain("getAdminWebsiteExperienceLoginSignup");
@@ -176,8 +176,9 @@ test("S7A5.3.1 Partner Application overview removes duplicate headings and techn
 });
 
 test("S7A5.3.1 Website Experience routes use module shell title and hide duplicate staging subtitle", () => {
-  for (const routeSource of websiteExperienceRouteFiles) {
-    expect(routeSource).toContain('<AdminShell title="Website Experience">');
+  for (const routeFile of websiteExperienceRouteFiles) {
+    const expectedTitle = routeFile.path.endsWith("/versions-audit/page.tsx") ? '<AdminShell title="History">' : '<AdminShell title="Website Experience">';
+    expect(routeFile.source).toContain(expectedTitle);
   }
   expect(adminShellSource).toContain('pathname.startsWith("/admin/website-experience")');
   expect(adminShellSource).toContain("!isWebsiteExperienceRoute");

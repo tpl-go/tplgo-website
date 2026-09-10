@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Loader2, RefreshCcw } from "lucide-react";
+import { ArrowRight, Eye, Loader2, RefreshCcw, Search } from "lucide-react";
 import { AdminBackButton } from "./AdminBackButton";
 import {
   getAdminPartnerServiceCatalogue,
@@ -26,6 +26,27 @@ type AuditState =
   | { status: "error"; website: null; catalogue: null; error: string };
 
 type RequestResolution = "mapped_to_existing" | "draft_service_created" | "closed";
+type HistoryRecordKind = "workflow_activity" | "saved_version";
+type HistoryEventType = "draft_changes" | "approval" | "scheduling" | "publishing" | "archived" | "versions";
+type HistoryArea = "global" | "pages" | "partner_application" | "agreement_template" | "service_catalogue";
+type HistoryTarget = { label: "Open item" | "View version"; href: string };
+type HistoryRow = {
+  id: string;
+  recordKind: HistoryRecordKind;
+  eventType: HistoryEventType;
+  source: HistoryArea;
+  actionLabel: string;
+  itemTitle: string;
+  contentType: string;
+  contentArea: string;
+  summary: string;
+  actor: string;
+  createdAt: string;
+  versionLabel?: string;
+  previousState?: string;
+  resultingState?: string;
+  target?: HistoryTarget;
+};
 
 export function AdminWebsiteExperienceServiceRequestsClient() {
   const [state, setState] = useState<CatalogueState>({ status: "loading", data: null, error: null });
@@ -198,7 +219,9 @@ export function AdminWebsiteExperienceServiceRequestsClient() {
 
 export function AdminWebsiteExperienceVersionsAuditClient() {
   const [state, setState] = useState<AuditState>({ status: "loading", website: null, catalogue: null, error: null });
-  const [source, setSource] = useState("all");
+  const [source, setSource] = useState<"all" | HistoryArea>("all");
+  const [eventType, setEventType] = useState<"all" | HistoryEventType>("all");
+  const [search, setSearch] = useState("");
   const [selectedRecordId, setSelectedRecordId] = useState("");
 
   const load = useCallback(async () => {
@@ -216,81 +239,145 @@ export function AdminWebsiteExperienceVersionsAuditClient() {
   }, [load]);
 
   useEffect(() => {
-    void Promise.resolve().then(() => {
+    const syncFromUrl = () => {
       const params = new URLSearchParams(window.location.search);
-      setSource(params.get("source") ?? "all");
+      setSource(historyAreaFromValue(params.get("source")));
+      setEventType(historyEventTypeFromValue(params.get("type")));
+      setSearch(params.get("search") ?? "");
       setSelectedRecordId(params.get("record") ?? "");
-    });
+    };
+    syncFromUrl();
+    window.addEventListener("popstate", syncFromUrl);
+    return () => window.removeEventListener("popstate", syncFromUrl);
   }, []);
 
   const records = useMemo(() => state.status === "ready" ? buildAuditRows(state.website, state.catalogue) : [], [state]);
-  const visibleRecords = source === "all" ? records : records.filter((record) => record.source === source);
+  const visibleRecords = useMemo(() => records.filter((record) => {
+    const query = search.trim().toLowerCase();
+    const matchesSearch = !query || [record.actionLabel, record.itemTitle, record.contentType, record.contentArea, record.summary].some((value) => value.toLowerCase().includes(query));
+    const matchesSource = source === "all" || record.source === source;
+    const matchesType = eventType === "all" || record.eventType === eventType;
+    return matchesSearch && matchesSource && matchesType;
+  }), [eventType, records, search, source]);
   const selectedRecord = records.find((record) => record.id === selectedRecordId);
 
-  function updateSource(next: string) {
-    setSource(next);
+  function pushHistoryUrl(next: { source?: "all" | HistoryArea; eventType?: "all" | HistoryEventType; search?: string; recordId?: string }) {
+    const nextSource = next.source ?? source;
+    const nextEventType = next.eventType ?? eventType;
+    const nextSearch = next.search ?? search;
+    const nextRecordId = next.recordId ?? selectedRecordId;
     const params = new URLSearchParams();
-    if (next !== "all") params.set("source", next);
+    if (nextSource !== "all") params.set("source", nextSource);
+    if (nextEventType !== "all") params.set("type", nextEventType);
+    if (nextSearch.trim()) params.set("search", nextSearch.trim());
+    if (nextRecordId) params.set("record", nextRecordId);
     window.history.pushState(null, "", params.toString() ? `${window.location.pathname}?${params.toString()}` : window.location.pathname);
+  }
+
+  function updateSource(next: "all" | HistoryArea) {
+    setSource(next);
+    pushHistoryUrl({ source: next, recordId: "" });
+  }
+
+  function updateEventType(next: "all" | HistoryEventType) {
+    setEventType(next);
+    pushHistoryUrl({ eventType: next, recordId: "" });
+  }
+
+  function updateSearch(next: string) {
+    setSearch(next);
+    pushHistoryUrl({ search: next, recordId: "" });
   }
 
   function openRecord(recordId: string) {
     setSelectedRecordId(recordId);
-    const params = new URLSearchParams();
-    if (source !== "all") params.set("source", source);
-    params.set("record", recordId);
-    window.history.pushState(null, "", `${window.location.pathname}?${params.toString()}`);
+    pushHistoryUrl({ recordId });
   }
 
   function closeRecord() {
     setSelectedRecordId("");
-    const params = new URLSearchParams();
-    if (source !== "all") params.set("source", source);
-    window.history.pushState(null, "", params.toString() ? `${window.location.pathname}?${params.toString()}` : window.location.pathname);
+    pushHistoryUrl({ recordId: "" });
   }
 
-  if (state.status === "loading") return <CentralState title="Loading content history..." text="Preparing Versions & Audit." />;
+  if (state.status === "loading") return <CentralState title="Loading History..." text="Preparing content activity." />;
   if (state.status === "error") return <CentralState title="We couldn't load content history." text="Navigation is still available." action={<button type="button" onClick={load} className="centralButton secondary"><RefreshCcw size={16} /> Retry</button>} />;
 
   return (
     <section className="space-y-4 rounded-2xl border border-sky-300/10 bg-[#0b1628]/95 p-5 text-slate-100 shadow-xl shadow-black/20">
       {selectedRecord ? (
         <>
-          <AdminBackButton onClick={closeRecord} label="Back to Versions & Audit" />
-          <CentralBreadcrumb items={[{ label: "Website Experience", href: "/admin/website-experience" }, { label: "Versions & Audit", href: "/admin/website-experience/versions-audit" }, { label: selectedRecord.title }]} />
-          <CentralHeader title={selectedRecord.title} subtitle={selectedRecord.detail} />
-          <div className="rounded-xl border border-white/10 bg-[#081427] p-4 text-sm text-slate-300">
-            <p><b className="text-slate-100">Source:</b> {sourceLabel(selectedRecord.source)}</p>
-            <p className="mt-2"><b className="text-slate-100">When:</b> {formatDateTime(selectedRecord.createdAt)}</p>
-            <p className="mt-2"><b className="text-slate-100">Status:</b> {selectedRecord.status}</p>
+          <AdminBackButton onClick={closeRecord} label="Back to History" />
+          <CentralBreadcrumb items={[{ label: "Website Experience", href: "/admin/website-experience" }, { label: "History", href: "/admin/website-experience/versions-audit" }, { label: selectedRecord.actionLabel }]} />
+          <CentralHeader title={selectedRecord.actionLabel} subtitle={selectedRecord.summary} />
+          <div className="grid gap-3 rounded-xl border border-white/10 bg-[#081427] p-4 text-sm text-slate-300 sm:grid-cols-2" data-history-detail="operator">
+            <HistoryDetailLine label="Item" value={selectedRecord.itemTitle} />
+            <HistoryDetailLine label="Content type" value={selectedRecord.contentType} />
+            <HistoryDetailLine label="Area" value={selectedRecord.contentArea} />
+            <HistoryDetailLine label="Actor" value={selectedRecord.actor} />
+            <HistoryDetailLine label="When" value={formatHistoryDateTime(selectedRecord.createdAt)} />
+            <HistoryDetailLine label="Version" value={selectedRecord.versionLabel ?? "Not available"} />
+            <HistoryDetailLine label="Previous state" value={selectedRecord.previousState ?? "Not available"} />
+            <HistoryDetailLine label="Resulting state" value={selectedRecord.resultingState ?? "Not available"} />
+            <HistoryDetailLine label="Record type" value={recordKindLabel(selectedRecord.recordKind)} />
+            <HistoryDetailLine label="Summary" value={selectedRecord.summary || "Not available"} wide />
           </div>
+          {selectedRecord.target ? (
+            <Link href={selectedRecord.target.href} className="centralButton secondary w-fit" data-history-related-target={selectedRecord.id}>
+              <Eye size={16} />
+              {selectedRecord.target.label}
+            </Link>
+          ) : null}
         </>
       ) : (
         <>
           <AdminBackButton href="/admin/website-experience" label="Back to Website Experience" />
-          <CentralBreadcrumb items={[{ label: "Website Experience", href: "/admin/website-experience" }, { label: "Versions & Audit" }]} />
-          <CentralHeader title="Versions & Audit" subtitle="View content versions and activity history." />
-          <label className="block max-w-sm">
-            <span className="text-xs font-black uppercase text-slate-400">Source Filter</span>
-            <select value={source} onChange={(event) => updateSource(event.target.value)} className="mt-1 h-11 w-full rounded-xl border border-sky-300/15 bg-[#07111f] px-3 text-sm text-slate-100 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-500/20">
-              <option value="all">All</option>
-              <option value="global">Global Experience</option>
-              <option value="pages">Pages</option>
-              <option value="partner_application">Partner Application</option>
-              <option value="service_catalogue">Service Catalogue</option>
-            </select>
-          </label>
-          {visibleRecords.length === 0 ? <EmptyPanel label="No history records match this filter." /> : (
-            <div className="space-y-3">
+          <CentralBreadcrumb items={[{ label: "Website Experience", href: "/admin/website-experience" }, { label: "History" }]} />
+          <CentralHeader title="History" subtitle="Track content changes, approvals and published versions." />
+          <div className="grid gap-3 rounded-xl border border-white/10 bg-[#081427] p-3 sm:grid-cols-2 xl:grid-cols-[minmax(14rem,1fr)_14rem_14rem]" data-history-filters="compact">
+            <label className="block min-w-0">
+              <span className="text-xs font-black uppercase text-slate-400">Search</span>
+              <span className="mt-1 flex h-11 items-center gap-2 rounded-xl border border-sky-300/15 bg-[#07111f] px-3 focus-within:border-sky-300 focus-within:ring-2 focus-within:ring-sky-500/20">
+                <Search size={16} className="shrink-0 text-slate-500" />
+                <input value={search} onChange={(event) => updateSearch(event.target.value)} placeholder="Item or action" className="min-w-0 flex-1 bg-transparent text-sm text-slate-100 outline-none placeholder:text-slate-500" />
+              </span>
+            </label>
+            <label className="block min-w-0">
+              <span className="text-xs font-black uppercase text-slate-400">Content</span>
+              <select value={source} onChange={(event) => updateSource(historyAreaFromValue(event.target.value))} className="mt-1 h-11 w-full rounded-xl border border-sky-300/15 bg-[#07111f] px-3 text-sm text-slate-100 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-500/20">
+                <option value="all">All content</option>
+                <option value="global">Global Experience</option>
+                <option value="pages">Pages</option>
+                <option value="partner_application">Partner Application</option>
+                <option value="agreement_template">Agreement Templates</option>
+                <option value="service_catalogue">Service Catalogue</option>
+              </select>
+            </label>
+            <label className="block min-w-0">
+              <span className="text-xs font-black uppercase text-slate-400">Activity</span>
+              <select value={eventType} onChange={(event) => updateEventType(historyEventTypeFromValue(event.target.value))} className="mt-1 h-11 w-full rounded-xl border border-sky-300/15 bg-[#07111f] px-3 text-sm text-slate-100 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-500/20">
+                <option value="all">All activity</option>
+                <option value="draft_changes">Draft changes</option>
+                <option value="approval">Approval activity</option>
+                <option value="scheduling">Scheduling</option>
+                <option value="publishing">Publishing</option>
+                <option value="archived">Archived</option>
+                <option value="versions">Versions</option>
+              </select>
+            </label>
+          </div>
+          {visibleRecords.length === 0 ? <EmptyPanel label="No history records match these filters." /> : (
+            <div className="space-y-2" data-history-timeline="operator">
               {visibleRecords.map((record) => (
-                <button key={record.id} type="button" onClick={() => openRecord(record.id)} className="flex min-h-16 w-full flex-col justify-between gap-3 rounded-xl border border-white/10 bg-[#081427] p-4 text-left shadow-md shadow-black/10 transition hover:border-sky-300/30 hover:bg-[#10213b] focus:outline-none focus:ring-2 focus:ring-sky-300 lg:flex-row lg:items-center">
-                  <span>
-                    <span className="block text-base font-black text-sky-50">{record.title}</span>
-                    <span className="mt-1 block text-sm text-slate-400">{record.detail}</span>
+                <button key={record.id} type="button" onClick={() => openRecord(record.id)} className="flex min-h-16 w-full min-w-0 flex-col justify-between gap-3 rounded-xl border border-white/10 bg-[#081427] p-3 text-left shadow-md shadow-black/10 transition hover:border-sky-300/30 hover:bg-[#10213b] focus:outline-none focus:ring-2 focus:ring-sky-300 lg:flex-row lg:items-center">
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-black text-sky-50">{record.actionLabel}</span>
+                    <span className="mt-1 block break-words text-sm text-slate-300">{record.itemTitle}</span>
+                    <span className="mt-1 block text-xs text-slate-500">{record.contentType} · {record.actor} · {formatHistoryDateTime(record.createdAt)}</span>
                   </span>
-                  <span className="flex shrink-0 items-center gap-3">
-                    <StatusPill label={sourceLabel(record.source)} />
-                    <span className="text-xs font-semibold text-slate-500">{formatDateTime(record.createdAt)}</span>
+                  <span className="flex shrink-0 flex-wrap items-center gap-2">
+                    <StatusPill label={recordKindLabel(record.recordKind)} />
+                    {record.versionLabel ? <StatusPill label={record.versionLabel} /> : null}
+                    {record.resultingState ? <StatusPill label={record.resultingState} /> : null}
                     <ArrowRight size={15} className="text-cyan-100" />
                   </span>
                 </button>
@@ -304,32 +391,81 @@ export function AdminWebsiteExperienceVersionsAuditClient() {
   );
 }
 
-function buildAuditRows(website: WebsiteExperienceAdminResponse, catalogue: AdminPartnerServiceCatalogueResponse) {
-  const websiteRows = website.recentAudit.map((row) => ({
-    id: `website:${row.id}`,
-    source: auditSource(row.context),
-    title: humanAction(row.action),
-    detail: row.changeSummary || contextTitle(row.context) || "Website Experience activity",
-    status: humanAction(row.action),
-    createdAt: row.createdAt,
-  }));
-  const catalogueAudit = catalogue.audit.map((row) => ({
-    id: `catalogue-audit:${row.id}`,
-    source: "service_catalogue",
-    title: humanAction(row.action),
-    detail: row.changeSummary || "Service Catalogue activity",
-    status: humanAction(row.action),
-    createdAt: row.createdAt,
-  }));
-  const catalogueVersions = catalogue.versions.map((row) => ({
-    id: `catalogue-version:${row.id}`,
-    source: "service_catalogue",
-    title: `Catalogue Version ${row.version}`,
-    detail: humanAction(row.status),
-    status: humanAction(row.status),
-    createdAt: row.publishedAt || row.createdAt,
-  }));
+function buildAuditRows(website: WebsiteExperienceAdminResponse, catalogue: AdminPartnerServiceCatalogueResponse): HistoryRow[] {
+  const catalogueVersionByRelation = new Map<string, AdminPartnerServiceCatalogueResponse["versions"][number]>();
+  for (const version of catalogue.versions) {
+    catalogueVersionByRelation.set(version.id, version);
+    catalogueVersionByRelation.set(String(version.version), version);
+    catalogueVersionByRelation.set(`version:${version.version}`, version);
+    catalogueVersionByRelation.set(`catalogue-version:${version.version}`, version);
+  }
+  const pairedVersionIds = new Set<string>();
+  const websiteRows: HistoryRow[] = website.recentAudit.map((row) => {
+    const target = websiteTarget(row.context, row.entityId, row.changeSummary);
+    return {
+      id: `website:${row.id}`,
+      recordKind: "workflow_activity",
+      eventType: historyEventType(row.action),
+      source: target.area,
+      actionLabel: historyActionLabel(row.action),
+      itemTitle: target.title,
+      contentType: target.contentType,
+      contentArea: target.contentArea,
+      summary: cleanHistorySummary(row.changeSummary) || `${historyActionLabel(row.action)} for ${target.title}.`,
+      actor: historyActor(row.actorAdminId),
+      createdAt: row.createdAt,
+      resultingState: workflowStateFromAction(row.action),
+      target: target.href ? { label: "Open item", href: target.href } : undefined,
+    };
+  });
+  const catalogueAudit: HistoryRow[] = catalogue.audit.map((row) => {
+    const relatedVersion = row.entityId ? catalogueVersionByRelation.get(row.entityId) : undefined;
+    if (relatedVersion) pairedVersionIds.add(relatedVersion.id);
+    return {
+      id: `catalogue-audit:${row.id}`,
+      recordKind: "workflow_activity",
+      eventType: historyEventType(row.action),
+      source: "service_catalogue",
+      actionLabel: historyActionLabel(row.action),
+      itemTitle: serviceCatalogueItemTitle(row, catalogue),
+      contentType: "Service Catalogue",
+      contentArea: "Partner Application",
+      summary: cleanHistorySummary(row.changeSummary) || `${historyActionLabel(row.action)} for Service Catalogue.`,
+      actor: historyActor(row.actorAdminId),
+      createdAt: row.createdAt,
+      versionLabel: relatedVersion ? `Version ${relatedVersion.version}` : undefined,
+      resultingState: workflowStateFromAction(row.action) ?? (relatedVersion ? workflowStateLabel(relatedVersion.status) : undefined),
+      target: { label: "Open item", href: "/admin/website-experience/pages/partner/service-catalogue" },
+    };
+  });
+  const catalogueVersions: HistoryRow[] = catalogue.versions
+    .filter((row) => !pairedVersionIds.has(row.id))
+    .map((row) => ({
+      id: `catalogue-version:${row.id}`,
+      recordKind: "saved_version",
+      eventType: "versions",
+      source: "service_catalogue",
+      actionLabel: "Saved version",
+      itemTitle: "Service Catalogue",
+      contentType: "Service Catalogue",
+      contentArea: "Partner Application",
+      summary: `Version ${row.version} - ${workflowStateLabel(row.status)}.`,
+      actor: historyActor(row.publishedByAdminId ?? row.createdByAdminId),
+      createdAt: row.publishedAt || row.createdAt,
+      versionLabel: `Version ${row.version}`,
+      resultingState: workflowStateLabel(row.status),
+      target: { label: "Open item", href: "/admin/website-experience/pages/partner/service-catalogue" },
+    }));
   return [...catalogueAudit, ...catalogueVersions, ...websiteRows].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+}
+
+function HistoryDetailLine({ label, value, wide = false }: { label: string; value: string; wide?: boolean }) {
+  return (
+    <div className={`min-w-0 rounded border border-white/10 bg-white/[0.03] p-3 ${wide ? "sm:col-span-2" : ""}`}>
+      <p className="text-[11px] font-black uppercase text-slate-500">{label}</p>
+      <p className="mt-1 break-words font-semibold text-slate-100">{value}</p>
+    </div>
+  );
 }
 
 function CentralHeader({ title, subtitle }: { title: string; subtitle: string }) {
@@ -371,18 +507,158 @@ function requestStatusLabel(request: AdminPartnerServiceCatalogueResponse["reque
   return "New";
 }
 
-function auditSource(context?: string) {
+function auditSource(context?: string): HistoryArea {
   if (context === "partner_application") return "partner_application";
   if (context?.includes("page")) return "pages";
   return "global";
 }
 
-function sourceLabel(source: string) {
-  if (source === "service_catalogue") return "Service Catalogue";
-  if (source === "partner_application") return "Partner Application";
-  if (source === "pages") return "Pages";
-  if (source === "global") return "Global Experience";
-  return "All";
+function historyActionLabel(value: string) {
+  const normalized = normalizedHistoryAction(value);
+  const labels: Record<string, string> = {
+    draft: "Draft saved",
+    saved: "Draft saved",
+    submitted: "Sent for approval",
+    submitted_for_approval: "Sent for approval",
+    approved: "Approved",
+    changes_requested: "Changes requested",
+    scheduled: "Scheduled",
+    schedule_cancelled: "Schedule cancelled",
+    published: "Published",
+    archived: "Archived",
+    baseline: "Initial version created",
+    context: "Initial version created",
+    initialized: "Initial version created",
+    initial_version_created: "Initial version created",
+  };
+  return labels[normalized] ?? humanAction(normalized);
+}
+
+function normalizedHistoryAction(value: string) {
+  const lastSegment = value.split(".").filter(Boolean).pop() ?? value;
+  return lastSegment
+    .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+    .replace(/[^a-zA-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .toLowerCase();
+}
+
+function historyEventType(value: string): HistoryEventType {
+  const normalized = normalizedHistoryAction(value);
+  if (normalized === "draft" || normalized === "saved") return "draft_changes";
+  if (normalized === "submitted" || normalized === "submitted_for_approval" || normalized === "approved" || normalized === "changes_requested") return "approval";
+  if (normalized === "scheduled" || normalized === "schedule_cancelled") return "scheduling";
+  if (normalized === "published") return "publishing";
+  if (normalized === "archived") return "archived";
+  return "versions";
+}
+
+function workflowStateFromAction(value: string): string | undefined {
+  const normalized = normalizedHistoryAction(value);
+  if (normalized === "draft" || normalized === "saved") return "Draft";
+  if (normalized === "submitted" || normalized === "submitted_for_approval") return "In review";
+  if (normalized === "approved") return "Approved";
+  if (normalized === "changes_requested") return "Changes requested";
+  if (normalized === "scheduled") return "Scheduled";
+  if (normalized === "schedule_cancelled") return "Approved";
+  if (normalized === "published") return "Published";
+  if (normalized === "archived") return "Archived";
+  if (normalized === "baseline" || normalized === "context" || normalized === "initialized" || normalized === "initial_version_created") return "Draft";
+  return undefined;
+}
+
+function workflowStateLabel(value?: string | null): string {
+  if (!value) return "Not available";
+  const normalized = value.toLowerCase();
+  if (normalized === "in_review") return "In review";
+  if (normalized === "changes_requested") return "Changes requested";
+  if (normalized === "schedule_cancelled") return "Schedule cancelled";
+  return humanAction(normalized);
+}
+
+function recordKindLabel(kind: HistoryRecordKind) {
+  return kind === "saved_version" ? "Saved version" : "Workflow activity";
+}
+
+function historyActor(value?: string | null) {
+  if (!value) return "Not available";
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)) return "Admin user";
+  if (/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i.test(value)) return value;
+  return value.length > 64 ? "Admin user" : value;
+}
+
+function cleanHistorySummary(value?: string | null) {
+  if (!value) return "";
+  return value.replace(/\b(?:Website Experience|Partner Service Catalogue)\.([a-z_ -]+)/gi, (_, action: string) => historyActionLabel(action)).trim();
+}
+
+function websiteTarget(context?: string, entityId?: string, summary?: string): { area: HistoryArea; title: string; contentType: string; contentArea: string; href?: string } {
+  const agreementTemplateTitle = agreementTemplateTitleFromHistory(entityId, summary);
+  if (agreementTemplateTitle) {
+    const templateId = agreementTemplateIdFromHistory(entityId);
+    return {
+      area: "agreement_template",
+      title: agreementTemplateTitle,
+      contentType: "Agreement Template",
+      contentArea: "Partner Application",
+      href: templateId ? `/admin/website-experience/pages/partner/application/step-7-partner-agreement/agreement-templates/${encodeURIComponent(templateId)}` : "/admin/website-experience/pages/partner/application/step-7-partner-agreement/agreement-templates",
+    };
+  }
+  if (context === "partner_application") {
+    return {
+      area: "partner_application",
+      title: "Partner Application",
+      contentType: "Partner Application",
+      contentArea: "Pages",
+      href: "/admin/website-experience/pages/partner/application",
+    };
+  }
+  return {
+    area: auditSource(context),
+    title: contextTitle(context) || "Website Experience",
+    contentType: "Website Experience",
+    contentArea: auditSource(context) === "global" ? "Global Experience" : "Pages",
+    href: websiteContextHref(context),
+  };
+}
+
+function agreementTemplateTitleFromHistory(entityId?: string, summary?: string) {
+  const text = `${entityId ?? ""} ${summary ?? ""}`;
+  if (!/agreement[_ -]?template|Agreement Template/i.test(text)) return "";
+  const labelled = summary?.match(/Agreement Template\s*[/:-]\s*([^|]+)$/i)?.[1]?.trim();
+  if (labelled) return labelled;
+  const quoted = summary?.match(/["']([^"']+)["']/)?.[1]?.trim();
+  if (quoted) return quoted;
+  const saved = summary?.match(/(?:Saved|Updated|Created)\s+(?:agreement\s+template\s+)?(.+)$/i)?.[1]?.trim();
+  return saved || "Agreement Template";
+}
+
+function agreementTemplateIdFromHistory(entityId?: string) {
+  const match = entityId?.match(/agreement[_-]template[:/](.+)$/i);
+  return match?.[1] ?? "";
+}
+
+function websiteContextHref(context?: string) {
+  if (context === "partner_application") return "/admin/website-experience/pages/partner/application";
+  if (context === "partner_registration" || context === "partner_login" || context === "user_login") {
+    return `/admin/website-experience/login-signup?context=${context}`;
+  }
+  return "/admin/website-experience";
+}
+
+function serviceCatalogueItemTitle(row: AdminPartnerServiceCatalogueResponse["audit"][number], catalogue: AdminPartnerServiceCatalogueResponse) {
+  const item = catalogue.draft.items.find((entry) => entry.stableCode === row.entityId || entry.id === row.entityId)
+    ?? catalogue.published.items.find((entry) => entry.stableCode === row.entityId || entry.id === row.entityId);
+  if (item) return item.name;
+  return "Service Catalogue";
+}
+
+function historyAreaFromValue(value: string | null): "all" | HistoryArea {
+  return value === "global" || value === "pages" || value === "partner_application" || value === "agreement_template" || value === "service_catalogue" ? value : "all";
+}
+
+function historyEventTypeFromValue(value: string | null): "all" | HistoryEventType {
+  return value === "draft_changes" || value === "approval" || value === "scheduling" || value === "publishing" || value === "archived" || value === "versions" ? value : "all";
 }
 
 function contextTitle(context?: string) {
@@ -422,6 +698,13 @@ function formatDateTime(value?: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "not available";
   return new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeStyle: "short" }).format(date);
+}
+
+function formatHistoryDateTime(value?: string) {
+  if (!value) return "Not available";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Not available";
+  return new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeStyle: "medium" }).format(date);
 }
 
 function CentralStyles() {

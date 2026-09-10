@@ -5,7 +5,7 @@ import { AdminWebsiteExperienceVersionsAuditClient } from "../../_components/Adm
 export default function AdminWebsiteExperienceVersionsAuditPage() {
   return (
     <AdminProtected requiredPermissions={["content.read"]}>
-      <AdminShell title="Website Experience">
+      <AdminShell title="History">
         <AdminWebsiteExperienceVersionsAuditClient />
       </AdminShell>
     </AdminProtected>
