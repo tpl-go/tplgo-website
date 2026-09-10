@@ -90,6 +90,11 @@ import {
   normalizeStep8ErrorCode,
   partnerStep8ActionLabel,
   partnerStep8CorrectionRoute,
+  partnerStep8HeaderMetadata,
+  partnerStep8IssuesTitle,
+  partnerStep8NavigationStatusOverrides,
+  partnerStep8ReadOnlyStepOverrides,
+  partnerStep8ShowsPreSubmissionIssues,
   partnerStep8StateLabel,
   partnerStep8StepStatusLabel,
   requiredFinalDeclarations,
@@ -685,6 +690,10 @@ export default function PartnerApplicationWorkspaceClient({
   const step8StateLabel = effectiveStep8Readiness ? partnerStep8StateLabel(effectiveStep8Readiness.applicationStatus, effectiveStep8Readiness.submissionReady) : "Needs attention";
   const step8CanSubmit = Boolean(effectiveStep8Readiness && canSubmitPartnerStep8(effectiveStep8Readiness, acceptedStep8Declarations));
   const step8DisabledReason = step8BlockingReason(effectiveStep8Readiness, acceptedStep8Declarations);
+  const step8NavigationStatusOverrides = useMemo(() => partnerStep8NavigationStatusOverrides(effectiveStep8Readiness), [effectiveStep8Readiness]);
+  const step8ReadOnlyStepOverrides = useMemo(() => partnerStep8ReadOnlyStepOverrides(effectiveStep8Readiness), [effectiveStep8Readiness]);
+  const activeStepReadOnly = step8ReadOnlyStepOverrides[activeStep] === true;
+  const headerMetadataText = partnerStep8HeaderMetadata(effectiveStep8Readiness, effectiveStep8Submission, statusText(saveStatus, lastSavedAt));
 
   useEffect(() => {
     formRef.current = form;
@@ -1673,7 +1682,7 @@ export default function PartnerApplicationWorkspaceClient({
             </div>
             <div className="hidden min-w-0 text-center md:block">
               <p className="truncate text-sm font-black">{readModel.organizationName}</p>
-              <p className="text-xs font-semibold text-slate-400">{statusText(saveStatus, lastSavedAt)}</p>
+              <p className="text-xs font-semibold text-slate-400">{headerMetadataText}</p>
             </div>
             <div className="flex shrink-0 items-center gap-2">
               <Link href="/customer-support" className="hidden h-9 items-center gap-2 rounded-lg border border-white/10 px-3 text-xs font-black text-slate-200 hover:border-[#f97316] sm:inline-flex">
@@ -1686,16 +1695,16 @@ export default function PartnerApplicationWorkspaceClient({
               </Link>
             </div>
           </div>
-          <TopProgress activeStep={activeStep} readModel={readModel} qaPreviewEnabled={qaPreviewEnabled} accountStepOverride={accountStepOverride} businessStepOverride={businessStepOverride} locationStepOverride={locationStepOverride} servicesStepOverride={servicesStepOverride} />
+          <TopProgress activeStep={activeStep} readModel={readModel} qaPreviewEnabled={qaPreviewEnabled} accountStepOverride={accountStepOverride} businessStepOverride={businessStepOverride} locationStepOverride={locationStepOverride} servicesStepOverride={servicesStepOverride} stepStatusOverrides={step8NavigationStatusOverrides} />
         </header>
 
         {qaPreviewEnabled ? <QaPreviewBar selectedState={qaPreviewState} onChange={changeQaPreviewState} onReset={resetQaPreviewData} /> : null}
         {message ? <WorkspaceToast tone={message.tone} text={message.text} onDismiss={() => setMessage(null)} /> : null}
 
         <div className="grid flex-1 gap-4 px-4 py-4 lg:grid-cols-[270px_minmax(0,1fr)] xl:grid-cols-[280px_minmax(0,1fr)_360px] 2xl:grid-cols-[300px_minmax(0,1fr)_390px]">
-          <StepNavigator activeStep={activeStep} readModel={readModel} qaPreviewEnabled={qaPreviewEnabled} accountStepOverride={accountStepOverride} businessStepOverride={businessStepOverride} locationStepOverride={locationStepOverride} servicesStepOverride={servicesStepOverride} onSelect={(step) => setActiveStep(step)} />
+          <StepNavigator activeStep={activeStep} readModel={readModel} qaPreviewEnabled={qaPreviewEnabled} accountStepOverride={accountStepOverride} businessStepOverride={businessStepOverride} locationStepOverride={locationStepOverride} servicesStepOverride={servicesStepOverride} stepStatusOverrides={step8NavigationStatusOverrides} readOnlyStepOverrides={step8ReadOnlyStepOverrides} onSelect={(step) => setActiveStep(step)} />
           <section className="min-w-0">
-            <MobileStepSelector activeStep={activeStep} readModel={readModel} qaPreviewEnabled={qaPreviewEnabled} accountStepOverride={accountStepOverride} businessStepOverride={businessStepOverride} locationStepOverride={locationStepOverride} servicesStepOverride={servicesStepOverride} onSelect={(step) => setActiveStep(step)} />
+            <MobileStepSelector activeStep={activeStep} readModel={readModel} qaPreviewEnabled={qaPreviewEnabled} accountStepOverride={accountStepOverride} businessStepOverride={businessStepOverride} locationStepOverride={locationStepOverride} servicesStepOverride={servicesStepOverride} stepStatusOverrides={step8NavigationStatusOverrides} onSelect={(step) => setActiveStep(step)} />
             {loadStatus === "loading" ? (
               <LoadingCard />
             ) : activeStep === "review_submit" ? (
@@ -1718,90 +1727,97 @@ export default function PartnerApplicationWorkspaceClient({
                   if (isWorkspaceStep(step)) setActiveStep(step);
                 }}
               />
-            ) : isApprovedState && !qaPreviewEnabled ? (
-              <StateCard title="Your Partner account is ready" detail="The verified Partner Business Desk opens in the next approved phase." tone="success" />
-            ) : activeStep === "account_contact" ? (
-              <AccountContactStep
-                form={form}
-                user={user}
-                mobileVerified={mobileVerified}
-                emailVerified={emailVerified}
-                mobileChallenge={mobileChallenge}
-                mobileOtp={mobileOtp}
-                emailChallenge={emailChallenge}
-                emailOtp={emailOtp}
-                busyAction={busyAction}
-                qaPreviewEnabled={qaPreviewEnabled}
-                canComplete={canCompleteStepOne}
-                onApplyQaExample={(example) => {
-                  updateForm(example.values);
-                  setQaVerifiedContacts(example.verified);
-                }}
-                onUseAccount={() => updateForm({
-                  businessMobile: user?.mobile ? stripIndiaPrefix(user.mobile) : form.businessMobile,
-                  businessEmail: user?.email ?? form.businessEmail,
-                  contactPersonFullName: user?.fullName || form.contactPersonFullName,
-                  useAccountContactDetails: true,
-                })}
-                onChange={updateForm}
-                onRequestMobile={requestMobileOtp}
-                onConfirmMobile={confirmMobileOtp}
-                onMobileOtpChange={setMobileOtp}
-                onRequestEmail={requestEmailOtp}
-                onConfirmEmail={confirmEmailOtp}
-                onEmailOtpChange={setEmailOtp}
-              />
-            ) : activeStep === "business_identity" ? (
-              <BusinessIdentityStep
-                form={businessForm}
-                showsRegistrationSection={showsRegistrationSection}
-                canComplete={canCompleteStepTwo}
-                qaPreviewEnabled={qaPreviewEnabled}
-                onChange={updateBusinessForm}
-              />
-            ) : activeStep === "business_location" ? (
-              <BusinessLocationStep
-                form={locationForm}
-                canComplete={canCompleteStepThree}
-                qaPreviewEnabled={qaPreviewEnabled}
-                onChange={updateLocationForm}
-              />
-            ) : activeStep === "services" ? (
-              <ServicesStep
-                form={servicesForm}
-                businessType={businessForm.organizationType}
-                countryCode={locationForm.primaryLocation.countryCode}
-                canComplete={canCompleteStepFour}
-                catalogueStatus={serviceCatalogueState.status}
-                serviceCatalog={runtimeServiceCatalog}
-                serviceCatalogueItems={serviceCatalogueState.items}
-                qaPreviewEnabled={qaPreviewEnabled}
-                legacyScopes={activeBundle?.serviceScopes ?? []}
-                activeDomainIds={activeServiceDomainIds}
-                onActiveDomainIdsChange={setActiveServiceDomainIds}
-                onRemoveSelectedService={removeSelectedService}
-                onRemoveSelectedServiceDomain={removeSelectedServiceDomain}
-                onOpenSelectedServiceDomain={openSelectedServiceDomain}
-                onChange={updateServicesForm}
-              />
-            ) : activeStep === "documents_compliance" ? (
-              <VerificationComplianceStep
-                bundle={activeBundle}
-                selectedServiceCodes={servicesForm.selectedServiceCodes}
-                serviceCatalogueItems={serviceCatalogueState.items}
-                qaPreviewEnabled={qaPreviewEnabled}
-                uploadingRequirementId={uploadingRequirementId}
-                onUploadEvidence={uploadEvidence}
-                onEditSelectedServices={() => setActiveStep("services")}
-                focusSectionId={focusedVerificationSectionId}
-                onFocusSectionHandled={() => setFocusedVerificationSectionId(null)}
-              />
-            ) : activeStep === "payout_tax" ? (
-              <PayoutTaxStep form={payoutTaxForm} bundle={activeBundle} content={payoutTaxContent} canComplete={canCompleteStepSix} onChange={updatePayoutTaxForm} />
-            ) : activeStep === "partner_agreement" ? (
-              <AgreementStep form={agreementForm} bundle={activeBundle} content={agreementContent} canComplete={canCompleteStepSeven} onChange={updateAgreementForm} />
             ) : (
-              <PlaceholderStep step={workspaceSteps.find((step) => step.id === activeStep) ?? workspaceSteps[1]!} />
+              <>
+                {activeStepReadOnly ? <ReadOnlyStepNotice stateLabel={step8StateLabel} /> : null}
+                <fieldset disabled={activeStepReadOnly} className="contents">
+                  {isApprovedState && !qaPreviewEnabled ? (
+                    <StateCard title="Your Partner account is ready" detail="The verified Partner Business Desk opens in the next approved phase." tone="success" />
+                  ) : activeStep === "account_contact" ? (
+                    <AccountContactStep
+                      form={form}
+                      user={user}
+                      mobileVerified={mobileVerified}
+                      emailVerified={emailVerified}
+                      mobileChallenge={mobileChallenge}
+                      mobileOtp={mobileOtp}
+                      emailChallenge={emailChallenge}
+                      emailOtp={emailOtp}
+                      busyAction={busyAction}
+                      qaPreviewEnabled={qaPreviewEnabled}
+                      canComplete={canCompleteStepOne}
+                      onApplyQaExample={(example) => {
+                        updateForm(example.values);
+                        setQaVerifiedContacts(example.verified);
+                      }}
+                      onUseAccount={() => updateForm({
+                        businessMobile: user?.mobile ? stripIndiaPrefix(user.mobile) : form.businessMobile,
+                        businessEmail: user?.email ?? form.businessEmail,
+                        contactPersonFullName: user?.fullName || form.contactPersonFullName,
+                        useAccountContactDetails: true,
+                      })}
+                      onChange={updateForm}
+                      onRequestMobile={requestMobileOtp}
+                      onConfirmMobile={confirmMobileOtp}
+                      onMobileOtpChange={setMobileOtp}
+                      onRequestEmail={requestEmailOtp}
+                      onConfirmEmail={confirmEmailOtp}
+                      onEmailOtpChange={setEmailOtp}
+                    />
+                  ) : activeStep === "business_identity" ? (
+                    <BusinessIdentityStep
+                      form={businessForm}
+                      showsRegistrationSection={showsRegistrationSection}
+                      canComplete={canCompleteStepTwo}
+                      qaPreviewEnabled={qaPreviewEnabled}
+                      onChange={updateBusinessForm}
+                    />
+                  ) : activeStep === "business_location" ? (
+                    <BusinessLocationStep
+                      form={locationForm}
+                      canComplete={canCompleteStepThree}
+                      qaPreviewEnabled={qaPreviewEnabled}
+                      onChange={updateLocationForm}
+                    />
+                  ) : activeStep === "services" ? (
+                    <ServicesStep
+                      form={servicesForm}
+                      businessType={businessForm.organizationType}
+                      countryCode={locationForm.primaryLocation.countryCode}
+                      canComplete={canCompleteStepFour}
+                      catalogueStatus={serviceCatalogueState.status}
+                      serviceCatalog={runtimeServiceCatalog}
+                      serviceCatalogueItems={serviceCatalogueState.items}
+                      qaPreviewEnabled={qaPreviewEnabled}
+                      legacyScopes={activeBundle?.serviceScopes ?? []}
+                      activeDomainIds={activeServiceDomainIds}
+                      onActiveDomainIdsChange={setActiveServiceDomainIds}
+                      onRemoveSelectedService={removeSelectedService}
+                      onRemoveSelectedServiceDomain={removeSelectedServiceDomain}
+                      onOpenSelectedServiceDomain={openSelectedServiceDomain}
+                      onChange={updateServicesForm}
+                    />
+                  ) : activeStep === "documents_compliance" ? (
+                    <VerificationComplianceStep
+                      bundle={activeBundle}
+                      selectedServiceCodes={servicesForm.selectedServiceCodes}
+                      serviceCatalogueItems={serviceCatalogueState.items}
+                      qaPreviewEnabled={qaPreviewEnabled}
+                      uploadingRequirementId={uploadingRequirementId}
+                      onUploadEvidence={uploadEvidence}
+                      onEditSelectedServices={() => setActiveStep("services")}
+                      focusSectionId={focusedVerificationSectionId}
+                      onFocusSectionHandled={() => setFocusedVerificationSectionId(null)}
+                    />
+                  ) : activeStep === "payout_tax" ? (
+                    <PayoutTaxStep form={payoutTaxForm} bundle={activeBundle} content={payoutTaxContent} canComplete={canCompleteStepSix} onChange={updatePayoutTaxForm} />
+                  ) : activeStep === "partner_agreement" ? (
+                    <AgreementStep form={agreementForm} bundle={activeBundle} content={agreementContent} canComplete={canCompleteStepSeven} onChange={updateAgreementForm} />
+                  ) : (
+                    <PlaceholderStep step={workspaceSteps.find((step) => step.id === activeStep) ?? workspaceSteps[1]!} />
+                  )}
+                </fieldset>
+              </>
             )}
           </section>
           <HelpPanel
@@ -1848,6 +1864,8 @@ export default function PartnerApplicationWorkspaceClient({
             onPrevious={() => setActiveStep(previousStep)}
             onSubmit={() => setSubmitConfirmOpen(true)}
           />
+        ) : activeStepReadOnly ? (
+          <ReadOnlyStepFooter previousStep={previousStep} stateLabel={step8StateLabel} onPrevious={() => setActiveStep(previousStep)} />
         ) : (
           <footer className="sticky bottom-0 z-30 border-t border-white/10 bg-[#11141a]/95 px-4 py-3 backdrop-blur">
             <div className="mx-auto flex max-w-7xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -2955,6 +2973,8 @@ function StepNavigator({
   businessStepOverride,
   locationStepOverride,
   servicesStepOverride,
+  stepStatusOverrides,
+  readOnlyStepOverrides,
   onSelect,
 }: {
   activeStep: WorkspaceStepId;
@@ -2964,6 +2984,8 @@ function StepNavigator({
   businessStepOverride?: PartnerApplicationStepStatus;
   locationStepOverride?: PartnerApplicationStepStatus;
   servicesStepOverride?: PartnerApplicationStepStatus;
+  stepStatusOverrides?: Partial<Record<WorkspaceStepId, PartnerApplicationStepStatus>>;
+  readOnlyStepOverrides?: Partial<Record<WorkspaceStepId, boolean>>;
   onSelect: (step: WorkspaceStepId) => void;
 }) {
   return (
@@ -2973,7 +2995,8 @@ function StepNavigator({
         <div className="mt-4 grid gap-2">
           {workspaceSteps.map((step) => {
             const modelStep = readModel.steps.find((item) => item.id === step.id);
-            const status = displayedStepStatus(step.id, activeStep, modelStep?.status ?? "locked", qaPreviewEnabled, accountStepOverride, businessStepOverride, locationStepOverride, servicesStepOverride);
+            const status = displayedStepStatus(step.id, activeStep, modelStep?.status ?? "locked", qaPreviewEnabled, accountStepOverride, businessStepOverride, locationStepOverride, servicesStepOverride, stepStatusOverrides);
+            const readOnly = readOnlyStepOverrides?.[step.id] === true;
             const current = activeStep === step.id;
             const Icon = step.icon;
             const enabled = qaPreviewEnabled || Boolean(modelStep?.enabled);
@@ -2995,7 +3018,7 @@ function StepNavigator({
                 <span className="min-w-0 flex-1">
                   <span data-step-title={step.id} className="block truncate text-sm font-black text-white">{step.number}. {step.title}</span>
                   <span className={`block text-xs font-semibold ${current ? "text-[#fb923c]" : status === "completed" ? "text-emerald-300" : status === "needs-attention" ? "text-amber-300" : "text-slate-400"}`}>
-                    {humanStatus(status, current)}{status === "completed" && !isSubmittedFinal(readModel) ? " · Edit" : ""}
+                    {humanStatus(status, current)}{status === "completed" && !readOnly && !isSubmittedFinal(readModel) ? " · Edit" : ""}
                   </span>
                 </span>
               </button>
@@ -3015,6 +3038,7 @@ function MobileStepSelector({
   businessStepOverride,
   locationStepOverride,
   servicesStepOverride,
+  stepStatusOverrides,
   onSelect,
 }: {
   activeStep: WorkspaceStepId;
@@ -3024,6 +3048,7 @@ function MobileStepSelector({
   businessStepOverride?: PartnerApplicationStepStatus;
   locationStepOverride?: PartnerApplicationStepStatus;
   servicesStepOverride?: PartnerApplicationStepStatus;
+  stepStatusOverrides?: Partial<Record<WorkspaceStepId, PartnerApplicationStepStatus>>;
   onSelect: (step: WorkspaceStepId) => void;
 }) {
   return (
@@ -3038,7 +3063,7 @@ function MobileStepSelector({
           {workspaceSteps.map((step) => {
             const modelStep = readModel.steps.find((item) => item.id === step.id);
             const enabled = qaPreviewEnabled || Boolean(modelStep?.enabled);
-            const status = displayedStepStatus(step.id, activeStep, modelStep?.status ?? "locked", qaPreviewEnabled, accountStepOverride, businessStepOverride, locationStepOverride, servicesStepOverride);
+            const status = displayedStepStatus(step.id, activeStep, modelStep?.status ?? "locked", qaPreviewEnabled, accountStepOverride, businessStepOverride, locationStepOverride, servicesStepOverride, stepStatusOverrides);
             return (
               <option key={step.id} value={step.id} disabled={!enabled}>
                 {step.number}. {step.title} - {humanStatus(status, activeStep === step.id)}
@@ -3059,6 +3084,7 @@ function TopProgress({
   businessStepOverride,
   locationStepOverride,
   servicesStepOverride,
+  stepStatusOverrides,
 }: {
   activeStep: WorkspaceStepId;
   readModel: ReturnType<typeof buildPartnerApplicationCenterReadModel>;
@@ -3067,6 +3093,7 @@ function TopProgress({
   businessStepOverride?: PartnerApplicationStepStatus;
   locationStepOverride?: PartnerApplicationStepStatus;
   servicesStepOverride?: PartnerApplicationStepStatus;
+  stepStatusOverrides?: Partial<Record<WorkspaceStepId, PartnerApplicationStepStatus>>;
 }) {
   const [stepsExpanded, setStepsExpanded] = useState(false);
   const activeIndex = Math.max(0, workspaceSteps.findIndex((step) => step.id === activeStep));
@@ -3106,7 +3133,7 @@ function TopProgress({
             <ol className="mt-3 grid gap-2 rounded-xl border border-white/10 bg-[#11141a] p-3">
               {workspaceSteps.map((step) => {
                 const modelStatus = readModel.steps.find((item) => item.id === step.id)?.status ?? "locked";
-                const status = displayedStepStatus(step.id, activeStep, modelStatus, qaPreviewEnabled, accountStepOverride, businessStepOverride, locationStepOverride, servicesStepOverride);
+                const status = displayedStepStatus(step.id, activeStep, modelStatus, qaPreviewEnabled, accountStepOverride, businessStepOverride, locationStepOverride, servicesStepOverride, stepStatusOverrides);
                 const current = activeStep === step.id;
                 const visual = stepVisual(status, current);
                 return (
@@ -3127,7 +3154,7 @@ function TopProgress({
         <ol className="hidden items-center gap-1 lg:flex" aria-label="Application progress">
         {workspaceSteps.map((step) => {
           const modelStatus = readModel.steps.find((item) => item.id === step.id)?.status ?? "locked";
-          const status = displayedStepStatus(step.id, activeStep, modelStatus, qaPreviewEnabled, accountStepOverride, businessStepOverride, locationStepOverride, servicesStepOverride);
+          const status = displayedStepStatus(step.id, activeStep, modelStatus, qaPreviewEnabled, accountStepOverride, businessStepOverride, locationStepOverride, servicesStepOverride, stepStatusOverrides);
           const current = activeStep === step.id;
           const visual = stepVisual(status, current);
           return (
@@ -4190,7 +4217,7 @@ function ReviewSubmitStep({
         </div>
       </section>
 
-      <Step8Issues readiness={readiness} onStepAction={onStepAction} />
+      {partnerStep8ShowsPreSubmissionIssues(readiness) ? <Step8Issues readiness={readiness} onStepAction={onStepAction} /> : null}
 
       {showFinalDeclarations ? (
         <section className="rounded-2xl border border-white/10 bg-[#171a20] p-5 shadow-2xl">
@@ -4237,10 +4264,11 @@ function ReviewSubmitStep({
 
 function Step8Issues({ readiness, onStepAction }: { readiness: PartnerApplicationReadiness; onStepAction: (route: string) => void }) {
   const blockingSteps = readiness.steps.filter((step) => step.status === "NEEDS_ATTENTION" || step.blockerCodes.length > 0);
+  const title = partnerStep8IssuesTitle(readiness);
   return (
     <section className="grid gap-4 lg:grid-cols-2">
       <div className="rounded-2xl border border-white/10 bg-[#171a20] p-5 shadow-2xl">
-        <h2 className="text-lg font-black text-white">Must fix before submission</h2>
+        <h2 className="text-lg font-black text-white">{title}</h2>
         {blockingSteps.length === 0 && readiness.submissionBlockers.length === 0 ? (
           <p className="mt-3 text-sm font-semibold leading-6 text-emerald-200">Your application is ready for final declarations.</p>
         ) : (
@@ -4385,6 +4413,33 @@ function PlaceholderStep({ step }: { step: (typeof workspaceSteps)[number] }) {
         This application step is not available right now.
       </p>
     </div>
+  );
+}
+
+function ReadOnlyStepNotice({ stateLabel }: { stateLabel: string }) {
+  return (
+    <div className="mb-4 rounded-2xl border border-amber-400/30 bg-amber-400/10 p-4 text-sm font-semibold leading-6 text-amber-100" role="status">
+      This section is read-only while the application status is {stateLabel.toLowerCase()}.
+    </div>
+  );
+}
+
+function ReadOnlyStepFooter({ previousStep, stateLabel, onPrevious }: { previousStep: WorkspaceStepId; stateLabel: string; onPrevious: () => void }) {
+  return (
+    <footer className="sticky bottom-0 z-30 border-t border-white/10 bg-[#11141a]/95 px-4 py-3 backdrop-blur">
+      <div className="mx-auto flex max-w-7xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <button
+          type="button"
+          disabled={previousStep === "account_contact"}
+          onClick={onPrevious}
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-white/10 px-4 text-sm font-black text-slate-300 disabled:cursor-not-allowed disabled:opacity-45"
+        >
+          <ArrowLeft size={16} aria-hidden="true" />
+          Previous
+        </button>
+        <p className="text-sm font-semibold text-slate-300">Editing is locked while the application status is {stateLabel.toLowerCase()}.</p>
+      </div>
+    </footer>
   );
 }
 
@@ -5572,8 +5627,11 @@ function displayedStepStatus(
   accountStepOverride?: PartnerApplicationStepStatus,
   businessStepOverride?: PartnerApplicationStepStatus,
   locationStepOverride?: PartnerApplicationStepStatus,
-  servicesStepOverride?: PartnerApplicationStepStatus
+  servicesStepOverride?: PartnerApplicationStepStatus,
+  stepStatusOverrides?: Partial<Record<WorkspaceStepId, PartnerApplicationStepStatus>>
 ): PartnerApplicationStepStatus {
+  const canonicalStatus = stepStatusOverrides?.[stepId];
+  if (canonicalStatus) return canonicalStatus;
   if (qaPreviewEnabled) {
     if (stepId === "account_contact" && accountStepOverride) return accountStepOverride;
     if (stepId === "business_identity" && businessStepOverride) return businessStepOverride;

@@ -7,6 +7,7 @@ import type {
   PartnerApplicationSubmissionSummary,
   PartnerApplicationSubmitInput,
 } from "./partnerApiClient";
+import type { PartnerApplicationStepId, PartnerApplicationStepStatus } from "./partnerApplicationCenter";
 
 export const step8StepRoutes: Record<PartnerApplicationStepKey, string> = {
   account_contact: "/partner-preview?step=account_contact",
@@ -150,3 +151,87 @@ export function visibleSubmissionReference(submission: PartnerApplicationSubmiss
   return `Submission ${submission.submissionRevision}`;
 }
 
+export function partnerStep8NavigationStatusOverrides(readiness: PartnerApplicationReadiness | null): Partial<Record<PartnerApplicationStepId, PartnerApplicationStepStatus>> {
+  if (!readiness) return {};
+  const overrides: Partial<Record<PartnerApplicationStepId, PartnerApplicationStepStatus>> = {};
+  for (const step of readiness.steps) {
+    overrides[workspaceStepIdForStep8Key(step.step)] = workspaceStatusForStep8Status(step.status);
+  }
+  overrides.review_submit = reviewSubmitWorkspaceStatus(readiness);
+  return overrides;
+}
+
+export function partnerStep8ReadOnlyStepOverrides(readiness: PartnerApplicationReadiness | null): Partial<Record<PartnerApplicationStepId, boolean>> {
+  if (!readiness) return {};
+  const readOnly: Partial<Record<PartnerApplicationStepId, boolean>> = {};
+  for (const step of readiness.steps) {
+    const stepId = workspaceStepIdForStep8Key(step.step);
+    readOnly[stepId] = partnerStep8StepIsReadOnly(readiness, stepId);
+  }
+  return readOnly;
+}
+
+export function partnerStep8StepIsReadOnly(readiness: PartnerApplicationReadiness | null, stepId: PartnerApplicationStepId): boolean {
+  if (!readiness || stepId === "review_submit") return false;
+  if (readiness.applicationStatus === "CHANGES_REQUESTED") {
+    return !readiness.steps.some((step) => workspaceStepIdForStep8Key(step.step) === stepId && step.status === "NEEDS_ATTENTION");
+  }
+  return isSubmittedPartnerApplicationState(readiness.applicationStatus);
+}
+
+export function partnerStep8HeaderMetadata(
+  readiness: PartnerApplicationReadiness | null,
+  latestSubmission: PartnerApplicationSubmissionSummary | null,
+  draftText: string,
+): string {
+  if (!readiness) return draftText;
+  const reference = visibleSubmissionReference(latestSubmission);
+  const submittedAt = latestSubmission?.submittedAt ? formatStep8MetadataDate(latestSubmission.submittedAt) : null;
+  const suffix = [reference, submittedAt].filter(Boolean).join(" · ");
+  if (readiness.applicationStatus === "SUBMITTED" || readiness.applicationStatus === "UNDER_REVIEW" || readiness.applicationStatus === "RESUBMITTED") {
+    return suffix ? `Submitted · ${suffix}` : "Submitted";
+  }
+  if (readiness.applicationStatus === "CHANGES_REQUESTED") return suffix ? `Changes requested · ${suffix}` : "Changes requested";
+  if (readiness.applicationStatus === "NOT_APPROVED") return suffix ? `Not approved · ${suffix}` : "Not approved";
+  if (readiness.applicationStatus === "APPROVED") return suffix ? `Approved · ${suffix}` : "Approved";
+  return draftText;
+}
+
+export function partnerStep8ShowsPreSubmissionIssues(readiness: PartnerApplicationReadiness): boolean {
+  return readiness.applicationStatus === "DRAFT_INCOMPLETE" || readiness.applicationStatus === "READY_TO_SUBMIT" || readiness.applicationStatus === "CHANGES_REQUESTED";
+}
+
+export function partnerStep8IssuesTitle(readiness: PartnerApplicationReadiness): string {
+  return readiness.applicationStatus === "CHANGES_REQUESTED" ? "Must fix before resubmission" : "Must fix before submission";
+}
+
+export function isSubmittedPartnerApplicationState(status: PartnerApplicationStatus): boolean {
+  return status === "SUBMITTED" || status === "UNDER_REVIEW" || status === "RESUBMITTED" || status === "NOT_APPROVED" || status === "APPROVED";
+}
+
+function workspaceStepIdForStep8Key(step: PartnerApplicationStepKey): PartnerApplicationStepId {
+  return step === "verification_compliance" ? "documents_compliance" : step;
+}
+
+function workspaceStatusForStep8Status(status: PartnerApplicationStepReadiness["status"]): PartnerApplicationStepStatus {
+  if (status === "COMPLETE") return "completed";
+  if (status === "UNDER_REVIEW") return "under-review";
+  if (status === "UNAVAILABLE") return "locked";
+  return "needs-attention";
+}
+
+function reviewSubmitWorkspaceStatus(readiness: PartnerApplicationReadiness): PartnerApplicationStepStatus {
+  if (readiness.applicationStatus === "APPROVED") return "completed";
+  if (readiness.applicationStatus === "SUBMITTED" || readiness.applicationStatus === "UNDER_REVIEW" || readiness.applicationStatus === "RESUBMITTED") return "under-review";
+  if (readiness.applicationStatus === "CHANGES_REQUESTED" || readiness.applicationStatus === "NOT_APPROVED") return "needs-attention";
+  return readiness.submissionReady ? "in-progress" : "needs-attention";
+}
+
+function formatStep8MetadataDate(value: string): string | null {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat("en-IN", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+}

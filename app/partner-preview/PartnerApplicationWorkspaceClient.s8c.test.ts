@@ -13,6 +13,11 @@ import {
   canSubmitPartnerStep8,
   declarationAcceptanceKey,
   normalizeStep8ErrorCode,
+  partnerStep8HeaderMetadata,
+  partnerStep8IssuesTitle,
+  partnerStep8NavigationStatusOverrides,
+  partnerStep8ReadOnlyStepOverrides,
+  partnerStep8ShowsPreSubmissionIssues,
   partnerStep8StateLabel,
   partnerStep8StepStatusLabel,
   requiredFinalDeclarations,
@@ -49,7 +54,7 @@ test("Step 8 renders seven authoritative review rows with human labels and reaso
 });
 
 test("blockers and warnings are separate, and raw identifiers are not normal UI fields", () => {
-    expect(workspaceSource).toContain("Must fix before submission");
+    expect(partnerStep8IssuesTitle(readyReadiness())).toBe("Must fix before submission");
     expect(workspaceSource).toContain("Warnings");
     expect(workspaceSource).not.toContain("{latestSubmission.snapshotHash}");
     expect(workspaceSource).not.toContain("{latestSubmission.submittedByUserId}");
@@ -155,4 +160,81 @@ test("submitted, changes requested, not approved and approved states are locked 
     expect(partnerStep8StateLabel("APPROVED", false)).toBe("Approved");
     expect(workspaceSource).toContain("Service activation, payout activation and Partner Desk access are handled separately.");
     expect(visibleSubmissionReference(buildPartnerQaPreviewSubmission("under-review"))).toBe("Submission 1");
+});
+
+test("sidebar and progress statuses use the Step 8 readiness contract in every QA state", () => {
+    for (const state of partnerQaPreviewStates) {
+      const readiness = buildPartnerQaPreviewReadiness(state.id);
+      const overrides = partnerStep8NavigationStatusOverrides(readiness);
+      for (const step of readiness.steps) {
+        const workspaceStep = step.step === "verification_compliance" ? "documents_compliance" : step.step;
+        expect(overrides[workspaceStep]).toBe(
+          step.status === "COMPLETE" ? "completed" : step.status === "UNDER_REVIEW" ? "under-review" : step.status === "UNAVAILABLE" ? "locked" : "needs-attention",
+        );
+      }
+    }
+    expect(partnerStep8NavigationStatusOverrides(buildPartnerQaPreviewReadiness("ready")).partner_agreement).toBe("completed");
+});
+
+test("Ready to Submit marks all prerequisite steps complete across navigation", () => {
+    const overrides = partnerStep8NavigationStatusOverrides(buildPartnerQaPreviewReadiness("ready"));
+    expect(overrides.account_contact).toBe("completed");
+    expect(overrides.business_identity).toBe("completed");
+    expect(overrides.business_location).toBe("completed");
+    expect(overrides.services).toBe("completed");
+    expect(overrides.documents_compliance).toBe("completed");
+    expect(overrides.payout_tax).toBe("completed");
+    expect(overrides.partner_agreement).toBe("completed");
+});
+
+test("submitted and terminal states lock prior steps and suppress draft footer actions", () => {
+    for (const state of ["under-review", "rejected", "approved"] as const) {
+      const locks = partnerStep8ReadOnlyStepOverrides(buildPartnerQaPreviewReadiness(state));
+      expect(locks.account_contact).toBe(true);
+      expect(locks.business_identity).toBe(true);
+      expect(locks.documents_compliance).toBe(true);
+      expect(locks.partner_agreement).toBe(true);
+    }
+    expect(workspaceSource).toContain("activeStepReadOnly ? (");
+    const readOnlyFooterSlice = workspaceSource.slice(workspaceSource.indexOf("function ReadOnlyStepFooter"), workspaceSource.indexOf("function StateCard"));
+    expect(readOnlyFooterSlice).not.toContain("Save as Draft");
+    expect(readOnlyFooterSlice).not.toContain("Save & Continue");
+});
+
+test("Changes Required unlocks only requested sections", () => {
+    const locks = partnerStep8ReadOnlyStepOverrides(buildPartnerQaPreviewReadiness("changes-required"));
+    expect(locks.documents_compliance).toBe(false);
+    expect(locks.account_contact).toBe(true);
+    expect(locks.business_identity).toBe(true);
+    expect(locks.services).toBe(true);
+    expect(locks.partner_agreement).toBe(true);
+});
+
+test("Steps 1-7 remain editable before submitted review states", () => {
+    for (const state of ["new", "incomplete", "ready"] as const) {
+      const locks = partnerStep8ReadOnlyStepOverrides(buildPartnerQaPreviewReadiness(state));
+      expect(locks.account_contact).toBe(false);
+      expect(locks.business_identity).toBe(false);
+      expect(locks.documents_compliance).toBe(false);
+      expect(locks.partner_agreement).toBe(false);
+    }
+});
+
+test("submitted states never use draft-only Not saved yet metadata", () => {
+    for (const state of ["under-review", "changes-required", "rejected", "approved"] as const) {
+      const readiness = buildPartnerQaPreviewReadiness(state);
+      const submission = buildPartnerQaPreviewSubmission(state);
+      const metadata = partnerStep8HeaderMetadata(readiness, submission, "Not saved yet");
+      expect(metadata).not.toBe("Not saved yet");
+      expect(metadata).toContain(visibleSubmissionReference(submission));
+    }
+});
+
+test("submitted and terminal Step 8 states do not show pre-submission blocker language", () => {
+    expect(partnerStep8ShowsPreSubmissionIssues(buildPartnerQaPreviewReadiness("under-review"))).toBe(false);
+    expect(partnerStep8ShowsPreSubmissionIssues(buildPartnerQaPreviewReadiness("rejected"))).toBe(false);
+    expect(partnerStep8ShowsPreSubmissionIssues(buildPartnerQaPreviewReadiness("approved"))).toBe(false);
+    expect(partnerStep8ShowsPreSubmissionIssues(buildPartnerQaPreviewReadiness("ready"))).toBe(true);
+    const reviewStepSlice = workspaceSource.slice(workspaceSource.indexOf("function ReviewSubmitStep"), workspaceSource.indexOf("function Step8Issues"));
+    expect(reviewStepSlice).toContain("partnerStep8ShowsPreSubmissionIssues(readiness)");
 });
