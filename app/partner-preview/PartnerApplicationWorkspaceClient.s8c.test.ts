@@ -15,6 +15,7 @@ import {
   normalizeStep8ErrorCode,
   partnerStep8HeaderMetadata,
   partnerStep8IssuesTitle,
+  partnerStep8NavigationLabel,
   partnerStep8NavigationStatusOverrides,
   partnerStep8ReadOnlyStepOverrides,
   partnerStep8ShowsPreSubmissionIssues,
@@ -187,6 +188,34 @@ test("Ready to Submit marks all prerequisite steps complete across navigation", 
     expect(overrides.partner_agreement).toBe("completed");
 });
 
+test("Ready header never says Not saved yet and uses revision metadata", () => {
+    const readiness = buildPartnerQaPreviewReadiness("ready");
+    const metadata = partnerStep8HeaderMetadata(readiness, null, "Not saved yet");
+    expect(metadata).toBe("Ready to submit · Revision 7");
+    expect(metadata).not.toBe("Not saved yet");
+});
+
+test("canonical navigation labels preserve ready editing and suppress terminal Edit labels", () => {
+    const ready = buildPartnerQaPreviewReadiness("ready");
+    const readyStatus = partnerStep8NavigationStatusOverrides(ready);
+    expect(partnerStep8NavigationLabel(ready, "account_contact", readyStatus.account_contact ?? "locked")).toBe("Complete · Edit");
+    expect(partnerStep8NavigationLabel(ready, "review_submit", readyStatus.review_submit ?? "locked")).toBe("In Progress");
+
+    for (const state of ["under-review", "rejected", "approved"] as const) {
+      const readiness = buildPartnerQaPreviewReadiness(state);
+      const status = partnerStep8NavigationStatusOverrides(readiness);
+      expect(partnerStep8NavigationLabel(readiness, "account_contact", status.account_contact ?? "locked")).not.toContain("Edit");
+      expect(partnerStep8NavigationLabel(readiness, "partner_agreement", status.partner_agreement ?? "locked")).not.toContain("Edit");
+    }
+});
+
+test("Not Approved and Approved Step 8 navigation labels match terminal states", () => {
+    const rejected = buildPartnerQaPreviewReadiness("rejected");
+    const approved = buildPartnerQaPreviewReadiness("approved");
+    expect(partnerStep8NavigationLabel(rejected, "review_submit", partnerStep8NavigationStatusOverrides(rejected).review_submit ?? "locked")).toBe("Not Approved");
+    expect(partnerStep8NavigationLabel(approved, "review_submit", partnerStep8NavigationStatusOverrides(approved).review_submit ?? "locked")).toBe("Approved");
+});
+
 test("submitted and terminal states lock prior steps and suppress draft footer actions", () => {
     for (const state of ["under-review", "rejected", "approved"] as const) {
       const locks = partnerStep8ReadOnlyStepOverrides(buildPartnerQaPreviewReadiness(state));
@@ -203,11 +232,15 @@ test("submitted and terminal states lock prior steps and suppress draft footer a
 
 test("Changes Required unlocks only requested sections", () => {
     const locks = partnerStep8ReadOnlyStepOverrides(buildPartnerQaPreviewReadiness("changes-required"));
+    const readiness = buildPartnerQaPreviewReadiness("changes-required");
+    const status = partnerStep8NavigationStatusOverrides(readiness);
     expect(locks.documents_compliance).toBe(false);
     expect(locks.account_contact).toBe(true);
     expect(locks.business_identity).toBe(true);
     expect(locks.services).toBe(true);
     expect(locks.partner_agreement).toBe(true);
+    expect(partnerStep8NavigationLabel(readiness, "documents_compliance", status.documents_compliance ?? "locked")).toBe("Needs Attention");
+    expect(partnerStep8NavigationLabel(readiness, "account_contact", status.account_contact ?? "locked")).toBe("Complete");
 });
 
 test("Steps 1-7 remain editable before submitted review states", () => {

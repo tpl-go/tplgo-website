@@ -92,6 +92,7 @@ import {
   partnerStep8CorrectionRoute,
   partnerStep8HeaderMetadata,
   partnerStep8IssuesTitle,
+  partnerStep8NavigationLabel,
   partnerStep8NavigationStatusOverrides,
   partnerStep8ReadOnlyStepOverrides,
   partnerStep8ShowsPreSubmissionIssues,
@@ -1695,16 +1696,16 @@ export default function PartnerApplicationWorkspaceClient({
               </Link>
             </div>
           </div>
-          <TopProgress activeStep={activeStep} readModel={readModel} qaPreviewEnabled={qaPreviewEnabled} accountStepOverride={accountStepOverride} businessStepOverride={businessStepOverride} locationStepOverride={locationStepOverride} servicesStepOverride={servicesStepOverride} stepStatusOverrides={step8NavigationStatusOverrides} />
+          <TopProgress activeStep={activeStep} readModel={readModel} readiness={effectiveStep8Readiness} qaPreviewEnabled={qaPreviewEnabled} accountStepOverride={accountStepOverride} businessStepOverride={businessStepOverride} locationStepOverride={locationStepOverride} servicesStepOverride={servicesStepOverride} stepStatusOverrides={step8NavigationStatusOverrides} />
         </header>
 
         {qaPreviewEnabled ? <QaPreviewBar selectedState={qaPreviewState} onChange={changeQaPreviewState} onReset={resetQaPreviewData} /> : null}
         {message ? <WorkspaceToast tone={message.tone} text={message.text} onDismiss={() => setMessage(null)} /> : null}
 
         <div className="grid flex-1 gap-4 px-4 py-4 lg:grid-cols-[270px_minmax(0,1fr)] xl:grid-cols-[280px_minmax(0,1fr)_360px] 2xl:grid-cols-[300px_minmax(0,1fr)_390px]">
-          <StepNavigator activeStep={activeStep} readModel={readModel} qaPreviewEnabled={qaPreviewEnabled} accountStepOverride={accountStepOverride} businessStepOverride={businessStepOverride} locationStepOverride={locationStepOverride} servicesStepOverride={servicesStepOverride} stepStatusOverrides={step8NavigationStatusOverrides} readOnlyStepOverrides={step8ReadOnlyStepOverrides} onSelect={(step) => setActiveStep(step)} />
+          <StepNavigator activeStep={activeStep} readModel={readModel} readiness={effectiveStep8Readiness} qaPreviewEnabled={qaPreviewEnabled} accountStepOverride={accountStepOverride} businessStepOverride={businessStepOverride} locationStepOverride={locationStepOverride} servicesStepOverride={servicesStepOverride} stepStatusOverrides={step8NavigationStatusOverrides} onSelect={(step) => setActiveStep(step)} />
           <section className="min-w-0">
-            <MobileStepSelector activeStep={activeStep} readModel={readModel} qaPreviewEnabled={qaPreviewEnabled} accountStepOverride={accountStepOverride} businessStepOverride={businessStepOverride} locationStepOverride={locationStepOverride} servicesStepOverride={servicesStepOverride} stepStatusOverrides={step8NavigationStatusOverrides} onSelect={(step) => setActiveStep(step)} />
+            <MobileStepSelector activeStep={activeStep} readModel={readModel} readiness={effectiveStep8Readiness} qaPreviewEnabled={qaPreviewEnabled} accountStepOverride={accountStepOverride} businessStepOverride={businessStepOverride} locationStepOverride={locationStepOverride} servicesStepOverride={servicesStepOverride} stepStatusOverrides={step8NavigationStatusOverrides} onSelect={(step) => setActiveStep(step)} />
             {loadStatus === "loading" ? (
               <LoadingCard />
             ) : activeStep === "review_submit" ? (
@@ -2968,24 +2969,24 @@ function CountrySelect({ value, onChange }: { value: string; onChange: (country:
 function StepNavigator({
   activeStep,
   readModel,
+  readiness,
   qaPreviewEnabled,
   accountStepOverride,
   businessStepOverride,
   locationStepOverride,
   servicesStepOverride,
   stepStatusOverrides,
-  readOnlyStepOverrides,
   onSelect,
 }: {
   activeStep: WorkspaceStepId;
   readModel: ReturnType<typeof buildPartnerApplicationCenterReadModel>;
+  readiness: PartnerApplicationReadiness | null;
   qaPreviewEnabled: boolean;
   accountStepOverride?: PartnerApplicationStepStatus;
   businessStepOverride?: PartnerApplicationStepStatus;
   locationStepOverride?: PartnerApplicationStepStatus;
   servicesStepOverride?: PartnerApplicationStepStatus;
   stepStatusOverrides?: Partial<Record<WorkspaceStepId, PartnerApplicationStepStatus>>;
-  readOnlyStepOverrides?: Partial<Record<WorkspaceStepId, boolean>>;
   onSelect: (step: WorkspaceStepId) => void;
 }) {
   return (
@@ -2996,7 +2997,6 @@ function StepNavigator({
           {workspaceSteps.map((step) => {
             const modelStep = readModel.steps.find((item) => item.id === step.id);
             const status = displayedStepStatus(step.id, activeStep, modelStep?.status ?? "locked", qaPreviewEnabled, accountStepOverride, businessStepOverride, locationStepOverride, servicesStepOverride, stepStatusOverrides);
-            const readOnly = readOnlyStepOverrides?.[step.id] === true;
             const current = activeStep === step.id;
             const Icon = step.icon;
             const enabled = qaPreviewEnabled || Boolean(modelStep?.enabled);
@@ -3018,7 +3018,7 @@ function StepNavigator({
                 <span className="min-w-0 flex-1">
                   <span data-step-title={step.id} className="block truncate text-sm font-black text-white">{step.number}. {step.title}</span>
                   <span className={`block text-xs font-semibold ${current ? "text-[#fb923c]" : status === "completed" ? "text-emerald-300" : status === "needs-attention" ? "text-amber-300" : "text-slate-400"}`}>
-                    {humanStatus(status, current)}{status === "completed" && !readOnly && !isSubmittedFinal(readModel) ? " · Edit" : ""}
+                    {partnerStep8NavigationLabel(readiness, step.id, status)}
                   </span>
                 </span>
               </button>
@@ -3033,6 +3033,7 @@ function StepNavigator({
 function MobileStepSelector({
   activeStep,
   readModel,
+  readiness,
   qaPreviewEnabled,
   accountStepOverride,
   businessStepOverride,
@@ -3043,6 +3044,7 @@ function MobileStepSelector({
 }: {
   activeStep: WorkspaceStepId;
   readModel: ReturnType<typeof buildPartnerApplicationCenterReadModel>;
+  readiness: PartnerApplicationReadiness | null;
   qaPreviewEnabled: boolean;
   accountStepOverride?: PartnerApplicationStepStatus;
   businessStepOverride?: PartnerApplicationStepStatus;
@@ -3066,7 +3068,7 @@ function MobileStepSelector({
             const status = displayedStepStatus(step.id, activeStep, modelStep?.status ?? "locked", qaPreviewEnabled, accountStepOverride, businessStepOverride, locationStepOverride, servicesStepOverride, stepStatusOverrides);
             return (
               <option key={step.id} value={step.id} disabled={!enabled}>
-                {step.number}. {step.title} - {humanStatus(status, activeStep === step.id)}
+                {step.number}. {step.title} - {partnerStep8NavigationLabel(readiness, step.id, status)}
               </option>
             );
           })}
@@ -3079,6 +3081,7 @@ function MobileStepSelector({
 function TopProgress({
   activeStep,
   readModel,
+  readiness,
   qaPreviewEnabled,
   accountStepOverride,
   businessStepOverride,
@@ -3088,6 +3091,7 @@ function TopProgress({
 }: {
   activeStep: WorkspaceStepId;
   readModel: ReturnType<typeof buildPartnerApplicationCenterReadModel>;
+  readiness: PartnerApplicationReadiness | null;
   qaPreviewEnabled: boolean;
   accountStepOverride?: PartnerApplicationStepStatus;
   businessStepOverride?: PartnerApplicationStepStatus;
@@ -3143,7 +3147,7 @@ function TopProgress({
                     </span>
                     <span className="min-w-0">
                       <span className="block truncate text-xs font-black text-white">{step.number}. {step.title}</span>
-                      <span className="block text-[11px] font-semibold text-slate-400">{humanStatus(status, current)}</span>
+                      <span className="block text-[11px] font-semibold text-slate-400">{partnerStep8NavigationLabel(readiness, step.id, status)}</span>
                     </span>
                   </li>
                 );
@@ -3162,8 +3166,8 @@ function TopProgress({
               <div
                 data-application-progress-step={step.id}
                 aria-current={current ? "step" : undefined}
-                aria-label={`${step.title}: ${humanStatus(status, current)}`}
-                title={`${step.title}: ${humanStatus(status, current)}`}
+                aria-label={`${step.title}: ${partnerStep8NavigationLabel(readiness, step.id, status)}`}
+                title={`${step.title}: ${partnerStep8NavigationLabel(readiness, step.id, status)}`}
                 className={`flex h-9 min-w-0 flex-1 items-center gap-2 rounded-xl border px-2 transition-colors motion-reduce:transition-none ${visual.segment}`}
               >
                 <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-black ${visual.node}`}>
@@ -5610,15 +5614,6 @@ function createPartnerStep8AttemptKey(): string {
   return `partner_step8_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
-function humanStatus(status: PartnerApplicationStepStatus, current: boolean): string {
-  if (status === "completed") return "Complete";
-  if (status === "needs-attention") return "Needs Attention";
-  if (status === "under-review") return "Under Review";
-  if (status === "locked") return "Locked";
-  if (current || status === "in-progress") return "In Progress";
-  return "Not Started";
-}
-
 function displayedStepStatus(
   stepId: WorkspaceStepId,
   activeStep: WorkspaceStepId,
@@ -5644,10 +5639,6 @@ function displayedStepStatus(
   if (stepId === "business_location" && locationStepOverride && baseStatus !== "locked") return locationStepOverride;
   if (stepId === "services" && servicesStepOverride && baseStatus !== "locked") return servicesStepOverride;
   return baseStatus;
-}
-
-function isSubmittedFinal(readModel: ReturnType<typeof buildPartnerApplicationCenterReadModel>): boolean {
-  return readModel.overallStatus === "under-review" || readModel.overallStatus === "changes-required" || readModel.overallStatus === "rejected";
 }
 
 function isWorkspaceStep(value: unknown): value is WorkspaceStepId {
