@@ -67,13 +67,14 @@ test("Step 7 blocks unsigned continuation while preserving draft save", () => {
 });
 
 test("Step 7 save feedback uses one non-blocking top-layer toast", () => {
+  const toastSlice = workspaceSource.slice(workspaceSource.indexOf("function WorkspaceToast"), workspaceSource.indexOf("function ReviewSubmitStep"));
   expect(workspaceSource).toContain("data-save-draft-toast-layer");
   expect(workspaceSource).toContain('data-save-draft-toast-position="content-top-center"');
   expect(workspaceSource).toContain("z-[120]");
   expect(workspaceSource).toContain("pointer-events-none fixed inset-x-0 top-20");
-  expect(workspaceSource).not.toContain("data-save-draft-modal-layer");
-  expect(workspaceSource).not.toContain('aria-modal="true"');
-  expect(workspaceSource).not.toContain('document.body.style.overflow = "hidden"');
+  expect(toastSlice).not.toContain("data-save-draft-modal-layer");
+  expect(toastSlice).not.toContain('aria-modal="true"');
+  expect(toastSlice).not.toContain('document.body.style.overflow = "hidden"');
 });
 
 test("Website Experience Partner Application removes local workflow controls and keeps central drafting", () => {
@@ -82,7 +83,7 @@ test("Website Experience Partner Application removes local workflow controls and
   expect(websiteExperienceSource).not.toContain("Open one Partner Application section.");
   expect(websiteExperienceSource).not.toContain("Open one application section at a time.");
   expect(websiteExperienceSource).toContain("function LocalStepEditorActions");
-  expect(websiteExperienceSource).toContain("Preview your changes, then save a draft.");
+  expect(websiteExperienceSource).toContain("Preview, then save as Draft.");
   expect(websiteExperienceSource).toContain('href="#website-experience-preview"');
   expect(websiteExperienceSource).toContain("Save as Draft");
   const partnerEditorSlice = websiteExperienceSource.slice(websiteExperienceSource.indexOf("function PartnerApplicationTreeEditor"), websiteExperienceSource.indexOf("function partnerApplicationDisplayLabel"));
@@ -119,7 +120,7 @@ test("Website Experience Step 7 content units expose Agreement Templates under t
   expect(websiteExperienceSource).toContain("Back to Step 7");
   expect(websiteExperienceSource).toContain("stepSevenUnitIds");
   expect(websiteExperienceSource).toContain("Company details added automatically");
-  expect(websiteExperienceSource).toContain("Choose one area to edit. Each item opens on its own page.");
+  expect(websiteExperienceSource).toContain("Choose an area to edit.");
   expect(websiteExperienceSource).not.toContain('Website Experience &gt; Pages &gt; Partner &gt; Partner Application &gt; {selectedNodeDisplayLabel}');
   expect(websiteExperienceSource).not.toContain('label="Back to Partner Application" className="border-slate-300 bg-slate-950 text-sky-100"');
 });
@@ -160,8 +161,9 @@ test("Agreement template Save Draft hands off to the central Draft queue exactly
   expect(apiClientSource).toContain("draftId?: string");
   expect(apiClientSource).toContain("centralDraft:");
   expect(websiteExperienceSource).toContain('data-agreement-template-central-draft-handoff="ready"');
-  expect(websiteExperienceSource).toContain("Open Draft");
-  expect(websiteExperienceSource).toContain("Open saved draft");
+  expect((websiteExperienceSource.match(/Open saved Draft/g) ?? []).length).toBe(1);
+  expect(websiteExperienceSource).not.toContain(">Open Draft<");
+  expect(websiteExperienceSource).not.toContain(">Open saved draft<");
   expect(websiteExperienceSource).toContain("result.data.centralDraft?.route");
   expect(websiteExperienceSource).toContain("centralDraftRouteFromTemplate(selected)");
   expect(websiteExperienceSource).toContain("agreementTemplateCentralDraftRoute(template.id)");

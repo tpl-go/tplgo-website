@@ -1,10 +1,19 @@
-import type { PartnerOrganizationBundle, PartnerVerificationStatus } from "./partnerApiClient";
+import type {
+  PartnerApplicationReadiness,
+  PartnerApplicationStatus,
+  PartnerApplicationStepKey,
+  PartnerApplicationStepReadiness,
+  PartnerApplicationSubmissionSummary,
+  PartnerOrganizationBundle,
+  PartnerVerificationStatus,
+} from "./partnerApiClient";
 
-export type PartnerQaPreviewState = "new" | "incomplete" | "under-review" | "changes-required" | "rejected" | "approved";
+export type PartnerQaPreviewState = "new" | "incomplete" | "ready" | "under-review" | "changes-required" | "rejected" | "approved";
 
 export const partnerQaPreviewStates: Array<{ id: PartnerQaPreviewState; label: string }> = [
   { id: "new", label: "New Partner" },
   { id: "incomplete", label: "Application in Progress" },
+  { id: "ready", label: "Ready to Submit" },
   { id: "under-review", label: "Under Review" },
   { id: "changes-required", label: "Changes Required" },
   { id: "rejected", label: "Application Not Approved" },
@@ -21,6 +30,15 @@ export function buildPartnerQaPreviewBundle(state: PartnerQaPreviewState): Partn
       serviceCount: 1,
       requirementsReady: false,
       blockingRequirements: 2,
+    });
+  }
+  if (state === "ready") {
+    return createFixtureBundle({
+      organizationStatus: "draft",
+      reviewStatus: "NOT_SUBMITTED",
+      contactsVerified: true,
+      serviceCount: 2,
+      requirementsReady: true,
     });
   }
   if (state === "under-review") {
@@ -66,6 +84,116 @@ export function buildPartnerQaPreviewBundle(state: PartnerQaPreviewState): Partn
     submittedAt: "2026-08-27T12:00:00.000Z",
     completedAt: "2026-08-29T12:00:00.000Z",
   });
+}
+
+export function buildPartnerQaPreviewReadiness(state: PartnerQaPreviewState): PartnerApplicationReadiness {
+  const bundle = buildPartnerQaPreviewBundle(state);
+  const completeSteps = stepKeys.map((step) => qaStep(step, "COMPLETE", "Ready for final review."));
+  const incompleteSteps = stepKeys.map((step, index) => qaStep(
+    step,
+    index < 3 ? "COMPLETE" : index === 4 ? "UNDER_REVIEW" : "NEEDS_ATTENTION",
+    index < 3 ? "Information has been added." : index === 4 ? "Evidence is submitted for TPL review." : "Finish this section before submitting.",
+  ));
+  const changesRequestedSteps = stepKeys.map((step) => qaStep(
+    step,
+    step === "verification_compliance" ? "NEEDS_ATTENTION" : "COMPLETE",
+    step === "verification_compliance" ? "Upload a clearer address document." : "No change requested.",
+  ));
+
+  if (state === "new") return qaReadiness({ bundle, status: "DRAFT_INCOMPLETE", submissionReady: false, steps: stepKeys.map((step) => qaStep(step, "NEEDS_ATTENTION", "Start this section.")), blockers: ["APPLICATION_NOT_STARTED"], declarations: [] });
+  if (state === "incomplete") return qaReadiness({ bundle, status: "DRAFT_INCOMPLETE", submissionReady: false, steps: incompleteSteps, blockers: ["READINESS_BLOCKER"], declarations: [qaFinalSubmissionDeclaration] });
+  if (state === "ready") return qaReadiness({ bundle, status: "READY_TO_SUBMIT", submissionReady: true, steps: completeSteps, blockers: [], declarations: [qaFinalSubmissionDeclaration] });
+  if (state === "under-review") return qaReadiness({ bundle, status: "UNDER_REVIEW", submissionReady: false, steps: completeSteps, blockers: [], declarations: [qaFinalSubmissionDeclaration], latestSubmission: buildPartnerQaPreviewSubmission(state) });
+  if (state === "changes-required") return qaReadiness({ bundle, status: "CHANGES_REQUESTED", submissionReady: false, steps: changesRequestedSteps, blockers: ["CHANGES_REQUESTED"], declarations: [qaFinalSubmissionDeclaration], latestSubmission: buildPartnerQaPreviewSubmission(state), warnings: ["TPL review requested an update."] });
+  if (state === "rejected") return qaReadiness({ bundle, status: "NOT_APPROVED", submissionReady: false, steps: completeSteps, blockers: ["APPLICATION_NOT_APPROVED"], declarations: [qaFinalSubmissionDeclaration], latestSubmission: buildPartnerQaPreviewSubmission(state) });
+  return qaReadiness({ bundle, status: "APPROVED", submissionReady: false, steps: completeSteps, blockers: [], declarations: [qaFinalSubmissionDeclaration], latestSubmission: buildPartnerQaPreviewSubmission(state) });
+}
+
+export function buildPartnerQaPreviewSubmission(state: PartnerQaPreviewState): PartnerApplicationSubmissionSummary | null {
+  if (!["under-review", "changes-required", "rejected", "approved"].includes(state)) return null;
+  const statusByState: Record<Exclude<PartnerQaPreviewState, "new" | "incomplete" | "ready">, PartnerApplicationStatus> = {
+    "under-review": "UNDER_REVIEW",
+    "changes-required": "CHANGES_REQUESTED",
+    rejected: "NOT_APPROVED",
+    approved: "APPROVED",
+  };
+  return {
+    id: `qa-preview-submission-${state}`,
+    submissionRevision: state === "changes-required" ? 2 : 1,
+    workflowStatus: statusByState[state as Exclude<PartnerQaPreviewState, "new" | "incomplete" | "ready">],
+    snapshotHash: "qa-preview-safe-hidden-hash",
+    submittedAt: state === "approved" ? "2026-08-27T12:00:00.000Z" : "2026-08-30T12:00:00.000Z",
+    submittedByUserId: "qa-preview-partner",
+  };
+}
+
+export const qaFinalSubmissionDeclaration = {
+  id: "qa-final-submission-test-declaration",
+  version: 1,
+  title: "QA-only final submission declaration",
+  active: true,
+  required: true,
+  appliesTo: "final_submission" as const,
+};
+
+const stepKeys: PartnerApplicationStepKey[] = [
+  "account_contact",
+  "business_identity",
+  "business_location",
+  "services",
+  "verification_compliance",
+  "payout_tax",
+  "partner_agreement",
+];
+
+const stepLabels: Record<PartnerApplicationStepKey, string> = {
+  account_contact: "Account & Contact",
+  business_identity: "Business Identity",
+  business_location: "Business Location",
+  services: "Services",
+  verification_compliance: "Verification & Compliance",
+  payout_tax: "Payout & Tax",
+  partner_agreement: "Partner Agreement",
+};
+
+function qaStep(step: PartnerApplicationStepKey, status: PartnerApplicationStepReadiness["status"], reason: string): PartnerApplicationStepReadiness {
+  return {
+    step,
+    label: stepLabels[step],
+    status,
+    reason,
+    blockerCodes: status === "NEEDS_ATTENTION" ? ["QA_PREVIEW_NEEDS_ATTENTION"] : [],
+    warningCodes: status === "UNDER_REVIEW" ? ["QA_PREVIEW_UNDER_REVIEW"] : [],
+    correctionRoute: `/partner-preview?qa=1&step=${step === "verification_compliance" ? "documents_compliance" : step}`,
+  };
+}
+
+function qaReadiness(input: {
+  bundle: PartnerOrganizationBundle | null;
+  status: PartnerApplicationStatus;
+  submissionReady: boolean;
+  steps: PartnerApplicationStepReadiness[];
+  blockers: string[];
+  declarations: PartnerApplicationReadiness["activeDeclarations"];
+  latestSubmission?: PartnerApplicationSubmissionSummary | null;
+  warnings?: string[];
+}): PartnerApplicationReadiness {
+  return {
+    organizationId: input.bundle?.organization.id ?? null,
+    applicationId: input.bundle?.organization.id ?? null,
+    organizationName: input.bundle?.organization.brandName || input.bundle?.organization.legalName || "QA Preview Partner",
+    organizationStatus: input.bundle?.organization.status ?? null,
+    applicationStatus: input.status,
+    applicationRevision: input.status === "READY_TO_SUBMIT" ? 7 : 4,
+    submissionReady: input.submissionReady,
+    approvalReady: input.status === "APPROVED",
+    steps: input.steps,
+    submissionBlockers: input.blockers,
+    approvalBlockers: input.status === "APPROVED" ? [] : ["QA_PREVIEW_APPROVAL_PENDING"],
+    warnings: input.warnings ?? [],
+    activeDeclarations: input.declarations,
+    latestSubmission: input.latestSubmission ?? null,
+  };
 }
 
 function createFixtureBundle(input: {

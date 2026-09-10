@@ -31,6 +31,7 @@ import {
 import { useAuth } from "../hooks/useAuth";
 import {
   fetchPartnerApplicationDraft,
+  fetchPartnerApplicationSubmission,
   fetchPartnerServiceCatalogue,
   requestPartnerEmailVerification,
   requestPartnerMobileVerification,
@@ -46,9 +47,12 @@ import {
   createPartnerDocumentUploadSession,
   confirmPartnerDocument,
   linkPartnerDocumentToRequirement,
+  submitPartnerApplication,
   verifyPartnerEmail,
   verifyPartnerMobile,
   type PartnerApplicationContentNode,
+  type PartnerApplicationReadiness,
+  type PartnerApplicationSubmissionSummary,
   type PartnerMobileChallenge,
   type PartnerRequirement,
   type PartnerOrganizationBundle,
@@ -73,9 +77,27 @@ import {
 } from "../lib/partner/partnerApplicationCenter";
 import {
   buildPartnerQaPreviewBundle,
+  buildPartnerQaPreviewReadiness,
+  buildPartnerQaPreviewSubmission,
   partnerQaPreviewStates,
   type PartnerQaPreviewState,
 } from "../lib/partner/partnerQaPreviewFixtures";
+import {
+  buildPartnerStep8SubmitInput,
+  canSubmitPartnerStep8,
+  declarationAcceptanceKey,
+  hasFinalDeclarationConfiguration,
+  normalizeStep8ErrorCode,
+  partnerStep8ActionLabel,
+  partnerStep8CorrectionRoute,
+  partnerStep8StateLabel,
+  partnerStep8StepStatusLabel,
+  requiredFinalDeclarations,
+  step8BlockingReason,
+  step8SafeErrorMessage,
+  visibleSubmissionReference,
+  type PartnerStep8ErrorCode,
+} from "../lib/partner/partnerStep8Review";
 import { activeCountries, findCountry, type CountryMasterEntry } from "../lib/partner/countryMaster";
 import { emptyPartnerOrganizationPreviewProfile } from "../lib/partner/partnerOrganizationPreviewProfile";
 
@@ -597,6 +619,24 @@ export default function PartnerApplicationWorkspaceClient({
   const [qaVerifiedContacts, setQaVerifiedContacts] = useState({ mobile: false, email: false });
   const [payoutTaxContent, setPayoutTaxContent] = useState<PayoutTaxContent>(fallbackPayoutTaxContent);
   const [agreementContent, setAgreementContent] = useState<AgreementContent>(fallbackAgreementContent);
+  const [reviewSubmitContent, setReviewSubmitContent] = useState<AgreementContent>({
+    title: "Review & Submit",
+    subtitle: "Review your application before sending it to TPL GO.",
+    helperText: "",
+    signerInstructions: "",
+    signingMethodCopy: "",
+    documentInstructions: "",
+    reviewReadyCopy: "",
+    reviewIncompleteCopy: "",
+  });
+  const [step8Readiness, setStep8Readiness] = useState<PartnerApplicationReadiness | null>(qaPreviewEnabled ? buildPartnerQaPreviewReadiness(initialQaState) : null);
+  const [step8Submission, setStep8Submission] = useState<PartnerApplicationSubmissionSummary | null>(qaPreviewEnabled ? buildPartnerQaPreviewSubmission(initialQaState) : null);
+  const [step8LoadStatus, setStep8LoadStatus] = useState<"idle" | "loading" | "ready" | "error">(qaPreviewEnabled ? "ready" : "idle");
+  const [step8Error, setStep8Error] = useState<{ code: PartnerStep8ErrorCode; message: string } | null>(null);
+  const [acceptedStep8Declarations, setAcceptedStep8Declarations] = useState<Record<string, boolean>>({});
+  const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
+  const submitAttemptKeyRef = useRef<string | null>(null);
   const [serviceCatalogueState, setServiceCatalogueState] = useState<RuntimeCatalogueState>({
     status: "loading",
     version: null,
@@ -619,7 +659,6 @@ export default function PartnerApplicationWorkspaceClient({
     () => buildPartnerApplicationCenterReadModel({ bundle: activeBundle, profile: minimalProfile(form), selectedServices, catalogueItems: serviceCatalogueState.items }),
     [activeBundle, form, selectedServices, serviceCatalogueState.items]
   );
-  const isSubmittedState = readModel.overallStatus === "under-review" || readModel.overallStatus === "changes-required" || readModel.overallStatus === "rejected";
   const isApprovedState = readModel.overallStatus === "approved";
   const mobileVerified = qaPreviewEnabled ? qaVerifiedContacts.mobile || contactVerified(activeBundle, "mobile", normalizedMobile(form.businessMobile, form.countryCode)) : contactVerified(activeBundle, "mobile", normalizedMobile(form.businessMobile, form.countryCode));
   const emailVerified = qaPreviewEnabled ? qaVerifiedContacts.email || contactVerified(activeBundle, "email", normalizeEmail(form.businessEmail)) : contactVerified(activeBundle, "email", normalizeEmail(form.businessEmail));
@@ -641,6 +680,11 @@ export default function PartnerApplicationWorkspaceClient({
   const canCompleteStepFour = serviceCatalogueState.status === "ready" && isServicesComplete(servicesForm, locationForm.primaryLocation.countryCode, businessForm.organizationType, serviceCatalogueState.items);
   const canCompleteStepSix = isPayoutTaxComplete(payoutTaxForm) || ["SUBMITTED", "UNDER_REVIEW", "VERIFIED"].includes(activeBundle?.payoutTaxReview?.status ?? "");
   const canCompleteStepSeven = isAgreementPartnerSigningComplete(activeBundle?.agreement?.status);
+  const effectiveStep8Readiness = qaPreviewEnabled ? step8Readiness ?? buildPartnerQaPreviewReadiness(qaPreviewState) : step8Readiness;
+  const effectiveStep8Submission = qaPreviewEnabled ? step8Submission : step8Submission ?? step8Readiness?.latestSubmission ?? null;
+  const step8StateLabel = effectiveStep8Readiness ? partnerStep8StateLabel(effectiveStep8Readiness.applicationStatus, effectiveStep8Readiness.submissionReady) : "Needs attention";
+  const step8CanSubmit = Boolean(effectiveStep8Readiness && canSubmitPartnerStep8(effectiveStep8Readiness, acceptedStep8Declarations));
+  const step8DisabledReason = step8BlockingReason(effectiveStep8Readiness, acceptedStep8Declarations);
 
   useEffect(() => {
     formRef.current = form;
@@ -694,13 +738,44 @@ export default function PartnerApplicationWorkspaceClient({
       if (cancelled || !result.ok) return;
       const stepSixNode = result.data.contexts?.partner_application?.applicationTree?.children.find((node) => node.id === "step-6-payout-tax");
       const stepSevenNode = result.data.contexts?.partner_application?.applicationTree?.children.find((node) => node.id === "step-7-partner-agreement");
+      const stepEightNode = result.data.contexts?.partner_application?.applicationTree?.children.find((node) => node.id === "step-8-review-submit");
       setPayoutTaxContent(payoutTaxContentFromNode(stepSixNode));
       setAgreementContent(agreementContentFromNode(stepSevenNode));
+      setReviewSubmitContent({
+        title: safePublishedCopy(stepEightNode?.title, "Review & Submit"),
+        subtitle: safePublishedCopy(stepEightNode?.subtitle, "Review your application before sending it to TPL GO."),
+        helperText: safePublishedCopy(stepEightNode?.helperText, ""),
+        signerInstructions: "",
+        signingMethodCopy: "",
+        documentInstructions: "",
+        reviewReadyCopy: "",
+        reviewIncompleteCopy: "",
+      });
     });
     return () => {
       cancelled = true;
     };
   }, []);
+
+  async function loadStep8ApplicationState(options: { silent?: boolean } = {}) {
+    if (qaPreviewEnabled || !isAuthenticated) return;
+    if (!options.silent) {
+      setStep8LoadStatus("loading");
+      setStep8Error(null);
+    }
+    const result = await fetchPartnerApplicationSubmission();
+    if (result.ok) {
+      setStep8Readiness(result.data.readiness);
+      setStep8Submission(result.data.latestSubmission ?? result.data.readiness.latestSubmission);
+      setAcceptedStep8Declarations({});
+      setStep8LoadStatus("ready");
+      setStep8Error(null);
+      return;
+    }
+    const code = normalizeStep8ErrorCode(result.status, result.error.code);
+    setStep8LoadStatus("error");
+    setStep8Error({ code, message: step8SafeErrorMessage(code) });
+  }
 
   useEffect(() => {
     if (serviceCatalogueState.status !== "ready") return;
@@ -709,6 +784,29 @@ export default function PartnerApplicationWorkspaceClient({
       return [...new Set([...current, ...fromSavedCodes])];
     });
   }, [serviceCatalogueState.items, serviceCatalogueState.status]);
+
+  useEffect(() => {
+    if (!qaPreviewEnabled) return;
+    setStep8Readiness(buildPartnerQaPreviewReadiness(qaPreviewState));
+    setStep8Submission(buildPartnerQaPreviewSubmission(qaPreviewState));
+    setAcceptedStep8Declarations({});
+    setStep8LoadStatus("ready");
+    setStep8Error(null);
+    setSubmitStatus("idle");
+    submitAttemptKeyRef.current = null;
+  }, [qaPreviewEnabled, qaPreviewState]);
+
+  useEffect(() => {
+    if (qaPreviewEnabled || !isAuthenticated) return;
+    void loadStep8ApplicationState({ silent: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, qaPreviewEnabled]);
+
+  useEffect(() => {
+    if (qaPreviewEnabled || !isAuthenticated || activeStep !== "review_submit") return;
+    void loadStep8ApplicationState({ silent: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeStep, isAuthenticated, qaPreviewEnabled]);
 
   useEffect(() => {
     if (qaPreviewEnabled) {
@@ -734,7 +832,7 @@ export default function PartnerApplicationWorkspaceClient({
       });
       setLastSavedAt(savedForState?.savedAt ?? null);
       setSaveStatus(savedForState ? "saved" : "idle");
-      setActiveStep(isWorkspaceStep(initialQaStep) ? initialQaStep : savedForState?.activeStep && isWorkspaceStep(savedForState.activeStep) ? savedForState.activeStep : qaPreviewState === "approved" ? "review_submit" : "account_contact");
+      setActiveStep(isWorkspaceStep(initialQaStep) ? initialQaStep : savedForState?.activeStep && isWorkspaceStep(savedForState.activeStep) ? savedForState.activeStep : qaPreviewStartsOnReview(qaPreviewState) ? "review_submit" : "account_contact");
       return;
     }
     if (!isAuthenticated) {
@@ -887,6 +985,67 @@ export default function PartnerApplicationWorkspaceClient({
   function changeQaPreviewState(state: PartnerQaPreviewState) {
     setQaPreviewState(state);
     router.replace(`/partner-preview?qa=1&state=${state}`, { scroll: false });
+  }
+
+  async function refreshStep8ApplicationState() {
+    submitAttemptKeyRef.current = null;
+    setSubmitStatus("idle");
+    await loadStep8ApplicationState({ silent: false });
+  }
+
+  async function submitStep8ForReview() {
+    if (!effectiveStep8Readiness) return;
+    if (qaPreviewEnabled) {
+      const submittedAt = new Date().toISOString();
+      setStep8Submission({
+        id: "qa-preview-submission-local",
+        submissionRevision: 1,
+        workflowStatus: "UNDER_REVIEW",
+        snapshotHash: "qa-preview-safe-hidden-hash",
+        submittedAt,
+        submittedByUserId: "qa-preview-partner",
+      });
+      setStep8Readiness({
+        ...buildPartnerQaPreviewReadiness("under-review"),
+        latestSubmission: {
+          id: "qa-preview-submission-local",
+          submissionRevision: 1,
+          workflowStatus: "UNDER_REVIEW",
+          snapshotHash: "qa-preview-safe-hidden-hash",
+          submittedAt,
+          submittedByUserId: "qa-preview-partner",
+        },
+      });
+      setSubmitConfirmOpen(false);
+      setSubmitStatus("success");
+      setMessage({ tone: "success", text: "QA preview moved to Under Review. No backend submission was made." });
+      return;
+    }
+    if (!step8CanSubmit || submitStatus === "submitting") return;
+    const idempotencyKey = submitAttemptKeyRef.current ?? createPartnerStep8AttemptKey();
+    submitAttemptKeyRef.current = idempotencyKey;
+    setSubmitConfirmOpen(false);
+    setSubmitStatus("submitting");
+    setStep8Error(null);
+    const result = await submitPartnerApplication(buildPartnerStep8SubmitInput(effectiveStep8Readiness, acceptedStep8Declarations, idempotencyKey));
+    if (result.ok) {
+      setStep8Submission(result.data.submission);
+      setStep8Readiness(result.data.readiness);
+      setAcceptedStep8Declarations({});
+      setSubmitStatus("success");
+      setMessage({ tone: "success", text: "Application submitted for review." });
+      return;
+    }
+    const code = normalizeStep8ErrorCode(result.status, result.error.code);
+    setSubmitStatus("error");
+    setStep8Error({ code, message: step8SafeErrorMessage(code) });
+    if (code === "ALREADY_SUBMITTED") {
+      await loadStep8ApplicationState({ silent: true });
+      return;
+    }
+    if (code === "STALE_APPLICATION_REVISION" || code === "IDEMPOTENCY_CONFLICT" || code === "INACTIVE_DECLARATION" || code === "WRONG_DECLARATION_VERSION") {
+      submitAttemptKeyRef.current = null;
+    }
   }
 
   function currentQaDraftPayload(step: WorkspaceStepId, savedAt: string) {
@@ -1451,6 +1610,8 @@ export default function PartnerApplicationWorkspaceClient({
     setBusinessForm(nextBusinessForm);
     setLocationForm(nextLocationForm);
     setServicesForm(nextServicesForm);
+    setPayoutTaxForm(payoutTaxFormFromBundle(qaBundle));
+    setAgreementForm(agreementFormFromBundle(qaBundle));
     setActiveServiceDomainIds(serviceDomainIdsFromCodes(nextServicesForm.selectedServiceCodes, serviceCatalogueState.items));
     setQaVerifiedContacts({
       mobile: contactVerified(qaBundle, "mobile", normalizedMobile(nextForm.businessMobile, nextForm.countryCode)),
@@ -1458,7 +1619,12 @@ export default function PartnerApplicationWorkspaceClient({
     });
     setSaveStatus("idle");
     setLastSavedAt(null);
-    setActiveStep(qaPreviewState === "approved" ? "review_submit" : "account_contact");
+    setStep8Readiness(buildPartnerQaPreviewReadiness(qaPreviewState));
+    setStep8Submission(buildPartnerQaPreviewSubmission(qaPreviewState));
+    setAcceptedStep8Declarations({});
+    setSubmitStatus("idle");
+    submitAttemptKeyRef.current = null;
+    setActiveStep(qaPreviewStartsOnReview(qaPreviewState) ? "review_submit" : "account_contact");
     setMessage({ tone: "info", text: "Preview data reset." });
   }
 
@@ -1532,10 +1698,28 @@ export default function PartnerApplicationWorkspaceClient({
             <MobileStepSelector activeStep={activeStep} readModel={readModel} qaPreviewEnabled={qaPreviewEnabled} accountStepOverride={accountStepOverride} businessStepOverride={businessStepOverride} locationStepOverride={locationStepOverride} servicesStepOverride={servicesStepOverride} onSelect={(step) => setActiveStep(step)} />
             {loadStatus === "loading" ? (
               <LoadingCard />
+            ) : activeStep === "review_submit" ? (
+              <ReviewSubmitStep
+                content={reviewSubmitContent}
+                readiness={effectiveStep8Readiness}
+                latestSubmission={effectiveStep8Submission}
+                loadStatus={step8LoadStatus}
+                error={step8Error}
+                acceptedDeclarations={acceptedStep8Declarations}
+                submitStatus={submitStatus}
+                stateLabel={step8StateLabel}
+                qaPreviewEnabled={qaPreviewEnabled}
+                onDeclarationChange={(key, accepted) => setAcceptedStep8Declarations((current) => ({ ...current, [key]: accepted }))}
+                onRetry={() => void loadStep8ApplicationState({ silent: false })}
+                onRefresh={() => void refreshStep8ApplicationState()}
+                onStepAction={(route) => {
+                  const url = new URL(route, window.location.origin);
+                  const step = url.searchParams.get("step");
+                  if (isWorkspaceStep(step)) setActiveStep(step);
+                }}
+              />
             ) : isApprovedState && !qaPreviewEnabled ? (
               <StateCard title="Your Partner account is ready" detail="The verified Partner Business Desk opens in the next approved phase." tone="success" />
-            ) : isSubmittedState && !qaPreviewEnabled && activeStep === "review_submit" ? (
-              <StateCard title={readModel.statusLabel} detail={readModel.reviewNote || "TPL GO will guide you through the next action when review is complete."} tone={readModel.overallStatus === "rejected" ? "danger" : "warning"} />
             ) : activeStep === "account_contact" ? (
               <AccountContactStep
                 form={form}
@@ -1633,6 +1817,9 @@ export default function PartnerApplicationWorkspaceClient({
             agreementSummary={activeStep === "partner_agreement" ? (
               <AgreementSummary form={agreementForm} bundle={activeBundle} canComplete={canCompleteStepSeven} />
             ) : null}
+            reviewSubmitSummary={activeStep === "review_submit" ? (
+              <ReviewSubmitSummary readiness={effectiveStep8Readiness} latestSubmission={effectiveStep8Submission} loadStatus={step8LoadStatus} stateLabel={step8StateLabel} />
+            ) : null}
             servicesSummary={activeStep === "services" ? (
               <SelectedServicesSummary
                 form={servicesForm}
@@ -1650,39 +1837,59 @@ export default function PartnerApplicationWorkspaceClient({
           />
         </div>
 
-        <footer className="sticky bottom-0 z-30 border-t border-white/10 bg-[#11141a]/95 px-4 py-3 backdrop-blur">
-          <div className="mx-auto flex max-w-7xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <button
-              type="button"
-              disabled={activeStep === "account_contact"}
-              onClick={() => setActiveStep(previousStep)}
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-white/10 px-4 text-sm font-black text-slate-300 disabled:cursor-not-allowed disabled:opacity-45"
-            >
-              <ArrowLeft size={16} aria-hidden="true" />
-              Previous
-            </button>
-            <div className="grid gap-2 sm:grid-cols-2">
+        {activeStep === "review_submit" ? (
+          <ReviewSubmitFooter
+            previousStep={previousStep}
+            readiness={effectiveStep8Readiness}
+            latestSubmission={effectiveStep8Submission}
+            canSubmit={step8CanSubmit}
+            disabledReason={step8DisabledReason}
+            submitStatus={submitStatus}
+            onPrevious={() => setActiveStep(previousStep)}
+            onSubmit={() => setSubmitConfirmOpen(true)}
+          />
+        ) : (
+          <footer className="sticky bottom-0 z-30 border-t border-white/10 bg-[#11141a]/95 px-4 py-3 backdrop-blur">
+            <div className="mx-auto flex max-w-7xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <button
                 type="button"
-                onClick={() => void saveDraft()}
-                disabled={saveStatus === "saving"}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-white/10 bg-[#1b1f27] px-4 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-55"
+                disabled={activeStep === "account_contact"}
+                onClick={() => setActiveStep(previousStep)}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-white/10 px-4 text-sm font-black text-slate-300 disabled:cursor-not-allowed disabled:opacity-45"
               >
-                {saveStatus === "saving" ? <Loader2 className="animate-spin" size={16} aria-hidden="true" /> : null}
-                Save as Draft
+                <ArrowLeft size={16} aria-hidden="true" />
+                Previous
               </button>
-              <button
-                type="button"
-                onClick={() => void saveAndContinue()}
-                disabled={saveContinueDisabled}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[linear-gradient(135deg,#f97316,#ea580c)] px-4 text-sm font-black text-white shadow-[0_12px_28px_rgba(249,115,22,0.26)] disabled:cursor-not-allowed disabled:opacity-55"
-              >
-                Save & Continue
-                <ArrowRight size={16} aria-hidden="true" />
-              </button>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => void saveDraft()}
+                  disabled={saveStatus === "saving"}
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-white/10 bg-[#1b1f27] px-4 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-55"
+                >
+                  {saveStatus === "saving" ? <Loader2 className="animate-spin" size={16} aria-hidden="true" /> : null}
+                  Save as Draft
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void saveAndContinue()}
+                  disabled={saveContinueDisabled}
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[linear-gradient(135deg,#f97316,#ea580c)] px-4 text-sm font-black text-white shadow-[0_12px_28px_rgba(249,115,22,0.26)] disabled:cursor-not-allowed disabled:opacity-55"
+                >
+                  Save & Continue
+                  <ArrowRight size={16} aria-hidden="true" />
+                </button>
+              </div>
             </div>
-          </div>
-        </footer>
+          </footer>
+        )}
+        {submitConfirmOpen && effectiveStep8Readiness ? (
+          <SubmitConfirmationDialog
+            onCancel={() => setSubmitConfirmOpen(false)}
+            onConfirm={() => void submitStep8ForReview()}
+            submitting={submitStatus === "submitting"}
+          />
+        ) : null}
       </div>
     </main>
   );
@@ -2947,8 +3154,8 @@ function TopProgress({
   );
 }
 
-function HelpPanel({ activeStep, servicesSummary, verificationSummary, payoutTaxSummary, agreementSummary }: { activeStep: WorkspaceStepId; servicesSummary?: ReactNode; verificationSummary?: ReactNode; payoutTaxSummary?: ReactNode; agreementSummary?: ReactNode }) {
-  const usesWideSummary = activeStep === "payout_tax" || activeStep === "partner_agreement";
+function HelpPanel({ activeStep, servicesSummary, verificationSummary, payoutTaxSummary, agreementSummary, reviewSubmitSummary }: { activeStep: WorkspaceStepId; servicesSummary?: ReactNode; verificationSummary?: ReactNode; payoutTaxSummary?: ReactNode; agreementSummary?: ReactNode; reviewSubmitSummary?: ReactNode }) {
+  const usesWideSummary = activeStep === "payout_tax" || activeStep === "partner_agreement" || activeStep === "review_submit";
   return (
     <aside className={usesWideSummary ? "block min-w-0 lg:col-start-2 xl:col-start-auto" : "hidden xl:block"}>
       <div className={usesWideSummary ? "rounded-2xl border border-white/10 bg-[#171a20] p-5 shadow-2xl xl:sticky xl:top-28" : "sticky top-28 rounded-2xl border border-white/10 bg-[#171a20] p-5 shadow-2xl"}>
@@ -2960,6 +3167,8 @@ function HelpPanel({ activeStep, servicesSummary, verificationSummary, payoutTax
           payoutTaxSummary
         ) : activeStep === "partner_agreement" && agreementSummary ? (
           agreementSummary
+        ) : activeStep === "review_submit" && reviewSubmitSummary ? (
+          reviewSubmitSummary
         ) : (
           <>
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#f97316]/12 text-[#fb923c]">
@@ -3005,9 +3214,9 @@ function HelpPanel({ activeStep, servicesSummary, verificationSummary, payoutTax
           </>
         ) : (
           <>
-            <h2 className="mt-4 text-lg font-black">Coming next</h2>
+            <h2 className="mt-4 text-lg font-black">Guidance</h2>
             <p className="mt-2 text-sm font-semibold leading-6 text-slate-300">
-              This step opens in the next approved development batch.
+              Select an available application step to continue.
             </p>
           </>
             )}
@@ -3873,13 +4082,307 @@ function payoutTaxStatusLabel(status: string): string {
   return "Not provided";
 }
 
+function ReviewSubmitStep({
+  content,
+  readiness,
+  latestSubmission,
+  loadStatus,
+  error,
+  acceptedDeclarations,
+  submitStatus,
+  stateLabel,
+  qaPreviewEnabled,
+  onDeclarationChange,
+  onRetry,
+  onRefresh,
+  onStepAction,
+}: {
+  content: Pick<AgreementContent, "title" | "subtitle" | "helperText">;
+  readiness: PartnerApplicationReadiness | null;
+  latestSubmission: PartnerApplicationSubmissionSummary | null;
+  loadStatus: "idle" | "loading" | "ready" | "error";
+  error: { code: PartnerStep8ErrorCode; message: string } | null;
+  acceptedDeclarations: Record<string, boolean>;
+  submitStatus: "idle" | "submitting" | "success" | "error";
+  stateLabel: string;
+  qaPreviewEnabled: boolean;
+  onDeclarationChange: (key: string, accepted: boolean) => void;
+  onRetry: () => void;
+  onRefresh: () => void;
+  onStepAction: (route: string) => void;
+}) {
+  if (loadStatus === "loading" || loadStatus === "idle") {
+    return (
+      <div data-application-active-step="review_submit" className="rounded-2xl border border-white/10 bg-[#171a20] p-6 shadow-2xl" aria-live="polite">
+        <Loader2 className="animate-spin text-[#f97316]" size={28} aria-hidden="true" />
+        <h1 className="mt-4 text-2xl font-black sm:text-3xl">Review & Submit</h1>
+        <p className="mt-2 text-sm font-semibold text-slate-300">Loading your application readiness.</p>
+      </div>
+    );
+  }
+  if (loadStatus === "error") {
+    return (
+      <div data-application-active-step="review_submit" className="rounded-2xl border border-red-500/30 bg-red-500/10 p-6 shadow-2xl" role="alert">
+        <h1 className="text-2xl font-black sm:text-3xl">Review & Submit</h1>
+        <p className="mt-2 text-sm font-semibold leading-6 text-red-100">{error?.message ?? "Application readiness is unavailable."}</p>
+        <button type="button" onClick={onRetry} className="mt-5 inline-flex h-10 items-center justify-center rounded-xl bg-white px-4 text-sm font-black text-slate-950">
+          Retry
+        </button>
+      </div>
+    );
+  }
+  if (!readiness) {
+    return (
+      <div data-application-active-step="review_submit" className="rounded-2xl border border-white/10 bg-[#171a20] p-6 shadow-2xl">
+        <h1 className="text-2xl font-black sm:text-3xl">Review & Submit</h1>
+        <p className="mt-2 text-sm font-semibold leading-6 text-slate-300">No Partner application is available yet.</p>
+      </div>
+    );
+  }
+
+  const declarations = requiredFinalDeclarations(readiness);
+  const declarationUnavailable = !hasFinalDeclarationConfiguration(readiness);
+  const showFinalDeclarations = ["DRAFT_INCOMPLETE", "READY_TO_SUBMIT", "CHANGES_REQUESTED"].includes(readiness.applicationStatus);
+  const terminalCopy = step8TerminalCopy(readiness.applicationStatus, latestSubmission);
+
+  return (
+    <div data-application-active-step="review_submit" className="grid gap-4">
+      <section className="rounded-2xl border border-white/10 bg-[#171a20] p-6 shadow-2xl">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            {qaPreviewEnabled ? <p className="text-xs font-black uppercase tracking-[0.16em] text-[#fed7aa]">QA Preview</p> : <p className="text-xs font-black uppercase tracking-[0.16em] text-[#fb923c]">Step 8</p>}
+            <h1 className="mt-2 text-2xl font-black sm:text-3xl">{content.title || "Review & Submit"}</h1>
+            <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-slate-300">{content.subtitle || "Review your application before sending it to TPL GO."}</p>
+            {content.helperText ? <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-slate-400">{content.helperText}</p> : null}
+          </div>
+          <div className="rounded-xl border border-white/10 bg-[#11141a] p-4">
+            <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-500">Application</p>
+            <p className="mt-1 text-sm font-black text-white">{readiness.organizationName || "Partner application"}</p>
+            <StatusLabel label={stateLabel} status={readiness.applicationStatus} />
+          </div>
+        </div>
+        {terminalCopy ? (
+          <div className="mt-5 rounded-xl border border-white/10 bg-[#11141a] p-4" aria-live="polite">
+            <h2 className="text-sm font-black text-white">{terminalCopy.title}</h2>
+            <p className="mt-1 text-sm font-semibold leading-6 text-slate-300">{terminalCopy.detail}</p>
+            {latestSubmission ? <p className="mt-2 text-xs font-bold text-slate-400">{visibleSubmissionReference(latestSubmission)} · {formatStep8Date(latestSubmission.submittedAt)}</p> : null}
+          </div>
+        ) : null}
+      </section>
+
+      <section className="rounded-2xl border border-white/10 bg-[#171a20] p-5 shadow-2xl">
+        <h2 className="text-lg font-black text-white">Review Steps 1-7</h2>
+        <div className="mt-4 grid gap-3">
+          {readiness.steps.map((step) => (
+            <div key={step.step} className="flex flex-col gap-3 rounded-xl border border-white/10 bg-[#11141a] p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <p className="text-sm font-black text-white">{step.label}</p>
+                <p className="mt-1 text-sm font-semibold leading-6 text-slate-300">{step.reason}</p>
+              </div>
+              <div className="flex shrink-0 flex-wrap items-center gap-2">
+                <StatusLabel label={partnerStep8StepStatusLabel(step.status)} status={step.status} />
+                <button type="button" onClick={() => onStepAction(partnerStep8CorrectionRoute(step))} className="inline-flex h-9 items-center justify-center rounded-lg border border-white/10 px-3 text-xs font-black text-slate-200 hover:border-[#f97316]">
+                  {partnerStep8ActionLabel(step)}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <Step8Issues readiness={readiness} onStepAction={onStepAction} />
+
+      {showFinalDeclarations ? (
+        <section className="rounded-2xl border border-white/10 bg-[#171a20] p-5 shadow-2xl">
+          <h2 className="text-lg font-black text-white">Final Declarations</h2>
+          {declarationUnavailable ? (
+            <p className="mt-3 rounded-xl border border-[#f97316]/30 bg-[#f97316]/10 p-4 text-sm font-semibold leading-6 text-[#fed7aa]" role="status">
+              The final application declaration is being prepared. You can review your application, but submission is not available yet.
+            </p>
+          ) : (
+            <div className="mt-4 grid gap-3">
+              {declarations.map((declaration) => {
+                const key = declarationAcceptanceKey(declaration);
+                return (
+                  <label key={key} className="flex gap-3 rounded-xl border border-white/10 bg-[#11141a] p-4 text-sm font-semibold leading-6 text-slate-200">
+                    <input
+                      type="checkbox"
+                      checked={acceptedDeclarations[key] === true}
+                      onChange={(event) => onDeclarationChange(key, event.target.checked)}
+                      className="mt-1 h-4 w-4 rounded border-white/20 bg-[#101216] text-[#f97316] focus:ring-[#f97316]"
+                    />
+                    <span>{declaration.title} <span className="text-slate-500">v{declaration.version}</span></span>
+                  </label>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      ) : null}
+
+      {error ? (
+        <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm font-semibold leading-6 text-red-100" role="alert">
+          <p>{error.message}</p>
+          {error.code === "STALE_APPLICATION_REVISION" || error.code === "IDEMPOTENCY_CONFLICT" ? (
+            <button type="button" onClick={onRefresh} className="mt-3 inline-flex h-9 items-center justify-center rounded-lg bg-white px-3 text-xs font-black text-slate-950">
+              Refresh application
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+      {submitStatus === "submitting" ? <p className="rounded-2xl border border-sky-500/30 bg-sky-500/10 p-4 text-sm font-semibold text-sky-100" aria-live="polite">Submitting your application for review.</p> : null}
+    </div>
+  );
+}
+
+function Step8Issues({ readiness, onStepAction }: { readiness: PartnerApplicationReadiness; onStepAction: (route: string) => void }) {
+  const blockingSteps = readiness.steps.filter((step) => step.status === "NEEDS_ATTENTION" || step.blockerCodes.length > 0);
+  return (
+    <section className="grid gap-4 lg:grid-cols-2">
+      <div className="rounded-2xl border border-white/10 bg-[#171a20] p-5 shadow-2xl">
+        <h2 className="text-lg font-black text-white">Must fix before submission</h2>
+        {blockingSteps.length === 0 && readiness.submissionBlockers.length === 0 ? (
+          <p className="mt-3 text-sm font-semibold leading-6 text-emerald-200">Your application is ready for final declarations.</p>
+        ) : (
+          <div className="mt-4 grid gap-3">
+            {blockingSteps.map((step) => (
+              <div key={step.step} className="rounded-xl border border-[#f97316]/25 bg-[#f97316]/10 p-4">
+                <p className="text-sm font-black text-white">{step.label}</p>
+                <p className="mt-1 text-sm font-semibold leading-6 text-[#fed7aa]">{step.reason}</p>
+                <button type="button" onClick={() => onStepAction(partnerStep8CorrectionRoute(step))} className="mt-3 inline-flex h-9 items-center justify-center rounded-lg bg-[#f97316] px-3 text-xs font-black text-white">
+                  Fix
+                </button>
+              </div>
+            ))}
+            {blockingSteps.length === 0 ? <p className="text-sm font-semibold leading-6 text-[#fed7aa]">Submission is blocked until the required application items are ready.</p> : null}
+          </div>
+        )}
+      </div>
+      <div className="rounded-2xl border border-white/10 bg-[#171a20] p-5 shadow-2xl">
+        <h2 className="text-lg font-black text-white">Warnings</h2>
+        {readiness.warnings.length === 0 && readiness.steps.every((step) => step.warningCodes.length === 0) ? (
+          <p className="mt-3 text-sm font-semibold leading-6 text-slate-300">No warnings are currently shown.</p>
+        ) : (
+          <ul className="mt-4 grid gap-2 text-sm font-semibold leading-6 text-slate-300">
+            {readiness.warnings.map((warning) => <li key={warning}>{warning}</li>)}
+            {readiness.steps.filter((step) => step.warningCodes.length > 0).map((step) => <li key={step.step}>{step.label}: {step.reason}</li>)}
+          </ul>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function ReviewSubmitSummary({ readiness, latestSubmission, loadStatus, stateLabel }: { readiness: PartnerApplicationReadiness | null; latestSubmission: PartnerApplicationSubmissionSummary | null; loadStatus: "idle" | "loading" | "ready" | "error"; stateLabel: string }) {
+  return (
+    <div data-step8-summary-panel="right-shell">
+      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#f97316]/12 text-[#fb923c]">
+        <ClipboardCheck size={19} aria-hidden="true" />
+      </div>
+      <h2 className="mt-4 text-lg font-black">Review Summary</h2>
+      {loadStatus !== "ready" || !readiness ? (
+        <p className="mt-2 text-sm font-semibold leading-6 text-slate-300">Readiness details load from TPL GO before submission.</p>
+      ) : (
+        <dl className="mt-4 grid gap-3 text-sm">
+          <SummaryRow label="Status" value={stateLabel} />
+          <SummaryRow label="Application" value={readiness.organizationName || "Partner application"} />
+          <SummaryRow label="Revision" value={`Revision ${readiness.applicationRevision}`} />
+          <SummaryRow label="Submission" value={visibleSubmissionReference(latestSubmission) ?? "Not submitted"} />
+          {latestSubmission ? <SummaryRow label="Submitted" value={formatStep8Date(latestSubmission.submittedAt)} /> : null}
+        </dl>
+      )}
+    </div>
+  );
+}
+
+function ReviewSubmitFooter({
+  previousStep,
+  readiness,
+  latestSubmission,
+  canSubmit,
+  disabledReason,
+  submitStatus,
+  onPrevious,
+  onSubmit,
+}: {
+  previousStep: WorkspaceStepId;
+  readiness: PartnerApplicationReadiness | null;
+  latestSubmission: PartnerApplicationSubmissionSummary | null;
+  canSubmit: boolean;
+  disabledReason: string;
+  submitStatus: "idle" | "submitting" | "success" | "error";
+  onPrevious: () => void;
+  onSubmit: () => void;
+}) {
+  const status = readiness?.applicationStatus;
+  const locked = status === "SUBMITTED" || status === "UNDER_REVIEW" || status === "RESUBMITTED" || status === "NOT_APPROVED" || status === "APPROVED";
+  const actionLabel = status === "CHANGES_REQUESTED" ? "Resubmit for review" : "Submit for review";
+  return (
+    <footer className="sticky bottom-0 z-30 border-t border-white/10 bg-[#11141a]/95 px-4 py-3 backdrop-blur">
+      <div className="mx-auto flex max-w-7xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <button
+          type="button"
+          disabled={previousStep === "account_contact"}
+          onClick={onPrevious}
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-white/10 px-4 text-sm font-black text-slate-300 disabled:cursor-not-allowed disabled:opacity-45"
+        >
+          <ArrowLeft size={16} aria-hidden="true" />
+          Previous
+        </button>
+        {locked ? (
+          <p className="text-sm font-semibold text-slate-300">{visibleSubmissionReference(latestSubmission) ?? "Application"} is {status === "APPROVED" ? "approved" : status === "NOT_APPROVED" ? "not approved" : "under review"}.</p>
+        ) : (
+          <div className="flex flex-col items-stretch gap-2 sm:items-end">
+            {disabledReason ? <p className="text-xs font-bold text-slate-400">{disabledReason}</p> : null}
+            <button
+              type="button"
+              onClick={onSubmit}
+              disabled={!canSubmit || submitStatus === "submitting"}
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[linear-gradient(135deg,#f97316,#ea580c)] px-4 text-sm font-black text-white shadow-[0_12px_28px_rgba(249,115,22,0.26)] disabled:cursor-not-allowed disabled:opacity-55"
+            >
+              {submitStatus === "submitting" ? <Loader2 className="animate-spin" size={16} aria-hidden="true" /> : null}
+              {actionLabel}
+            </button>
+          </div>
+        )}
+      </div>
+    </footer>
+  );
+}
+
+function SubmitConfirmationDialog({ onCancel, onConfirm, submitting }: { onCancel: () => void; onConfirm: () => void; submitting: boolean }) {
+  if (typeof document === "undefined") return null;
+  return createPortal(
+    <div className="fixed inset-0 z-[130] flex items-center justify-center bg-black/70 px-4" role="dialog" aria-modal="true" aria-labelledby="step8-submit-title">
+      <div className="w-full max-w-lg rounded-2xl border border-white/10 bg-[#171a20] p-6 text-white shadow-2xl">
+        <h2 id="step8-submit-title" className="text-xl font-black">Submit application for review?</h2>
+        <ul className="mt-4 grid gap-2 text-sm font-semibold leading-6 text-slate-300">
+          <li>Your current application snapshot will be sent to TPL GO for review.</li>
+          <li>Broad editing is locked while review is in progress.</li>
+          <li>Approval does not automatically activate services, payouts or Partner Desk access.</li>
+        </ul>
+        <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <button type="button" onClick={onCancel} disabled={submitting} className="inline-flex h-10 items-center justify-center rounded-xl border border-white/10 px-4 text-sm font-black text-slate-200 disabled:opacity-50">
+            Cancel
+          </button>
+          <button type="button" onClick={onConfirm} disabled={submitting} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#f97316] px-4 text-sm font-black text-white disabled:opacity-50">
+            {submitting ? <Loader2 className="animate-spin" size={16} aria-hidden="true" /> : null}
+            Submit for review
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 function PlaceholderStep({ step }: { step: (typeof workspaceSteps)[number] }) {
   return (
     <div data-application-active-step={step.id} className="rounded-2xl border border-white/10 bg-[#171a20] p-6 shadow-2xl">
       <p className="text-xs font-black uppercase tracking-[0.16em] text-[#fb923c]">Step {step.number}</p>
       <h1 className="mt-2 text-2xl font-black sm:text-3xl">{step.title}</h1>
       <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-300">
-        This step is reserved in the approved 8-step Partner application flow.
+        This application step is not available right now.
       </p>
     </div>
   );
@@ -5004,6 +5507,54 @@ function statusText(status: "idle" | "saving" | "saved" | "error", lastSavedAt: 
   return `Saved ${Math.floor(elapsed / 60_000)} min ago`;
 }
 
+function step8TerminalCopy(status: PartnerApplicationReadiness["applicationStatus"], latestSubmission: PartnerApplicationSubmissionSummary | null): { title: string; detail: string } | null {
+  if (status === "SUBMITTED" || status === "UNDER_REVIEW" || status === "RESUBMITTED") {
+    return {
+      title: "Application under review",
+      detail: "TPL GO is reviewing your submitted application. Broad editing is locked during review.",
+    };
+  }
+  if (status === "CHANGES_REQUESTED") {
+    return {
+      title: "Changes requested",
+      detail: "Review the sections marked Needs attention and resubmit when the backend confirms the application is ready.",
+    };
+  }
+  if (status === "NOT_APPROVED") {
+    return {
+      title: "Application not approved",
+      detail: "TPL GO could not approve this application with the current information.",
+    };
+  }
+  if (status === "APPROVED") {
+    return {
+      title: "Application approved",
+      detail: "Service activation, payout activation and Partner Desk access are handled separately.",
+    };
+  }
+  if (latestSubmission && status === "READY_TO_SUBMIT") {
+    return {
+      title: "Ready for resubmission",
+      detail: "Your corrections are ready to send back to TPL GO.",
+    };
+  }
+  return null;
+}
+
+function formatStep8Date(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Not available";
+  return new Intl.DateTimeFormat("en-IN", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+}
+
+function createPartnerStep8AttemptKey(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return `partner_step8_${crypto.randomUUID()}`;
+  return `partner_step8_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
 function humanStatus(status: PartnerApplicationStepStatus, current: boolean): string {
   if (status === "completed") return "Complete";
   if (status === "needs-attention") return "Needs Attention";
@@ -5113,4 +5664,8 @@ function maskEmail(value?: string): string {
 
 function parseQaPreviewState(value: string | undefined): PartnerQaPreviewState {
   return partnerQaPreviewStates.some((state) => state.id === value) ? value as PartnerQaPreviewState : "new";
+}
+
+function qaPreviewStartsOnReview(state: PartnerQaPreviewState): boolean {
+  return state === "ready" || state === "under-review" || state === "changes-required" || state === "rejected" || state === "approved";
 }
