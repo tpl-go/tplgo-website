@@ -2161,6 +2161,7 @@ type RequestOptions = {
   body?: unknown;
   token?: string | null;
   requestId?: string;
+  headers?: Record<string, string>;
 };
 
 type StoredAdminSession = {
@@ -2295,6 +2296,7 @@ export async function adminApiRequest<TData>(
     "X-Request-Id": requestId,
   };
   if (typeof options.body !== "undefined") headers["Content-Type"] = "application/json";
+  Object.assign(headers, options.headers ?? {});
 
   const token = options.token ?? readAdminSession()?.session.token;
   if (token) headers.Authorization = `Bearer ${token}`;
