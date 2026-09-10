@@ -124,6 +124,76 @@ export type PartnerReview = {
   completedAt?: string | null;
 };
 
+export type PartnerApplicationStatus =
+  | "DRAFT_INCOMPLETE"
+  | "READY_TO_SUBMIT"
+  | "SUBMITTED"
+  | "UNDER_REVIEW"
+  | "CHANGES_REQUESTED"
+  | "RESUBMITTED"
+  | "NOT_APPROVED"
+  | "APPROVED";
+
+export type PartnerApplicationStepKey =
+  | "account_contact"
+  | "business_identity"
+  | "business_location"
+  | "services"
+  | "verification_compliance"
+  | "payout_tax"
+  | "partner_agreement";
+
+export type PartnerApplicationDeclarationDefinition = {
+  id: string;
+  version: number;
+  title: string;
+  active: boolean;
+  required: boolean;
+  appliesTo: "final_submission";
+};
+
+export type PartnerApplicationStepReadiness = {
+  step: PartnerApplicationStepKey;
+  label: string;
+  status: "COMPLETE" | "NEEDS_ATTENTION" | "UNDER_REVIEW" | "UNAVAILABLE";
+  reason: string;
+  blockerCodes: string[];
+  warningCodes: string[];
+  correctionRoute: string;
+};
+
+export type PartnerApplicationSubmissionSummary = {
+  id: string;
+  submissionRevision: number;
+  workflowStatus: PartnerApplicationStatus;
+  snapshotHash: string;
+  submittedAt: string;
+  submittedByUserId: string;
+};
+
+export type PartnerApplicationReadiness = {
+  organizationId: string | null;
+  applicationId: string | null;
+  organizationName: string;
+  organizationStatus: string | null;
+  applicationStatus: PartnerApplicationStatus;
+  applicationRevision: number;
+  submissionReady: boolean;
+  approvalReady: boolean;
+  steps: PartnerApplicationStepReadiness[];
+  submissionBlockers: string[];
+  approvalBlockers: string[];
+  warnings: string[];
+  activeDeclarations: PartnerApplicationDeclarationDefinition[];
+  latestSubmission: PartnerApplicationSubmissionSummary | null;
+};
+
+export type PartnerApplicationSubmitInput = {
+  expectedApplicationRevision: number;
+  declarationAcceptances: Array<{ declarationId: string; version: number; accepted: boolean }>;
+  idempotencyKey: string;
+};
+
 export type PartnerPayoutTaxStatus =
   | "NOT_PROVIDED"
   | "DRAFT"
@@ -475,6 +545,18 @@ export function fetchPartnerApplicationDraft(): Promise<TplApiResult<PartnerOrga
   return tplApiRequest<PartnerOrganizationBundle | null>("/api/v1/partner/application/draft");
 }
 
+export function fetchPartnerApplicationReadiness(): Promise<TplApiResult<PartnerApplicationReadiness>> {
+  return tplApiRequest<PartnerApplicationReadiness>("/api/v1/partner/application/readiness", {
+    fallbackOnError: false,
+  });
+}
+
+export function fetchPartnerApplicationSubmission(): Promise<TplApiResult<{ latestSubmission: PartnerApplicationSubmissionSummary | null; readiness: PartnerApplicationReadiness }>> {
+  return tplApiRequest<{ latestSubmission: PartnerApplicationSubmissionSummary | null; readiness: PartnerApplicationReadiness }>("/api/v1/partner/application/submission", {
+    fallbackOnError: false,
+  });
+}
+
 export function fetchPartnerServiceCatalogue(): Promise<TplApiResult<PartnerServiceCatalogueRuntimeResponse>> {
   return tplApiRequest<PartnerServiceCatalogueRuntimeResponse>("/api/v1/partner/service-catalogue", {
     fallbackOnError: false,
@@ -527,6 +609,15 @@ export function savePartnerAgreementDraft(input: PartnerAgreementDraftInput): Pr
   return tplApiRequest<PartnerOrganizationBundle>("/api/v1/partner/application/draft/agreement", {
     method: "POST",
     body: input,
+  });
+}
+
+export function submitPartnerApplication(input: PartnerApplicationSubmitInput): Promise<TplApiResult<{ submission: PartnerApplicationSubmissionSummary; readiness: PartnerApplicationReadiness }>> {
+  return tplApiRequest<{ submission: PartnerApplicationSubmissionSummary; readiness: PartnerApplicationReadiness }>("/api/v1/partner/application/submissions", {
+    method: "POST",
+    idempotencyKey: input.idempotencyKey,
+    body: input,
+    fallbackOnError: false,
   });
 }
 
