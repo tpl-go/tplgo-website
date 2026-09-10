@@ -1,12 +1,62 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "vitest";
+import {
+  buildAuditRows,
+  filterHistoryRows,
+  historyActionLabel,
+  historyEventType,
+} from "./AdminWebsiteExperienceHistoryPresentation";
+import type { AdminPartnerServiceCatalogueResponse, WebsiteExperienceAdminResponse } from "../../lib/admin/adminApiClient";
 
 const centralSource = readFileSync(join(process.cwd(), "app/admin/_components/AdminWebsiteExperienceCentralizedQueues.tsx"), "utf8");
+const presentationSource = readFileSync(join(process.cwd(), "app/admin/_components/AdminWebsiteExperienceHistoryPresentation.ts"), "utf8");
 const landingSource = readFileSync(join(process.cwd(), "app/admin/_components/AdminWebsiteExperienceLanding.tsx"), "utf8");
 const catalogueSource = readFileSync(join(process.cwd(), "app/admin/partners/services/AdminPartnerServiceCatalogueClient.tsx"), "utf8");
 const requestRouteSource = readFileSync(join(process.cwd(), "app/admin/website-experience/service-requests/page.tsx"), "utf8");
 const auditRouteSource = readFileSync(join(process.cwd(), "app/admin/website-experience/versions-audit/page.tsx"), "utf8");
+
+const emptyContentTree = { id: "root", label: "Root", fields: [], children: [] };
+
+function websiteFixture(recentAudit: WebsiteExperienceAdminResponse["recentAudit"]): WebsiteExperienceAdminResponse {
+  return {
+    contexts: [],
+    permissions: { canRead: true, canWrite: true, canPublish: true },
+    schema: { contexts: [], mediaSlots: [], editableFields: [], lockedSecurityFields: [], allowedMediaTypes: [], maxBenefits: 0, maxMediaBytes: 0 },
+    recentMedia: [],
+    recentAudit,
+    partnerRegistrationIntakes: [],
+  } as unknown as WebsiteExperienceAdminResponse;
+}
+
+function catalogueFixture(
+  audit: AdminPartnerServiceCatalogueResponse["audit"],
+  versions: AdminPartnerServiceCatalogueResponse["versions"] = [],
+): AdminPartnerServiceCatalogueResponse {
+  return {
+    draft: {
+      items: [{ id: "hotel-item", stableCode: "hotel", name: "Hotel" }],
+      contentTree: emptyContentTree,
+    },
+    published: {
+      items: [{ id: "hotel-item", stableCode: "hotel", name: "Hotel" }],
+      contentTree: emptyContentTree,
+    },
+    preview: {
+      items: [{ id: "hotel-item", stableCode: "hotel", name: "Hotel" }],
+      contentTree: emptyContentTree,
+    },
+    draftVersion: 4,
+    publishedVersion: 12,
+    status: "draft",
+    permissions: { canRead: true, canManage: true, canPublish: true },
+    scheduling: { supported: false, reason: "" },
+    versions,
+    audit,
+    requestedServices: [],
+    schema: { statuses: [], capabilities: [], editableFields: [], lockedFields: [], lifecycleActions: [], resolutionActions: [] },
+  } as unknown as AdminPartnerServiceCatalogueResponse;
+}
 
 test("Website Experience Home exposes central History without the retired Work Queue shell", () => {
   expect(landingSource).toContain('href="/admin/website-experience/versions-audit"');
@@ -72,31 +122,183 @@ test("central History route combines Website Experience and Service Catalogue hi
   expect(existsSync(join(process.cwd(), "app/admin/website-experience/versions-audit/page.tsx"))).toBe(true);
   expect(auditRouteSource).toContain('AdminShell title="History"');
   expect(centralSource).toContain("buildAuditRows(state.website, state.catalogue)");
-  expect(centralSource).toContain("catalogue.audit.map");
-  expect(centralSource).toContain("catalogue.versions");
-  expect(centralSource).toContain(".filter((row) => !pairedVersionIds.has(row.id))");
-  expect(centralSource).toContain("website.recentAudit.map");
+  expect(presentationSource).toContain("catalogue.audit.map");
+  expect(presentationSource).toContain("catalogue.versions");
+  expect(presentationSource).toContain(".filter((row) => !pairedVersionIds.has(row.id))");
+  expect(presentationSource).toContain("website.recentAudit.map");
   expect(centralSource).toContain('<option value="service_catalogue">Service Catalogue</option>');
   expect(centralSource).toContain('label="Back to History"');
   expect(centralSource).toContain('label="Back to Website Experience"');
 });
 
 test("central History maps internal event codes to operator labels", () => {
-  expect(centralSource).toContain('draft: "Draft saved"');
-  expect(centralSource).toContain('submitted: "Sent for approval"');
-  expect(centralSource).toContain('approved: "Approved"');
-  expect(centralSource).toContain('changes_requested: "Changes requested"');
-  expect(centralSource).toContain('scheduled: "Scheduled"');
-  expect(centralSource).toContain('schedule_cancelled: "Schedule cancelled"');
-  expect(centralSource).toContain('published: "Published"');
-  expect(centralSource).toContain('archived: "Archived"');
-  expect(centralSource).toContain('baseline: "Initial version created"');
-  expect(centralSource).toContain("normalizedHistoryAction(value)");
+  expect(presentationSource).toContain('draft: "Draft saved"');
+  expect(presentationSource).toContain('draft_saved: "Draft saved"');
+  expect(presentationSource).toContain('submitted: "Sent for approval"');
+  expect(presentationSource).toContain('approved: "Approved"');
+  expect(presentationSource).toContain('changes_requested: "Changes requested"');
+  expect(presentationSource).toContain('scheduled: "Scheduled"');
+  expect(presentationSource).toContain('schedule_cancelled: "Schedule cancelled"');
+  expect(presentationSource).toContain('published: "Published"');
+  expect(presentationSource).toContain('archived: "Archived"');
+  expect(presentationSource).toContain('baseline: "Initial version created"');
+  expect(presentationSource).toContain("normalizedHistoryAction(value)");
+});
+
+test("central History classifies staging-shaped Agreement Template draft save variants as Draft changes", () => {
+  const website = websiteFixture([
+    {
+      id: "agreement-draft",
+      context: "partner_application",
+      entityId: "agreement_template:qa-template",
+      action: "draft",
+      actorAdminId: "operator@example.com",
+      changeSummary: "Saved agreement template draft: QA Agreement Upload Test",
+      createdAt: "2026-09-10T06:01:12.000Z",
+    },
+    {
+      id: "agreement-saved",
+      context: "partner_application",
+      entityId: "agreement_template:qa-template",
+      action: "agreement_template.saved",
+      actorAdminId: "operator@example.com",
+      changeSummary: "Saved agreement template draft: QA Agreement Upload Test",
+      createdAt: "2026-09-10T06:02:12.000Z",
+    },
+    {
+      id: "agreement-dotted-draft-saved",
+      context: "partner_application",
+      entityId: "agreement_template:qa-template",
+      action: "Website Experience.draft_saved",
+      actorAdminId: "operator@example.com",
+      changeSummary: "Saved agreement template draft: QA Agreement Upload Test",
+      createdAt: "2026-09-10T06:03:12.000Z",
+    },
+  ]);
+  const rows = buildAuditRows(website, catalogueFixture([]));
+  const draftRows = filterHistoryRows(rows, { search: "", source: "agreement_template", eventType: "draft_changes" });
+
+  expect(historyActionLabel("Website Experience.draft_saved")).toBe("Draft saved");
+  expect(historyEventType("Website Experience.draft_saved")).toBe("draft_changes");
+  expect(draftRows).toHaveLength(3);
+  expect(draftRows.every((row) => row.actionLabel === "Draft saved")).toBe(true);
+});
+
+test("central History cleans only confirmed workflow prefixes from Agreement Template titles", () => {
+  const rows = buildAuditRows(
+    websiteFixture([
+      {
+        id: "prefixed-title",
+        context: "partner_application",
+        entityId: "agreement_template:qa-template",
+        action: "draft",
+        actorAdminId: "operator@example.com",
+        changeSummary: "Saved agreement template draft: QA Agreement Upload Test",
+        createdAt: "2026-09-10T06:01:12.000Z",
+      },
+      {
+        id: "legitimate-colon-title",
+        context: "partner_application",
+        entityId: "agreement_template:colon-title",
+        action: "saved",
+        actorAdminId: "operator@example.com",
+        changeSummary: "Saved agreement template Package: Agency Terms",
+        createdAt: "2026-09-10T06:02:12.000Z",
+      },
+    ]),
+    catalogueFixture([]),
+  );
+
+  expect(rows.find((row) => row.id === "website:prefixed-title")?.itemTitle).toBe("QA Agreement Upload Test");
+  expect(rows.find((row) => row.id === "website:legitimate-colon-title")?.itemTitle).toBe("Package: Agency Terms");
+});
+
+test("central History keeps Service Catalogue and Agreement Template area metadata distinct", () => {
+  const rows = buildAuditRows(
+    websiteFixture([
+      {
+        id: "agreement-area",
+        context: "partner_application",
+        entityId: "agreement_template:qa-template",
+        action: "draft",
+        actorAdminId: "operator@example.com",
+        changeSummary: "Saved agreement template draft: QA Agreement Upload Test",
+        createdAt: "2026-09-10T06:01:12.000Z",
+      },
+    ]),
+    catalogueFixture([
+      {
+        id: "hotel-draft",
+        action: "draft",
+        entityId: "hotel",
+        actorAdminId: "operator@example.com",
+        changeSummary: "Partner Service Catalogue.draft Saved",
+        createdAt: "2026-09-10T06:01:12.000Z",
+      },
+    ]),
+  );
+
+  expect(rows.find((row) => row.id === "catalogue-audit:hotel-draft")).toMatchObject({
+    itemTitle: "Hotel",
+    contentType: "Service Catalogue",
+    contentArea: "Service Catalogue",
+  });
+  expect(rows.find((row) => row.id === "website:agreement-area")).toMatchObject({
+    contentType: "Agreement Template",
+    contentArea: "Partner Application",
+  });
+});
+
+test("central History Versions filter includes only saved versions or proven version-linked workflow records", () => {
+  const rows = buildAuditRows(
+    websiteFixture([]),
+    catalogueFixture(
+      [
+        {
+          id: "hotel-unpaired",
+          action: "draft",
+          entityId: "hotel",
+          actorAdminId: "operator@example.com",
+          changeSummary: "Partner Service Catalogue.draft Saved",
+          createdAt: "2026-09-10T06:01:12.000Z",
+        },
+        {
+          id: "hotel-linked",
+          action: "draft",
+          entityId: "catalogue-version:12",
+          actorAdminId: "operator@example.com",
+          changeSummary: "Partner Service Catalogue.draft Saved",
+          createdAt: "2026-09-10T06:01:12.000Z",
+        },
+      ],
+      [
+        {
+          id: "version-12",
+          version: 12,
+          status: "draft",
+          createdByAdminId: "operator@example.com",
+          createdAt: "2026-09-10T06:01:12.000Z",
+        },
+        {
+          id: "version-13",
+          version: 13,
+          status: "published",
+          createdByAdminId: "operator@example.com",
+          createdAt: "2026-09-10T06:01:12.000Z",
+        },
+      ],
+    ),
+  );
+  const versionRows = filterHistoryRows(rows, { search: "", source: "service_catalogue", eventType: "versions" });
+
+  expect(versionRows.map((row) => row.id)).not.toContain("catalogue-audit:hotel-unpaired");
+  expect(versionRows.find((row) => row.id === "catalogue-audit:hotel-linked")?.versionLabel).toBe("Version 12");
+  expect(versionRows.find((row) => row.id === "catalogue-version:version-13")?.recordKind).toBe("saved_version");
 });
 
 test("central History presentation avoids raw dotted technical labels", () => {
-  expect(centralSource).toContain("historyActionLabel(row.action)");
-  expect(centralSource).toContain("cleanHistorySummary(row.changeSummary)");
+  expect(presentationSource).toContain("historyActionLabel(row.action)");
+  expect(presentationSource).toContain("cleanHistorySummary(row.changeSummary)");
   expect(centralSource).not.toContain("Website Experience.draft");
   expect(centralSource).not.toContain("Website Experience.submitted");
   expect(centralSource).not.toContain("Partner Service Catalogue.published");
@@ -104,39 +306,39 @@ test("central History presentation avoids raw dotted technical labels", () => {
 });
 
 test("central History identifies exact item, content type, actor, version and state", () => {
-  expect(centralSource).toContain("itemTitle: target.title");
-  expect(centralSource).toContain('contentType: "Agreement Template"');
-  expect(centralSource).toContain('contentType: "Service Catalogue"');
-  expect(centralSource).toContain("actor: historyActor(row.actorAdminId)");
-  expect(centralSource).toContain("versionLabel: relatedVersion ? `Version ${relatedVersion.version}` : undefined");
-  expect(centralSource).toContain("previousState");
-  expect(centralSource).toContain("resultingState");
+  expect(presentationSource).toContain("itemTitle: target.title");
+  expect(presentationSource).toContain('contentType: "Agreement Template"');
+  expect(presentationSource).toContain('contentType: "Service Catalogue"');
+  expect(presentationSource).toContain("actor: historyActor(row.actorAdminId)");
+  expect(presentationSource).toContain("versionLabel: relatedVersion ? `Version ${relatedVersion.version}` : undefined");
+  expect(presentationSource).toContain("previousState");
+  expect(presentationSource).toContain("resultingState");
   expect(centralSource).toContain("formatHistoryDateTime(selectedRecord.createdAt)");
 });
 
 test("central History keeps Agreement Template events identifiable", () => {
-  expect(centralSource).toContain("agreementTemplateTitleFromHistory(entityId, summary)");
-  expect(centralSource).toContain('area: "agreement_template"');
-  expect(centralSource).toContain('title: agreementTemplateTitle');
-  expect(centralSource).toContain('href: templateId ? `/admin/website-experience/pages/partner/application/step-7-partner-agreement/agreement-templates/${encodeURIComponent(templateId)}`');
+  expect(presentationSource).toContain("agreementTemplateTitleFromHistory(entityId, summary)");
+  expect(presentationSource).toContain('area: "agreement_template"');
+  expect(presentationSource).toContain('title: agreementTemplateTitle');
+  expect(presentationSource).toContain('href: templateId ? `/admin/website-experience/pages/partner/application/step-7-partner-agreement/agreement-templates/${encodeURIComponent(templateId)}`');
   expect(centralSource).toContain('<option value="agreement_template">Agreement Templates</option>');
 });
 
 test("central History relates audit and version records without timestamp-only collapsing", () => {
-  expect(centralSource).toContain("catalogueVersionByRelation.set(version.id, version)");
-  expect(centralSource).toContain("catalogueVersionByRelation.set(String(version.version), version)");
-  expect(centralSource).toContain("const relatedVersion = row.entityId ? catalogueVersionByRelation.get(row.entityId) : undefined");
-  expect(centralSource).toContain("pairedVersionIds.add(relatedVersion.id)");
-  expect(centralSource).toContain('.filter((row) => !pairedVersionIds.has(row.id))');
-  expect(centralSource).not.toContain("Math.abs(Date.parse");
+  expect(presentationSource).toContain("catalogueVersionByRelation.set(version.id, version)");
+  expect(presentationSource).toContain("catalogueVersionByRelation.set(String(version.version), version)");
+  expect(presentationSource).toContain("const relatedVersion = row.entityId ? catalogueVersionByRelation.get(row.entityId) : undefined");
+  expect(presentationSource).toContain("pairedVersionIds.add(relatedVersion.id)");
+  expect(presentationSource).toContain('.filter((row) => !pairedVersionIds.has(row.id))');
+  expect(presentationSource).not.toContain("Math.abs(Date.parse");
 });
 
 test("central History filters search, content area and activity type together", () => {
   expect(centralSource).toContain('data-history-filters="compact"');
   expect(centralSource).toContain("setSearch(params.get(\"search\") ?? \"\")");
-  expect(centralSource).toContain("record.actionLabel");
-  expect(centralSource).toContain("record.itemTitle");
-  expect(centralSource).toContain("matchesSearch && matchesSource && matchesType");
+  expect(presentationSource).toContain("record.actionLabel");
+  expect(presentationSource).toContain("record.itemTitle");
+  expect(presentationSource).toContain("matchesSearch && matchesSource && matchesType");
   expect(centralSource).toContain('<option value="draft_changes">Draft changes</option>');
   expect(centralSource).toContain('<option value="approval">Approval activity</option>');
   expect(centralSource).toContain('<option value="scheduling">Scheduling</option>');
@@ -150,7 +352,7 @@ test("central History detail and navigation stay operator-facing and safe", () =
   for (const label of ["Item", "Content type", "Area", "Actor", "When", "Version", "Previous state", "Resulting state", "Summary"]) {
     expect(centralSource).toContain(`label="${label}"`);
   }
-  expect(centralSource).toContain('label: "Open item"');
+  expect(presentationSource).toContain('label: "Open item"');
   expect(centralSource).toContain('data-history-related-target={selectedRecord.id}');
   expect(centralSource).toContain('window.addEventListener("popstate", syncFromUrl)');
   expect(centralSource).toContain('{ label: "History", href: "/admin/website-experience/versions-audit" }');
