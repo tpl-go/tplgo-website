@@ -237,7 +237,7 @@ test("S7A5.4 removes local workflow, audit, security and unrelated intake clutte
   for (const text of forbidden) {
     expect(managerSource).not.toContain(text);
   }
-  expect(managerSource).toContain("Preview your changes, then save a draft.");
+  expect(managerSource).toContain("Preview, then save as Draft.");
   expect(managerSource).toContain("Saved image");
   expect(managerSource).not.toContain("<PartnerRegistrationIntakes");
   expect(managerSource).not.toContain("<LockedSecurity");
@@ -254,6 +254,49 @@ test("S7A5.4 Partner Application editors render selected-section fields without 
   expect(editorSlice).not.toContain("Website Experience &gt; Pages &gt; Partner &gt; Partner Application");
   expect(managerSource).toContain("Application Overview");
   expect(managerSource).not.toContain("Application Shell");
+});
+
+test("S7A5.5 Partner Application inner editors use compact operator metadata", () => {
+  const statusStripSlice = managerSource.slice(managerSource.indexOf("function ItemStatusStrip"), managerSource.indexOf("function WorkflowQueueView"));
+  expect(statusStripSlice).toContain("Draft v${activeRow.draftVersion}");
+  expect(statusStripSlice).toContain("publishedVersionLabel(activeRow.publishedVersion)");
+  expect(statusStripSlice).toContain("Last modified");
+  expect(statusStripSlice).not.toContain("workflowLabel(activeRow.workflowState");
+  expect(statusStripSlice).not.toContain("Published v${activeRow.publishedVersion}");
+  expect(managerSource).toContain('return version && version > 0 ? `Published v${version}` : "Not published";');
+});
+
+test("S7A5.5 Partner Application editors keep one concise preview/save instruction", () => {
+  const localActionSlice = managerSource.slice(managerSource.indexOf("function LocalStepEditorActions"), managerSource.indexOf("const stepSevenUnits"));
+  const previewPanelSlice = managerSource.slice(managerSource.indexOf("function PreviewPanel"), managerSource.indexOf("function PromoPreview"));
+  expect((localActionSlice.match(/Preview, then save as Draft\./g) ?? []).length).toBe(1);
+  expect(localActionSlice).toContain("Preview");
+  expect(localActionSlice).toContain("Save as Draft");
+  expect(managerSource).not.toContain("Preview your changes, then save a draft.");
+  expect(previewPanelSlice).not.toContain("Preview Changes shows the current editor draft and never publishes content.");
+});
+
+test("S7A5.5 Step 4 CTA editor labels are human-readable while preserving content keys", () => {
+  const editorSlice = managerSource.slice(managerSource.indexOf("function PartnerApplicationTreeEditor"), managerSource.indexOf("function isAgreementTemplateEditor"));
+  expect(editorSlice).toContain("stepFourCtaLabel(key)");
+  expect(managerSource).toContain('if (normalized === "continue") return "Continue button";');
+  expect(managerSource).toContain('if (normalized === "savedraft") return "Save Draft button";');
+  expect(managerSource).toContain('if (normalized === "requestanotherservice") return "Request another service button";');
+  expect(editorSlice).toContain("[key]: value");
+  expect(managerSource).not.toContain("CTA:");
+  expect(managerSource).not.toContain("CTA: CONTINUE");
+  expect(managerSource).not.toContain("CTA: SAVEDRAFT");
+  expect(managerSource).not.toContain("CTA: REQUESTANOTHERSERVICE");
+});
+
+test("S7A5.5 Step 7 landing and content editor remove redundant helper copy", () => {
+  const stepSevenSlice = managerSource.slice(managerSource.indexOf("function StepSevenContentUnits"), managerSource.indexOf("type AgreementTemplateDraftState"));
+  expect(stepSevenSlice).toContain("Choose an area to edit.");
+  expect(stepSevenSlice).not.toContain("Choose one area to edit. Each item opens on its own page.");
+  expect(stepSevenSlice).not.toContain("Edit this content area.");
+  expect(stepSevenSlice).toContain('<h3 className="text-lg font-semibold text-slate-950">{stepSevenUnitTitles[activeUnit]}</h3>');
+  expect(stepSevenSlice).toContain('data-step7-content-unit-row={id}');
+  expect(stepSevenSlice).toContain('data-step7-content-unit-editor={activeUnit}');
 });
 
 test("S7A5.4 Partner Application preview follows the selected section", () => {

@@ -594,9 +594,8 @@ function ContentDrilldownRow({
 function ItemStatusStrip({ activeRow }: { activeRow: WebsiteExperienceAdminContext }) {
   return (
     <div className="flex flex-wrap gap-2">
-      <StatusChip label={workflowLabel(activeRow.workflowState ?? activeRow.status)} tone={workflowTone(activeRow.workflowState ?? activeRow.status)} />
       <StatusChip label={`Draft v${activeRow.draftVersion}`} tone="draft" />
-      <StatusChip label={`Published v${activeRow.publishedVersion}`} tone="published" />
+      <StatusChip label={publishedVersionLabel(activeRow.publishedVersion)} tone="published" />
       {activeRow.scheduledFor ? <StatusChip label={`Scheduled ${formatDateTime(activeRow.scheduledFor)}`} tone="scheduled" /> : null}
       <span className="inline-flex min-h-8 items-center rounded-full border border-slate-600 bg-slate-900 px-3 text-xs font-semibold text-slate-300">
         Last modified {activeRow.updatedAt ? formatDateTime(activeRow.updatedAt) : "not available"}
@@ -1093,7 +1092,7 @@ function PartnerApplicationTreeEditor({
                   <Field label="Empty-state copy" value={node.emptyStateCopy} maxLength={180} onChange={(value) => updateNode(node.id, { emptyStateCopy: value })} />
                   <Field label="Other-service guidance" value={node.otherServiceGuidance} maxLength={180} onChange={(value) => updateNode(node.id, { otherServiceGuidance: value })} />
                   {Object.entries(node.ctaLabels).map(([key, value]) => (
-                    <Field key={key} label={`CTA: ${key}`} value={value} maxLength={60} onChange={(next) => updateCta(node.id, key, next)} />
+                    <Field key={key} label={stepFourCtaLabel(key)} value={value} maxLength={60} onChange={(next) => updateCta(node.id, key, next)} />
                   ))}
                 </>
               ) : null}
@@ -1123,6 +1122,18 @@ function partnerApplicationWorkflowLabel(activeRow: WebsiteExperienceAdminContex
   return "Published";
 }
 
+function publishedVersionLabel(version?: number | null): string {
+  return version && version > 0 ? `Published v${version}` : "Not published";
+}
+
+function stepFourCtaLabel(key: string): string {
+  const normalized = key.replace(/[^a-z0-9]/gi, "").toLowerCase();
+  if (normalized === "continue") return "Continue button";
+  if (normalized === "savedraft") return "Save Draft button";
+  if (normalized === "requestanotherservice") return "Request another service button";
+  return humanLabel(key);
+}
+
 function agreementTemplateWorkflowLabel(title: string): string {
   return `Partner Application / Step 7 / Agreement Template / ${title || "Agreement Template"}`;
 }
@@ -1130,7 +1141,7 @@ function agreementTemplateWorkflowLabel(title: string): string {
 function LocalStepEditorActions({ canWrite, busyAction, message, onSaveDraft }: { canWrite: boolean; busyAction: string; message: string; onSaveDraft: () => void }) {
   return (
     <div className="rounded border border-cyan-200 bg-cyan-50 p-4">
-      <p className="text-sm font-semibold text-cyan-950">Preview your changes, then save a draft.</p>
+      <p className="text-sm font-semibold text-cyan-950">Preview, then save as Draft.</p>
       <div className="mt-3 flex flex-wrap gap-3">
         <a href="#website-experience-preview" className="inline-flex h-10 items-center gap-2 rounded border border-cyan-300 bg-white px-4 text-sm font-semibold text-cyan-900 focus:outline-none focus:ring-2 focus:ring-cyan-400">
           <Eye className="h-4 w-4" />
@@ -1189,7 +1200,7 @@ function StepSevenContentUnits({
       <div className="grid gap-4" data-step7-overview-page="true">
         <h3 className="text-lg font-semibold text-slate-950">Step 7 Partner Agreement</h3>
         <div className="rounded border border-blue-100 bg-blue-50 p-3 text-sm leading-6 text-blue-950">
-          Choose one area to edit. Each item opens on its own page.
+          Choose an area to edit.
         </div>
         <div className="space-y-3" data-step7-content-unit-list="vertical">
           {stepSevenUnits.map(([id, label, detail]) => (
@@ -1219,8 +1230,7 @@ function StepSevenContentUnits({
       {activeUnit === "agreement-templates" && templateId ? null : (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h4 className="text-base font-black text-slate-950">{stepSevenUnitTitles[activeUnit]}</h4>
-            <p className="mt-1 text-sm leading-6 text-slate-600">Edit this content area.</p>
+            <h3 className="text-lg font-semibold text-slate-950">{stepSevenUnitTitles[activeUnit]}</h3>
           </div>
         </div>
       )}
@@ -1874,7 +1884,6 @@ function PreviewPanel({ content, selectedNodeId, device, onDeviceChange }: { con
           })}
         </div>
       </div>
-      <p className="mt-2 text-xs font-semibold text-slate-600">Preview Changes shows the current editor draft and never publishes content.</p>
       <div className="mt-4 rounded bg-slate-100 p-3">
         <div className={`mx-auto overflow-hidden rounded border border-slate-300 bg-white ${frameClass}`}>
           <PromoPreview content={content} selectedNodeId={selectedNodeId} compact={device !== "desktop"} />
