@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { AlertTriangle, CheckCircle2, ChevronRight, FileText, Lock, MessageSquare, RefreshCcw, Search, ShieldCheck, type LucideIcon } from "lucide-react";
 import { adminApiRequest, type AdminApiResult } from "@/app/lib/admin/adminApiClient";
@@ -115,15 +115,14 @@ export default function AdminPartnerApplicationsClient({ initialSubmissionId }: 
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState(initialSubmissionId ?? searchParams.get("submission") ?? "");
   const [notice, setNotice] = useState("");
+  const [qaState, setQaState] = useState(createQaState);
 
   const load = useCallback(async () => {
     setLoading(true);
     if (qa) {
-      const fixtures = qaQueue();
-      setQueue({ ok: true, data: fixtures, meta: { requestId: "qa", apiVersion: "v1" }, status: 200, requestId: "qa" });
+      const fixtures = qaState.queue;
       const chosen = selectedId || fixtures.rows[0]?.submissionId || "";
       setSelectedId(chosen);
-      setDetail({ ok: true, data: qaDetail(chosen), meta: { requestId: "qa", apiVersion: "v1" }, status: 200, requestId: "qa" });
       setLoading(false);
       return;
     }
@@ -144,7 +143,7 @@ export default function AdminPartnerApplicationsClient({ initialSubmissionId }: 
     if (nextId) setDetail(await adminApiRequest<DetailResponse>(`/api/v1/admin/partner-applications/${encodeURIComponent(nextId)}`));
     else setDetail(null);
     setLoading(false);
-  }, [agreement, country, entityType, payoutTax, qa, reviewer, search, selectedId, service, status, verification]);
+  }, [agreement, country, entityType, payoutTax, qa, qaState, reviewer, search, selectedId, service, status, verification]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -153,8 +152,9 @@ export default function AdminPartnerApplicationsClient({ initialSubmissionId }: 
     return () => window.clearTimeout(timer);
   }, [load]);
 
-  const rows = queue?.ok ? filterQaRows(queue.data.rows, { status, search, service, country, entityType, verification, payoutTax, agreement, reviewer }, qa) : [];
-  const detailData = detail?.ok ? detail.data : null;
+  const queueData = qa ? qaState.queue : queue?.ok ? queue.data : null;
+  const rows = queueData ? filterQaRows(queueData.rows, { status, search, service, country, entityType, verification, payoutTax, agreement, reviewer }, qa) : [];
+  const detailData = qa ? qaState.details[selectedId || qaState.queue.rows[0].submissionId] : detail?.ok ? detail.data : null;
 
   return (
     <div className="space-y-5">
@@ -196,12 +196,17 @@ export default function AdminPartnerApplicationsClient({ initialSubmissionId }: 
         onPayoutTax={setPayoutTax}
         onAgreement={setAgreement}
         onReviewer={setReviewer}
-        counts={queue?.ok ? queue.data.counts : {}}
+        counts={queueData?.counts ?? {}}
       />
       <div className="grid gap-5 xl:grid-cols-[0.9fr_1.4fr]">
-        <Queue rows={rows} selectedId={selectedId} onSelect={(id) => setSelectedId(id)} qa={qa} />
+        <Queue rows={rows} selectedId={selectedId} onSelect={(id) => { setSelectedId(id); setNotice(""); }} qa={qa} />
         {detailData ? (
-          <Detail detail={detailData} qa={qa} notice={notice} onNotice={setNotice} onReload={load} />
+          <Detail key={detailData.submission.id} detail={detailData} assignedReviewer={queueData?.rows.find((row) => row.submissionId === detailData.submission.id)?.assignedReviewer} qa={qa} notice={notice} onNotice={setNotice} onReload={load} onQaAction={(action, input) => {
+            const result = simulateQaAction(qaState, detailData.submission.id, action, input);
+            setQaState(result.state);
+            setNotice(result.notice);
+            return result.state !== qaState;
+          }} />
         ) : (
           <Empty label={loading ? "Loading application review detail." : "Select an application to review."} />
         )}
@@ -325,16 +330,28 @@ function Queue({ rows, selectedId, onSelect, qa }: { rows: QueueRow[]; selectedI
   );
 }
 
-function Detail({ detail, qa, notice, onNotice, onReload }: { detail: DetailResponse; qa: boolean; notice: string; onNotice: (value: string) => void; onReload: () => void }) {
+function Detail({ detail, assignedReviewer, qa, notice, onNotice, onReload, onQaAction }: { detail: DetailResponse; assignedReviewer?: string | null; qa: boolean; notice: string; onNotice: (value: string) => void; onReload: () => void; onQaAction: (action: ReviewAction, input: ActionInput) => boolean }) {
   const [message, setMessage] = useState(detail.messages.partnerVisible ?? "");
   const [privateNote, setPrivateNote] = useState("");
   const [reasonCategory, setReasonCategory] = useState("specialist_readiness");
   const [sections, setSections] = useState<Set<StepKey>>(new Set(["services"]));
-  const doAction = async (action: "start-review" | "request-changes" | "not-approve" | "approve" | "notes") => {
+  const [pending, setPending] = useState<ReviewAction | null>(null);
+  const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false);
+  const input = { partnerMessage: message, privateNote, reasonCategory, correctionSections: [...sections] };
+  const reason = (action: ReviewAction) => busy ? "An action is being recorded." : actionDisabledReason(detail, action, input);
+  const doAction = async (action: ReviewAction) => {
+    if (busyRef.current) return;
+    const disabled = actionDisabledReason(detail, action, input);
+    if (disabled) { onNotice(disabled); return; }
+    setPending(null);
     if (qa) {
-      onNotice("QA preview only. No application record was changed.");
+      if (onQaAction(action, input)) setPrivateNote("");
       return;
     }
+    busyRef.current = true;
+    setBusy(true);
+    try {
     const body = {
       expectedTransitionVersion: detail.submission.transitionVersion,
       correctionSections: [...sections],
@@ -352,7 +369,13 @@ function Detail({ detail, qa, notice, onNotice, onReload }: { detail: DetailResp
       setPrivateNote("");
       onReload();
     } else {
-      onNotice(result.error.message);
+      onNotice(result.status === 409 ? "This application review changed. Refresh before continuing." : result.error.message);
+    }
+    } catch {
+      onNotice("The action could not be confirmed. Refresh before trying again.");
+    } finally {
+      busyRef.current = false;
+      setBusy(false);
     }
   };
   return (
@@ -365,8 +388,9 @@ function Detail({ detail, qa, notice, onNotice, onReload }: { detail: DetailResp
         </div>
         <Pill label={`Transition v${detail.submission.transitionVersion}`} />
       </div>
-      {notice ? <Notice text={notice} /> : null}
+      {pending ? <ActionConfirmation action={pending} onCancel={() => setPending(null)} onConfirm={() => void doAction(pending)} /> : null}
       <div className="grid gap-3 md:grid-cols-3">
+        <Info label="Assigned reviewer" value={assignedReviewer ?? "Unassigned"} />
         <Info label="Submitted" value={formatDate(detail.submission.submittedAt)} />
         <Info label="Contact" value={`${detail.contact.displayName} · ${detail.contact.email}`} />
         <Info label="Activation" value="Not changed by final approval" />
@@ -404,10 +428,11 @@ function Detail({ detail, qa, notice, onNotice, onReload }: { detail: DetailResp
         </div>
       </Panel>
       <Panel title="Decision Controls">
+        {detail.messages.partnerVisible ? <p className="mb-3 text-sm">Partner-visible result: {detail.messages.partnerVisible}</p> : null}
         <div className="grid gap-3">
-          <textarea value={message} onChange={(event) => setMessage(event.target.value)} className="min-h-20 rounded border border-slate-200 p-3 text-sm" placeholder="Partner-visible message" />
-          <textarea value={privateNote} onChange={(event) => setPrivateNote(event.target.value)} className="min-h-20 rounded border border-slate-200 p-3 text-sm" placeholder="Private Admin note" />
-          <input value={reasonCategory} onChange={(event) => setReasonCategory(event.target.value)} className="h-10 rounded border border-slate-200 px-3 text-sm" placeholder="Reason category" />
+          <textarea aria-label="Partner-visible message" value={message} onChange={(event) => setMessage(event.target.value)} className="min-h-20 rounded border border-slate-200 p-3 text-sm" placeholder="Partner-visible message" />
+          <textarea aria-label="Private Admin note" value={privateNote} onChange={(event) => setPrivateNote(event.target.value)} className="min-h-20 rounded border border-slate-200 p-3 text-sm" placeholder="Private Admin note" />
+          <input aria-label="Reason category" value={reasonCategory} onChange={(event) => setReasonCategory(event.target.value)} className="h-10 rounded border border-slate-200 px-3 text-sm" placeholder="Reason category" />
           <div className="flex flex-wrap gap-2">
             {(Object.keys(stepLabels) as StepKey[]).map((step) => (
               <label key={step} className="inline-flex items-center gap-2 rounded bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700">
@@ -422,12 +447,13 @@ function Detail({ detail, qa, notice, onNotice, onReload }: { detail: DetailResp
             ))}
           </div>
           <div className="flex flex-wrap gap-2">
-            <ActionButton label="Start review" icon={ShieldCheck} enabled={detail.actions.canStartReview} reason={detail.actions.disabledReasons.startReview} onClick={() => void doAction("start-review")} />
-            <ActionButton label="Request changes" icon={MessageSquare} enabled={detail.actions.canRequestChanges} reason={detail.actions.disabledReasons.requestChanges} onClick={() => void doAction("request-changes")} />
-            <ActionButton label="Not approve" icon={Lock} enabled={detail.actions.canNotApprove} reason={detail.actions.disabledReasons.notApprove} onClick={() => window.confirm("Not approve this final application?") && void doAction("not-approve")} />
-            <ActionButton label="Approve final application" icon={CheckCircle2} enabled={detail.actions.canApprove} reason={detail.actions.disabledReasons.approve} onClick={() => window.confirm("Approval does not activate the organization, services, payouts or Partner Desk access.") && void doAction("approve")} />
-            <ActionButton label="Add private note" icon={FileText} enabled={detail.actions.canAddPrivateNote} reason={detail.actions.disabledReasons.privateNote} onClick={() => void doAction("notes")} />
+            <ActionButton label="Start review" icon={ShieldCheck} enabled={!reason("start-review")} reason={reason("start-review")} onClick={() => void doAction("start-review")} />
+            <ActionButton label="Request changes" icon={MessageSquare} enabled={!reason("request-changes")} reason={reason("request-changes")} onClick={() => setPending("request-changes")} />
+            <ActionButton label="Not approve" icon={Lock} enabled={!reason("not-approve")} reason={reason("not-approve")} onClick={() => setPending("not-approve")} />
+            <ActionButton label="Approve final application" icon={CheckCircle2} enabled={!reason("approve")} reason={reason("approve")} onClick={() => setPending("approve")} />
+            <ActionButton label="Add private note" icon={FileText} enabled={!reason("notes")} reason={reason("notes")} onClick={() => void doAction("notes")} />
           </div>
+          {notice ? <Notice text={notice} /> : null}
         </div>
       </Panel>
       <Panel title="Private Admin Notes">
@@ -436,7 +462,7 @@ function Detail({ detail, qa, notice, onNotice, onReload }: { detail: DetailResp
       <Panel title="Timeline">
         <div className="space-y-2">
           {detail.timeline.map((event) => (
-            <p key={event.id} className="text-sm text-slate-600">{event.label} · {event.actor} · {formatDate(event.occurredAt)}</p>
+            <p key={event.id} className="text-sm text-slate-600">{event.label} · {event.actor} · {formatDate(event.occurredAt)}{event.partnerVisibleMessage ? ` · ${event.partnerVisibleMessage}` : ""}{event.correctionSections.length ? ` · ${event.correctionSections.map((step) => stepLabels[step]).join(", ")}` : ""}</p>
           ))}
         </div>
       </Panel>
@@ -445,12 +471,13 @@ function Detail({ detail, qa, notice, onNotice, onReload }: { detail: DetailResp
 }
 
 function ActionButton({ label, icon: Icon, enabled, reason, onClick }: { label: string; icon: LucideIcon; enabled: boolean; reason?: string; onClick: () => void }) {
+  const reasonId = `action-reason-${label.toLowerCase().replace(/ /g, "-")}`;
   return (
     <span className="inline-flex flex-col">
-      <button type="button" disabled={!enabled} onClick={onClick} className={`inline-flex h-10 items-center gap-2 rounded px-4 text-sm font-semibold ${enabled ? "bg-slate-950 text-white" : "bg-slate-100 text-slate-400"}`}>
+      <button type="button" disabled={!enabled} aria-describedby={!enabled && reason ? reasonId : undefined} onClick={onClick} className={`inline-flex min-h-10 items-center gap-2 rounded px-4 py-2 text-sm font-semibold ${enabled ? "bg-slate-950 text-white" : "bg-slate-100 text-slate-400"}`}>
         <Icon className="h-4 w-4" /> {label}
       </button>
-      {!enabled && reason ? <span className="mt-1 max-w-56 text-xs text-slate-500">{reason}</span> : null}
+      {!enabled && reason ? <span id={reasonId} className="mt-1 max-w-56 text-xs text-slate-500">{reason}</span> : null}
     </span>
   );
 }
@@ -468,7 +495,7 @@ function Pill({ label }: { label: string }) {
 }
 
 function Notice({ text }: { text: string }) {
-  return <div className="rounded border border-amber-200 bg-amber-50 p-3 text-sm font-medium text-amber-800">{text}</div>;
+  return <div role="status" aria-live="polite" className="rounded border border-amber-200 bg-amber-50 p-3 text-sm font-medium text-amber-800">{text}</div>;
 }
 
 function Empty({ label }: { label: string }) {
@@ -494,7 +521,85 @@ function humanCode(value: string) {
 }
 
 function actionLabel(value: string) {
+  if (value === "notes") return "Add Private Note";
+  if (value === "approve") return "Approve Final Application";
   return statusLabel(value.replace(/-/g, "_"));
+}
+
+type ReviewAction = "start-review" | "request-changes" | "not-approve" | "approve" | "notes";
+type ActionInput = { partnerMessage: string; privateNote: string; reasonCategory: string; correctionSections: StepKey[] };
+const actionKeys = {
+  "start-review": ["canStartReview", "startReview"],
+  "request-changes": ["canRequestChanges", "requestChanges"],
+  "not-approve": ["canNotApprove", "notApprove"],
+  approve: ["canApprove", "approve"],
+  notes: ["canAddPrivateNote", "privateNote"],
+} as const;
+
+export function actionDisabledReason(detail: DetailResponse, action: ReviewAction, input: ActionInput): string {
+  const [flag, key] = actionKeys[action];
+  const permission = action === "approve" || action === "not-approve" ? detail.permissions.canFinalApprove : detail.permissions.canReview || detail.permissions.canManage;
+  if (!permission) return detail.actions.disabledReasons[key] || "You do not have permission for this action.";
+  const status = detail.submission.workflowStatus;
+  if (action === "start-review" && !["SUBMITTED", "RESUBMITTED"].includes(status)) return "Start Review requires Submitted or Resubmitted status.";
+  if (action !== "start-review" && action !== "notes" && !["UNDER_REVIEW", "RESUBMITTED"].includes(status)) return "This action requires Under Review or Resubmitted status.";
+  if (action === "approve" && (!detail.readiness.approvalReady || detail.readiness.approvalBlockers.length)) return "Specialist approval blockers remain.";
+  if (!detail.actions[flag]) return detail.actions.disabledReasons[key] || "This action is unavailable for this application.";
+  const missing: string[] = [];
+  if (action === "request-changes" && !input.correctionSections.length) missing.push("Select at least one correction section.");
+  if (action === "not-approve" && !input.reasonCategory.trim()) missing.push("Reason category is required.");
+  if ((action === "request-changes" || action === "not-approve") && !input.partnerMessage.trim()) missing.push("Partner-visible message is required.");
+  if (action === "notes" && !input.privateNote.trim()) missing.push("Private Admin note is required.");
+  return missing.join(" ");
+}
+
+export function ActionConfirmation({ action, onCancel, onConfirm }: { action: ReviewAction; onCancel: () => void; onConfirm: () => void }) {
+  const ref = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const dialog = ref.current;
+    const trigger = document.activeElement as HTMLElement | null;
+    dialog?.showModal();
+    return () => { dialog?.close(); trigger?.focus(); };
+  }, []);
+  return <dialog ref={ref} aria-modal="true" aria-labelledby="review-confirm-title" aria-describedby="review-confirm-description" onCancel={(event) => { event.preventDefault(); onCancel(); }} className="fixed inset-0 m-auto w-[calc(100%-2rem)] max-w-lg rounded border border-slate-200 bg-white p-6 shadow-xl backdrop:bg-black/40">
+    <h2 id="review-confirm-title" className="text-lg font-semibold">{actionLabel(action)}</h2>
+    <p id="review-confirm-description" className="mt-3 text-sm text-slate-600">{action === "approve" ? "Approval does not activate the organization, services, payouts or Partner Desk access." : `Confirm ${actionLabel(action).toLowerCase()} for this application using the entered Partner-visible message.`}</p>
+    <div className="mt-5 flex flex-wrap justify-end gap-3">
+      <button type="button" autoFocus onClick={onCancel} className="rounded border border-slate-300 px-4 py-2 text-sm font-semibold">Cancel</button>
+      <button type="button" onClick={onConfirm} className="rounded bg-slate-950 px-4 py-2 text-sm font-semibold text-white">{actionLabel(action)}</button>
+    </div>
+  </dialog>;
+}
+
+export function createQaState() {
+  const queue = qaQueue();
+  return { queue, details: Object.fromEntries(queue.rows.map((row) => [row.submissionId, qaDetail(row.submissionId)])) };
+}
+
+export function simulateQaAction(state: ReturnType<typeof createQaState>, id: string, action: ReviewAction, input: ActionInput) {
+  const detail = state.details[id];
+  const disabled = actionDisabledReason(detail, action, input);
+  if (disabled) return { state, notice: disabled };
+  if (id === "qa-stale-conflict") return { state, notice: "This application review changed. Refresh before continuing. QA preview only; no application record was changed." };
+  const now = new Date().toISOString();
+  const from = detail.submission.workflowStatus;
+  const to: ApplicationStatus = action === "start-review" ? "UNDER_REVIEW" : action === "request-changes" ? "CHANGES_REQUESTED" : action === "not-approve" ? "NOT_APPROVED" : action === "approve" ? "APPROVED" : from;
+  const version = detail.submission.transitionVersion + (action === "notes" ? 0 : 1);
+  const partnerMessage = action === "request-changes" || action === "not-approve" ? input.partnerMessage.trim() : detail.messages.partnerVisible;
+  const next: DetailResponse = {
+    ...detail,
+    submission: { ...detail.submission, workflowStatus: to, transitionVersion: version, partnerVisibleMessage: partnerMessage },
+    messages: { partnerVisible: partnerMessage, privateAdminNotes: input.privateNote.trim() ? [...detail.messages.privateAdminNotes, { id: `${id}:note:${detail.messages.privateAdminNotes.length}`, author: "QA Reviewer", createdAt: now, note: input.privateNote.trim() }] : detail.messages.privateAdminNotes },
+    timeline: action === "notes" ? detail.timeline : [...detail.timeline, { id: `${id}:${version}`, action, label: actionLabel(action), fromStatus: from, toStatus: to, actor: "QA Reviewer", occurredAt: now, partnerVisibleMessage: action === "request-changes" || action === "not-approve" ? partnerMessage : null, correctionSections: action === "request-changes" ? [...input.correctionSections] : [], privateNotePresent: Boolean(input.privateNote.trim()) }],
+    actions: { ...detail.actions, canStartReview: to === "RESUBMITTED" || to === "SUBMITTED", canRequestChanges: to === "UNDER_REVIEW" || to === "RESUBMITTED", canNotApprove: to === "UNDER_REVIEW" || to === "RESUBMITTED", canApprove: (to === "UNDER_REVIEW" || to === "RESUBMITTED") && detail.readiness.approvalReady && !detail.readiness.approvalBlockers.length },
+  };
+  const rows = state.queue.rows.map((row) => row.submissionId === id ? { ...row, workflowStatus: to, transitionVersion: version, assignedReviewer: action === "start-review" ? "QA Reviewer" : row.assignedReviewer } : row);
+  const counts: Record<string, number> = { ACTIONABLE: 0 };
+  for (const row of rows) {
+    counts[row.workflowStatus] = (counts[row.workflowStatus] ?? 0) + 1;
+    if (["SUBMITTED", "RESUBMITTED", "UNDER_REVIEW"].includes(row.workflowStatus)) counts.ACTIONABLE++;
+  }
+  return { state: { queue: { ...state.queue, rows, counts }, details: { ...state.details, [id]: next } }, notice: `QA preview only. ${actionLabel(action)} was simulated. No application record was changed.` };
 }
 
 function filterQaRows(rows: QueueRow[], filters: { status: string; search: string; service: string; country: string; entityType: string; verification: string; payoutTax: string; agreement: string; reviewer: string }, qa: boolean) {

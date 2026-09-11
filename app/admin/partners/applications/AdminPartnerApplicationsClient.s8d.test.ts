@@ -55,7 +55,7 @@ test("QA preview is local-only and exposes every final-review state", () => {
   for (const fixture of ["APPROVAL_BLOCKED", "STALE_CONFLICT", "READ_ONLY"]) {
     expect(client).toContain(fixture);
   }
-  expect(client).toContain('if (qa) {\n      onNotice("QA preview only. No application record was changed.");\n      return;\n    }');
+  expect(client).toContain('if (onQaAction(action, input)) setPrivateNote("")');
 });
 
 test("normal mode calls the S8D Admin endpoints with idempotency support", () => {
@@ -70,7 +70,7 @@ test("read-only and disabled action reasons are visible", () => {
   expect(client).toContain("Specialist approval blockers remain.");
   expect(client).toContain("This application review changed. Refresh before continuing.");
   expect(client).toContain("Read-only Admins can view but cannot approve applications.");
-  expect(client).toContain("reason={detail.actions.disabledReasons.startReview}");
+  expect(client).toContain('reason={reason("start-review")}');
 });
 
 test("Partner S8C Step 8 remains separate from Admin final review", () => {
