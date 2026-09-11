@@ -330,7 +330,7 @@ function Queue({ rows, selectedId, onSelect, qa }: { rows: QueueRow[]; selectedI
   );
 }
 
-function Detail({ detail, assignedReviewer, qa, notice, onNotice, onReload, onQaAction }: { detail: DetailResponse; assignedReviewer?: string | null; qa: boolean; notice: string; onNotice: (value: string) => void; onReload: () => void; onQaAction: (action: ReviewAction, input: ActionInput) => boolean }) {
+function Detail({ detail, assignedReviewer, qa, notice, onNotice, onReload, onQaAction }: { detail: DetailResponse; assignedReviewer?: string | null; qa: boolean; notice: string; onNotice: (value: string) => void; onReload: () => Promise<void> | void; onQaAction: (action: ReviewAction, input: ActionInput) => boolean }) {
   const [message, setMessage] = useState(detail.messages.partnerVisible ?? "");
   const [privateNote, setPrivateNote] = useState("");
   const [reasonCategory, setReasonCategory] = useState("specialist_readiness");
@@ -367,7 +367,7 @@ function Detail({ detail, assignedReviewer, qa, notice, onNotice, onReload, onQa
     if (result.ok) {
       onNotice(`${actionLabel(action)} recorded.`);
       setPrivateNote("");
-      onReload();
+      await onReload();
     } else {
       onNotice(result.status === 409 ? "This application review changed. Refresh before continuing." : result.error.message);
     }

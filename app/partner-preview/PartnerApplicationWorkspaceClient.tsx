@@ -690,7 +690,7 @@ export default function PartnerApplicationWorkspaceClient({
   const effectiveStep8Readiness = qaPreviewEnabled ? step8Readiness ?? buildPartnerQaPreviewReadiness(qaPreviewState) : step8Readiness;
   const effectiveStep8Submission = qaPreviewEnabled ? step8Submission : step8Submission ?? step8Readiness?.latestSubmission ?? null;
   const step8StateLabel = effectiveStep8Readiness ? partnerStep8StateLabel(effectiveStep8Readiness.applicationStatus, effectiveStep8Readiness.submissionReady) : "Needs attention";
-  const step8CanSubmit = Boolean(effectiveStep8Readiness && canSubmitPartnerStep8(effectiveStep8Readiness, acceptedStep8Declarations));
+  const step8CanSubmit = Boolean(step8LoadStatus === "ready" && effectiveStep8Readiness && canSubmitPartnerStep8(effectiveStep8Readiness, acceptedStep8Declarations));
   const step8DisabledReason = step8BlockingReason(effectiveStep8Readiness, acceptedStep8Declarations);
   const step8NavigationStatusOverrides = useMemo(() => partnerStep8NavigationStatusOverrides(effectiveStep8Readiness), [effectiveStep8Readiness]);
   const step8ReadOnlyStepOverrides = useMemo(() => partnerStep8ReadOnlyStepOverrides(effectiveStep8Readiness), [effectiveStep8Readiness]);
@@ -770,8 +770,9 @@ export default function PartnerApplicationWorkspaceClient({
 
   async function loadStep8ApplicationState(options: { silent?: boolean } = {}) {
     if (qaPreviewEnabled || !isAuthenticated) return;
+    setStep8LoadStatus("loading");
+    setSubmitConfirmOpen(false);
     if (!options.silent) {
-      setStep8LoadStatus("loading");
       setStep8Error(null);
     }
     const result = await fetchPartnerApplicationSubmission();
@@ -1040,7 +1041,12 @@ export default function PartnerApplicationWorkspaceClient({
       setMessage({ tone: "success", text: "QA preview moved to Under Review. No backend submission was made." });
       return;
     }
-    if (!step8CanSubmit || submitStatus === "submitting") return;
+    if (submitStatus === "submitting") return;
+    if (!step8CanSubmit) {
+      setSubmitConfirmOpen(false);
+      setMessage({ tone: "error", text: step8DisabledReason ?? "Wait for application readiness to refresh, then review the declarations before submitting." });
+      return;
+    }
     const idempotencyKey = submitAttemptKeyRef.current ?? createPartnerStep8AttemptKey();
     submitAttemptKeyRef.current = idempotencyKey;
     setSubmitConfirmOpen(false);
