@@ -945,6 +945,7 @@ export default function PartnerApplicationWorkspaceClient({
   }
 
   function updateServicesForm(next: ServicesFormUpdate) {
+    if (step8ReadOnlyStepOverrides.services === true) return;
     setServicesForm((current) => {
       const resolved = { ...current, ...(typeof next === "function" ? next(current) : next) };
       servicesFormRef.current = resolved;
@@ -983,6 +984,7 @@ export default function PartnerApplicationWorkspaceClient({
   }
 
   function removeSelectedServiceDomain(domainId: PartnerServiceDomainId) {
+    if (step8ReadOnlyStepOverrides.services === true) return;
     updateServicesForm((current) => ({
       selectedServiceCodes: current.selectedServiceCodes.filter((code) => findPartnerCatalogueItemIn(serviceCatalogueState.items, code)?.domain !== domainId),
     }));
@@ -990,7 +992,13 @@ export default function PartnerApplicationWorkspaceClient({
   }
 
   function openSelectedServiceDomain(domainId: PartnerServiceDomainId) {
+    if (step8ReadOnlyStepOverrides.services === true) return;
     setActiveServiceDomainIds((current) => current.includes(domainId) ? current : [...current, domainId]);
+  }
+
+  function updateActiveServiceDomains(next: PartnerServiceDomainId[] | ((current: PartnerServiceDomainId[]) => PartnerServiceDomainId[])) {
+    if (step8ReadOnlyStepOverrides.services === true) return;
+    setActiveServiceDomainIds(next);
   }
 
   function changeQaPreviewState(state: PartnerQaPreviewState) {
@@ -1783,6 +1791,7 @@ export default function PartnerApplicationWorkspaceClient({
                     />
                   ) : activeStep === "services" ? (
                     <ServicesStep
+                      readOnly={step8ReadOnlyStepOverrides.services === true}
                       form={servicesForm}
                       businessType={businessForm.organizationType}
                       countryCode={locationForm.primaryLocation.countryCode}
@@ -1793,7 +1802,7 @@ export default function PartnerApplicationWorkspaceClient({
                       qaPreviewEnabled={qaPreviewEnabled}
                       legacyScopes={activeBundle?.serviceScopes ?? []}
                       activeDomainIds={activeServiceDomainIds}
-                      onActiveDomainIdsChange={setActiveServiceDomainIds}
+                      onActiveDomainIdsChange={updateActiveServiceDomains}
                       onRemoveSelectedService={removeSelectedService}
                       onRemoveSelectedServiceDomain={removeSelectedServiceDomain}
                       onOpenSelectedServiceDomain={openSelectedServiceDomain}
@@ -1840,6 +1849,7 @@ export default function PartnerApplicationWorkspaceClient({
             ) : null}
             servicesSummary={activeStep === "services" ? (
               <SelectedServicesSummary
+                readOnly={step8ReadOnlyStepOverrides.services === true}
                 form={servicesForm}
                 headingId="selected-services-summary-desktop"
                 countryCode={locationForm.primaryLocation.countryCode}
@@ -2453,6 +2463,7 @@ function BusinessLocationStep({
 }
 
 function ServicesStep({
+  readOnly,
   form,
   businessType,
   countryCode,
@@ -2474,6 +2485,7 @@ function ServicesStep({
   countryCode: string;
   canComplete: boolean;
   catalogueStatus: RuntimeCatalogueState["status"];
+  readOnly: boolean;
   serviceCatalog: PartnerServiceCategory[];
   serviceCatalogueItems: PartnerServiceCatalogueItem[];
   qaPreviewEnabled: boolean;
@@ -2583,6 +2595,7 @@ function ServicesStep({
 
         <div className="xl:hidden">
           <SelectedServicesSummary
+            readOnly={readOnly}
             form={form}
             headingId="selected-services-summary-mobile"
             countryCode={countryCode}
@@ -2789,7 +2802,8 @@ function ServicesStep({
   );
 }
 
-function SelectedServicesSummary({
+export function SelectedServicesSummary({
+  readOnly,
   form,
   headingId,
   countryCode,
@@ -2803,6 +2817,7 @@ function SelectedServicesSummary({
 }: {
   form: ServicesForm;
   headingId: string;
+  readOnly: boolean;
   countryCode: string;
   businessType: string;
   serviceCatalogueItems: PartnerServiceCatalogueItem[];
@@ -2847,10 +2862,10 @@ function SelectedServicesSummary({
                 <p className="mt-1 text-xs font-semibold text-slate-500">{group.items.length} selected</p>
               </div>
               <div className="flex shrink-0 gap-2">
-                <button type="button" onClick={() => onEditDomain(group.domainId)} className="rounded-lg border border-[#38bdf8]/30 bg-[#38bdf8]/10 px-2 py-1 text-[11px] font-black text-[#bae6fd] focus:outline-none focus:ring-2 focus:ring-[#38bdf8]/35">
+                <button type="button" disabled={readOnly} onClick={() => { if (!readOnly) onEditDomain(group.domainId); }} className="rounded-lg border border-[#38bdf8]/30 bg-[#38bdf8]/10 px-2 py-1 text-[11px] font-black text-[#bae6fd] focus:outline-none focus:ring-2 focus:ring-[#38bdf8]/35 disabled:cursor-not-allowed disabled:opacity-50">
                   Edit
                 </button>
-                <button type="button" onClick={() => onRemoveDomain(group.domainId)} className="rounded-lg border border-white/10 px-2 py-1 text-[11px] font-black text-slate-300 hover:border-[#f97316]/40 hover:text-[#fed7aa] focus:outline-none focus:ring-2 focus:ring-[#f97316]/30">
+                <button type="button" disabled={readOnly} onClick={() => { if (!readOnly) onRemoveDomain(group.domainId); }} className="rounded-lg border border-white/10 px-2 py-1 text-[11px] font-black text-slate-300 hover:border-[#f97316]/40 hover:text-[#fed7aa] focus:outline-none focus:ring-2 focus:ring-[#f97316]/30 disabled:cursor-not-allowed disabled:opacity-50">
                   Remove
                 </button>
               </div>
@@ -2862,7 +2877,7 @@ function SelectedServicesSummary({
                     <p className="truncate text-xs font-black text-white">{item.name}</p>
                     <p className="truncate text-[11px] font-bold text-slate-500">{group.title}</p>
                   </div>
-                  <button type="button" onClick={() => onRemoveService(item)} aria-label={`Remove ${item.name}`} className="rounded-md p-1 text-slate-400 hover:bg-white/10 hover:text-[#fed7aa] focus:outline-none focus:ring-2 focus:ring-[#f97316]/30">
+                  <button type="button" disabled={readOnly} onClick={() => { if (!readOnly) onRemoveService(item); }} aria-label={`Remove ${item.name}`} className="rounded-md p-1 text-slate-400 hover:bg-white/10 hover:text-[#fed7aa] focus:outline-none focus:ring-2 focus:ring-[#f97316]/30 disabled:cursor-not-allowed disabled:opacity-50">
                     <X size={14} aria-hidden="true" />
                   </button>
                 </div>
