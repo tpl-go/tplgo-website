@@ -878,40 +878,40 @@ export default function PartnerApplicationWorkspaceClient({
   }, [initialQaStep, isAuthenticated, qaPreviewEnabled, qaPreviewState, serviceCatalogueState.items, user]);
 
   useEffect(() => {
-    if (qaPreviewEnabled || !isAuthenticated || loadStatus !== "ready") return;
+    if (qaPreviewEnabled || !isAuthenticated || loadStatus !== "ready" || !effectiveStep8Readiness || activeStepReadOnly || activeStep !== "account_contact") return;
     const timer = window.setTimeout(() => {
       if (form.organizationId || hasMeaningfulStepOneInput(form)) void saveDraft({ silent: true });
     }, 1400);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form.contactPersonFullName, form.designation, form.roleOther, form.businessMobile, form.businessEmail, form.authorizedRepresentative]);
+  }, [activeStep, activeStepReadOnly, effectiveStep8Readiness, form.contactPersonFullName, form.designation, form.roleOther, form.businessMobile, form.businessEmail, form.authorizedRepresentative]);
 
   useEffect(() => {
-    if (qaPreviewEnabled || !isAuthenticated || loadStatus !== "ready" || activeStep !== "business_identity") return;
+    if (qaPreviewEnabled || !isAuthenticated || loadStatus !== "ready" || !effectiveStep8Readiness || activeStepReadOnly || activeStep !== "business_identity") return;
     const timer = window.setTimeout(() => {
       if (businessForm.organizationId || hasMeaningfulStepTwoInput(businessForm)) void saveDraft({ silent: true });
     }, 1400);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeStep, businessForm.legalName, businessForm.brandName, businessForm.organizationType, businessForm.organizationTypeOther, businessForm.description, businessForm.yearEstablished, businessForm.registrationType, businessForm.registrationNumber, businessForm.registrationDate]);
+  }, [activeStep, activeStepReadOnly, effectiveStep8Readiness, businessForm.legalName, businessForm.brandName, businessForm.organizationType, businessForm.organizationTypeOther, businessForm.description, businessForm.yearEstablished, businessForm.registrationType, businessForm.registrationNumber, businessForm.registrationDate]);
 
   useEffect(() => {
-    if (qaPreviewEnabled || !isAuthenticated || loadStatus !== "ready" || activeStep !== "business_location") return;
+    if (qaPreviewEnabled || !isAuthenticated || loadStatus !== "ready" || !effectiveStep8Readiness || activeStepReadOnly || activeStep !== "business_location") return;
     const timer = window.setTimeout(() => {
       if (locationForm.organizationId || hasMeaningfulStepThreeInput(locationForm)) void saveDraft({ silent: true });
     }, 1400);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeStep, locationForm.primaryLocation, locationForm.sameAsOperating, locationForm.operatingLocation, locationForm.serviceAreas]);
+  }, [activeStep, activeStepReadOnly, effectiveStep8Readiness, locationForm.primaryLocation, locationForm.sameAsOperating, locationForm.operatingLocation, locationForm.serviceAreas]);
 
   useEffect(() => {
-    if (qaPreviewEnabled || !isAuthenticated || loadStatus !== "ready" || activeStep !== "services") return;
+    if (qaPreviewEnabled || !isAuthenticated || loadStatus !== "ready" || !effectiveStep8Readiness || activeStepReadOnly || activeStep !== "services") return;
     const timer = window.setTimeout(() => {
       if (servicesForm.organizationId || hasMeaningfulStepFourInput(servicesForm)) void saveDraft({ silent: true });
     }, 1400);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeStep, servicesForm.selectedServiceCodes, servicesForm.requestedServices]);
+  }, [activeStep, activeStepReadOnly, effectiveStep8Readiness, servicesForm.selectedServiceCodes, servicesForm.requestedServices]);
 
   function updateForm(next: Partial<AccountContactForm>) {
     setForm((current) => {
@@ -1092,6 +1092,7 @@ export default function PartnerApplicationWorkspaceClient({
   }
 
   async function saveDraft(options: { silent?: boolean; continueAfter?: boolean } = {}) {
+    if (activeStepReadOnly || activeStep === "review_submit" || (!qaPreviewEnabled && !effectiveStep8Readiness)) return null;
     if (qaPreviewEnabled) {
       const savedAt = new Date().toISOString();
       setSaveStatus("saved");
