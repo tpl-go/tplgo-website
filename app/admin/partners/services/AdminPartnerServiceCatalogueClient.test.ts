@@ -4,21 +4,20 @@ import { expect, test } from "vitest";
 
 const clientSource = readFileSync(join(process.cwd(), "app/admin/partners/services/AdminPartnerServiceCatalogueClient.tsx"), "utf8");
 const routeSource = readFileSync(join(process.cwd(), "app/admin/website-experience/pages/partner/service-catalogue/page.tsx"), "utf8");
+const navigationSource = readFileSync(join(process.cwd(), "app/admin/partners/_components/PartnerAdminNavigation.tsx"), "utf8");
 const partnerListingSource = readFileSync(join(process.cwd(), "app/admin/_components/AdminWebsiteExperienceLanding.tsx"), "utf8");
 
 test("Service Catalogue route keeps explicit Back to Partner and complete clickable breadcrumbs", () => {
-  expect(routeSource).toContain('href="/admin/website-experience/pages/partner" label="Back to Partner"');
-  expect(routeSource).toContain('aria-label="Website Experience breadcrumbs"');
-  expect(routeSource).toContain('href="/admin/website-experience"');
-  expect(routeSource).toContain('href="/admin/website-experience/pages"');
-  expect(routeSource).toContain('href="/admin/website-experience/pages/partner"');
-  expect(routeSource).toContain('aria-current="page"');
-  expect(routeSource).toContain("Service Catalogue");
+  expect(navigationSource).toContain('href="/admin/website-experience/pages/partner"');
+  expect(navigationSource).toContain('aria-label="Partner breadcrumbs"');
+  expect(navigationSource).toContain('aria-current="page"');
+  expect(routeSource).toContain("AdminPartnerServiceCatalogueClient");
   expect(routeSource).not.toContain("router.back");
 });
 
 test("Service Catalogue home uses compact human header and summary chips", () => {
-  expect(clientSource).toContain(">Service Catalogue</h2>");
+  expect(navigationSource).toContain('<h1');
+  expect(clientSource).not.toContain(">Service Catalogue</h2>");
   expect(clientSource).toContain("Manage Partner service domains and services.");
   expect(clientSource).toContain('aria-label="Catalogue summary"');
   expect(clientSource).toContain('<SummaryChip label="Domains" value={String(domains.length)} />');
@@ -139,7 +138,8 @@ test("Domain Detail hides Catalogue Home chrome and keeps explicit Back to Servi
 
   expect(clientSource).toContain("const showCatalogueHomeHeader = !selectedDomain && !selectedItem;");
   expect(clientSource).toContain("!showCatalogueHomeHeader ? <HideCatalogueRouteChrome /> : null");
-  expect(routeSource).toContain("catalogueRouteChrome");
+  expect(routeSource).not.toContain("catalogueRouteChrome");
+  expect(navigationSource).toContain('aria-label="Partner navigation"');
   expect(detailSource).toContain('href="/admin/website-experience/pages/partner/service-catalogue" label="Back to Service Catalogue"');
   expect(detailSource).not.toContain("Back to Partner");
   expect(detailSource).toContain("<DomainBreadcrumb domainName={props.domain.title} />");

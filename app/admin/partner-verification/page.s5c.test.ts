@@ -4,10 +4,12 @@ import { test } from "vitest";
 
 const pageSource = readFileSync("app/admin/partner-verification/page.tsx", "utf8");
 const shellSource = readFileSync("app/admin/_components/AdminShell.tsx", "utf8");
+const navigationSource = readFileSync("app/admin/partners/_components/partnerAdminRoutes.ts", "utf8");
 const partnerStepSource = readFileSync("app/partner-preview/PartnerApplicationWorkspaceClient.tsx", "utf8");
 
 test("Admin verification review lives under Partners and not Website Experience", () => {
-  assert.match(shellSource, /label: "Verification & Compliance"/);
+  assert.match(navigationSource, /label: "Verification"/);
+  assert.match(shellSource, /partnerAdminNavigation/);
   assert.match(pageSource, /AdminProtected/);
   assert.match(pageSource, /AdminShell title="Partner Verification & Compliance"/);
   assert.ok(pageSource.includes("Admin"));

@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { canEditPartnerStep, partnerStepAccess, resolvePartnerStep } from "../lib/partner/partnerStepAccess";
 import {
   ArrowLeft,
   ArrowRight,
@@ -598,7 +599,8 @@ export default function PartnerApplicationWorkspaceClient({
   const initialQaState = parseQaPreviewState(initialQaPreviewState);
   const [qaPreviewState, setQaPreviewState] = useState<PartnerQaPreviewState>(initialQaState);
   const [bundle, setBundle] = useState<PartnerOrganizationBundle | null>(null);
-  const [activeStep, setActiveStep] = useState<WorkspaceStepId>("account_contact");
+  const [requestedStep, setActiveStep] = useState<WorkspaceStepId | null>(null);
+  const stepSearchParams = useSearchParams();
   const [form, setForm] = useState<AccountContactForm>(() => emptyForm());
   const [businessForm, setBusinessForm] = useState<BusinessIdentityForm>(() => emptyBusinessForm());
   const [locationForm, setLocationForm] = useState<BusinessLocationForm>(() => emptyLocationForm());
@@ -694,7 +696,26 @@ export default function PartnerApplicationWorkspaceClient({
   const step8DisabledReason = step8BlockingReason(effectiveStep8Readiness, acceptedStep8Declarations);
   const step8NavigationStatusOverrides = useMemo(() => partnerStep8NavigationStatusOverrides(effectiveStep8Readiness), [effectiveStep8Readiness]);
   const step8ReadOnlyStepOverrides = useMemo(() => partnerStep8ReadOnlyStepOverrides(effectiveStep8Readiness), [effectiveStep8Readiness]);
-  const activeStepReadOnly = step8ReadOnlyStepOverrides[activeStep] === true;
+  const activeStep = resolvePartnerStep(requestedStep ?? stepSearchParams.get("step"), effectiveStep8Readiness);
+  const stepAccess = partnerStepAccess(effectiveStep8Readiness);
+  const activeStepReadOnly = !canEditPartnerStep(effectiveStep8Readiness, activeStep) || step8ReadOnlyStepOverrides[activeStep] === true;
+  const selectStep = (step: WorkspaceStepId) => {
+    if (!stepAccess.steps.some((item) => item.id === step && item.accessible)) return;
+    setActiveStep(step);
+    const query = new URLSearchParams(stepSearchParams.toString());
+    query.set("step", step);
+    router.push(`/partner-preview?${query.toString()}`, { scroll: false });
+  };
+  useEffect(() => {
+    if (step8LoadStatus !== "ready") return;
+    const query = new URLSearchParams(stepSearchParams.toString());
+    const requested = query.get("step");
+    if (requested && resolvePartnerStep(requested, effectiveStep8Readiness) !== requested) {
+      query.set("step", stepAccess.latestAccessible);
+      router.replace(`/partner-preview?${query.toString()}`, { scroll: false });
+    }
+  }, [effectiveStep8Readiness, router, step8LoadStatus, stepAccess.latestAccessible, stepSearchParams]);
+  useEffect(() => { setActiveStep(null); }, [stepSearchParams]);
   const headerMetadataText = partnerStep8HeaderMetadata(effectiveStep8Readiness, effectiveStep8Submission, statusText(saveStatus, lastSavedAt));
 
   useEffect(() => {
@@ -782,7 +803,7 @@ export default function PartnerApplicationWorkspaceClient({
       setAcceptedStep8Declarations({});
       setStep8LoadStatus("ready");
       setStep8Error(null);
-      return;
+      return result.data.readiness;
     }
     const code = normalizeStep8ErrorCode(result.status, result.error.code);
     setStep8LoadStatus("error");
@@ -812,7 +833,7 @@ export default function PartnerApplicationWorkspaceClient({
     if (qaPreviewEnabled || !isAuthenticated) return;
     void loadStep8ApplicationState({ silent: false });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, qaPreviewEnabled]);
+  }, [isAuthenticated, qaPreviewEnabled, bundle]);
 
   useEffect(() => {
     if (qaPreviewEnabled || !isAuthenticated || activeStep !== "review_submit") return;
@@ -866,7 +887,7 @@ export default function PartnerApplicationWorkspaceClient({
         setAgreementForm(agreementFormFromBundle(result.data));
         setActiveServiceDomainIds(serviceDomainIdsFromCodes(nextServicesForm.selectedServiceCodes, serviceCatalogueState.items));
         setLastSavedAt(readLastSaved(result.data));
-        setActiveStep(resolveActiveStep(result.data));
+        setActiveStep(null);
         setLoadStatus("ready");
       } else {
         setMessage({ tone: "error", text: "Could not load your Partner application." });
@@ -915,6 +936,7 @@ export default function PartnerApplicationWorkspaceClient({
   }, [activeStep, activeStepReadOnly, effectiveStep8Readiness, servicesForm.selectedServiceCodes, servicesForm.requestedServices]);
 
   function updateForm(next: Partial<AccountContactForm>) {
+    if (!canEditPartnerStep(effectiveStep8Readiness, "account_contact")) return;
     setForm((current) => {
       const mobileChanged = next.businessMobile !== undefined && next.businessMobile !== current.businessMobile || next.countryCode !== undefined && next.countryCode !== current.countryCode;
       const emailChanged = next.businessEmail !== undefined && normalizeEmail(next.businessEmail) !== normalizeEmail(current.businessEmail);
@@ -928,6 +950,7 @@ export default function PartnerApplicationWorkspaceClient({
   }
 
   function updateBusinessForm(next: Partial<BusinessIdentityForm>) {
+    if (!canEditPartnerStep(effectiveStep8Readiness, "business_identity")) return;
     setBusinessForm((current) => {
       const resolved = { ...current, ...next };
       businessFormRef.current = resolved;
@@ -937,6 +960,7 @@ export default function PartnerApplicationWorkspaceClient({
   }
 
   function updateLocationForm(next: Partial<BusinessLocationForm>) {
+    if (!canEditPartnerStep(effectiveStep8Readiness, "business_location")) return;
     setLocationForm((current) => {
       const resolved = { ...current, ...next };
       locationFormRef.current = resolved;
@@ -946,6 +970,7 @@ export default function PartnerApplicationWorkspaceClient({
   }
 
   function updateServicesForm(next: ServicesFormUpdate) {
+    if (!canEditPartnerStep(effectiveStep8Readiness, "services")) return;
     if (step8ReadOnlyStepOverrides.services === true) return;
     setServicesForm((current) => {
       const resolved = { ...current, ...(typeof next === "function" ? next(current) : next) };
@@ -956,6 +981,7 @@ export default function PartnerApplicationWorkspaceClient({
   }
 
   function updatePayoutTaxForm(next: Partial<PayoutTaxForm>) {
+    if (!canEditPartnerStep(effectiveStep8Readiness, "payout_tax")) return;
     setPayoutTaxForm((current) => {
       const resolved = { ...current, ...next };
       payoutTaxFormRef.current = resolved;
@@ -965,6 +991,7 @@ export default function PartnerApplicationWorkspaceClient({
   }
 
   function updateAgreementForm(next: Partial<AgreementForm>) {
+    if (!canEditPartnerStep(effectiveStep8Readiness, "partner_agreement")) return;
     setAgreementForm((current) => {
       const resolved = { ...current, ...next };
       agreementFormRef.current = resolved;
@@ -985,6 +1012,7 @@ export default function PartnerApplicationWorkspaceClient({
   }
 
   function removeSelectedServiceDomain(domainId: PartnerServiceDomainId) {
+    if (!canEditPartnerStep(effectiveStep8Readiness, "services")) return;
     if (step8ReadOnlyStepOverrides.services === true) return;
     updateServicesForm((current) => ({
       selectedServiceCodes: current.selectedServiceCodes.filter((code) => findPartnerCatalogueItemIn(serviceCatalogueState.items, code)?.domain !== domainId),
@@ -993,11 +1021,13 @@ export default function PartnerApplicationWorkspaceClient({
   }
 
   function openSelectedServiceDomain(domainId: PartnerServiceDomainId) {
+    if (!canEditPartnerStep(effectiveStep8Readiness, "services")) return;
     if (step8ReadOnlyStepOverrides.services === true) return;
     setActiveServiceDomainIds((current) => current.includes(domainId) ? current : [...current, domainId]);
   }
 
   function updateActiveServiceDomains(next: PartnerServiceDomainId[] | ((current: PartnerServiceDomainId[]) => PartnerServiceDomainId[])) {
+    if (!canEditPartnerStep(effectiveStep8Readiness, "services")) return;
     if (step8ReadOnlyStepOverrides.services === true) return;
     setActiveServiceDomainIds(next);
   }
@@ -1140,6 +1170,7 @@ export default function PartnerApplicationWorkspaceClient({
   }
 
   async function saveBusinessIdentityDraft(options: { silent?: boolean; continueAfter?: boolean } = {}) {
+    if (!canEditPartnerStep(effectiveStep8Readiness, "business_identity")) return null;
     setSaveStatus("saving");
     if (!options.silent) setMessage({ tone: "info", text: "Saving your draft." });
     const payload = {
@@ -1176,6 +1207,7 @@ export default function PartnerApplicationWorkspaceClient({
   }
 
   async function saveBusinessLocationDraft(options: { silent?: boolean; continueAfter?: boolean } = {}) {
+    if (!canEditPartnerStep(effectiveStep8Readiness, "business_location")) return null;
     setSaveStatus("saving");
     if (!options.silent) setMessage({ tone: "info", text: "Saving your draft." });
     const result = await savePartnerBusinessLocationDraft({
@@ -1202,6 +1234,7 @@ export default function PartnerApplicationWorkspaceClient({
   }
 
   async function saveServicesDraft(options: { silent?: boolean; continueAfter?: boolean } = {}) {
+    if (!canEditPartnerStep(effectiveStep8Readiness, "services")) return null;
     setSaveStatus("saving");
     if (!options.silent) setMessage({ tone: "info", text: "Saving your draft." });
     const result = await savePartnerServicesDraft({
@@ -1234,6 +1267,7 @@ export default function PartnerApplicationWorkspaceClient({
   }
 
   async function saveVerificationDraft(options: { silent?: boolean; continueAfter?: boolean } = {}) {
+    if (!canEditPartnerStep(effectiveStep8Readiness, "documents_compliance")) return null;
     if (qaPreviewEnabled) {
       const savedAt = new Date().toISOString();
       setSaveStatus("saved");
@@ -1264,6 +1298,7 @@ export default function PartnerApplicationWorkspaceClient({
   }
 
   async function savePayoutTaxDraft(options: { silent?: boolean; continueAfter?: boolean } = {}) {
+    if (!canEditPartnerStep(effectiveStep8Readiness, "payout_tax")) return null;
     if (qaPreviewEnabled) {
       const savedAt = new Date().toISOString();
       setSaveStatus("saved");
@@ -1295,6 +1330,7 @@ export default function PartnerApplicationWorkspaceClient({
   }
 
   async function saveAgreementDraft(options: { silent?: boolean; continueAfter?: boolean } = {}) {
+    if (!canEditPartnerStep(effectiveStep8Readiness, "partner_agreement")) return null;
     if (qaPreviewEnabled) {
       const savedAt = new Date().toISOString();
       setSaveStatus("saved");
@@ -1442,6 +1478,24 @@ export default function PartnerApplicationWorkspaceClient({
   }
 
   async function saveAndContinue() {
+    if (activeStepReadOnly) return;
+    if (!qaPreviewEnabled) {
+      const saved = await saveDraft({ continueAfter: true });
+      if (!saved) return;
+      const readiness = await loadStep8ApplicationState({ silent: true });
+      if (!readiness) return;
+      const next = workspaceSteps[workspaceSteps.findIndex((step) => step.id === activeStep) + 1]?.id;
+      if (next && partnerStepAccess(readiness).steps.some((step) => step.id === next && step.accessible)) {
+        setActiveStep(next);
+        const query = new URLSearchParams(stepSearchParams.toString());
+        query.set("step", next);
+        router.replace(`/partner-preview?${query.toString()}`, { scroll: false });
+      } else {
+        if (activeStep === "documents_compliance") setFocusedVerificationSectionId(firstRequiredVerificationSectionId(saved));
+        setMessage({ tone: "warning", text: "Complete the required items in this step before continuing." });
+      }
+      return;
+    }
     if (qaPreviewEnabled) {
       const savedAt = new Date().toISOString();
       setSaveStatus("saved");
@@ -1486,82 +1540,10 @@ export default function PartnerApplicationWorkspaceClient({
       setMessage({ tone: "success", text: "Preview draft saved." });
       return;
     }
-    if (activeStep === "business_identity") {
-      const saved = await saveBusinessIdentityDraft({ continueAfter: true });
-      if (!saved) return;
-      if (canCompleteStepTwo || isBusinessIdentityComplete(readBusinessIdentity(saved))) {
-        setActiveStep("business_location");
-      } else {
-        setMessage({ tone: "warning", text: "Complete the required business details before continuing." });
-      }
-      return;
-    }
-    if (activeStep === "business_location") {
-      const saved = await saveBusinessLocationDraft({ continueAfter: true });
-      if (!saved) return;
-      if (canCompleteStepThree || isBusinessLocationComplete(locationFormFromBundle(saved))) {
-        setActiveStep("services");
-      } else {
-        setMessage({ tone: "warning", text: "Complete the required location details before continuing." });
-      }
-      return;
-    }
-    if (activeStep === "services") {
-      const saved = await saveServicesDraft({ continueAfter: true });
-      if (!saved) return;
-      if (isServicesComplete(servicesFormFromBundle(saved), locationForm.primaryLocation.countryCode, businessForm.organizationType, serviceCatalogueState.items)) {
-        setActiveStep("documents_compliance");
-      } else {
-        setMessage({ tone: "warning", text: "Choose at least one service before continuing." });
-      }
-      return;
-    }
-    if (activeStep === "documents_compliance") {
-      const saved = await saveVerificationDraft({ continueAfter: true });
-      if (!saved) return;
-      if (isVerificationStepComplete(saved)) {
-        setActiveStep("payout_tax");
-        setFocusedVerificationSectionId(null);
-      } else {
-        setFocusedVerificationSectionId(firstRequiredVerificationSectionId(saved));
-        setMessage({ tone: "warning", text: "Complete this required check before continuing." });
-      }
-      return;
-    }
-    if (activeStep === "payout_tax") {
-      const saved = await savePayoutTaxDraft({ continueAfter: true });
-      if (!saved) return;
-      if (canCompleteStepSix || ["SUBMITTED", "UNDER_REVIEW", "VERIFIED"].includes(saved.payoutTaxReview?.status ?? "")) {
-        setActiveStep("partner_agreement");
-      } else {
-        setMessage({ tone: "warning", text: "Complete the required payout and tax details before continuing." });
-      }
-      return;
-    }
-    if (activeStep === "partner_agreement") {
-      if (!isAgreementReadyForPartnerAction(activeBundle?.agreement?.status)) {
-        setMessage({ tone: "warning", text: "Wait for Admin to issue the agreement before continuing." });
-        return;
-      }
-      const saved = await saveAgreementDraft({ continueAfter: true });
-      if (!saved) return;
-      if (isAgreementPartnerSigningComplete(saved.agreement?.status)) {
-        setActiveStep("review_submit");
-      } else {
-        setMessage({ tone: "warning", text: "Complete the agreement review before continuing." });
-      }
-      return;
-    }
-    const saved = await saveDraft({ continueAfter: true });
-    if (!saved) return;
-    if (canCompleteStepOne || contactVerified(saved, "mobile", normalizedMobile(form.businessMobile, form.countryCode)) && contactVerified(saved, "email", normalizeEmail(form.businessEmail)) && form.authorizedRepresentative) {
-      setActiveStep("business_identity");
-    } else {
-      setMessage({ tone: "warning", text: "Complete the required contact details before continuing." });
-    }
   }
 
   async function uploadEvidence(requirement: PartnerRequirement, file: File, details?: { documentNumber?: string; issueDate?: string; expiryDate?: string; noExpiry?: boolean }) {
+    if (!canEditPartnerStep(effectiveStep8Readiness, "documents_compliance")) return;
     const organizationId = activeBundle?.organization.id || form.organizationId;
     if (!organizationId) {
       setMessage({ tone: "warning", text: "Save your application before uploading evidence." });
@@ -1719,9 +1701,9 @@ export default function PartnerApplicationWorkspaceClient({
         {message ? <WorkspaceToast tone={message.tone} text={message.text} onDismiss={() => setMessage(null)} /> : null}
 
         <div className="grid flex-1 gap-4 px-4 py-4 lg:grid-cols-[270px_minmax(0,1fr)] xl:grid-cols-[280px_minmax(0,1fr)_360px] 2xl:grid-cols-[300px_minmax(0,1fr)_390px]">
-          <StepNavigator activeStep={activeStep} readModel={readModel} readiness={effectiveStep8Readiness} qaPreviewEnabled={qaPreviewEnabled} accountStepOverride={accountStepOverride} businessStepOverride={businessStepOverride} locationStepOverride={locationStepOverride} servicesStepOverride={servicesStepOverride} stepStatusOverrides={step8NavigationStatusOverrides} onSelect={(step) => setActiveStep(step)} />
+          <StepNavigator activeStep={activeStep} readModel={readModel} readiness={effectiveStep8Readiness} qaPreviewEnabled={qaPreviewEnabled} accountStepOverride={accountStepOverride} businessStepOverride={businessStepOverride} locationStepOverride={locationStepOverride} servicesStepOverride={servicesStepOverride} stepStatusOverrides={step8NavigationStatusOverrides} onSelect={selectStep} />
           <section className="min-w-0">
-            <MobileStepSelector activeStep={activeStep} readModel={readModel} readiness={effectiveStep8Readiness} qaPreviewEnabled={qaPreviewEnabled} accountStepOverride={accountStepOverride} businessStepOverride={businessStepOverride} locationStepOverride={locationStepOverride} servicesStepOverride={servicesStepOverride} stepStatusOverrides={step8NavigationStatusOverrides} onSelect={(step) => setActiveStep(step)} />
+            <MobileStepSelector activeStep={activeStep} readModel={readModel} readiness={effectiveStep8Readiness} qaPreviewEnabled={qaPreviewEnabled} accountStepOverride={accountStepOverride} businessStepOverride={businessStepOverride} locationStepOverride={locationStepOverride} servicesStepOverride={servicesStepOverride} stepStatusOverrides={step8NavigationStatusOverrides} onSelect={selectStep} />
             {loadStatus === "loading" ? (
               <LoadingCard />
             ) : activeStep === "review_submit" ? (
@@ -1741,7 +1723,7 @@ export default function PartnerApplicationWorkspaceClient({
                 onStepAction={(route) => {
                   const url = new URL(route, window.location.origin);
                   const step = url.searchParams.get("step");
-                  if (isWorkspaceStep(step)) setActiveStep(step);
+                  if (isWorkspaceStep(step)) selectStep(step);
                 }}
               />
             ) : (
@@ -1798,7 +1780,7 @@ export default function PartnerApplicationWorkspaceClient({
                     />
                   ) : activeStep === "services" ? (
                     <ServicesStep
-                      readOnly={step8ReadOnlyStepOverrides.services === true}
+                      readOnly={!canEditPartnerStep(effectiveStep8Readiness, "services")}
                       form={servicesForm}
                       businessType={businessForm.organizationType}
                       countryCode={locationForm.primaryLocation.countryCode}
@@ -1823,7 +1805,7 @@ export default function PartnerApplicationWorkspaceClient({
                       qaPreviewEnabled={qaPreviewEnabled}
                       uploadingRequirementId={uploadingRequirementId}
                       onUploadEvidence={uploadEvidence}
-                      onEditSelectedServices={() => setActiveStep("services")}
+                      onEditSelectedServices={() => selectStep("services")}
                       focusSectionId={focusedVerificationSectionId}
                       onFocusSectionHandled={() => setFocusedVerificationSectionId(null)}
                     />
@@ -1856,7 +1838,7 @@ export default function PartnerApplicationWorkspaceClient({
             ) : null}
             servicesSummary={activeStep === "services" ? (
               <SelectedServicesSummary
-                readOnly={step8ReadOnlyStepOverrides.services === true}
+                readOnly={!canEditPartnerStep(effectiveStep8Readiness, "services")}
                 form={servicesForm}
                 headingId="selected-services-summary-desktop"
                 countryCode={locationForm.primaryLocation.countryCode}
@@ -2989,7 +2971,7 @@ function CountrySelect({ value, onChange }: { value: string; onChange: (country:
   );
 }
 
-function StepNavigator({
+export function StepNavigator({
   activeStep,
   readModel,
   readiness,
@@ -3022,7 +3004,8 @@ function StepNavigator({
             const status = displayedStepStatus(step.id, activeStep, modelStep?.status ?? "locked", qaPreviewEnabled, accountStepOverride, businessStepOverride, locationStepOverride, servicesStepOverride, stepStatusOverrides);
             const current = activeStep === step.id;
             const Icon = step.icon;
-            const enabled = qaPreviewEnabled || Boolean(modelStep?.enabled);
+            const access = partnerStepAccess(readiness).steps.find((item) => item.id === step.id)!;
+            const enabled = access.accessible;
             return (
               <button
                 key={step.id}
@@ -3030,6 +3013,8 @@ function StepNavigator({
                 type="button"
                 onClick={() => enabled ? onSelect(step.id) : undefined}
                 disabled={!enabled}
+                title={access.reason || undefined}
+                aria-current={current ? "step" : undefined}
                 className={`relative flex min-h-14 w-full items-center gap-3 overflow-hidden rounded-xl border px-3 py-2 text-left transition ${
                   current ? "border-[#f97316]/45 bg-[#211a13] shadow-[0_10px_26px_rgba(0,0,0,0.24)]" : "border-white/10 bg-[#11141a] hover:border-white/20"
                 } disabled:cursor-not-allowed disabled:opacity-55`}
@@ -3053,7 +3038,7 @@ function StepNavigator({
   );
 }
 
-function MobileStepSelector({
+export function MobileStepSelector({
   activeStep,
   readModel,
   readiness,
@@ -3082,12 +3067,15 @@ function MobileStepSelector({
         Application step
         <select
           value={activeStep}
-          onChange={(event) => onSelect(event.target.value as WorkspaceStepId)}
+          onChange={(event) => {
+            const step = event.target.value as WorkspaceStepId;
+            if (partnerStepAccess(readiness).steps.some((item) => item.id === step && item.accessible)) onSelect(step);
+          }}
           className="h-10 rounded-lg border border-white/10 bg-[#0f1217] px-3 text-sm font-black normal-case tracking-normal text-white outline-none focus:border-[#f97316] focus:ring-2 focus:ring-[#f97316]/25"
         >
           {workspaceSteps.map((step) => {
             const modelStep = readModel.steps.find((item) => item.id === step.id);
-            const enabled = qaPreviewEnabled || Boolean(modelStep?.enabled);
+            const enabled = partnerStepAccess(readiness).steps.some((item) => item.id === step.id && item.accessible);
             const status = displayedStepStatus(step.id, activeStep, modelStep?.status ?? "locked", qaPreviewEnabled, accountStepOverride, businessStepOverride, locationStepOverride, servicesStepOverride, stepStatusOverrides);
             return (
               <option key={step.id} value={step.id} disabled={!enabled}>
@@ -4975,12 +4963,6 @@ function readLastSaved(bundle: PartnerOrganizationBundle | null): string | null 
   return typeof application.lastSavedAt === "string" ? application.lastSavedAt : bundle?.organization.updatedAt ?? null;
 }
 
-function resolveActiveStep(bundle: PartnerOrganizationBundle | null): WorkspaceStepId {
-  const metadata = bundle?.organization.metadata;
-  const application = metadata?.application && typeof metadata.application === "object" && !Array.isArray(metadata.application) ? metadata.application as Record<string, unknown> : {};
-  const current = application.currentStep;
-  return workspaceSteps.some((step) => step.id === current) ? current as WorkspaceStepId : "account_contact";
-}
 
 function contactVerified(bundle: PartnerOrganizationBundle | null, channel: "mobile" | "email", value: string): boolean {
   if (!value) return false;
@@ -5042,13 +5024,6 @@ function hasMeaningfulStepTwoInput(form: BusinessIdentityForm): boolean {
   );
 }
 
-function isBusinessIdentityComplete(data: Record<string, unknown>): boolean {
-  const legalName = typeof data.legalName === "string" ? data.legalName.trim() : "";
-  const organizationType = typeof data.organizationType === "string" ? data.organizationType.trim() : "";
-  const organizationTypeOther = typeof data.organizationTypeOther === "string" ? data.organizationTypeOther.trim() : "";
-  const description = typeof data.description === "string" ? data.description.trim() : "";
-  return legalName.length >= 2 && organizationType.length > 0 && (organizationType !== "Other" || organizationTypeOther.length >= 2) && description.length >= 20;
-}
 
 function frontendOrganizationType(value: string): string {
   const reverse = Object.entries(organizationTypeToBackend).find(([, backend]) => backend === value);
@@ -5118,12 +5093,6 @@ function isServicesComplete(form: ServicesForm, countryCode: string, businessTyp
   });
 }
 
-function isVerificationStepComplete(bundle: PartnerOrganizationBundle | null): boolean {
-  if (!bundle || !bundle.requirements.length) return false;
-  return bundle.requirements
-    .filter((requirement) => requirementStage(requirement) === "REQUIRED_NOW")
-    .every((requirement) => requirementReadyForUiProgression(requirement.status));
-}
 
 function requirementReadyForUiProgression(status: string): boolean {
   return status === "SUBMITTED" || status === "UNDER_REVIEW" || status === "VERIFIED" || status === "EXPIRING_SOON";

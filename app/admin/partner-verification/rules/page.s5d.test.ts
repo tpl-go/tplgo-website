@@ -16,7 +16,8 @@ test("Verification Rules lives under Partner Verification navigation", () => {
   assert.match(reviewPage, /href="\/admin\/partner-verification\/rules"/);
   assert.match(rulesPage, /Admin/);
   assert.match(rulesPage, /Partners/);
-  assert.match(rulesPage, /Verification & Compliance/);
+  assert.doesNotMatch(rulesPage, /Back to Verification/);
+  assert.match(readFileSync("app/admin/partners/_components/PartnerAdminNavigation.tsx", "utf8"), /Back to/);
   assert.match(rulesPage, /Verification Rules/);
 });
 
@@ -59,11 +60,10 @@ test("Verification Rules appears in the central Website Experience work queue th
   assert.match(adminApiClient, /AdminVerificationPolicyWorkflowView/);
   assert.match(adminApiClient, /getAdminVerificationPolicyWorkflow/);
   assert.match(websiteExperienceHome, /getAdminVerificationPolicyWorkflow/);
-  assert.match(websiteExperienceHome, /Central policy work item for Partner verification requirements\./);
-  assert.match(websiteExperienceHome, /policyWorkflowState\.status !== "denied"/);
-  assert.match(websiteExperienceHome, /policyState === "PENDING_APPROVAL"/);
-  assert.match(websiteExperienceHome, /policyState === "APPROVED"/);
-  assert.match(websiteExperienceHome, /policyState === "SCHEDULED"/);
+  assert.match(websiteExperienceHome, /if \(policy\?\.workflowRecord\)/);
+  assert.match(websiteExperienceHome, /centralStageFromState\(policy\.workflowRecord\.workflowState/);
+  assert.match(websiteExperienceHome, /contentType: "verification_rules"/);
+  assert.match(websiteExperienceHome, /previewHref: "\/admin\/partner-verification\/rules"/);
 });
 
 

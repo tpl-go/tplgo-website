@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -47,6 +47,8 @@ import {
 } from "lucide-react";
 import { adminLogout, getAdminNotificationCenter, readAdminSession, refreshAdminSession } from "../../lib/admin/adminApiClient";
 import type { AdminSession } from "../../lib/admin/adminApiClient";
+import { partnerAdminNavigation, partnerAdminRoute } from "../partners/_components/partnerAdminRoutes";
+import PartnerAdminNavigation from "../partners/_components/PartnerAdminNavigation";
 
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -80,14 +82,8 @@ const navItems = [
 ];
 
 const partnerNavItems = [
-  { href: "/admin/partners", label: "Overview", icon: Building2 },
-  { href: "/admin/partners/applications", label: "Applications", icon: ClipboardCheck },
-  { href: "/admin/partner-verification", label: "Verification & Compliance", icon: ShieldCheck },
+  ...partnerAdminNavigation.map((item) => ({ ...item, icon: item.label === "Applications" ? ClipboardCheck : item.label === "Verification" ? ShieldCheck : item.label === "Overview" ? Building2 : FileText })),
   { href: "/admin/partner-verification/rules", label: "Verification Rules", icon: FileSearch, permission: "partner_verification_policy.read" },
-  { href: "/admin/partners/organizations", label: "Organizations", icon: Users },
-  { href: "/admin/partners/documents-compliance", label: "Documents & Compliance", icon: FileText },
-  { href: "/admin/partners/payout-tax", label: "Payout & Tax", icon: FileText, permission: "partner_payout_tax.read" },
-  { href: "/admin/partners/agreements", label: "Agreements", icon: FileText, permission: "partner_agreement.read" },
 ];
 
 const websiteContentNavItems = [
@@ -247,7 +243,7 @@ export default function AdminShell({
           </div>
           <div className={serviceCatalogueShell ? "space-y-1 border-t border-sky-300/10 pt-4" : "space-y-1 border-t border-slate-100 pt-4"}>
             <p className={serviceCatalogueShell ? "border-l-2 border-orange-400 px-3 pb-2 text-[11px] font-semibold uppercase text-orange-300" : "border-l-2 border-emerald-500 px-3 pb-2 text-[11px] font-semibold uppercase text-emerald-700"}>Partners</p>
-            {partnerNavItems.map((item) => {
+            {partnerNavItems.filter((item) => Boolean(session?.admin.permissions.includes(item.permission))).map((item) => {
               const Icon = item.icon;
               const active = pathname === item.href || (item.href !== "/admin/partner-verification" && pathname.startsWith(item.href));
               return (
@@ -370,7 +366,7 @@ export default function AdminShell({
       <div className="lg:pl-72">
         <header className={serviceCatalogueShell ? "sticky top-0 z-20 flex h-16 items-center justify-between border-b border-sky-300/10 bg-[#07111f]/95 px-4 text-slate-100 backdrop-blur lg:px-8" : "sticky top-0 z-20 flex h-16 items-center justify-between border-b border-slate-200 bg-white px-4 lg:px-8"}>
           <div>
-            <h1 className={serviceCatalogueShell ? "text-base font-semibold text-sky-100" : "text-base font-semibold text-slate-950"}>{title}</h1>
+            {partnerAdminRoute(pathname) ? <p className="text-base font-semibold text-sky-100">Partners</p> : <h1 className={serviceCatalogueShell ? "text-base font-semibold text-sky-100" : "text-base font-semibold text-slate-950"}>{title}</h1>}
             {!isWebsiteExperienceRoute ? <p className={serviceCatalogueShell ? "text-xs text-orange-200" : "text-xs text-slate-500"}>Staging workspace</p> : null}
           </div>
           <div className="flex items-center gap-3">
@@ -396,7 +392,7 @@ export default function AdminShell({
           <p className={serviceCatalogueShell ? "text-[11px] font-semibold uppercase text-sky-300" : "text-[11px] font-semibold uppercase text-slate-400"}>Admin quick links</p>
           <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
             {[
-              ...partnerNavItems,
+              ...partnerNavItems.filter((item) => Boolean(session?.admin.permissions.includes(item.permission))),
               ...websiteContentNavItems.filter((item) => canAccess(item.permission)),
               ...secondaryNavItems.filter(isAdminNavLinkItem).filter((item) => !missingPermission(item.permission)),
             ].map((item) => {
@@ -420,7 +416,10 @@ export default function AdminShell({
             })}
           </div>
         </nav>
-        <main className="px-4 py-6 lg:px-8">{children}</main>
+        <main className="min-w-0 px-4 py-6 lg:px-8">
+          {partnerAdminRoute(pathname) ? <Suspense fallback={null}><PartnerAdminNavigation permissions={session?.admin.permissions ?? []} /></Suspense> : null}
+          {children}
+        </main>
       </div>
     </div>
   );

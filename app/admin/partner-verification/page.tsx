@@ -70,12 +70,12 @@ function AdminPartnerVerificationView() {
   const [queueResult, setQueueResult] = useState<AdminApiResult<PartnerQueueRow[]> | null>(null);
   const [detailResult, setDetailResult] = useState<AdminApiResult<PartnerOrganizationBundle> | null>(null);
   const [activeOrganizationId, setActiveOrganizationId] = useState<string | null>(requestedOrganizationId);
-  const [activeTab, setActiveTab] = useState<QueueTab>("level-1");
-  const [query, setQuery] = useState("");
-  const [serviceFilter, setServiceFilter] = useState("");
-  const [countryFilter, setCountryFilter] = useState("");
-  const [stateFilter, setStateFilter] = useState("");
-  const [submittedAfter, setSubmittedAfter] = useState("");
+  const [activeTab, setActiveTab] = useState<QueueTab>(queueTabs.find((tab) => tab.id === searchParams.get("tab"))?.id ?? "level-1");
+  const [query, setQuery] = useState(searchParams.get("search") ?? "");
+  const [serviceFilter, setServiceFilter] = useState(searchParams.get("service") ?? "");
+  const [countryFilter, setCountryFilter] = useState(searchParams.get("country") ?? "");
+  const [stateFilter, setStateFilter] = useState(searchParams.get("state") ?? "");
+  const [submittedAfter, setSubmittedAfter] = useState(searchParams.get("submittedAfter") ?? "");
   const [decisionDraft, setDecisionDraft] = useState({ reason: "", partnerMessage: "", internalNote: "", category: "document_quality" });
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [documentAccessMessage, setDocumentAccessMessage] = useState<string | null>(null);
@@ -170,18 +170,9 @@ function AdminPartnerVerificationView() {
     <div className="space-y-5 text-slate-100">
       <div className="flex flex-col gap-3 rounded-2xl border border-sky-300/15 bg-[#101827] p-4 shadow-2xl shadow-black/20 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <nav className="flex flex-wrap items-center gap-2 text-xs font-black text-slate-400" aria-label="Admin breadcrumbs">
-            <Link href="/admin" className="hover:text-sky-200">Admin</Link>
-            <span>/</span>
-            <Link href="/admin/partners" className="hover:text-sky-200">Partners</Link>
-            <span>/</span>
-            <Link href="/admin/partner-verification" className="hover:text-sky-200">Verification & Compliance</Link>
-            {detail ? <><span>/</span><span className="text-slate-200">{detail.organization.legalName}</span></> : null}
-          </nav>
-          <h1 className="mt-3 text-2xl font-black tracking-tight text-white">Verification & Compliance</h1>
           <p className="mt-1 max-w-3xl text-sm font-semibold leading-6 text-slate-400">Review Partner documents and complete verification checks.</p>
         </div>
-        <div className="flex flex-wrap gap-2"><Link href="/admin/partner-verification/rules" className="inline-flex h-10 w-fit items-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-400/10 px-4 text-sm font-black text-cyan-100 hover:bg-cyan-400/15">Verification Rules</Link><button type="button" onClick={loadQueue} className="inline-flex h-10 w-fit items-center gap-2 rounded-xl border border-sky-300/20 bg-sky-400/10 px-4 text-sm font-black text-sky-100 hover:bg-sky-400/15">
+        <div className="flex flex-wrap gap-2">{adminPermissions.includes("partner_verification_policy.read") ? <Link href="/admin/partner-verification/rules" className="inline-flex h-10 w-fit items-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-400/10 px-4 text-sm font-black text-cyan-100 hover:bg-cyan-400/15">Verification Rules</Link> : null}<button type="button" onClick={loadQueue} className="inline-flex h-10 w-fit items-center gap-2 rounded-xl border border-sky-300/20 bg-sky-400/10 px-4 text-sm font-black text-sky-100 hover:bg-sky-400/15">
           <RefreshCcw className="h-4 w-4" /> Refresh
         </button></div>
       </div>
@@ -236,15 +227,15 @@ function QueueView({ rows, filters, filterOptions, onTab, onQuery, onService, on
         <input value={filters.submittedAfter} onChange={(event) => onSubmittedAfter(event.target.value)} type="date" aria-label="Submitted after" className="h-10 rounded-xl border border-white/10 bg-[#0b1220] px-3 text-sm font-semibold text-white outline-none focus:border-sky-300/40" />
       </div>
       <div className="mt-4 overflow-hidden rounded-xl border border-white/10">
-        {rows.length ? rows.map((row) => <QueueRow key={row.organization.id} row={row} />) : <p className="p-6 text-sm font-semibold text-slate-400">No Partner verification submissions are ready for review.</p>}
+        {rows.length ? rows.map((row) => <QueueRow key={row.organization.id} row={row} queueQuery={new URLSearchParams({ tab: filters.activeTab, search: filters.query, service: filters.serviceFilter, country: filters.countryFilter, state: filters.stateFilter, submittedAfter: filters.submittedAfter }).toString()} />) : <p className="p-6 text-sm font-semibold text-slate-400">No Partner verification submissions are ready for review.</p>}
       </div>
     </section>
   );
 }
 
-function QueueRow({ row }: { row: PartnerQueueRow }) {
+function QueueRow({ row, queueQuery }: { row: PartnerQueueRow; queueQuery: string }) {
   return (
-    <Link href={`/admin/partner-verification?organizationId=${encodeURIComponent(row.organization.id)}`} className="grid gap-3 border-b border-white/10 bg-[#0b1220] p-4 text-sm last:border-b-0 hover:bg-[#0f1a2e] lg:grid-cols-[minmax(0,1.25fr)_130px_minmax(0,1fr)_160px_145px]">
+    <Link href={`/admin/partner-verification?${queueQuery}&organizationId=${encodeURIComponent(row.organization.id)}`} className="grid gap-3 border-b border-white/10 bg-[#0b1220] p-4 text-sm last:border-b-0 hover:bg-[#0f1a2e] lg:grid-cols-[minmax(0,1.25fr)_130px_minmax(0,1fr)_160px_145px]">
       <div className="min-w-0">
         <p className="break-words font-black text-white">{row.organization.legalName}</p>
         <p className="mt-1 text-xs font-semibold text-slate-400">{row.organization.organizationType}</p>
@@ -274,7 +265,6 @@ function RecordView({ detail, adminPermissions, actionMessage, documentAccessMes
   const grouped = groupRequirements(detail.requirements);
   return (
     <div className="space-y-5" data-admin-verification-record="true">
-      <Link href="/admin/partner-verification" className="inline-flex h-9 items-center gap-2 rounded-xl border border-white/10 px-3 text-xs font-black text-slate-200 hover:border-sky-300/30"><ArrowLeft className="h-4 w-4" /> Back to Verification & Compliance queue</Link>
       {actionMessage ? <Notice text={actionMessage} /> : null}
       {documentAccessMessage ? <Notice text={documentAccessMessage} /> : null}
       <Panel title="Partner summary">

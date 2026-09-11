@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Building2,
@@ -33,12 +34,20 @@ type PartnerQueueRow = {
 type PartnerAdminMode = "overview" | "applications" | "organizations" | "services" | "documents";
 
 export function PartnerAdminReadModel({ mode }: { mode: PartnerAdminMode }) {
+  const searchParams = useSearchParams();
   const [result, setResult] = useState<AdminApiResult<PartnerQueueRow[]> | null>(null);
   const [intakesResult, setIntakesResult] = useState<AdminApiResult<{ rows: PartnerRegistrationIntakeView[] }> | null>(null);
   const [loading, setLoading] = useState(true);
-  const [query, setQuery] = useState("");
-  const [status, setStatus] = useState("");
-  const [service, setService] = useState("");
+  const [query, setQuery] = useState(searchParams.get("search") ?? "");
+  const [status, setStatus] = useState(searchParams.get("status") ?? "");
+  const [service, setService] = useState(searchParams.get("service") ?? "");
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    for (const [key, value] of Object.entries({ search: query, status, service })) {
+      if (value) params.set(key, value); else params.delete(key);
+    }
+    window.history.replaceState(null, "", `${window.location.pathname}?${params}`);
+  }, [query, status, service]);
 
   const loadQueue = useCallback(async () => {
     setLoading(true);
@@ -93,11 +102,7 @@ function HeaderPanel({ onRefresh, loading }: { onRefresh: () => void; loading: b
     <section className="rounded border border-slate-200 bg-white p-5">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase text-slate-400">Partner domain</p>
-          <h2 className="mt-1 text-base font-semibold text-slate-950">Staging Partner operations</h2>
-          <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-500">
-            Read-models are derived from the live Partner Verification queue. Broader Partner management APIs can extend these pages without moving Partners under Suppliers.
-          </p>
+          <p className="text-sm text-slate-500">Partner records awaiting verification review.</p>
         </div>
         <button
           type="button"
@@ -122,16 +127,9 @@ function Overview({ metrics, rows }: { metrics: ReturnType<typeof buildMetrics>;
         <MetricCard icon={Users} label="Verified" value={metrics.verified} />
         <MetricCard icon={FileText} label="Blocking items" value={metrics.blocking} />
       </section>
-      <section className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-        <Panel title="Applications Needing Attention" actionHref="/admin/partners/applications">
+      <section className="grid gap-4">
+        <Panel title="Verification Reviews">
           <QueueList rows={rows.slice(0, 6)} emptyLabel="No Partner records are currently returned by the verification queue." />
-        </Panel>
-        <Panel title="Partner Navigation">
-          <div className="grid gap-3">
-            <NavCard href="/admin/partners/applications" icon={ClipboardCheck} title="Applications" detail="Submitted onboarding records and review state" />
-            <NavCard href="/admin/partner-verification" icon={ShieldCheck} title="Partner Reviews" detail="Review submitted Partner documents" />`r`n            <NavCard href="/admin/partner-verification/rules" icon={FileText} title="Verification Rules" detail="Manage which checks and documents Partners must complete" />
-            <NavCard href="/admin/partners/organizations" icon={Building2} title="Organizations" detail="Organization and TPL Identity membership visibility" />
-          </div>
         </Panel>
       </section>
     </>
@@ -193,6 +191,7 @@ function PartnerRegistrationIntakePanel({ rows, loading }: { rows: PartnerRegist
 }
 
 function Organizations({ rows, loading }: { rows: PartnerQueueRow[]; loading: boolean }) {
+  const queueQuery = useSearchParams().toString();
   if (rows.length === 0) {
     return <Empty label={loading ? "Loading Partner organizations." : "No Partner organizations are currently returned by the verification queue."} />;
   }
@@ -221,7 +220,7 @@ function Organizations({ rows, loading }: { rows: PartnerQueueRow[]; loading: bo
               <td className="px-4 py-3 text-slate-600">{row.selectedServices.map((item) => item.serviceLabel).join(", ") || "No services"}</td>
               <td className="px-4 py-3"><StatusPill value={row.readiness.overallVerificationStatus} /></td>
               <td className="px-4 py-3">
-                <Link className="inline-flex h-8 items-center gap-1 rounded bg-slate-950 px-3 text-xs font-semibold text-white" href={`/admin/partner-verification?organizationId=${encodeURIComponent(row.organization.id)}`}>
+                <Link className="inline-flex h-8 items-center gap-1 rounded bg-slate-950 px-3 text-xs font-semibold text-white" href={`/admin/partner-verification?${queueQuery}&from=organizations&organizationId=${encodeURIComponent(row.organization.id)}`}>
                   Review <ChevronRight className="h-3.5 w-3.5" />
                 </Link>
               </td>
@@ -325,6 +324,9 @@ function FilterPanel({
 }
 
 function QueueList({ rows, emptyLabel }: { rows: PartnerQueueRow[]; emptyLabel: string }) {
+  const pathname = usePathname();
+  const params = new URLSearchParams(useSearchParams().toString());
+  if (pathname === "/admin/partners/documents-compliance") params.set("from", "documents-compliance");
   if (rows.length === 0) return <Empty label={emptyLabel} />;
   return (
     <div className="divide-y divide-slate-100">
@@ -332,7 +334,7 @@ function QueueList({ rows, emptyLabel }: { rows: PartnerQueueRow[]; emptyLabel: 
         <div key={row.organization.id} className="py-3 first:pt-0 last:pb-0">
           <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
             <div className="min-w-0">
-              <Link className="font-semibold text-slate-950 underline-offset-2 hover:underline" href={`/admin/partner-verification?organizationId=${encodeURIComponent(row.organization.id)}`}>
+              <Link className="font-semibold text-slate-950 underline-offset-2 hover:underline" href={`/admin/partner-verification?${params}&organizationId=${encodeURIComponent(row.organization.id)}`}>
                 {row.organization.legalName}
               </Link>
               <p className="mt-1 text-xs text-slate-500">{row.organization.brandName || "No brand name"} · {row.organization.organizationType}</p>
@@ -377,19 +379,6 @@ function MetricCard({ icon: Icon, label, value }: { icon: LucideIcon; label: str
   );
 }
 
-function NavCard({ href, icon: Icon, title, detail }: { href: string; icon: LucideIcon; title: string; detail: string }) {
-  return (
-    <Link href={href} className="flex items-center gap-3 rounded border border-slate-200 bg-slate-50 p-3 hover:border-slate-300 hover:bg-white">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-white text-slate-700">
-        <Icon className="h-5 w-5" />
-      </div>
-      <div className="min-w-0">
-        <p className="truncate text-sm font-semibold text-slate-950">{title}</p>
-        <p className="mt-1 text-xs leading-5 text-slate-500">{detail}</p>
-      </div>
-    </Link>
-  );
-}
 
 function FilterInput({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (value: string) => void; placeholder: string }) {
   return (

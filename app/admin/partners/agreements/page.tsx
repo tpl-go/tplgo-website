@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AlertTriangle, Eye, RefreshCcw, ShieldCheck } from "lucide-react";
 import AdminProtected from "../../_components/AdminProtected";
 import AdminShell from "../../_components/AdminShell";
@@ -44,10 +45,22 @@ export default function AdminPartnerAgreementsPage() {
 }
 
 function AdminPartnerAgreements() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const selectedOrganizationId = searchParams.get("organizationId");
+  const setSelectedOrganizationId = (id: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("organizationId", id);
+    router.push(`?${params.toString()}`, { scroll: false });
+  };
   const [queueResult, setQueueResult] = useState<AdminApiResult<AgreementQueueResponse> | null>(null);
   const [detailResult, setDetailResult] = useState<AdminApiResult<PartnerOrganizationBundle & { agreementPermissions?: AgreementQueueResponse["permissions"]; activationAllowed?: boolean }> | null>(null);
-  const [selectedOrganizationId, setSelectedOrganizationId] = useState<string | null>(null);
-  const [filter, setFilter] = useState("All");
+  const [filter, setFilter] = useState(searchParams.get("status") ?? "All");
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    params.set("status", filter);
+    window.history.replaceState(null, "", `${window.location.pathname}?${params}`);
+  }, [filter]);
   const [message, setMessage] = useState<string | null>(null);
   const [reason, setReason] = useState("");
   const [privateNote, setPrivateNote] = useState("");
@@ -88,7 +101,7 @@ function AdminPartnerAgreements() {
     const state = agreementFilterState(filter);
     return all.filter((row) => row.status === state || row.currentStage === state || row.tplReviewStatus === state);
   }, [filter, queueResult]);
-  const detail = detailResult?.ok ? detailResult.data : null;
+  const detail = selectedOrganizationId && detailResult?.ok ? detailResult.data : null;
 
   async function openDetail(organizationId: string) {
     setSelectedOrganizationId(organizationId);
@@ -126,8 +139,6 @@ function AdminPartnerAgreements() {
       <section className="rounded-2xl border border-slate-800 bg-slate-950 p-5 text-slate-100 shadow-xl">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.16em] text-orange-300">Partner Admin</p>
-            <h1 className="mt-2 text-2xl font-black">Agreement review</h1>
             <p className="mt-1 text-sm font-semibold text-slate-400">Issue and review Partner agreement evidence. Completion remains separate from final Partner approval.</p>
           </div>
           <button type="button" onClick={() => setRefreshTick((value) => value + 1)} className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-700 px-4 text-sm font-black text-slate-100"><RefreshCcw size={16} /> Refresh</button>

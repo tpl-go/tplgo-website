@@ -321,7 +321,6 @@ function CatalogueHeader({
     <section className="rounded-2xl border border-sky-300/15 bg-[#0b1628]/95 p-5 shadow-xl shadow-black/20">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div className="min-w-0">
-          <h2 className="text-3xl font-black tracking-normal text-sky-100">Service Catalogue</h2>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">Manage Partner service domains and services.</p>
         </div>
         <div className="flex flex-wrap gap-2" aria-label="Catalogue summary">

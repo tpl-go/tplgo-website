@@ -1,8 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import Link from "next/link";
-import { ArrowLeft, CalendarClock, CheckCircle2, Clock, FileSearch, ListChecks, PlayCircle, RefreshCcw, Send, ShieldCheck } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { CalendarClock, CheckCircle2, Clock, FileSearch, ListChecks, PlayCircle, RefreshCcw, Send, ShieldCheck } from "lucide-react";
 import AdminProtected from "../../_components/AdminProtected";
 import AdminShell from "../../_components/AdminShell";
 import { CentralSchedulePanel } from "../../_components/CentralSchedulePanel";
@@ -51,12 +50,17 @@ function VerificationRulesClient() {
   const localCanRead = hasPermission(permissions, "partner_verification_policy.read");
   const activeGroup = useMemo(() => policy?.groups[0] ?? null, [policy]);
 
-  async function load() {
+  const load = useCallback(async () => {
     const result = await adminApiRequest<PolicyView>("/api/v1/admin/partner-verification/policies");
     if (result.ok) { setPolicy(result.data); setMessage(""); return; }
     if (result.error.code === "ADMIN_UNAUTHORIZED" || result.error.code === "ADMIN_FORBIDDEN") setMessage("You do not have access to Verification Rules.");
     else setMessage(result.error.message);
-  }
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => { void load(); }, 0);
+    return () => window.clearTimeout(timer);
+  }, [load]);
 
   async function transition(path: string, label: string) {
     const result = await adminApiRequest<PolicyView>(path, { method: "POST", body: JSON.stringify({}) });
@@ -85,26 +89,14 @@ function VerificationRulesClient() {
   return (
     <div className="space-y-5 text-slate-100" data-verification-rules-page="true">
       <header className="rounded-2xl border border-sky-300/15 bg-[#101827] p-4 shadow-2xl shadow-black/20">
-        <nav className="flex flex-wrap items-center gap-2 text-xs font-black text-slate-400" aria-label="Admin breadcrumbs">
-          <Link href="/admin" className="hover:text-sky-200">Admin</Link><span>/</span>
-          <Link href="/admin/partners" className="hover:text-sky-200">Partners</Link><span>/</span>
-          <Link href="/admin/partner-verification" className="hover:text-sky-200">Verification & Compliance</Link><span>/</span>
-          <span className="text-slate-200">Verification Rules</span>
-        </nav>
         <div className="mt-3 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <Link href="/admin/partner-verification" className="inline-flex items-center gap-2 text-xs font-black text-sky-200"><ArrowLeft className="h-4 w-4" /> Back to Partner Reviews</Link>
-            <h1 className="mt-3 text-2xl font-black tracking-tight text-white">Verification Rules</h1>
             <p className="mt-1 max-w-3xl text-sm font-semibold leading-6 text-slate-400">Manage which checks and documents Partners must complete.</p>
           </div>
           <button type="button" onClick={load} className="inline-flex h-10 w-fit items-center gap-2 rounded-xl border border-sky-300/20 bg-sky-400/10 px-4 text-sm font-black text-sky-100"><RefreshCcw className="h-4 w-4" /> Refresh</button>
         </div>
       </header>
 
-      <div className="flex flex-wrap gap-2">
-        <Link href="/admin/partner-verification" className="rounded-xl border border-white/10 px-4 py-2 text-sm font-black text-slate-300">Partner Reviews</Link>
-        <span className="rounded-xl border border-cyan-300/30 bg-cyan-400/10 px-4 py-2 text-sm font-black text-cyan-100">Verification Rules</span>
-      </div>
 
       {message ? <p className="rounded-2xl border border-amber-300/20 bg-amber-400/10 p-4 text-sm font-bold text-amber-100">{message}</p> : null}
       {policy ? <PolicyHome policy={policy} activeGroup={activeGroup} onPreview={runPreview} onDraft={() => transition("/api/v1/admin/partner-verification/policies/draft", "Draft created")} onSubmit={() => transition("/api/v1/admin/partner-verification/policies/approval/submit", "Sent for approval")} onApprove={() => transition("/api/v1/admin/partner-verification/policies/approval/approve", "Approval")} onPublish={() => transition("/api/v1/admin/partner-verification/policies/publish", "Publish")} schedule={schedule} onScheduleChange={setSchedule} onSchedule={schedulePolicy} onRefresh={load} /> : null}
@@ -163,7 +155,7 @@ function PreviewPanel({ preview }: { preview: PreviewResult }) {
   </section>;
 }
 
-function AccessDenied() { return <AdminProtected><AdminShell title="Verification Rules"><section className="rounded-2xl border border-amber-300/25 bg-[#111827] p-6"><p className="text-lg font-black text-white">You do not have access to Verification Rules.</p><Link href="/admin/partner-verification" className="mt-4 inline-flex h-10 items-center gap-2 rounded-xl border border-sky-300/25 bg-sky-400/10 px-4 text-sm font-black text-sky-100"><ArrowLeft className="h-4 w-4" /> Back to Verification & Compliance</Link></section></AdminShell></AdminProtected>; }
+function AccessDenied() { return <section className="rounded-lg border border-amber-300/25 bg-[#111827] p-6"><p className="text-lg font-black text-white">You do not have access to Verification Rules.</p></section>; }
 function Metric({ icon: Icon, label, value }: { icon: typeof ListChecks; label: string; value: number }) { return <div className="rounded-xl border border-white/10 bg-[#0b1220] p-3"><Icon className="h-4 w-4 text-cyan-200" /><p className="mt-2 text-xs font-black uppercase tracking-[0.16em] text-sky-300/70">{label}</p><p className="mt-1 text-2xl font-black text-white">{value}</p></div>; }
 function Status({ text }: { text: string }) { return <span className="w-fit rounded-full border border-cyan-300/20 bg-cyan-400/10 px-3 py-1 text-xs font-black text-cyan-100">{text}</span>; }
 function nextAction(policy: PolicyView) { return policy.nextActions.find((item) => ["Create draft", "Send for approval", "Approve", "Publish now"].includes(item)) ?? "Preview requirements"; }

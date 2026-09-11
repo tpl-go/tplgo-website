@@ -95,7 +95,7 @@ export function buildPartnerApplicationCenterReadModel(input: {
       description: "Add your registered or operating location.",
       status: locationDone ? "completed" : businessDone ? "in-progress" : "locked",
       actionLabel: locationDone ? "Review" : "Start",
-      enabled: businessDone,
+      enabled: contactDone && businessDone,
     },
     {
       id: "services",
@@ -103,7 +103,7 @@ export function buildPartnerApplicationCenterReadModel(input: {
       description: "Choose the services your business wants to offer.",
       status: servicesDone ? "completed" : locationDone ? "in-progress" : "locked",
       actionLabel: servicesDone ? "Review" : "Start",
-      enabled: locationDone,
+      enabled: contactDone && businessDone && locationDone,
     },
     {
       id: "documents_compliance",
@@ -111,7 +111,7 @@ export function buildPartnerApplicationCenterReadModel(input: {
       description: "Upload the documents TPL GO needs for review.",
       status: documentsDone ? "completed" : reviewDone ? "under-review" : servicesDone ? "in-progress" : "not-started",
       actionLabel: documentsDone ? "Review" : "Continue",
-      enabled: servicesDone || Boolean(bundle),
+      enabled: contactDone && businessDone && locationDone && servicesDone,
     },
     {
       id: "payout_tax",
@@ -119,7 +119,7 @@ export function buildPartnerApplicationCenterReadModel(input: {
       description: "Add payout details after documents are ready.",
       status: payoutDone ? "completed" : documentsDone ? "in-progress" : "locked",
       actionLabel: payoutDone ? "Review" : "Start",
-      enabled: documentsDone,
+      enabled: contactDone && businessDone && locationDone && servicesDone && documentsDone,
     },
     {
       id: "partner_agreement",
@@ -127,7 +127,7 @@ export function buildPartnerApplicationCenterReadModel(input: {
       description: "Review agreement details after payout setup.",
       status: agreementDone ? "completed" : payoutDone ? "in-progress" : "locked",
       actionLabel: agreementDone ? "Review" : "Start",
-      enabled: payoutDone,
+      enabled: contactDone && businessDone && locationDone && servicesDone && documentsDone && payoutDone,
     },
     {
       id: "review_submit",

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { AlertTriangle, CheckCircle2, ChevronRight, FileText, Lock, MessageSquare, RefreshCcw, Search, ShieldCheck, type LucideIcon } from "lucide-react";
+import { AlertTriangle, CheckCircle2, FileText, Lock, MessageSquare, RefreshCcw, Search, ShieldCheck, type LucideIcon } from "lucide-react";
 import { adminApiRequest, type AdminApiResult } from "@/app/lib/admin/adminApiClient";
 
 type ApplicationStatus = "SUBMITTED" | "UNDER_REVIEW" | "CHANGES_REQUESTED" | "RESUBMITTED" | "NOT_APPROVED" | "APPROVED";
@@ -117,6 +117,14 @@ export default function AdminPartnerApplicationsClient({ initialSubmissionId }: 
   const [notice, setNotice] = useState("");
   const [qaState, setQaState] = useState(createQaState);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    for (const [key, value] of Object.entries({ status, search, service, country, entityType, verification, payoutTax, agreement, reviewer })) {
+      if (value) params.set(key, value); else params.delete(key);
+    }
+    window.history.replaceState(null, "", `${window.location.pathname}?${params.toString()}`);
+  }, [status, search, service, country, entityType, verification, payoutTax, agreement, reviewer]);
+
   const load = useCallback(async () => {
     setLoading(true);
     if (qa) {
@@ -158,16 +166,9 @@ export default function AdminPartnerApplicationsClient({ initialSubmissionId }: 
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col gap-2 text-sm text-slate-500 md:flex-row md:items-center">
-        <Link href="/admin/partners" className="font-medium text-slate-600 hover:text-slate-950">Partners</Link>
-        <ChevronRight className="hidden h-4 w-4 md:block" />
-        <span>Partner Applications</span>
-      </div>
       <section className="rounded border border-slate-200 bg-white p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase text-slate-500">Final review</p>
-            <h1 className="mt-1 text-2xl font-semibold text-slate-950">Partner Applications</h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">Review submitted Partner applications without activating organizations, services, payouts or Partner Desk access.</p>
             {qa ? <p className="mt-2 inline-flex rounded bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-700">QA preview only. No application record was changed.</p> : null}
           </div>
