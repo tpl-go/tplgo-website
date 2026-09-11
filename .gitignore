@@ -143,3 +143,6 @@ vite.config.ts.timestamp-*
 .vite/
 .vercel
 .env*
+/tmp/s8e3/browser-admin.json
+/tmp/s8e3/browser-senior.json
+/tmp/s8e3/test-inbox.json
