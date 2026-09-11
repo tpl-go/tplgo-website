@@ -98,6 +98,7 @@ import {
   partnerStep8ShowsPreSubmissionIssues,
   partnerStep8StateLabel,
   partnerStep8StepStatusLabel,
+  partnerStep8StepIsReadOnly,
   requiredFinalDeclarations,
   step8BlockingReason,
   step8SafeErrorMessage,
@@ -4196,6 +4197,7 @@ function ReviewSubmitStep({
           <div className="mt-5 rounded-xl border border-white/10 bg-[#11141a] p-4" aria-live="polite">
             <h2 className="text-sm font-black text-white">{terminalCopy.title}</h2>
             <p className="mt-1 text-sm font-semibold leading-6 text-slate-300">{terminalCopy.detail}</p>
+            {latestSubmission?.partnerVisibleMessage ? <p className="mt-2 text-sm font-semibold leading-6 text-slate-200">{latestSubmission.partnerVisibleMessage}</p> : null}
             {latestSubmission ? <p className="mt-2 text-xs font-bold text-slate-400">{visibleSubmissionReference(latestSubmission)} · {formatStep8Date(latestSubmission.submittedAt)}</p> : null}
           </div>
         ) : null}
@@ -4213,7 +4215,7 @@ function ReviewSubmitStep({
               <div className="flex shrink-0 flex-wrap items-center gap-2">
                 <StatusLabel label={partnerStep8StepStatusLabel(step.status)} status={step.status} />
                 <button type="button" onClick={() => onStepAction(partnerStep8CorrectionRoute(step))} className="inline-flex h-9 items-center justify-center rounded-lg border border-white/10 px-3 text-xs font-black text-slate-200 hover:border-[#f97316]">
-                  {partnerStep8ActionLabel(step)}
+                  {partnerStep8StepIsReadOnly(readiness, step.step === "verification_compliance" ? "documents_compliance" : step.step) ? "Review" : partnerStep8ActionLabel(step)}
                 </button>
               </div>
             </div>

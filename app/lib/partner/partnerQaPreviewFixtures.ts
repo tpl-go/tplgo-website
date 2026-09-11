@@ -124,6 +124,8 @@ export function buildPartnerQaPreviewSubmission(state: PartnerQaPreviewState): P
     snapshotHash: "qa-preview-safe-hidden-hash",
     submittedAt: state === "approved" ? "2026-08-27T12:00:00.000Z" : "2026-08-30T12:00:00.000Z",
     submittedByUserId: "qa-preview-partner",
+    correctionSections: state === "changes-required" ? ["verification_compliance"] : [],
+    partnerVisibleMessage: state === "changes-required" ? "Please update the requested verification evidence." : null,
   };
 }
 

@@ -169,6 +169,8 @@ export type PartnerApplicationSubmissionSummary = {
   snapshotHash: string;
   submittedAt: string;
   submittedByUserId: string;
+  partnerVisibleMessage?: string | null;
+  correctionSections?: PartnerApplicationStepKey[];
 };
 
 export type PartnerApplicationReadiness = {

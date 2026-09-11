@@ -243,6 +243,28 @@ test("Changes Required unlocks only requested sections", () => {
     expect(partnerStep8NavigationLabel(readiness, "account_contact", status.account_contact ?? "locked")).toBe("Complete");
 });
 
+test("S8E corrections use exact server sections even when readiness considers the section complete", () => {
+    const readiness = buildPartnerQaPreviewReadiness("changes-required");
+    readiness.latestSubmission = { ...readiness.latestSubmission!, correctionSections: ["services"], partnerVisibleMessage: "Please correct services." };
+    const locks = partnerStep8ReadOnlyStepOverrides(readiness);
+    expect(locks.services).toBe(false);
+    expect(locks.documents_compliance).toBe(true);
+    expect(locks.business_identity).toBe(true);
+    expect(workspaceSource).toContain("{latestSubmission.partnerVisibleMessage}");
+    readiness.latestSubmission = { ...readiness.latestSubmission, correctionSections: [] };
+    expect(partnerStep8ReadOnlyStepOverrides(readiness).services).toBe(true);
+});
+
+test("S8E submitted and resubmitted server statuses stay locked after reopen", () => {
+    for (const status of ["SUBMITTED", "RESUBMITTED"] as const) {
+      const readiness = { ...readyReadiness(), applicationStatus: status, submissionReady: false };
+      const locks = partnerStep8ReadOnlyStepOverrides(readiness);
+      expect(Object.values(locks).every(Boolean)).toBe(true);
+      expect(canSubmitPartnerStep8(readiness, {})).toBe(false);
+      expect(partnerStep8NavigationLabel(readiness, "review_submit", "under-review")).toBe("Under Review");
+    }
+});
+
 test("Steps 1-7 remain editable before submitted review states", () => {
     for (const state of ["new", "incomplete", "ready"] as const) {
       const locks = partnerStep8ReadOnlyStepOverrides(buildPartnerQaPreviewReadiness(state));

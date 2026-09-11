@@ -174,7 +174,7 @@ export function partnerStep8ReadOnlyStepOverrides(readiness: PartnerApplicationR
 export function partnerStep8StepIsReadOnly(readiness: PartnerApplicationReadiness | null, stepId: PartnerApplicationStepId): boolean {
   if (!readiness || stepId === "review_submit") return false;
   if (readiness.applicationStatus === "CHANGES_REQUESTED") {
-    return !readiness.steps.some((step) => workspaceStepIdForStep8Key(step.step) === stepId && step.status === "NEEDS_ATTENTION");
+    return !(readiness.latestSubmission?.correctionSections ?? []).some((step) => workspaceStepIdForStep8Key(step) === stepId);
   }
   return isSubmittedPartnerApplicationState(readiness.applicationStatus);
 }
