@@ -1,6 +1,6 @@
-const { chromium } = require('playwright');
-const { execFileSync } = require('node:child_process');
-const assert = require('node:assert/strict');
+import { chromium } from 'playwright';
+import { execFileSync } from 'node:child_process';
+import assert from 'node:assert/strict';
 
 // Existing private runtime only. Credentials and simulated OTP never leave memory.
 const base = 'http://127.0.0.1:3100';
