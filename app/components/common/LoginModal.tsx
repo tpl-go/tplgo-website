@@ -26,6 +26,7 @@ import {
   type LoginPromoContext,
 } from "@/app/lib/auth/loginPromoContent";
 import { createPartnerRegistrationIntake } from "@/app/lib/partner/partnerRegistrationIntake";
+import PartnerAccessLogin from "./PartnerAccessLogin";
 
 type LoginModalProps = {
   isOpen: boolean;
@@ -689,6 +690,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   };
 
   if (!isOpen) return null;
+  if (["partner"].includes(activeTab)) return <PartnerAccessLogin onClose={handleClose} onUserLogin={() => setActiveAccountType("personal")} />;
 
   const shouldUseCompactContent =
     step === "otp" || emailStep === "otp" || partnerView === "register";
@@ -1607,7 +1609,7 @@ function TopAccountTabs(props: {
         style={topTabStyle(props.activeAccountType === "partner")}
       >
         <BriefcaseBusiness size={17} aria-hidden="true" />
-        Partner Desk
+        Partner Access
       </button>
     </div>
   );

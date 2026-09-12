@@ -877,6 +877,10 @@ export default function PartnerApplicationWorkspaceClient({
     fetchPartnerApplicationDraft().then((result) => {
       if (cancelled) return;
       if (result.ok) {
+        if (!result.data) {
+          window.location.replace("/partner-access");
+          return;
+        }
         setBundle(result.data);
         setForm(formFromBundle(result.data, user));
         setBusinessForm(businessFormFromBundle(result.data));
