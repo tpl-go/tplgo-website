@@ -12,7 +12,7 @@ export default function FloatingSupportWidget() {
   const pathname = usePathname();
   const router = useRouter();
 
-  const hideOnRoutes = ["/flights", "/smart-planner/workspace"];
+  const hideOnRoutes = ["/flights", "/smart-planner/workspace", "/partner-access"];
 
   const shouldHide = hideOnRoutes.some((route) =>
     pathname.startsWith(route)

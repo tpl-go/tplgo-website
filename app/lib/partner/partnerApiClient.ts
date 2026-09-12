@@ -1,4 +1,5 @@
 import { tplApiRequest, type TplApiResult } from "../api/tplApiClient";
+import { withPartnerProfile } from "./partnerProfilePreference";
 import type { PartnerOrganizationPreviewProfile } from "./partnerOrganizationPreviewProfile";
 import type { PartnerServiceCatalogueItem, PartnerServiceCatalogueRuntimeDomain, PartnerServiceDefinition } from "./partnerServiceCatalogRuntime";
 
@@ -544,17 +545,17 @@ export type PartnerServiceCatalogueRuntimeResponse = {
 };
 
 export function fetchPartnerApplicationDraft(): Promise<TplApiResult<PartnerOrganizationBundle | null>> {
-  return tplApiRequest<PartnerOrganizationBundle | null>("/api/v1/partner/application/draft");
+  return tplApiRequest<PartnerOrganizationBundle | null>(withPartnerProfile("/api/v1/partner/application/draft"));
 }
 
 export function fetchPartnerApplicationReadiness(): Promise<TplApiResult<PartnerApplicationReadiness>> {
-  return tplApiRequest<PartnerApplicationReadiness>("/api/v1/partner/application/readiness", {
+  return tplApiRequest<PartnerApplicationReadiness>(withPartnerProfile("/api/v1/partner/application/readiness"), {
     fallbackOnError: false,
   });
 }
 
 export function fetchPartnerApplicationSubmission(): Promise<TplApiResult<{ latestSubmission: PartnerApplicationSubmissionSummary | null; readiness: PartnerApplicationReadiness }>> {
-  return tplApiRequest<{ latestSubmission: PartnerApplicationSubmissionSummary | null; readiness: PartnerApplicationReadiness }>("/api/v1/partner/application/submission", {
+  return tplApiRequest<{ latestSubmission: PartnerApplicationSubmissionSummary | null; readiness: PartnerApplicationReadiness }>(withPartnerProfile("/api/v1/partner/application/submission"), {
     fallbackOnError: false,
   });
 }
@@ -615,7 +616,7 @@ export function savePartnerAgreementDraft(input: PartnerAgreementDraftInput): Pr
 }
 
 export function submitPartnerApplication(input: PartnerApplicationSubmitInput): Promise<TplApiResult<{ submission: PartnerApplicationSubmissionSummary; readiness: PartnerApplicationReadiness }>> {
-  return tplApiRequest<{ submission: PartnerApplicationSubmissionSummary; readiness: PartnerApplicationReadiness }>("/api/v1/partner/application/submissions", {
+  return tplApiRequest<{ submission: PartnerApplicationSubmissionSummary; readiness: PartnerApplicationReadiness }>(withPartnerProfile("/api/v1/partner/application/submissions"), {
     method: "POST",
     idempotencyKey: input.idempotencyKey,
     body: input,

@@ -18,6 +18,7 @@ import {
 } from "@/app/lib/auth/auth.types";
 import { registerCurrentDeviceSession } from "@/app/lib/account/deviceSessions";
 import { AUTH_UPDATED_EVENT } from "@/app/lib/booking/guestAuth";
+import { clearPartnerProfilePreference } from "@/app/lib/partner/partnerProfilePreference";
 
 type AuthContextType = AuthState & {
   openLoginModal: (options?: OpenLoginModalOptions) => void;
@@ -357,6 +358,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
   );
 
   const logout = useCallback(() => {
+    clearPartnerProfilePreference();
     const token = readStoredAuthToken();
     if (token) void logoutBackendSession(token);
 
