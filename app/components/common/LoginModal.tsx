@@ -10,7 +10,6 @@ import {
   useState,
 } from "react";
 import {
-  ArrowRight,
   BriefcaseBusiness,
   CheckCircle2,
   Mail,
@@ -25,8 +24,7 @@ import {
   type LoginPromoContent,
   type LoginPromoContext,
 } from "@/app/lib/auth/loginPromoContent";
-import { createPartnerRegistrationIntake } from "@/app/lib/partner/partnerRegistrationIntake";
-import PartnerAccessLogin from "./PartnerAccessLogin";
+import { readPartnerAccess, partnerAccessDestination } from "@/app/lib/partner/partnerAccess";
 
 type LoginModalProps = {
   isOpen: boolean;
@@ -34,12 +32,9 @@ type LoginModalProps = {
 };
 
 type LoginStep = "mobile" | "otp";
-type RegisterMobileStep = "idle" | "otp" | "verified";
 type EmailOtpStep = "idle" | "otp" | "verified";
 type AuthMethod = "mobile" | "email";
 type AccountTab = "personal" | "partner";
-type PartnerView = "login" | "register";
-type RegisterStep = "contact" | "service";
 
 type CountryOption = {
   code: string;
@@ -63,17 +58,6 @@ const COUNTRY_OPTIONS: CountryOption[] = [
   { code: "OTHER", name: "Other", dialCode: "", minLength: 6, maxLength: 15, certifiedOtp: false },
 ];
 
-const PARTNER_PRIMARY_CATEGORIES = [
-  "Hotels & Resorts",
-  "Homestay",
-  "Cab / Taxi",
-  "Activities",
-  "Guide",
-  "Travel Agency / DMC",
-  "Marketplace Seller",
-  "Others",
-] as const;
-
 const API_BASE_URL = process.env.NEXT_PUBLIC_TPL_API_BASE_URL?.replace(/\/+$/, "") || "";
 
 export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
@@ -84,8 +68,6 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     sendEmailOtp,
     verifyOtp,
     verifyEmailOtp,
-    verifyOtpForSession,
-    verifyEmailOtpForSession,
   } = useAuth();
 
   const titleId = useId();
@@ -93,13 +75,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const mobileInputId = useId();
   const otpInputId = useId();
   const emailInputId = useId();
-  const registerLegalNameInputId = useId();
-  const registerMobileInputId = useId();
-  const registerOtpInputId = useId();
-  const registerEmailInputId = useId();
-  const registerCategoryInputId = useId();
-  const registerRequestedServiceInputId = useId();
-  const registerTermsInputId = useId();
+
   const modalRef = useRef<HTMLDivElement | null>(null);
   const mobileInputRef = useRef<HTMLInputElement | null>(null);
   const otpInputRef = useRef<HTMLInputElement | null>(null);
@@ -108,29 +84,14 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
   const [step, setStep] = useState<LoginStep>("mobile");
   const [method, setMethod] = useState<AuthMethod>("mobile");
-  const [partnerView, setPartnerView] = useState<PartnerView>("login");
-  const [registerStep, setRegisterStep] = useState<RegisterStep>("contact");
+
   const [countryCode, setCountryCode] = useState("IN");
   const [mobile, setMobile] = useState("");
   const [email, setEmail] = useState("");
   const [emailOtp, setEmailOtp] = useState("");
   const [emailStep, setEmailStep] = useState<EmailOtpStep>("idle");
   const [emailResendAvailableAt, setEmailResendAvailableAt] = useState<number | null>(null);
-  const [registerLegalName, setRegisterLegalName] = useState("");
-  const [registerCountryCode, setRegisterCountryCode] = useState("IN");
-  const [registerMobile, setRegisterMobile] = useState("");
-  const [registerOtp, setRegisterOtp] = useState("");
-  const [registerMobileStep, setRegisterMobileStep] = useState<RegisterMobileStep>("idle");
-  const [registerVerifiedMobile, setRegisterVerifiedMobile] = useState("");
-  const [registerResendAvailableAt, setRegisterResendAvailableAt] = useState<number | null>(null);
-  const [registerEmail, setRegisterEmail] = useState("");
-  const [registerEmailOtp, setRegisterEmailOtp] = useState("");
-  const [registerEmailStep, setRegisterEmailStep] = useState<EmailOtpStep>("idle");
-  const [registerVerifiedEmail, setRegisterVerifiedEmail] = useState("");
-  const [registerEmailResendAvailableAt, setRegisterEmailResendAvailableAt] = useState<number | null>(null);
-  const [registerCategory, setRegisterCategory] = useState("Hotels & Resorts");
-  const [registerRequestedService, setRegisterRequestedService] = useState("");
-  const [registerTermsAccepted, setRegisterTermsAccepted] = useState(false);
+
   const [otp, setOtp] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorText, setErrorText] = useState("");
@@ -146,16 +107,9 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const cleanedOtp = useMemo(() => otp.replace(/\D/g, ""), [otp]);
   const normalizedEmail = useMemo(() => normalizeEmail(email), [email]);
   const cleanedEmailOtp = useMemo(() => emailOtp.replace(/\D/g, ""), [emailOtp]);
-  const selectedRegisterCountry = useMemo(() => getCountry(registerCountryCode), [registerCountryCode]);
-  const cleanedRegisterMobile = useMemo(() => registerMobile.replace(/\D/g, ""), [registerMobile]);
-  const cleanedRegisterOtp = useMemo(() => registerOtp.replace(/\D/g, ""), [registerOtp]);
-  const normalizedRegisterEmail = useMemo(() => normalizeEmail(registerEmail), [registerEmail]);
-  const cleanedRegisterEmailOtp = useMemo(() => registerEmailOtp.replace(/\D/g, ""), [registerEmailOtp]);
+
   const isValidMobile = isNationalMobileValid(cleanedMobile, selectedCountry);
-  const isValidRegisterMobile = isNationalMobileValid(cleanedRegisterMobile, selectedRegisterCountry);
-  const isValidRegisterEmail = isEmailValid(normalizedRegisterEmail);
-  const cleanedRequestedService = useMemo(() => sanitizePlainText(registerRequestedService).slice(0, 80), [registerRequestedService]);
-  const isOtherRegisterCategory = registerCategory === "Others";
+
   const isCertifiedMobileOtp = selectedCountry.certifiedOtp && selectedCountry.code === "IN";
   const isValidEmail = isEmailValid(normalizedEmail);
   const isValidOtp = cleanedOtp.length === 6;
@@ -164,49 +118,20 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const resendSecondsRemaining = resendAvailableAt
     ? Math.max(0, Math.ceil((resendAvailableAt - nowMs) / 1000))
     : 0;
-  const registerResendSecondsRemaining = registerResendAvailableAt
-    ? Math.max(0, Math.ceil((registerResendAvailableAt - nowMs) / 1000))
-    : 0;
+
   const emailResendSecondsRemaining = emailResendAvailableAt
     ? Math.max(0, Math.ceil((emailResendAvailableAt - nowMs) / 1000))
     : 0;
-  const registerEmailResendSecondsRemaining = registerEmailResendAvailableAt
-    ? Math.max(0, Math.ceil((registerEmailResendAvailableAt - nowMs) / 1000))
-    : 0;
+
   const canSendOtp = method === "mobile" && isValidMobile && isCertifiedMobileOtp && !isSubmitting;
   const canVerifyOtp = method === "mobile" && isValidOtp && !isSubmitting;
   const canResendOtp = step === "otp" && canSendOtp && resendSecondsRemaining === 0;
   const canVerifyEmailOtp = method === "email" && cleanedEmailOtp.length === 6 && !isSubmitting;
   const canResendEmailOtp = emailStep === "otp" && isValidEmail && !isSubmitting && emailResendSecondsRemaining === 0;
-  const canSendRegisterOtp = isValidRegisterMobile && selectedRegisterCountry.certifiedOtp && selectedRegisterCountry.code === "IN" && !isSubmitting;
-  const canVerifyRegisterOtp = cleanedRegisterOtp.length === 6 && !isSubmitting;
-  const canResendRegisterOtp = registerMobileStep === "otp" && canSendRegisterOtp && registerResendSecondsRemaining === 0;
-  const normalizedRegisterMobile = useMemo(
-    () => toBackendMobile(cleanedRegisterMobile, selectedRegisterCountry),
-    [cleanedRegisterMobile, selectedRegisterCountry]
-  );
-  const isRegisterMobileVerified =
-    registerMobileStep === "verified" && Boolean(normalizedRegisterMobile) && registerVerifiedMobile === normalizedRegisterMobile;
-  const isRegisterEmailVerified = registerEmailStep === "verified" && registerVerifiedEmail === normalizedRegisterEmail;
-  const canSendRegisterEmailOtp = isValidRegisterEmail && registerEmailStep === "idle" && !isSubmitting;
-  const canVerifyRegisterEmailOtp = cleanedRegisterEmailOtp.length === 6 && !isSubmitting;
-  const canResendRegisterEmailOtp = registerEmailStep === "otp" && isValidRegisterEmail && !isSubmitting && registerEmailResendSecondsRemaining === 0;
-  const canContinueRegistration =
-    registerLegalName.trim().length >= 2 &&
-    isValidRegisterMobile &&
-    isRegisterMobileVerified &&
-    isRegisterEmailVerified &&
-    isValidRegisterEmail &&
-    Boolean(registerCategory) &&
-    (!isOtherRegisterCategory || cleanedRequestedService.length >= 2) &&
-    registerTermsAccepted;
+
   const maskedMobile = cleanedMobile.length >= 4 ? `XXXXX${cleanedMobile.slice(-4)}` : "";
   const promoContext: LoginPromoContext =
-    activeTab === "partner" && partnerView === "register"
-      ? "partner_registration"
-      : activeTab === "partner"
-        ? "partner_login"
-        : "user_login";
+    activeTab === "partner" ? "partner_login" : "user_login";
 
   useEffect(() => {
     const checkViewport = () => setIsCompactViewport(window.innerWidth < 900);
@@ -216,10 +141,10 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   }, []);
 
   useEffect(() => {
-    if (!resendAvailableAt && !emailResendAvailableAt && !registerResendAvailableAt && !registerEmailResendAvailableAt) return;
+    if (!resendAvailableAt && !emailResendAvailableAt) return;
     const timer = window.setInterval(() => setNowMs(Date.now()), 1000);
     return () => window.clearInterval(timer);
-  }, [emailResendAvailableAt, registerEmailResendAvailableAt, registerResendAvailableAt, resendAvailableAt]);
+  }, [emailResendAvailableAt, resendAvailableAt]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -266,29 +191,12 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const resetState = useCallback(() => {
     resetChallengeState();
     setMethod("mobile");
-    setPartnerView("login");
-    setRegisterStep("contact");
     setCountryCode("IN");
     setMobile("");
     setEmail("");
     setEmailOtp("");
     setEmailStep("idle");
     setEmailResendAvailableAt(null);
-    setRegisterLegalName("");
-    setRegisterCountryCode("IN");
-    setRegisterMobile("");
-    setRegisterOtp("");
-    setRegisterMobileStep("idle");
-    setRegisterVerifiedMobile("");
-    setRegisterResendAvailableAt(null);
-    setRegisterEmail("");
-    setRegisterEmailOtp("");
-    setRegisterEmailStep("idle");
-    setRegisterVerifiedEmail("");
-    setRegisterEmailResendAvailableAt(null);
-    setRegisterCategory("Hotels & Resorts");
-    setRegisterRequestedService("");
-    setRegisterTermsAccepted(false);
     setIsSubmitting(false);
   }, [resetChallengeState]);
 
@@ -326,7 +234,6 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     if (isSubmitting) return;
     setActiveAccountType(nextType);
     resetChallengeState();
-    setPartnerView("login");
     setMethod("mobile");
     setInfoText("");
   };
@@ -400,10 +307,12 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
       await verifyOtp(toBackendMobile(cleanedMobile, selectedCountry), cleanedOtp, activeTab);
 
       if (activeTab === "partner") {
+        const access = await readPartnerAccess().catch(() => null);
+        const destination = access ? partnerAccessDestination(access) ?? "/partner-access" : "/partner-access";
         setSuccessText("Signed in. Opening Partner Desk.");
         window.setTimeout(() => {
           resetState();
-          window.location.assign("/partner-preview");
+          window.location.assign(destination);
         }, 500);
         return;
       }
@@ -455,10 +364,12 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
       await verifyEmailOtp(normalizedEmail, cleanedEmailOtp, activeTab);
 
       if (activeTab === "partner") {
+        const access = await readPartnerAccess().catch(() => null);
+        const destination = access ? partnerAccessDestination(access) ?? "/partner-access" : "/partner-access";
         setSuccessText("Signed in. Opening Partner Desk.");
         window.setTimeout(() => {
           resetState();
-          window.location.assign("/partner-preview");
+          window.location.assign(destination);
         }, 500);
         return;
       }
@@ -480,192 +391,6 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     await handleEmailContinue();
   };
 
-  const handleRegisterAsPartner = () => {
-    setActiveAccountType("partner");
-    resetChallengeState();
-    setPartnerView("register");
-    setRegisterStep("contact");
-    setInfoText("");
-  };
-
-  const handleBackToPartnerLogin = () => {
-    resetChallengeState();
-    setPartnerView("login");
-    setInfoText("");
-  };
-
-  const handleRegisterMobileChange = (value: string) => {
-    const currentMobile = toBackendMobile(cleanedRegisterMobile, selectedRegisterCountry);
-    const nextMobile = toBackendMobile(value.replace(/\D/g, ""), selectedRegisterCountry);
-    setRegisterMobile(value);
-    if (currentMobile === nextMobile) return;
-    setRegisterOtp("");
-    setRegisterMobileStep("idle");
-    setRegisterVerifiedMobile("");
-    setRegisterResendAvailableAt(null);
-  };
-
-  const handleRegisterEmailChange = (value: string) => {
-    const currentEmail = normalizeEmail(registerEmail);
-    const nextEmail = normalizeEmail(value);
-    setRegisterEmail(value);
-    if (currentEmail === nextEmail) return;
-    setRegisterEmailOtp("");
-    setRegisterEmailStep("idle");
-    setRegisterVerifiedEmail("");
-    setRegisterEmailResendAvailableAt(null);
-  };
-
-  const handleRegisterCountryChange = (value: string) => {
-    const nextCountry = getCountry(value);
-    const nextMobile = toBackendMobile(cleanedRegisterMobile, nextCountry);
-    setRegisterCountryCode(value);
-    if (registerVerifiedMobile && nextMobile === registerVerifiedMobile) return;
-    setRegisterOtp("");
-    setRegisterMobileStep("idle");
-    setRegisterVerifiedMobile("");
-    setRegisterResendAvailableAt(null);
-  };
-
-  const handleRegisterSendOtp = async () => {
-    if (!isValidRegisterMobile) {
-      setErrorText("Enter a valid service mobile number for the selected country.");
-      return;
-    }
-    if (!selectedRegisterCountry.certifiedOtp || selectedRegisterCountry.code !== "IN") {
-      setErrorText("WhatsApp OTP delivery is currently certified for India only. Global provider certification is pending.");
-      return;
-    }
-
-    try {
-      setIsSubmitting(true);
-      setErrorText("");
-      setInfoText("");
-      setSuccessText("");
-
-      const result = await sendOtp(toBackendMobile(cleanedRegisterMobile, selectedRegisterCountry), "partner");
-      setRegisterOtp("");
-      setRegisterMobileStep("otp");
-      setRegisterResendAvailableAt(parseTimestamp(result?.resendAvailableAt));
-      setNowMs(Date.now());
-      setInfoText("OTP sent by WhatsApp. Verify the service mobile to continue.");
-    } catch (error) {
-      setErrorText(toUserFacingAuthError(error, "Failed to send OTP."));
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleRegisterVerifyOtp = async () => {
-    if (!canVerifyRegisterOtp) return;
-
-    try {
-      setIsSubmitting(true);
-      setErrorText("");
-      setInfoText("");
-      setSuccessText("");
-
-      await verifyOtpForSession(toBackendMobile(cleanedRegisterMobile, selectedRegisterCountry), cleanedRegisterOtp, "partner");
-      setRegisterVerifiedMobile(toBackendMobile(cleanedRegisterMobile, selectedRegisterCountry));
-      setRegisterMobileStep("verified");
-      setRegisterResendAvailableAt(null);
-      setSuccessText("Mobile verified successfully.");
-    } catch (error) {
-      setErrorText(toUserFacingAuthError(error, "Failed to verify OTP."));
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleRegisterResendOtp = async () => {
-    if (!canResendRegisterOtp) return;
-    await handleRegisterSendOtp();
-  };
-
-  const handleRegisterSendEmailOtp = async () => {
-    if (!isValidRegisterEmail) {
-      setErrorText("Enter a valid business email address.");
-      return;
-    }
-    try {
-      setIsSubmitting(true);
-      setErrorText("");
-      setInfoText("");
-      setSuccessText("");
-      const result = await sendEmailOtp(normalizedRegisterEmail, "partner");
-      setRegisterEmailOtp("");
-      setRegisterEmailStep("otp");
-      setRegisterVerifiedEmail("");
-      setRegisterEmailResendAvailableAt(parseTimestamp(result?.resendAvailableAt));
-      setNowMs(Date.now());
-      setInfoText("OTP sent by email. Verify the business email to continue.");
-    } catch (error) {
-      setErrorText(toUserFacingEmailAuthError(error, "Failed to send Email OTP."));
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleRegisterVerifyEmailOtp = async () => {
-    if (!canVerifyRegisterEmailOtp) return;
-
-    try {
-      setIsSubmitting(true);
-      setErrorText("");
-      setInfoText("");
-      setSuccessText("");
-
-      await verifyEmailOtpForSession(normalizedRegisterEmail, cleanedRegisterEmailOtp, "partner");
-      setRegisterVerifiedEmail(normalizedRegisterEmail);
-      setRegisterEmailStep("verified");
-      setRegisterEmailResendAvailableAt(null);
-      setSuccessText("Email verified successfully.");
-    } catch (error) {
-      setErrorText(toUserFacingEmailAuthError(error, "Failed to verify Email OTP."));
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleRegisterResendEmailOtp = async () => {
-    if (!canResendRegisterEmailOtp) return;
-    await handleRegisterSendEmailOtp();
-  };
-
-  const handleRegisterContinue = async () => {
-    if (!canContinueRegistration) {
-      setErrorText(
-        registerStep === "contact"
-          ? "Verify mobile and email before continuing."
-          : isOtherRegisterCategory
-            ? "Tell us your service and accept the Partner verification terms."
-            : "Choose a primary service and accept the Partner verification terms."
-      );
-      return;
-    }
-    try {
-      setIsSubmitting(true);
-      setErrorText("");
-      await createPartnerRegistrationIntake({
-        legalName: registerLegalName.trim(),
-        serviceMobileCountryCode: registerCountryCode,
-        serviceMobile: cleanedRegisterMobile,
-        businessEmail: normalizedRegisterEmail,
-        primaryCategory: isOtherRegisterCategory ? "OTHER" : registerCategory,
-        requestedServiceName: isOtherRegisterCategory ? cleanedRequestedService : undefined,
-      });
-      setSuccessText("Application started. Opening Partner Desk.");
-      window.setTimeout(() => {
-        resetState();
-        window.location.assign("/partner-preview");
-      }, 500);
-    } catch (error) {
-      setErrorText(error instanceof Error ? error.message : "Partner registration could not be saved.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   const handleGoogleAvailability = () => {
     setErrorText("");
     setInfoText("");
@@ -676,10 +401,10 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     setIsSubmitting(true);
     const returnTo = typeof window !== "undefined"
       ? activeTab === "partner"
-        ? `${window.location.origin}/partner-preview`
+        ? `${window.location.origin}/partner-access`
         : `${window.location.origin}${window.location.pathname}${window.location.search}`
       : activeTab === "partner"
-        ? "/partner-preview"
+        ? "/partner-access"
         : "/";
     window.location.assign(`${API_BASE_URL}/api/v1/auth/google?returnTo=${encodeURIComponent(returnTo)}`);
   };
@@ -690,11 +415,10 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   };
 
   if (!isOpen) return null;
-  if (["partner"].includes(activeTab)) return <PartnerAccessLogin onClose={handleClose} onUserLogin={() => setActiveAccountType("personal")} />;
 
   const shouldUseCompactContent =
-    step === "otp" || emailStep === "otp" || partnerView === "register";
-  const showGlobalLegal = !(activeTab === "partner" && partnerView === "register");
+    step === "otp" || emailStep === "otp";
+  const showGlobalLegal = true;
 
   return (
     <div onClick={handleClose} style={overlayStyle(isCompactViewport)}>
@@ -738,20 +462,16 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
           >
             <div style={headingBlockStyle}>
               <p style={eyebrowStyle}>{activeTab === "partner" ? "TPL GO PARTNER ACCESS" : "TPL GO ACCOUNT"}</p>
-              <h2 id={titleId} style={titleStyle(isCompactViewport, activeTab === "partner" && partnerView === "register")}>
+              <h2 id={titleId} style={titleStyle(isCompactViewport, false)}>
                 {activeTab === "partner"
-                  ? partnerView === "register"
-                    ? "Start your Partner Application"
-                    : "Partner Desk"
+                  ? "Partner Desk"
                   : step === "otp"
                     ? "Verify OTP"
                     : "Login or Sign up"}
               </h2>
               <p style={introTextStyle}>
                 {activeTab === "partner"
-                  ? partnerView === "register"
-                    ? "Verify your contact details to get started."
-                    : "Sign in to manage your TPL Partner account."
+                  ? "Sign in to manage your TPL Partner account."
                   : "Sign in to bookings, trips, wallet, and traveller services."}
               </p>
             </div>
@@ -767,7 +487,6 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
               activeTab={activeTab}
               method={method}
               setMethod={handleMethodChange}
-              partnerView={partnerView}
               step={step}
               mobileInputId={mobileInputId}
               mobileInputRef={mobileInputRef}
@@ -809,57 +528,6 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
               onVerifyEmailOtp={handleVerifyEmailOtp}
               onResendEmailOtp={handleResendEmailOtp}
               onGoogleAvailability={handleGoogleAvailability}
-              onRegisterAsPartner={handleRegisterAsPartner}
-              onBackToPartnerLogin={handleBackToPartnerLogin}
-              registerLegalNameInputId={registerLegalNameInputId}
-              registerMobileInputId={registerMobileInputId}
-              registerOtpInputId={registerOtpInputId}
-              registerEmailInputId={registerEmailInputId}
-              registerCategoryInputId={registerCategoryInputId}
-              registerTermsInputId={registerTermsInputId}
-              registerLegalName={registerLegalName}
-              setRegisterLegalName={setRegisterLegalName}
-              registerCountryCode={registerCountryCode}
-              setRegisterCountryCode={handleRegisterCountryChange}
-              registerMobile={registerMobile}
-              setRegisterMobile={handleRegisterMobileChange}
-              registerMobileStep={registerMobileStep}
-              isRegisterMobileVerified={isRegisterMobileVerified}
-              registerOtp={registerOtp}
-              setRegisterOtp={setRegisterOtp}
-              canSendRegisterOtp={canSendRegisterOtp}
-              canVerifyRegisterOtp={canVerifyRegisterOtp}
-              canResendRegisterOtp={canResendRegisterOtp}
-              registerResendSecondsRemaining={registerResendSecondsRemaining}
-              onRegisterSendOtp={handleRegisterSendOtp}
-              onRegisterVerifyOtp={handleRegisterVerifyOtp}
-              onRegisterResendOtp={handleRegisterResendOtp}
-              registerEmail={registerEmail}
-              setRegisterEmail={handleRegisterEmailChange}
-              registerEmailStep={registerEmailStep}
-              isRegisterEmailVerified={isRegisterEmailVerified}
-              registerEmailOtp={registerEmailOtp}
-              setRegisterEmailOtp={setRegisterEmailOtp}
-              canSendRegisterEmailOtp={canSendRegisterEmailOtp}
-              canVerifyRegisterEmailOtp={canVerifyRegisterEmailOtp}
-              canResendRegisterEmailOtp={canResendRegisterEmailOtp}
-              registerEmailResendSecondsRemaining={registerEmailResendSecondsRemaining}
-              onRegisterSendEmailOtp={handleRegisterSendEmailOtp}
-              onRegisterVerifyEmailOtp={handleRegisterVerifyEmailOtp}
-              onRegisterResendEmailOtp={handleRegisterResendEmailOtp}
-              registerCategory={registerCategory}
-              setRegisterCategory={setRegisterCategory}
-              registerRequestedServiceInputId={registerRequestedServiceInputId}
-              registerRequestedService={registerRequestedService}
-              setRegisterRequestedService={setRegisterRequestedService}
-              registerTermsAccepted={registerTermsAccepted}
-              setRegisterTermsAccepted={setRegisterTermsAccepted}
-              registerMobileInvalid={cleanedRegisterMobile.length > 0 && !isValidRegisterMobile}
-              registerEmailInvalid={normalizedRegisterEmail.length > 0 && !isValidRegisterEmail}
-              canContinueRegistration={canContinueRegistration}
-              onRegisterContinue={handleRegisterContinue}
-              registerStep={registerStep}
-              setRegisterStep={setRegisterStep}
             />
 
             {showGlobalLegal ? (
@@ -954,7 +622,6 @@ function AuthPanel(props: {
   activeTab: AccountTab;
   method: AuthMethod;
   setMethod: (method: AuthMethod) => void;
-  partnerView: PartnerView;
   step: LoginStep;
   mobileInputId: string;
   mobileInputRef: React.RefObject<HTMLInputElement | null>;
@@ -996,63 +663,11 @@ function AuthPanel(props: {
   onVerifyEmailOtp: () => void;
   onResendEmailOtp: () => void;
   onGoogleAvailability: () => void;
-  onRegisterAsPartner: () => void;
-  onBackToPartnerLogin: () => void;
-  registerLegalNameInputId: string;
-  registerMobileInputId: string;
-  registerOtpInputId: string;
-  registerEmailInputId: string;
-  registerCategoryInputId: string;
-  registerRequestedServiceInputId: string;
-  registerTermsInputId: string;
-  registerLegalName: string;
-  setRegisterLegalName: (value: string) => void;
-  registerCountryCode: string;
-  setRegisterCountryCode: (value: string) => void;
-  registerMobile: string;
-  setRegisterMobile: (value: string) => void;
-  registerMobileStep: RegisterMobileStep;
-  isRegisterMobileVerified: boolean;
-  registerOtp: string;
-  setRegisterOtp: (value: string) => void;
-  canSendRegisterOtp: boolean;
-  canVerifyRegisterOtp: boolean;
-  canResendRegisterOtp: boolean;
-  registerResendSecondsRemaining: number;
-  onRegisterSendOtp: () => void;
-  onRegisterVerifyOtp: () => void;
-  onRegisterResendOtp: () => void;
-  registerEmail: string;
-  setRegisterEmail: (value: string) => void;
-  registerEmailStep: EmailOtpStep;
-  isRegisterEmailVerified: boolean;
-  registerEmailOtp: string;
-  setRegisterEmailOtp: (value: string) => void;
-  canSendRegisterEmailOtp: boolean;
-  canVerifyRegisterEmailOtp: boolean;
-  canResendRegisterEmailOtp: boolean;
-  registerEmailResendSecondsRemaining: number;
-  onRegisterSendEmailOtp: () => void;
-  onRegisterVerifyEmailOtp: () => void;
-  onRegisterResendEmailOtp: () => void;
-  registerCategory: string;
-  setRegisterCategory: (value: string) => void;
-  registerRequestedService: string;
-  setRegisterRequestedService: (value: string) => void;
-  registerTermsAccepted: boolean;
-  setRegisterTermsAccepted: (value: boolean) => void;
-  registerMobileInvalid: boolean;
-  registerEmailInvalid: boolean;
-  canContinueRegistration: boolean;
-  onRegisterContinue: () => void;
-  registerStep: RegisterStep;
-  setRegisterStep: (step: RegisterStep) => void;
 }) {
   const {
     activeTab,
     method,
     setMethod,
-    partnerView,
     step,
     mobileInputId,
     mobileInputRef,
@@ -1094,59 +709,7 @@ function AuthPanel(props: {
     onVerifyEmailOtp,
     onResendEmailOtp,
     onGoogleAvailability,
-    onRegisterAsPartner,
-    onBackToPartnerLogin,
-    registerLegalNameInputId,
-    registerMobileInputId,
-    registerOtpInputId,
-    registerEmailInputId,
-    registerCategoryInputId,
-    registerRequestedServiceInputId,
-    registerTermsInputId,
-    registerLegalName,
-    setRegisterLegalName,
-    registerCountryCode,
-    setRegisterCountryCode,
-    registerMobile,
-    setRegisterMobile,
-    registerMobileStep,
-    isRegisterMobileVerified,
-    registerOtp,
-    setRegisterOtp,
-    canSendRegisterOtp,
-    canVerifyRegisterOtp,
-    canResendRegisterOtp,
-    registerResendSecondsRemaining,
-    onRegisterSendOtp,
-    onRegisterVerifyOtp,
-    onRegisterResendOtp,
-    registerEmail,
-    setRegisterEmail,
-    registerEmailStep,
-    isRegisterEmailVerified,
-    registerEmailOtp,
-    setRegisterEmailOtp,
-    canSendRegisterEmailOtp,
-    canVerifyRegisterEmailOtp,
-    canResendRegisterEmailOtp,
-    registerEmailResendSecondsRemaining,
-    onRegisterSendEmailOtp,
-    onRegisterVerifyEmailOtp,
-    onRegisterResendEmailOtp,
-    registerCategory,
-    setRegisterCategory,
-    registerRequestedService,
-    setRegisterRequestedService,
-    registerTermsAccepted,
-    setRegisterTermsAccepted,
-    registerMobileInvalid,
-    registerEmailInvalid,
-    canContinueRegistration,
-    onRegisterContinue,
-    registerStep,
-    setRegisterStep,
   } = props;
-  const selectedRegisterCountry = getCountry(registerCountryCode);
 
   if (step === "otp") {
     return (
@@ -1192,272 +755,6 @@ function AuthPanel(props: {
           >
             {resendSecondsRemaining > 0 ? `Resend in ${resendSecondsRemaining}s` : "Resend OTP"}
           </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (activeTab === "partner" && partnerView === "register") {
-    const canContinueContact =
-      registerLegalName.trim().length >= 2 &&
-      isRegisterMobileVerified &&
-      isRegisterEmailVerified &&
-      !isSubmitting;
-
-    return (
-      <div style={registerFormStyle}>
-        <RegisterProgress currentStep={registerStep} />
-
-        {registerStep === "contact" ? (
-          <div style={registerStepGridStyle}>
-            <label htmlFor={registerLegalNameInputId} style={labelStyle}>
-              Legal / Company Name
-            </label>
-            <input
-              id={registerLegalNameInputId}
-              value={registerLegalName}
-              onChange={(event) => setRegisterLegalName(event.target.value)}
-              type="text"
-              autoComplete="organization"
-              placeholder="Registered business or professional name"
-              style={standaloneInputStyle}
-            />
-
-            <label htmlFor={registerMobileInputId} style={labelStyle}>
-              Service mobile number
-            </label>
-            <div style={registerMobileVerifyRowStyle}>
-              <div style={compactCountryMobileShellStyle(registerMobileInvalid)}>
-                <select
-                  aria-label="Service mobile country code"
-                  value={registerCountryCode}
-                  onChange={(event) => setRegisterCountryCode(event.target.value)}
-                  style={compactCountryCodeSelectStyle}
-                >
-                  {COUNTRY_OPTIONS.map((item) => (
-                    <option key={item.code} value={item.code}>
-                      {item.dialCode ? `+${item.dialCode}` : "Other"}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  id={registerMobileInputId}
-                  value={registerMobile}
-                  onChange={(event) => setRegisterMobile(sanitizeDigits(event.target.value).slice(0, selectedRegisterCountry.maxLength || 15))}
-                  type="tel"
-                  inputMode="numeric"
-                  autoComplete="tel"
-                  placeholder="Mobile number"
-                  aria-invalid={registerMobileInvalid}
-                  style={compactInputStyle}
-                />
-              </div>
-              <button
-                type="button"
-                onClick={onRegisterSendOtp}
-                disabled={!canSendRegisterOtp || registerMobileStep !== "idle"}
-                style={compactActionButtonStyle(!canSendRegisterOtp || registerMobileStep !== "idle")}
-              >
-                {isRegisterMobileVerified ? "Verified" : registerMobileStep === "otp" ? "OTP Sent" : "Verify"}
-              </button>
-            </div>
-            {isRegisterMobileVerified ? <p style={verifiedTextStyle}>Mobile verified</p> : null}
-
-            {registerMobileStep === "otp" ? (
-              <div style={registerOtpBoxStyle}>
-                <div style={registerOtpRowStyle}>
-                  <input
-                    id={registerOtpInputId}
-                    value={registerOtp}
-                    onChange={(event) => setRegisterOtp(sanitizeDigits(event.target.value).slice(0, 6))}
-                    onPaste={(event) => {
-                      event.preventDefault();
-                      setRegisterOtp(sanitizeDigits(event.clipboardData.getData("text")).slice(0, 6));
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") onRegisterVerifyOtp();
-                    }}
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                    aria-label="Enter OTP"
-                    placeholder="6-digit code"
-                    aria-invalid={Boolean(registerOtp && registerOtp.length !== 6)}
-                    disabled={isSubmitting}
-                    style={registerOtpInputStyle}
-                  />
-                  <button
-                    type="button"
-                    onClick={onRegisterVerifyOtp}
-                    disabled={!canVerifyRegisterOtp}
-                    style={compactActionButtonStyle(!canVerifyRegisterOtp)}
-                  >
-                    Verify OTP
-                  </button>
-                </div>
-                <button
-                  type="button"
-                  onClick={onRegisterResendOtp}
-                  disabled={!canResendRegisterOtp}
-                  style={resendButtonStyle(!canResendRegisterOtp)}
-                >
-                  {registerResendSecondsRemaining > 0 ? `Resend in ${registerResendSecondsRemaining}s` : "Resend OTP"}
-                </button>
-              </div>
-            ) : null}
-
-            <label htmlFor={registerEmailInputId} style={labelStyle}>
-              Business email
-            </label>
-            <div style={emailVerifyInputRowStyle}>
-              <input
-                id={registerEmailInputId}
-                value={registerEmail}
-                onChange={(event) => setRegisterEmail(event.target.value)}
-                onBlur={() => setRegisterEmail(normalizeEmail(registerEmail))}
-                type="email"
-                inputMode="email"
-                autoComplete="email"
-                placeholder="partner@example.com"
-                aria-invalid={registerEmailInvalid}
-                style={standaloneInputStyle}
-              />
-              <button
-                type="button"
-                onClick={onRegisterSendEmailOtp}
-                disabled={!canSendRegisterEmailOtp}
-                style={compactActionButtonStyle(!canSendRegisterEmailOtp)}
-              >
-                {isRegisterEmailVerified ? "Verified" : registerEmailStep === "otp" ? "OTP Sent" : "Verify"}
-              </button>
-            </div>
-            {registerEmailInvalid ? <p style={warningTextStyle}>Enter a valid business email address.</p> : null}
-            {isRegisterEmailVerified ? <p style={verifiedTextStyle}>Email verified</p> : null}
-            {registerEmailStep === "otp" ? (
-              <div style={registerOtpBoxStyle}>
-                <div style={registerOtpRowStyle}>
-                  <input
-                    id={`${registerEmailInputId}-otp`}
-                    value={registerEmailOtp}
-                    onChange={(event) => setRegisterEmailOtp(sanitizeDigits(event.target.value).slice(0, 6))}
-                    onPaste={(event) => {
-                      event.preventDefault();
-                      setRegisterEmailOtp(sanitizeDigits(event.clipboardData.getData("text")).slice(0, 6));
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") onRegisterVerifyEmailOtp();
-                    }}
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                    aria-label="Enter Email OTP"
-                    placeholder="6-digit code"
-                    aria-invalid={Boolean(registerEmailOtp && registerEmailOtp.length !== 6)}
-                    disabled={isSubmitting}
-                    style={registerOtpInputStyle}
-                  />
-                  <button
-                    type="button"
-                    onClick={onRegisterVerifyEmailOtp}
-                    disabled={!canVerifyRegisterEmailOtp}
-                    style={compactActionButtonStyle(!canVerifyRegisterEmailOtp)}
-                  >
-                    Verify OTP
-                  </button>
-                </div>
-                <p style={helperTextStyle}>Code sent to {maskEmail(registerEmail)}</p>
-                <button
-                  type="button"
-                  onClick={onRegisterResendEmailOtp}
-                  disabled={!canResendRegisterEmailOtp}
-                  style={resendButtonStyle(!canResendRegisterEmailOtp)}
-                >
-                  {registerEmailResendSecondsRemaining > 0 ? `Resend in ${registerEmailResendSecondsRemaining}s` : "Resend OTP"}
-                </button>
-              </div>
-            ) : null}
-          </div>
-        ) : (
-          <div style={registerStepGridStyle}>
-            <label htmlFor={registerCategoryInputId} style={labelStyle}>
-              Primary Service Category
-            </label>
-            <select
-              id={registerCategoryInputId}
-              value={registerCategory}
-              onChange={(event) => {
-                setRegisterCategory(event.target.value);
-                if (event.target.value !== "Others") setRegisterRequestedService("");
-              }}
-              style={standaloneSelectStyle}
-            >
-              {PARTNER_PRIMARY_CATEGORIES.map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
-              ))}
-            </select>
-
-            {registerCategory === "Others" ? (
-              <>
-                <label htmlFor={registerRequestedServiceInputId} style={labelStyle}>
-                  Tell us your service *
-                </label>
-                <input
-                  id={registerRequestedServiceInputId}
-                  value={registerRequestedService}
-                  onChange={(event) => setRegisterRequestedService(sanitizePlainText(event.target.value).slice(0, 80))}
-                  type="text"
-                  inputMode="text"
-                  autoComplete="off"
-                  placeholder="e.g. Yacht Charter, Interpreter, Event Equipment"
-                  style={standaloneInputStyle}
-                />
-              </>
-            ) : null}
-
-            <label htmlFor={registerTermsInputId} style={termsCheckStyle}>
-              <input
-                id={registerTermsInputId}
-                type="checkbox"
-                checked={registerTermsAccepted}
-                onChange={(event) => setRegisterTermsAccepted(event.target.checked)}
-              />
-              <span>I agree to continue with TPL GO Partner verification.</span>
-            </label>
-          </div>
-        )}
-
-        <div style={registerFooterActionsStyle}>
-          {registerStep === "contact" ? (
-            <button
-              type="button"
-              onClick={() => setRegisterStep("service")}
-              disabled={!canContinueContact}
-              style={primaryButtonStyle(!canContinueContact)}
-            >
-              Continue
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={onRegisterContinue}
-              disabled={!canContinueRegistration}
-              style={primaryButtonStyle(!canContinueRegistration)}
-            >
-              Continue to Partner Desk
-            </button>
-          )}
-          <div style={registerFooterLinkRowStyle}>
-            {registerStep === "service" ? (
-              <button type="button" onClick={() => setRegisterStep("contact")} style={plainLinkButtonStyle}>
-                Back
-              </button>
-            ) : null}
-            <button type="button" onClick={onBackToPartnerLogin} style={plainLinkButtonStyle}>
-              Existing Partner? Sign in
-            </button>
-          </div>
         </div>
       </div>
     );
@@ -1570,15 +867,6 @@ function AuthPanel(props: {
         </>
       )}
 
-      {activeTab === "partner" ? (
-        <div style={registerInlineStyle}>
-          <span style={registerTitleStyle}>New to TPL?</span>
-          <button type="button" onClick={onRegisterAsPartner} style={registerButtonStyle}>
-            Become a TPL Partner
-            <ArrowRight size={16} aria-hidden="true" />
-          </button>
-        </div>
-      ) : null}
     </div>
   );
 }
@@ -1609,7 +897,7 @@ function TopAccountTabs(props: {
         style={topTabStyle(props.activeAccountType === "partner")}
       >
         <BriefcaseBusiness size={17} aria-hidden="true" />
-        Partner Access
+        Partner Desk
       </button>
     </div>
   );
@@ -1654,16 +942,6 @@ function AuthDivider({ isDense = false }: { isDense?: boolean }) {
       <span style={authDividerLineStyle} />
       <b>OR</b>
       <span style={authDividerLineStyle} />
-    </div>
-  );
-}
-
-function RegisterProgress({ currentStep }: { currentStep: RegisterStep }) {
-  return (
-    <div aria-label="Partner application progress" style={registerProgressStyle}>
-      <span style={registerProgressItemStyle(currentStep === "contact", true)}>1 Contact</span>
-      <span aria-hidden="true" style={registerProgressDividerStyle} />
-      <span style={registerProgressItemStyle(currentStep === "service", currentStep === "service")}>2 Service</span>
     </div>
   );
 }
@@ -1830,10 +1108,6 @@ function sanitizeDigits(value: string) {
 
 function normalizeEmail(value: string) {
   return value.trim().toLowerCase();
-}
-
-function sanitizePlainText(value: string) {
-  return value.replace(/[<>]/g, "").replace(/\s+/g, " ").trimStart();
 }
 
 function isEmailValid(value: string) {
@@ -2202,55 +1476,6 @@ const partnerCompactStackStyle: React.CSSProperties = {
   gap: "4px",
 };
 
-const registerFormStyle: React.CSSProperties = {
-  display: "grid",
-  gridTemplateRows: "auto minmax(0, 1fr) auto",
-  gap: "4px",
-  minHeight: 0,
-  flex: "1 1 auto",
-};
-
-const registerStepGridStyle: React.CSSProperties = {
-  display: "grid",
-  gap: "5px",
-  minHeight: 0,
-  paddingBottom: "10px",
-  overflowY: "auto",
-  overscrollBehavior: "contain",
-};
-
-const registerProgressStyle: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "minmax(0, 1fr) 22px minmax(0, 1fr)",
-  alignItems: "center",
-  gap: "6px",
-  margin: "0 0 2px",
-};
-
-function registerProgressItemStyle(active: boolean, complete: boolean): React.CSSProperties {
-  return {
-    minHeight: "26px",
-    borderRadius: "999px",
-    border: active ? "1px solid #0b5fff" : "1px solid #dbe4ef",
-    background: active ? "#eff6ff" : complete ? "#ecfdf5" : "#f8fafc",
-    color: active ? "#0b5fff" : complete ? "#047857" : "#64748b",
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "0 8px",
-    fontSize: "11px",
-    lineHeight: "15px",
-    fontWeight: 900,
-    textAlign: "center",
-    whiteSpace: "nowrap",
-  };
-}
-
-const registerProgressDividerStyle: React.CSSProperties = {
-  height: "1px",
-  background: "#cbd5e1",
-};
-
 function methodGridStyle(isDense = false): React.CSSProperties {
   return {
     display: "grid",
@@ -2391,11 +1616,6 @@ const standaloneInputStyle: React.CSSProperties = {
   letterSpacing: 0,
 };
 
-const standaloneSelectStyle: React.CSSProperties = {
-  ...standaloneInputStyle,
-  appearance: "auto",
-};
-
 function primaryButtonStyle(disabled: boolean): React.CSSProperties {
   return {
     minHeight: "48px",
@@ -2439,159 +1659,6 @@ function resendButtonStyle(disabled: boolean): React.CSSProperties {
     cursor: disabled ? "not-allowed" : "pointer",
   };
 }
-
-const registerMobileVerifyRowStyle: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "minmax(0, 1fr) auto",
-  alignItems: "center",
-  gap: "8px",
-  marginTop: "-3px",
-};
-
-function compactCountryMobileShellStyle(invalid: boolean): React.CSSProperties {
-  return {
-    height: "44px",
-    border: invalid ? "1px solid #ef4444" : "1px solid #cbd5e1",
-    borderRadius: "11px",
-    display: "grid",
-    gridTemplateColumns: "72px minmax(0, 1fr)",
-    overflow: "hidden",
-    background: "#ffffff",
-  };
-}
-
-const compactCountryCodeSelectStyle: React.CSSProperties = {
-  ...countrySelectStyle,
-  width: "72px",
-  padding: "0 7px",
-  fontSize: "12px",
-  background: "#f8fafc",
-};
-
-const emailVerifyInputRowStyle: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "minmax(0, 1fr) auto",
-  alignItems: "center",
-  gap: "8px",
-};
-
-const verifiedTextStyle: React.CSSProperties = {
-  margin: "-2px 0 0",
-  color: "#047857",
-  fontSize: "11px",
-  lineHeight: "16px",
-  fontWeight: 850,
-};
-
-function compactActionButtonStyle(disabled: boolean): React.CSSProperties {
-  return {
-    minHeight: "36px",
-    border: "1px solid #0b5fff",
-    borderRadius: "10px",
-    background: disabled ? "#f1f5f9" : "#0b5fff",
-    color: disabled ? "#64748b" : "#ffffff",
-    padding: "0 12px",
-    fontSize: "12px",
-    lineHeight: "16px",
-    fontWeight: 900,
-    cursor: disabled ? "not-allowed" : "pointer",
-    whiteSpace: "nowrap",
-  };
-}
-
-const registerOtpBoxStyle: React.CSSProperties = {
-  display: "grid",
-  gap: "4px",
-  border: "1px solid #dbeafe",
-  borderRadius: "12px",
-  background: "#f8fbff",
-  padding: "6px",
-};
-
-const registerOtpRowStyle: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "minmax(0, 1fr) auto",
-  gap: "8px",
-  alignItems: "center",
-};
-
-const registerOtpInputStyle: React.CSSProperties = {
-  ...standaloneInputStyle,
-  height: "38px",
-  borderRadius: "10px",
-};
-
-const registerFooterActionsStyle: React.CSSProperties = {
-  display: "grid",
-  gap: "4px",
-  paddingTop: "5px",
-  background: "#ffffff",
-};
-
-const registerFooterLinkRowStyle: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  gap: "10px",
-};
-
-const registerInlineStyle: React.CSSProperties = {
-  minHeight: "38px",
-  marginTop: "0",
-  borderTop: "1px solid #e2e8f0",
-  paddingTop: "5px",
-  paddingBottom: "7px",
-  display: "grid",
-  gridTemplateColumns: "minmax(0, 1fr) minmax(160px, auto)",
-  alignItems: "center",
-  gap: "8px",
-};
-
-const registerTitleStyle: React.CSSProperties = {
-  margin: 0,
-  color: "#0f172a",
-  fontSize: "13px",
-  lineHeight: "17px",
-  fontWeight: 900,
-};
-
-const registerButtonStyle: React.CSSProperties = {
-  minHeight: "36px",
-  border: "1px solid #f97316",
-  borderRadius: "10px",
-  background: "#ffffff",
-  color: "#c2410c",
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: "8px",
-  fontWeight: 900,
-  cursor: "pointer",
-  padding: "0 10px",
-  whiteSpace: "nowrap",
-  width: "100%",
-};
-
-const plainLinkButtonStyle: React.CSSProperties = {
-  border: "none",
-  background: "transparent",
-  color: "#0b5fff",
-  fontSize: "11px",
-  lineHeight: "16px",
-  fontWeight: 850,
-  cursor: "pointer",
-  padding: "0",
-};
-
-const termsCheckStyle: React.CSSProperties = {
-  display: "flex",
-  alignItems: "flex-start",
-  gap: "8px",
-  color: "#475569",
-  fontSize: "11px",
-  lineHeight: "16px",
-  fontWeight: 700,
-};
 
 const benefitLineStyle: React.CSSProperties = {
   display: "flex",
