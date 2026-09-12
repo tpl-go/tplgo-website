@@ -47,6 +47,7 @@ type AuthContextType = AuthState & {
     accountType: AccountType
   ) => Promise<AuthUser>;
   logout: () => Promise<void>;
+  adoptRecoveredPartnerSession: (session: { token: string; expiresAt: string } | null) => Promise<void>;
   requireAuth: (options?: OpenLoginModalOptions) => boolean;
 };
 
@@ -398,6 +399,18 @@ export default function AuthProvider({ children }: AuthProviderProps) {
     [isAuthenticated, user, openLoginModal]
   );
 
+  const adoptRecoveredPartnerSession = useCallback(async (session: { token: string; expiresAt: string } | null) => {
+    const resolved = session
+      ? { user: await readBackendMeUser(session.token), session }
+      : await readBackendCookieSession();
+    if (!resolved.session?.token) throw new Error("Sign in again to open your Partner account.");
+    clearPartnerProfilePreference();
+    persistSession(resolved.user, resolved.session);
+    setUser(resolved.user);
+    setIsAuthenticated(true);
+    setActiveAccountType("partner");
+  }, [persistSession]);
+
   const value = useMemo(
     () => ({
       isAuthLoading,
@@ -418,6 +431,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
       verifyEmailOtpForSession,
       logout,
       requireAuth,
+      adoptRecoveredPartnerSession,
     }),
     [
       isAuthLoading,
@@ -437,6 +451,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
       verifyEmailOtpForSession,
       logout,
       requireAuth,
+      adoptRecoveredPartnerSession,
     ]
   );
 

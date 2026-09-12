@@ -25,6 +25,7 @@ import {
 import { visibleSubmissionReference } from "@/app/lib/partner/partnerStep8Review";
 import PartnerAccessShell from "./PartnerAccessShell";
 import PartnerProfileChooser from "./PartnerProfileChooser";
+import PartnerRecovery from "./PartnerRecovery";
 
 type PartnerView = "access" | "landing" | "recovery";
 type PartnerStatusSummary = {
@@ -250,16 +251,7 @@ export default function PartnerAccessPage() {
   }
 
   if (view === "recovery") {
-    return shell(
-      <div className="mx-auto max-w-xl">
-        <h1 className="text-3xl font-black tracking-tight sm:text-4xl">Recover existing application</h1>
-        <p className="mt-4 text-sm font-medium leading-6 text-slate-300">Secure account recovery is not available yet. No application or identity has been linked.</p>
-        <div className="mt-7 flex flex-wrap gap-3">
-          <Link href="/customer-support" className={secondaryActionClass}>Contact Partner Support</Link>
-          <button type="button" onClick={() => setView("access")} className={backActionClass}><ArrowLeft aria-hidden="true" className="h-4 w-4" />Back</button>
-        </div>
-      </div>,
-    );
+    return shell(<PartnerRecovery onCancel={() => setView("access")} onComplete={accept} />);
   }
 
   if (loading && !access) return shell(<LoadingState text="Opening your Partner account…" />);

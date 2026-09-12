@@ -74,12 +74,13 @@ test("remembered selection remains a backend-revalidated preference", () => {
   expect(accessAuthority).toContain("clearPartnerProfilePreference()");
 });
 
-test("no-linked state explains safe choices while recovery remains holding", () => {
+test("no-linked state explains safe choices and opens verified recovery", () => {
   expect(accessPage).toContain("We could not find a Partner application or account linked to this login. Check the mobile number, email or Google account you used earlier.");
   expect(accessPage).toContain("Use another Partner login");
   expect(accessPage).toContain("Start a new Partner application");
   expect(accessPage).toContain("Recover existing application");
-  expect(accessPage).toContain("Secure account recovery is not available yet. No application or identity has been linked.");
+  expect(accessPage).toContain("<PartnerRecovery");
+  expect(source("app/partner-access/PartnerRecovery.tsx")).toContain("Confirm recovery");
 });
 
 test("accepted application and Partner login structures remain present", () => {
