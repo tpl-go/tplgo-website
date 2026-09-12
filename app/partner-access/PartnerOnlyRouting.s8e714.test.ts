@@ -24,9 +24,9 @@ test("Partner routes use a dedicated shell and suppress the consumer header", ()
 });
 
 test("Partner login and application exit remain inside Partner context", () => {
-  expect(loginModal).toContain("window.location.replace(destination)");
+  expect(loginModal).toContain('window.location.replace("/partner-access")');
   expect(loginModal).not.toContain("window.location.assign(destination)");
-  expect(workspace).toContain('<Link href="/partner-access"');
+  expect(workspace).toContain('<Link href="/partner-access?intent=exit" replace');
   expect(chooser).not.toContain('href="/"');
   expect(accessPage).not.toContain('href="/"');
 });
@@ -74,7 +74,7 @@ test("resolver and back navigation are guarded without consumer fallbacks", () =
   expect(accessPage).toContain("void refresh(false)");
   expect(chooser).toContain("if (busy.current || !profile.selectable) return");
   expect(accessPage).not.toContain('window.location.assign("/")');
-  expect(accessPage).not.toContain('window.location.replace("/")');
+  expect(accessPage).toContain('window.location.replace("/")');
 });
 
 test("operator surfaces do not render lifecycle enums or internal identifiers", () => {

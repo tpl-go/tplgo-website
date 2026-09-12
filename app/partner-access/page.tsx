@@ -44,6 +44,7 @@ export default function PartnerAccessPage() {
   const [multipleProfiles, setMultipleProfiles] = useState(false);
   const startBusy = useRef(false);
   const resolveInFlight = useRef<Promise<void> | null>(null);
+  const sessionResetInFlight = useRef<Promise<void> | null>(null);
   const startKey = useRef<string | null>(null);
 
   const accept = useCallback((result: PartnerAccess, profile?: PartnerProfile) => {
@@ -96,6 +97,16 @@ export default function PartnerAccessPage() {
       setLoading(false);
       return;
     }
+    const explicitExit = new URLSearchParams(window.location.search).get("intent") === "exit";
+    if (explicitExit) {
+      setAccess(null);
+      setSelectedProfile(null);
+      setStatusSummary(null);
+      setSummaryState("idle");
+      setView("landing");
+      setLoading(false);
+      return;
+    }
     void refresh();
   }, [isAuthLoading, isAuthenticated, refresh]);
 
@@ -137,8 +148,7 @@ export default function PartnerAccessPage() {
     }
   }
 
-  async function resetSession(openPartnerLogin: boolean) {
-    await logout();
+  function resetPartnerViewState() {
     setAccess(null);
     setSelectedProfile(null);
     setStatusSummary(null);
@@ -147,7 +157,24 @@ export default function PartnerAccessPage() {
     setView("access");
     setLoading(false);
     setError("");
-    if (openPartnerLogin) openLoginModal({ accountType: "partner", intent: "partner" });
+  }
+
+  function resetSession(destination: "home" | "partner-login") {
+    if (sessionResetInFlight.current) return sessionResetInFlight.current;
+    const request = (async () => {
+      await logout();
+      resetPartnerViewState();
+      if (destination === "home") {
+        window.location.replace("/");
+        return;
+      }
+      openLoginModal({ accountType: "partner", intent: "partner" });
+    })();
+    sessionResetInFlight.current = request;
+    void request.finally(() => {
+      if (sessionResetInFlight.current === request) sessionResetInFlight.current = null;
+    });
+    return request;
   }
 
   function openPartnerLanding() {
@@ -156,6 +183,9 @@ export default function PartnerAccessPage() {
   }
 
   function reopenPartnerAccount() {
+    if (new URLSearchParams(window.location.search).get("intent") === "exit") {
+      window.history.replaceState(window.history.state, "", "/partner-access");
+    }
     setView("access");
     setAccess(null);
     setSelectedProfile(null);
@@ -181,8 +211,8 @@ export default function PartnerAccessPage() {
       title={shellTitle}
       displayName={displayName}
       authenticated={authenticated}
-      onUseAnotherLogin={() => { void resetSession(true); }}
-      onLogout={() => { void resetSession(false); }}
+      onUseAnotherLogin={() => { void resetSession("partner-login"); }}
+      onLogout={() => { void resetSession("home"); }}
     >
       {content}
     </PartnerAccessShell>
@@ -242,7 +272,7 @@ export default function PartnerAccessPage() {
         <p role="alert" className="mt-4 text-sm font-semibold text-red-100">{error}</p>
         <div className="mt-7 flex flex-wrap gap-3">
           <button type="button" disabled={loading} onClick={() => void refresh()} className={primaryActionClass}>Retry</button>
-          <button type="button" onClick={() => { void resetSession(true); }} className={secondaryActionClass}>Use another Partner login</button>
+          <button type="button" onClick={() => { void resetSession("partner-login"); }} className={secondaryActionClass}>Use another Partner login</button>
         </div>
       </div>,
     );
@@ -261,14 +291,14 @@ export default function PartnerAccessPage() {
         </p>
         {error ? <p role="alert" className="mt-5 text-sm font-semibold text-red-200">{error}</p> : null}
         <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-          <button type="button" onClick={() => { void resetSession(true); }} className={secondaryActionClass}>Use another Partner login</button>
+          <button type="button" onClick={() => { void resetSession("partner-login"); }} className={secondaryActionClass}>Use another Partner login</button>
           <button type="button" disabled={loading} onClick={() => setView("recovery")} className={secondaryActionClass}>Recover existing application</button>
           <button type="button" disabled={loading} onClick={() => void start()} className={primaryActionClass}>
             {loading ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" /> : null}
             Start a new Partner application
           </button>
         </div>
-        <button type="button" onClick={() => { void resetSession(true); }} className={`${backActionClass} mt-8`}><ArrowLeft aria-hidden="true" className="h-4 w-4" />Back</button>
+        <button type="button" onClick={() => { void resetSession("partner-login"); }} className={`${backActionClass} mt-8`}><ArrowLeft aria-hidden="true" className="h-4 w-4" />Back</button>
       </div>,
     );
   }

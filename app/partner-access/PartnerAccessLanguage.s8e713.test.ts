@@ -54,7 +54,7 @@ test("completed steps use Completed", () => {
 test("auth loading is explicit and cannot render the unauthenticated branch", () => {
   expect(authProvider).toContain("const [isAuthLoading, setIsAuthLoading] = useState(true)");
   expect(workspace.indexOf("if (!qaPreviewEnabled && isAuthLoading)")).toBeLessThan(workspace.indexOf("if (!qaPreviewEnabled && !isAuthenticated)"));
-  expect(workspace).toContain("Opening your Partner account…");
+  expect(workspace).toContain("Opening your Partner application…");
   expect(workspace).toContain("Sign in to continue");
 });
 

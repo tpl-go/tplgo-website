@@ -28,10 +28,10 @@ function declarations(source: string) {
   test("removes the alternative shell and entire duplicate registration path", () => {
     expect(current).not.toMatch(/PartnerAccessLogin|Become a TPL Partner|createPartnerRegistrationIntake|partnerView|registerLegalName|registerTerms/);
   });
-  test("resolves both successful OTP methods using backend authority", () => {
-    expect(current.match(/const access = await readPartnerAccess\(\)/g)).toHaveLength(2);
+  test("hands both successful Partner OTP methods to the single resolver route", () => {
+    expect(current).not.toContain("readPartnerAccess");
     expect(current).not.toContain('window.location.assign("/partner-preview")');
-    expect(current.match(/window.location.assign\(destination\)/g)).toHaveLength(2);
+    expect(current.match(/window\.location\.replace\("\/partner-access"\)/g)).toHaveLength(2);
   });
   test("retains one Google OAuth integration and returns Partner authentication to the resolver page", () => {
     expect(current).toContain('/api/v1/auth/google?returnTo=${encodeURIComponent(returnTo)}');

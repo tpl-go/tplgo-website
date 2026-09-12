@@ -24,7 +24,6 @@ import {
   type LoginPromoContent,
   type LoginPromoContext,
 } from "@/app/lib/auth/loginPromoContent";
-import { readPartnerAccess, partnerAccessDestination } from "@/app/lib/partner/partnerAccess";
 
 type LoginModalProps = {
   isOpen: boolean;
@@ -68,6 +67,8 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     sendEmailOtp,
     verifyOtp,
     verifyEmailOtp,
+    verifyOtpForSession,
+    verifyEmailOtpForSession,
   } = useAuth();
 
   const titleId = useId();
@@ -304,19 +305,14 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
       setInfoText("");
       setSuccessText("");
 
-      await verifyOtp(toBackendMobile(cleanedMobile, selectedCountry), cleanedOtp, activeTab);
-
       if (activeTab === "partner") {
-        const access = await readPartnerAccess().catch(() => null);
-        const destination = access ? partnerAccessDestination(access) ?? "/partner-access" : "/partner-access";
-        setSuccessText("Signed in. Opening Partner Desk.");
-        window.setTimeout(() => {
-          resetState();
-          window.location.replace(destination);
-        }, 500);
+        await verifyOtpForSession(toBackendMobile(cleanedMobile, selectedCountry), cleanedOtp, activeTab);
+        setSuccessText("Opening your Partner account…");
+        window.location.replace("/partner-access");
         return;
       }
 
+      await verifyOtp(toBackendMobile(cleanedMobile, selectedCountry), cleanedOtp, activeTab);
       setSuccessText("Login successful. Welcome to TPL GO.");
       window.setTimeout(() => {
         resetState();
@@ -361,19 +357,14 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
       setInfoText("");
       setSuccessText("");
 
-      await verifyEmailOtp(normalizedEmail, cleanedEmailOtp, activeTab);
-
       if (activeTab === "partner") {
-        const access = await readPartnerAccess().catch(() => null);
-        const destination = access ? partnerAccessDestination(access) ?? "/partner-access" : "/partner-access";
-        setSuccessText("Signed in. Opening Partner Desk.");
-        window.setTimeout(() => {
-          resetState();
-          window.location.replace(destination);
-        }, 500);
+        await verifyEmailOtpForSession(normalizedEmail, cleanedEmailOtp, activeTab);
+        setSuccessText("Opening your Partner account…");
+        window.location.replace("/partner-access");
         return;
       }
 
+      await verifyEmailOtp(normalizedEmail, cleanedEmailOtp, activeTab);
       setSuccessText("Login successful. Welcome to TPL GO.");
       window.setTimeout(() => {
         resetState();

@@ -1659,7 +1659,7 @@ export default function PartnerApplicationWorkspaceClient({
       <main data-partner-application-workspace="true" className="min-h-screen bg-[#101216] text-white">
         <CenteredShell>
           <div className="rounded-2xl border border-white/10 bg-[#171a20] p-8 shadow-2xl">
-            <p role="status" className="text-lg font-black">Opening your Partner account…</p>
+            <p role="status" className="text-lg font-black">Opening your Partner application…</p>
           </div>
         </CenteredShell>
       </main>
@@ -1689,6 +1689,27 @@ export default function PartnerApplicationWorkspaceClient({
     );
   }
 
+  if (!qaPreviewEnabled && (loadStatus !== "ready" || step8LoadStatus !== "ready")) {
+    const failed = loadStatus === "error" || step8LoadStatus === "error";
+    return (
+      <main data-partner-application-workspace="true" className="min-h-screen bg-[#101216] text-white">
+        <CenteredShell>
+          <div className="rounded-2xl border border-white/10 bg-[#171a20] p-8 shadow-2xl">
+            {failed ? (
+              <>
+                <h1 className="text-xl font-black">Partner application unavailable</h1>
+                <p role="alert" className="mt-3 text-sm font-semibold text-slate-300">We could not open your Partner application. Please retry.</p>
+                <button type="button" onClick={() => window.location.reload()} className="mt-6 inline-flex h-10 items-center rounded-xl border border-white/10 px-4 text-sm font-black text-slate-200 hover:border-[#f97316]">Retry</button>
+              </>
+            ) : (
+              <p role="status" className="text-lg font-black">Opening your Partner application…</p>
+            )}
+          </div>
+        </CenteredShell>
+      </main>
+    );
+  }
+
   return (
     <main data-partner-application-workspace="true" className="min-h-screen bg-[#101216] text-white">
       <div className="flex min-h-screen flex-col">
@@ -1710,7 +1731,7 @@ export default function PartnerApplicationWorkspaceClient({
                 <HelpCircle size={15} aria-hidden="true" />
                 Help
               </Link>
-              <Link href="/partner-access" className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 px-3 text-xs font-black text-slate-200 hover:border-[#f97316]">
+              <Link href="/partner-access?intent=exit" replace className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 px-3 text-xs font-black text-slate-200 hover:border-[#f97316]">
                 <LogOut size={15} aria-hidden="true" />
                 Exit
               </Link>
@@ -4495,8 +4516,9 @@ function StateCard({ title, detail, tone }: { title: string; detail: string; ton
 
 function LoadingCard() {
   return (
-    <div className="flex min-h-[360px] items-center justify-center rounded-2xl border border-white/10 bg-[#171a20]">
+    <div className="flex min-h-[360px] flex-col items-center justify-center gap-4 rounded-2xl border border-white/10 bg-[#171a20]" role="status">
       <Loader2 className="animate-spin text-[#f97316]" size={28} aria-hidden="true" />
+      <p className="text-sm font-black text-slate-200">Opening your Partner application…</p>
     </div>
   );
 }
