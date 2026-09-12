@@ -312,7 +312,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
         setSuccessText("Signed in. Opening Partner Desk.");
         window.setTimeout(() => {
           resetState();
-          window.location.assign(destination);
+          window.location.replace(destination);
         }, 500);
         return;
       }
@@ -369,7 +369,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
         setSuccessText("Signed in. Opening Partner Desk.");
         window.setTimeout(() => {
           resetState();
-          window.location.assign(destination);
+          window.location.replace(destination);
         }, 500);
         return;
       }

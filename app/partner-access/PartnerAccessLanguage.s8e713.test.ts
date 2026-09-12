@@ -16,7 +16,7 @@ const authProvider = source("app/providers/AuthProvider.tsx");
 const accessAuthority = source("app/lib/partner/partnerAccess.ts");
 
 test("chooser uses concise business language and never promises an unavailable dashboard", () => {
-  expect(accessPage).toContain("Choose a business to continue");
+  expect(chooser).toContain("Choose a business to continue");
   expect(chooser).toContain("Select the application or Partner account you want to open.");
   expect(chooser).not.toContain("Open Partner Dashboard");
   expect(chooser).not.toContain("Choose your Partner profile");
@@ -65,7 +65,7 @@ test("expired draft sessions clear local authority and return to sign-in", () =>
 
 test("resolver, selection, and start requests retain duplicate guards", () => {
   expect(accessPage).toContain("resolveInFlight.current");
-  expect(accessPage).toContain("if (busy.current || access?.outcome !== \"NO_LINKED_PROFILE\") return");
+  expect(accessPage).toContain("if (startBusy.current || access?.outcome !== \"NO_LINKED_PROFILE\") return");
   expect(chooser).toContain("if (busy.current || !profile.selectable) return");
 });
 
@@ -75,12 +75,11 @@ test("remembered selection remains a backend-revalidated preference", () => {
 });
 
 test("no-linked state explains safe choices while recovery remains holding", () => {
-  expect(accessPage).toContain("We could not find a Partner application linked to this mobile number, email or Google account.");
-  expect(accessPage).toContain("If you previously applied using another mobile number or email, use that login or choose recovery.");
-  expect(accessPage).toContain("Use another login");
-  expect(accessPage).toContain("Start new application");
+  expect(accessPage).toContain("We could not find a Partner application or account linked to this login. Check the mobile number, email or Google account you used earlier.");
+  expect(accessPage).toContain("Use another Partner login");
+  expect(accessPage).toContain("Start a new Partner application");
   expect(accessPage).toContain("Recover existing application");
-  expect(accessPage).toContain("Secure recovery is not yet available on staging.");
+  expect(accessPage).toContain("Secure account recovery is not available yet. No application or identity has been linked.");
 });
 
 test("accepted application and Partner login structures remain present", () => {

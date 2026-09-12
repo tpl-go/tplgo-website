@@ -1710,7 +1710,7 @@ export default function PartnerApplicationWorkspaceClient({
                 <HelpCircle size={15} aria-hidden="true" />
                 Help
               </Link>
-              <Link href="/" className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 px-3 text-xs font-black text-slate-200 hover:border-[#f97316]">
+              <Link href="/partner-access" className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 px-3 text-xs font-black text-slate-200 hover:border-[#f97316]">
                 <LogOut size={15} aria-hidden="true" />
                 Exit
               </Link>

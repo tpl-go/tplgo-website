@@ -15,7 +15,7 @@ export default function StickyHeaderWrapper() {
   const [showTrigger, setShowTrigger] = useState(false);
   const [openPanel, setOpenPanel] = useState(false);
 
-  if (pathname.startsWith("/admin") || pathname.startsWith("/partner-preview")) {
+  if (pathname.startsWith("/admin") || pathname.startsWith("/partner-preview") || pathname.startsWith("/partner-access")) {
     return null;
   }
 

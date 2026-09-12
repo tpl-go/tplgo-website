@@ -6,6 +6,13 @@ export type PartnerProfile = { organizationId: string; displayName: string; refe
 export type PartnerAccess = { outcome: typeof outcomes[number]; organizationId: string | null; step: string | null; profiles?: PartnerProfile[] };
 const steps = ["account_contact", "business_identity", "business_location", "services", "verification_compliance", "payout_tax", "partner_agreement", "review_submit"];
 
+export class PartnerAccessRequestError extends Error {
+  constructor(public readonly status: number, message: string) {
+    super(message);
+    this.name = "PartnerAccessRequestError";
+  }
+}
+
 export function parsePartnerAccess(value: unknown): PartnerAccess {
   if (!value || typeof value !== "object") throw new Error("Partner access could not be confirmed. Please retry.");
   const data = value as PartnerAccess;
@@ -35,16 +42,16 @@ export function partnerAccessDestination(access: PartnerAccess): string | null {
     const step = access.step === "verification_compliance" ? "documents_compliance" : access.step;
     return `/partner-preview?step=${encodeURIComponent(step!)}&organizationId=${encodeURIComponent(access.organizationId!)}`;
   }
-  if (access.outcome === "APPLICATION_STATUS" || access.outcome === "CORRECTIONS") return `/partner-preview?step=review_submit&organizationId=${encodeURIComponent(access.organizationId!)}`;
+  if (access.outcome === "CORRECTIONS") return `/partner-preview?step=review_submit&organizationId=${encodeURIComponent(access.organizationId!)}`;
   return null;
 }
 
-export async function readPartnerAccess(): Promise<PartnerAccess> {
+export async function readPartnerAccess(options: { revalidateRememberedSelection?: boolean } = {}): Promise<PartnerAccess> {
   const result = await tplApiRequest<unknown>("/api/v1/partner/access", { fallbackOnError: false });
-  if (!result.ok) throw new Error(result.status === 401 ? "Sign in again to continue." : "Partner access is unavailable. Please retry.");
+  if (!result.ok) throw new PartnerAccessRequestError(result.status, result.status === 401 ? "Sign in again to continue." : "Partner access is unavailable. Please retry.");
   const access = parsePartnerAccess(result.data);
   const preference = readPartnerProfilePreference();
-  if (access.outcome === "SELECTION_REQUIRED" && preference) {
+  if (access.outcome === "SELECTION_REQUIRED" && preference && options.revalidateRememberedSelection !== false) {
     if (access.profiles?.some((profile) => profile.organizationId === preference && profile.selectable)) {
       try { return await selectPartnerProfile(preference); } catch { clearPartnerProfilePreference(); }
     } else clearPartnerProfilePreference();

@@ -560,6 +560,12 @@ export function fetchPartnerApplicationSubmission(): Promise<TplApiResult<{ late
   });
 }
 
+export function fetchPartnerApplicationSubmissionForOrganization(organizationId: string): Promise<TplApiResult<{ latestSubmission: PartnerApplicationSubmissionSummary | null; readiness: PartnerApplicationReadiness }>> {
+  return tplApiRequest<{ latestSubmission: PartnerApplicationSubmissionSummary | null; readiness: PartnerApplicationReadiness }>(`/api/v1/partner/application/submission?organizationId=${encodeURIComponent(organizationId)}`, {
+    fallbackOnError: false,
+  });
+}
+
 export function fetchPartnerServiceCatalogue(): Promise<TplApiResult<PartnerServiceCatalogueRuntimeResponse>> {
   return tplApiRequest<PartnerServiceCatalogueRuntimeResponse>("/api/v1/partner/service-catalogue", {
     fallbackOnError: false,
