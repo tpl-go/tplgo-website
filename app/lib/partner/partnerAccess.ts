@@ -71,7 +71,8 @@ export async function selectPartnerProfile(organizationId: string): Promise<Part
 export async function startPartnerApplication(key: string): Promise<PartnerAccess> {
   const result = await tplApiRequest<{ access: unknown }>("/api/v1/partner/application/start", { method: "POST", body: {}, idempotencyKey: key, fallbackOnError: false });
   if (!result.ok) {
-    const support = ["PARTNER_ACCESS_SUPPORT_REQUIRED", "PARTNER_ACCESS_SELECTION_REQUIRED", "PARTNER_ACCESS_RESTRICTED"].includes(result.error.code);
+    if (result.error.code === "PARTNER_ACCESS_SUPPORT_REQUIRED") throw new Error("We couldn’t start a new application safely. Use another Partner login, choose Recover existing application, or contact Partner Support.");
+    const support = ["PARTNER_ACCESS_SELECTION_REQUIRED", "PARTNER_ACCESS_RESTRICTED"].includes(result.error.code);
     throw new Error(support ? "Contact Support before starting another Partner application." : "The application could not be opened. Please retry.");
   }
   return parsePartnerAccess(result.data?.access);
