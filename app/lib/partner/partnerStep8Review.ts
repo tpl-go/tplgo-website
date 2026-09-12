@@ -20,15 +20,14 @@ export const step8StepRoutes: Record<PartnerApplicationStepKey, string> = {
 };
 
 export type PartnerStep8StateLabel =
-  | "Needs attention"
+  | "Application in progress"
   | "Ready to submit"
-  | "Submitted"
-  | "Under review"
-  | "Changes requested"
-  | "Not approved"
-  | "Approved";
+  | "Application submitted"
+  | "Updates required"
+  | "Application status available"
+  | "Account setup pending";
 
-export type PartnerStep8StepLabel = "Complete" | "Needs attention" | "Under review" | "Unavailable";
+export type PartnerStep8StepLabel = "Completed" | "Action needed" | "Under review" | "Not started";
 
 export type PartnerStep8ErrorCode =
   | "FINAL_DECLARATIONS_NOT_CONFIGURED"
@@ -45,20 +44,19 @@ export type PartnerStep8ErrorCode =
   | "UNKNOWN";
 
 export function partnerStep8StateLabel(status: PartnerApplicationStatus, submissionReady: boolean): PartnerStep8StateLabel {
-  if (status === "SUBMITTED") return "Submitted";
-  if (status === "UNDER_REVIEW" || status === "RESUBMITTED") return "Under review";
-  if (status === "CHANGES_REQUESTED") return "Changes requested";
-  if (status === "NOT_APPROVED") return "Not approved";
-  if (status === "APPROVED") return "Approved";
+  if (status === "SUBMITTED" || status === "UNDER_REVIEW" || status === "RESUBMITTED") return "Application submitted";
+  if (status === "CHANGES_REQUESTED") return "Updates required";
+  if (status === "NOT_APPROVED") return "Application status available";
+  if (status === "APPROVED") return "Account setup pending";
   if (status === "READY_TO_SUBMIT" || submissionReady) return "Ready to submit";
-  return "Needs attention";
+  return "Application in progress";
 }
 
 export function partnerStep8StepStatusLabel(status: PartnerApplicationStepReadiness["status"]): PartnerStep8StepLabel {
-  if (status === "COMPLETE") return "Complete";
+  if (status === "COMPLETE") return "Completed";
   if (status === "UNDER_REVIEW") return "Under review";
-  if (status === "UNAVAILABLE") return "Unavailable";
-  return "Needs attention";
+  if (status === "UNAVAILABLE") return "Not started";
+  return "Action needed";
 }
 
 export function partnerStep8ActionLabel(step: PartnerApplicationStepReadiness): "Review" | "Fix" {
@@ -100,7 +98,7 @@ export function canSubmitPartnerStep8(readiness: PartnerApplicationReadiness, ac
 export function step8BlockingReason(readiness: PartnerApplicationReadiness | null, acceptedById: Record<string, boolean>): string {
   if (!readiness) return "Application readiness is still loading.";
   if (!hasFinalDeclarationConfiguration(readiness)) return "The final application declaration is being prepared.";
-  if (readiness.submissionBlockers.length > 0 || !readiness.submissionReady) return "Resolve the items marked Needs attention before submitting.";
+  if (readiness.submissionBlockers.length > 0 || !readiness.submissionReady) return "Resolve the items marked Action needed before submitting.";
   if (!canSubmitPartnerStep8(readiness, acceptedById)) return "Accept each required declaration before submitting.";
   return "";
 }
@@ -154,8 +152,17 @@ export function visibleSubmissionReference(submission: PartnerApplicationSubmiss
 export function partnerStep8NavigationStatusOverrides(readiness: PartnerApplicationReadiness | null): Partial<Record<PartnerApplicationStepId, PartnerApplicationStepStatus>> {
   if (!readiness) return {};
   const overrides: Partial<Record<PartnerApplicationStepId, PartnerApplicationStepStatus>> = {};
+  let foundCurrentIncomplete = false;
+  const correctionSections = new Set(readiness.latestSubmission?.correctionSections ?? []);
   for (const step of readiness.steps) {
-    overrides[workspaceStepIdForStep8Key(step.step)] = workspaceStatusForStep8Status(step.status);
+    const stepId = workspaceStepIdForStep8Key(step.step);
+    if (step.status === "COMPLETE") overrides[stepId] = "completed";
+    else if (step.status === "UNDER_REVIEW") overrides[stepId] = "under-review";
+    else if (readiness.applicationStatus === "CHANGES_REQUESTED" && correctionSections.has(step.step)) overrides[stepId] = "needs-attention";
+    else if (!foundCurrentIncomplete && step.status !== "UNAVAILABLE") {
+      overrides[stepId] = "in-progress";
+      foundCurrentIncomplete = true;
+    } else overrides[stepId] = "not-started";
   }
   overrides.review_submit = reviewSubmitWorkspaceStatus(readiness);
   return overrides;
@@ -205,15 +212,14 @@ export function partnerStep8NavigationLabel(
 ): string {
   if (readiness && stepId === "review_submit") {
     if (readiness.applicationStatus === "APPROVED") return "Approved";
-    if (readiness.applicationStatus === "NOT_APPROVED") return "Not Approved";
-    if (readiness.applicationStatus === "CHANGES_REQUESTED") return "Changes Required";
-    if (readiness.applicationStatus === "SUBMITTED" || readiness.applicationStatus === "UNDER_REVIEW" || readiness.applicationStatus === "RESUBMITTED") return "Under Review";
-    if (readiness.applicationStatus === "READY_TO_SUBMIT" || readiness.submissionReady) return "In Progress";
+    if (readiness.applicationStatus === "NOT_APPROVED") return "Not approved";
+    if (readiness.applicationStatus === "CHANGES_REQUESTED") return "Updates required";
+    if (readiness.applicationStatus === "SUBMITTED" || readiness.applicationStatus === "UNDER_REVIEW" || readiness.applicationStatus === "RESUBMITTED") return "Under review";
+    if (readiness.applicationStatus === "READY_TO_SUBMIT" || readiness.submissionReady) return "In progress";
   }
   const label = workspaceNavigationStatusLabel(status);
   if (!readiness) return label;
-  const canEditCompletedStep = stepId !== "review_submit" && status === "completed" && !partnerStep8StepIsReadOnly(readiness, stepId);
-  return canEditCompletedStep ? `${label} · Edit` : label;
+  return label;
 }
 
 export function partnerStep8ShowsPreSubmissionIssues(readiness: PartnerApplicationReadiness): boolean {
@@ -232,27 +238,19 @@ function workspaceStepIdForStep8Key(step: PartnerApplicationStepKey): PartnerApp
   return step === "verification_compliance" ? "documents_compliance" : step;
 }
 
-function workspaceStatusForStep8Status(status: PartnerApplicationStepReadiness["status"]): PartnerApplicationStepStatus {
-  if (status === "COMPLETE") return "completed";
-  if (status === "UNDER_REVIEW") return "under-review";
-  if (status === "UNAVAILABLE") return "locked";
-  return "needs-attention";
-}
-
 function reviewSubmitWorkspaceStatus(readiness: PartnerApplicationReadiness): PartnerApplicationStepStatus {
   if (readiness.applicationStatus === "APPROVED") return "completed";
   if (readiness.applicationStatus === "SUBMITTED" || readiness.applicationStatus === "UNDER_REVIEW" || readiness.applicationStatus === "RESUBMITTED") return "under-review";
   if (readiness.applicationStatus === "CHANGES_REQUESTED" || readiness.applicationStatus === "NOT_APPROVED") return "needs-attention";
-  return readiness.submissionReady ? "in-progress" : "needs-attention";
+  return readiness.submissionReady ? "in-progress" : "not-started";
 }
 
 function workspaceNavigationStatusLabel(status: PartnerApplicationStepStatus): string {
-  if (status === "completed") return "Complete";
-  if (status === "needs-attention") return "Needs Attention";
-  if (status === "under-review") return "Under Review";
-  if (status === "locked") return "Locked";
-  if (status === "in-progress") return "In Progress";
-  return "Not Started";
+  if (status === "completed") return "Completed";
+  if (status === "needs-attention") return "Action needed";
+  if (status === "under-review") return "Under review";
+  if (status === "locked" || status === "not-started") return "Not started";
+  return "In progress";
 }
 
 function formatStep8MetadataDate(value: string): string | null {

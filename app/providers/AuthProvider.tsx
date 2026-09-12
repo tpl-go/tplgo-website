@@ -46,7 +46,7 @@ type AuthContextType = AuthState & {
     otp: string,
     accountType: AccountType
   ) => Promise<AuthUser>;
-  logout: () => void;
+  logout: () => Promise<void>;
   requireAuth: (options?: OpenLoginModalOptions) => boolean;
 };
 
@@ -95,6 +95,7 @@ type AuthProviderProps = {
 };
 
 export default function AuthProvider({ children }: AuthProviderProps) {
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -106,14 +107,14 @@ export default function AuthProvider({ children }: AuthProviderProps) {
   );
 
   // 🔥 CENTRAL SYNC FUNCTION
-  const syncAuthFromStorage = useCallback(() => {
+  const syncAuthFromStorage = useCallback((): boolean => {
     try {
       const raw = localStorage.getItem(AUTH_STORAGE_KEY);
 
       if (!raw) {
         setUser(null);
         setIsAuthenticated(false);
-        return;
+        return false;
       }
 
       const parsed = JSON.parse(raw);
@@ -126,16 +127,19 @@ export default function AuthProvider({ children }: AuthProviderProps) {
         setUser(parsed.user);
         setIsAuthenticated(true);
         setActiveAccountType(parsed.user.accountType || "personal");
+        return true;
       } else {
         setUser(null);
         setIsAuthenticated(false);
         localStorage.removeItem(AUTH_STORAGE_KEY);
+        return false;
       }
     } catch (err) {
       console.error("Auth restore failed:", err);
       setUser(null);
       setIsAuthenticated(false);
       localStorage.removeItem(AUTH_STORAGE_KEY);
+      return false;
     }
   }, []);
 
@@ -171,7 +175,6 @@ export default function AuthProvider({ children }: AuthProviderProps) {
       setIsAuthenticated(true);
       setActiveAccountType(nextUser.accountType || "personal");
       persistSession(nextUser, authResult.session);
-      window.dispatchEvent(new Event(AUTH_UPDATED_EVENT));
       return true;
     } catch {
       return false;
@@ -180,9 +183,22 @@ export default function AuthProvider({ children }: AuthProviderProps) {
 
   // ✅ INITIAL LOAD
   useEffect(() => {
-    const timer = window.setTimeout(syncAuthFromStorage, 0);
-    return () => window.clearTimeout(timer);
-  }, [syncAuthFromStorage]);
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      const restored = syncAuthFromStorage();
+      if (restored) {
+        if (!cancelled) setIsAuthLoading(false);
+        return;
+      }
+      void hydrateBackendCookieSession().finally(() => {
+        if (!cancelled) setIsAuthLoading(false);
+      });
+    }, 0);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [hydrateBackendCookieSession, syncAuthFromStorage]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -219,7 +235,6 @@ export default function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     const handleAuthUpdate = () => {
       syncAuthFromStorage();
-      if (!localStorage.getItem(AUTH_STORAGE_KEY)) void hydrateBackendCookieSession();
     };
 
     window.addEventListener(AUTH_UPDATED_EVENT, handleAuthUpdate);
@@ -233,7 +248,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
       window.removeEventListener("focus", handleAuthUpdate);
       document.removeEventListener("visibilitychange", handleAuthUpdate);
     };
-  }, [hydrateBackendCookieSession, syncAuthFromStorage]);
+  }, [syncAuthFromStorage]);
 
   const openLoginModal = useCallback((options?: OpenLoginModalOptions) => {
     if (options?.accountType) setActiveAccountType(options.accountType);
@@ -357,12 +372,12 @@ export default function AuthProvider({ children }: AuthProviderProps) {
     [persistSession]
   );
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
     clearPartnerProfilePreference();
     const token = readStoredAuthToken();
-    if (token) void logoutBackendSession(token);
 
     setUser(null);
+    setIsAuthLoading(false);
     setIsAuthenticated(false);
     setIsLoginModalOpen(false);
     setActiveAccountType("personal");
@@ -370,6 +385,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
     setRedirectAfterLogin(null);
 
     persistSession(null);
+    if (token) await logoutBackendSession(token);
   }, [persistSession]);
 
   const requireAuth = useCallback(
@@ -384,6 +400,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
 
   const value = useMemo(
     () => ({
+      isAuthLoading,
       isAuthenticated,
       user,
       isLoginModalOpen,
@@ -403,6 +420,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
       requireAuth,
     }),
     [
+      isAuthLoading,
       isAuthenticated,
       user,
       isLoginModalOpen,

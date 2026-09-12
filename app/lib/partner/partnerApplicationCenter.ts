@@ -1,6 +1,7 @@
 import type { PartnerOrganizationBundle, PartnerVerificationStatus } from "./partnerApiClient";
 import type { PartnerOrganizationPreviewProfile } from "./partnerOrganizationPreviewProfile";
 import { findPartnerCatalogueItemIn, partnerServiceEligibleForApplication, type PartnerServiceCatalogueItem, type PartnerServiceDefinition } from "./partnerServiceCatalogRuntime";
+import { cleanPartnerApplicationName } from "./partnerOperatorPresentation";
 
 export type PartnerApplicationStepId =
   | "account_contact"
@@ -158,7 +159,7 @@ export function buildPartnerApplicationCenterReadModel(input: {
 }
 
 function getOrganizationName(bundle: PartnerOrganizationBundle | null | undefined, profile: PartnerOrganizationPreviewProfile): string {
-  return bundle?.organization.brandName || bundle?.organization.legalName || profile.businessName || profile.legalName || "Partner";
+  return cleanPartnerApplicationName(bundle?.organization.brandName || bundle?.organization.legalName || profile.businessName || profile.legalName);
 }
 
 function hasVerifiedContact(

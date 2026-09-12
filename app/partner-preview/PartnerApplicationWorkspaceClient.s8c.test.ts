@@ -51,7 +51,7 @@ test("Step 8 renders seven authoritative review rows with human labels and reaso
     expect(step8Source).toContain("partner_agreement");
     const readiness = readyReadiness();
     expect(readiness.steps).toHaveLength(7);
-    expect(readiness.steps.map((step) => partnerStep8StepStatusLabel(step.status))).toEqual(Array(7).fill("Complete"));
+    expect(readiness.steps.map((step) => partnerStep8StepStatusLabel(step.status))).toEqual(Array(7).fill("Completed"));
 });
 
 test("blockers and warnings are separate, and raw identifiers are not normal UI fields", () => {
@@ -155,10 +155,10 @@ test("normal authenticated mode uses S8B endpoints", () => {
 });
 
 test("submitted, changes requested, not approved and approved states are locked or scoped", () => {
-    expect(partnerStep8StateLabel("UNDER_REVIEW", false)).toBe("Under review");
-    expect(partnerStep8StateLabel("CHANGES_REQUESTED", false)).toBe("Changes requested");
-    expect(partnerStep8StateLabel("NOT_APPROVED", false)).toBe("Not approved");
-    expect(partnerStep8StateLabel("APPROVED", false)).toBe("Approved");
+    expect(partnerStep8StateLabel("UNDER_REVIEW", false)).toBe("Application submitted");
+    expect(partnerStep8StateLabel("CHANGES_REQUESTED", false)).toBe("Updates required");
+    expect(partnerStep8StateLabel("NOT_APPROVED", false)).toBe("Application status available");
+    expect(partnerStep8StateLabel("APPROVED", false)).toBe("Account setup pending");
     expect(workspaceSource).toContain("Service activation, payout activation and Partner Desk access are handled separately.");
     expect(visibleSubmissionReference(buildPartnerQaPreviewSubmission("under-review"))).toBe("Submission 1");
 });
@@ -167,10 +167,19 @@ test("sidebar and progress statuses use the Step 8 readiness contract in every Q
     for (const state of partnerQaPreviewStates) {
       const readiness = buildPartnerQaPreviewReadiness(state.id);
       const overrides = partnerStep8NavigationStatusOverrides(readiness);
+      let foundCurrentIncomplete = false;
       for (const step of readiness.steps) {
         const workspaceStep = step.step === "verification_compliance" ? "documents_compliance" : step.step;
+        let expected: "completed" | "under-review" | "needs-attention" | "in-progress" | "not-started";
+        if (step.status === "COMPLETE") expected = "completed";
+        else if (step.status === "UNDER_REVIEW") expected = "under-review";
+        else if (readiness.applicationStatus === "CHANGES_REQUESTED" && readiness.latestSubmission?.correctionSections?.includes(step.step)) expected = "needs-attention";
+        else if (!foundCurrentIncomplete && step.status !== "UNAVAILABLE") {
+          expected = "in-progress";
+          foundCurrentIncomplete = true;
+        } else expected = "not-started";
         expect(overrides[workspaceStep]).toBe(
-          step.status === "COMPLETE" ? "completed" : step.status === "UNDER_REVIEW" ? "under-review" : step.status === "UNAVAILABLE" ? "locked" : "needs-attention",
+          expected,
         );
       }
     }
@@ -198,8 +207,8 @@ test("Ready header never says Not saved yet and uses revision metadata", () => {
 test("canonical navigation labels preserve ready editing and suppress terminal Edit labels", () => {
     const ready = buildPartnerQaPreviewReadiness("ready");
     const readyStatus = partnerStep8NavigationStatusOverrides(ready);
-    expect(partnerStep8NavigationLabel(ready, "account_contact", readyStatus.account_contact ?? "locked")).toBe("Complete · Edit");
-    expect(partnerStep8NavigationLabel(ready, "review_submit", readyStatus.review_submit ?? "locked")).toBe("In Progress");
+    expect(partnerStep8NavigationLabel(ready, "account_contact", readyStatus.account_contact ?? "locked")).toBe("Completed");
+    expect(partnerStep8NavigationLabel(ready, "review_submit", readyStatus.review_submit ?? "locked")).toBe("In progress");
 
     for (const state of ["under-review", "rejected", "approved"] as const) {
       const readiness = buildPartnerQaPreviewReadiness(state);
@@ -212,7 +221,7 @@ test("canonical navigation labels preserve ready editing and suppress terminal E
 test("Not Approved and Approved Step 8 navigation labels match terminal states", () => {
     const rejected = buildPartnerQaPreviewReadiness("rejected");
     const approved = buildPartnerQaPreviewReadiness("approved");
-    expect(partnerStep8NavigationLabel(rejected, "review_submit", partnerStep8NavigationStatusOverrides(rejected).review_submit ?? "locked")).toBe("Not Approved");
+    expect(partnerStep8NavigationLabel(rejected, "review_submit", partnerStep8NavigationStatusOverrides(rejected).review_submit ?? "locked")).toBe("Not approved");
     expect(partnerStep8NavigationLabel(approved, "review_submit", partnerStep8NavigationStatusOverrides(approved).review_submit ?? "locked")).toBe("Approved");
 });
 
@@ -239,8 +248,8 @@ test("Changes Required unlocks only requested sections", () => {
     expect(locks.business_identity).toBe(true);
     expect(locks.services).toBe(true);
     expect(locks.partner_agreement).toBe(true);
-    expect(partnerStep8NavigationLabel(readiness, "documents_compliance", status.documents_compliance ?? "locked")).toBe("Needs Attention");
-    expect(partnerStep8NavigationLabel(readiness, "account_contact", status.account_contact ?? "locked")).toBe("Complete");
+    expect(partnerStep8NavigationLabel(readiness, "documents_compliance", status.documents_compliance ?? "locked")).toBe("Action needed");
+    expect(partnerStep8NavigationLabel(readiness, "account_contact", status.account_contact ?? "locked")).toBe("Completed");
 });
 
 test("S8E corrections use exact server sections even when readiness considers the section complete", () => {
@@ -261,7 +270,7 @@ test("S8E submitted and resubmitted server statuses stay locked after reopen", (
       const locks = partnerStep8ReadOnlyStepOverrides(readiness);
       expect(Object.values(locks).every(Boolean)).toBe(true);
       expect(canSubmitPartnerStep8(readiness, {})).toBe(false);
-      expect(partnerStep8NavigationLabel(readiness, "review_submit", "under-review")).toBe("Under Review");
+      expect(partnerStep8NavigationLabel(readiness, "review_submit", "under-review")).toBe("Under review");
     }
 });
 

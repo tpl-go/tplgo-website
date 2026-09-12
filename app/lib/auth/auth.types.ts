@@ -24,6 +24,7 @@ export type AuthIntent =
   | "partner";
 
 export type AuthState = {
+  isAuthLoading: boolean;
   isAuthenticated: boolean;
   user: AuthUser | null;
   isLoginModalOpen: boolean;

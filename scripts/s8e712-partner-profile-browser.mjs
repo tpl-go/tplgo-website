@@ -12,7 +12,7 @@ const profiles = [
 ];
 const browser = await chromium.launch({ headless: true });
 const results = [];
-await mkdir("tmp/s8e712-artifacts", { recursive: true });
+await mkdir("tmp/s8e713-artifacts", { recursive: true });
 try {
   for (const width of [1363, 768, 390]) {
     const context = await browser.newContext({ viewport: { width, height: 936 } });
@@ -47,22 +47,25 @@ try {
       if (url.pathname === "/api/v1/auth/logout") return route.fulfill({ contentType: "application/json", body: JSON.stringify({ ok: true, data: {} }) });
       if (url.pathname.includes("/api/v1/")) return route.fulfill({ status: 401, contentType: "application/json", body: JSON.stringify({ ok: false, error: { code: "AUTH_UNAUTHORIZED", message: "Sign in required" } }) });
       if (url.hostname !== "127.0.0.1") return route.abort();
-      if (url.pathname === "/partner-preview") return route.fulfill({ contentType: "text/html", body: "<h1>Selected profile navigation target</h1>" });
+      if (url.pathname === "/partner-preview" && !url.searchParams.has("qa")) return route.fulfill({ contentType: "text/html", body: "<h1>Selected profile navigation target</h1>" });
       return route.continue();
     });
     await page.goto(`${base}/partner-access`);
-    await page.getByRole("heading", { name: "Choose your Partner profile" }).waitFor();
-    assert.equal(await page.getByText("Contact Support", { exact: true }).count(), 1);
+    await page.getByRole("heading", { name: "Choose a business to continue" }).waitFor();
+    assert.equal(await page.getByText("Contact support", { exact: true }).count(), 1);
+    assert.equal(await page.getByText("Application in progress", { exact: true }).count(), 1);
+    assert.equal(await page.getByText("Application submitted", { exact: true }).count(), 1);
+    assert.equal(await page.getByText("Open Partner Dashboard", { exact: true }).count(), 0);
     assert.equal(await page.getByText(/@|mobile|organizationId|membership|resolver/i).count(), 0);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth), false);
-    await page.screenshot({ path: `tmp/s8e712-artifacts/chooser-${width}.png` });
-    const continueButton = page.getByRole("button", { name: "Continue Application: Test Only Hotel" });
+    await page.screenshot({ path: `tmp/s8e713-artifacts/chooser-${width}.png` });
+    const continueButton = page.getByRole("button", { name: "Continue application: Test Only Hotel" });
     await continueButton.focus();
     await continueButton.press("Enter");
     await page.getByRole("alert").waitFor();
     assert.equal(selectRequests, 1);
     await continueButton.waitFor({ state: "visible" });
-    await page.waitForFunction(() => !document.querySelector('button[aria-label="Continue Application: Test Only Hotel"]')?.hasAttribute("disabled"));
+    await page.waitForFunction(() => !document.querySelector('button[aria-label="Continue application: Test Only Hotel"]')?.hasAttribute("disabled"));
     assert.equal(await continueButton.isEnabled(), true);
     await continueButton.dblclick();
     await page.waitForURL(`**/partner-preview?step=review_submit&organizationId=${ids.draft}`);
@@ -73,19 +76,34 @@ try {
     assert.equal(selectRequests, 3);
     await page.evaluate((id) => sessionStorage.setItem("tpl_partner_profile_preference_v1", id), ids.invalid);
     await page.goto(`${base}/partner-access`);
-    await page.getByRole("heading", { name: "Choose your Partner profile" }).waitFor();
+    await page.getByRole("heading", { name: "Choose a business to continue" }).waitFor();
     assert.equal(selectRequests, 3);
     assert.equal(await page.evaluate(() => sessionStorage.getItem("tpl_partner_profile_preference_v1")), null);
-    await page.getByRole("button", { name: "View Status: Test Only Cab" }).dblclick();
+    await page.getByRole("button", { name: "View application status: Test Only Cab" }).dblclick();
     await page.waitForURL(`**/partner-preview?step=review_submit&organizationId=${ids.review}`);
     assert.equal(selectRequests, 4);
     await page.evaluate((id) => sessionStorage.setItem("tpl_partner_profile_preference_v1", id), ids.invalid);
     await page.goto(`${base}/partner-access`);
-    await page.getByRole("heading", { name: "Choose your Partner profile" }).waitFor();
+    await page.getByRole("heading", { name: "Choose a business to continue" }).waitFor();
     await page.getByRole("button", { name: "Switch login" }).click();
     await page.getByText("Partner access could not be confirmed. Sign in or retry.", { exact: true }).waitFor();
     assert.equal(await page.evaluate(() => sessionStorage.getItem("tpl_partner_profile_preference_v1")), null);
     assert.equal(await page.evaluate(() => localStorage.getItem("tpl_auth_session_v1")), null);
+
+    await page.goto(`${base}/partner-preview?qa=1&state=new&step=account_contact`);
+    await page.locator('input[name="contactPersonFullName"]').waitFor();
+    assert.equal(await page.getByText("Needs Attention", { exact: true }).count(), 0);
+    assert.equal(await page.getByText("Partner Partner Application Draft", { exact: true }).count(), 0);
+    if (width >= 1024) {
+      assert.match(await page.locator('[data-application-progress-step="account_contact"]').getAttribute("aria-label"), /In progress$/);
+      assert.match(await page.locator('[data-application-progress-step="business_identity"]').getAttribute("aria-label"), /Not started$/);
+      assert.doesNotMatch(await page.locator('[data-application-progress-step="business_identity"]').getAttribute("class"), /red-/);
+    } else {
+      assert.match(await page.locator('option[value="account_contact"]').textContent(), /In progress$/);
+      assert.match(await page.locator('option[value="business_identity"]').textContent(), /Not started$/);
+    }
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth), false);
+    await page.screenshot({ path: `tmp/s8e713-artifacts/application-new-${width}.png` });
     assert.deepEqual(errors, []);
     results.push({ width, profiles: 3, selectRequests, rememberedRevalidated: true, invalidPreferenceCleared: true, overflow: false });
     await context.close();

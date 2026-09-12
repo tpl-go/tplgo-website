@@ -108,6 +108,7 @@ import {
 } from "../lib/partner/partnerStep8Review";
 import { activeCountries, findCountry, type CountryMasterEntry } from "../lib/partner/countryMaster";
 import { emptyPartnerOrganizationPreviewProfile } from "../lib/partner/partnerOrganizationPreviewProfile";
+import { cleanPartnerApplicationName } from "../lib/partner/partnerOperatorPresentation";
 
 type WorkspaceStepId = PartnerApplicationStepId;
 
@@ -595,7 +596,7 @@ export default function PartnerApplicationWorkspaceClient({
   initialQaStep?: string;
 }) {
   const router = useRouter();
-  const { isAuthenticated, user, openLoginModal } = useAuth();
+  const { isAuthLoading, isAuthenticated, user, openLoginModal, logout } = useAuth();
   const initialQaState = parseQaPreviewState(initialQaPreviewState);
   const [qaPreviewState, setQaPreviewState] = useState<PartnerQaPreviewState>(initialQaState);
   const [bundle, setBundle] = useState<PartnerOrganizationBundle | null>(null);
@@ -691,7 +692,7 @@ export default function PartnerApplicationWorkspaceClient({
   const canCompleteStepSeven = isAgreementPartnerSigningComplete(activeBundle?.agreement?.status);
   const effectiveStep8Readiness = qaPreviewEnabled ? step8Readiness ?? buildPartnerQaPreviewReadiness(qaPreviewState) : step8Readiness;
   const effectiveStep8Submission = qaPreviewEnabled ? step8Submission : step8Submission ?? step8Readiness?.latestSubmission ?? null;
-  const step8StateLabel = effectiveStep8Readiness ? partnerStep8StateLabel(effectiveStep8Readiness.applicationStatus, effectiveStep8Readiness.submissionReady) : "Needs attention";
+  const step8StateLabel = effectiveStep8Readiness ? partnerStep8StateLabel(effectiveStep8Readiness.applicationStatus, effectiveStep8Readiness.submissionReady) : "Application in progress";
   const step8CanSubmit = Boolean(step8LoadStatus === "ready" && effectiveStep8Readiness && canSubmitPartnerStep8(effectiveStep8Readiness, acceptedStep8Declarations));
   const step8DisabledReason = step8BlockingReason(effectiveStep8Readiness, acceptedStep8Declarations);
   const step8NavigationStatusOverrides = useMemo(() => partnerStep8NavigationStatusOverrides(effectiveStep8Readiness), [effectiveStep8Readiness]);
@@ -894,6 +895,11 @@ export default function PartnerApplicationWorkspaceClient({
         setActiveStep(null);
         setLoadStatus("ready");
       } else {
+        if (result.status === 401) {
+          void logout();
+          setLoadStatus("ready");
+          return;
+        }
         setMessage({ tone: "error", text: "Could not load your Partner application." });
         setLoadStatus("error");
       }
@@ -901,7 +907,7 @@ export default function PartnerApplicationWorkspaceClient({
     return () => {
       cancelled = true;
     };
-  }, [initialQaStep, isAuthenticated, qaPreviewEnabled, qaPreviewState, serviceCatalogueState.items, user]);
+  }, [initialQaStep, isAuthenticated, logout, qaPreviewEnabled, qaPreviewState, serviceCatalogueState.items, user]);
 
   useEffect(() => {
     if (qaPreviewEnabled || !isAuthenticated || loadStatus !== "ready" || !effectiveStep8Readiness || activeStepReadOnly || activeStep !== "account_contact") return;
@@ -1648,6 +1654,18 @@ export default function PartnerApplicationWorkspaceClient({
   const locationStepOverride: PartnerApplicationStepStatus | undefined = canCompleteStepThree ? "completed" : hasMeaningfulStepThreeInput(locationForm) ? "in-progress" : undefined;
   const servicesStepOverride: PartnerApplicationStepStatus | undefined = canCompleteStepFour ? "completed" : hasMeaningfulStepFourInput(servicesForm) ? "in-progress" : undefined;
 
+  if (!qaPreviewEnabled && isAuthLoading) {
+    return (
+      <main data-partner-application-workspace="true" className="min-h-screen bg-[#101216] text-white">
+        <CenteredShell>
+          <div className="rounded-2xl border border-white/10 bg-[#171a20] p-8 shadow-2xl">
+            <p role="status" className="text-lg font-black">Opening your Partner account…</p>
+          </div>
+        </CenteredShell>
+      </main>
+    );
+  }
+
   if (!qaPreviewEnabled && !isAuthenticated) {
     return (
       <main data-partner-application-workspace="true" className="min-h-screen bg-[#101216] text-white">
@@ -1684,8 +1702,8 @@ export default function PartnerApplicationWorkspaceClient({
               </div>
             </div>
             <div className="hidden min-w-0 text-center md:block">
-              <p className="truncate text-sm font-black">{readModel.organizationName}</p>
-              <p className="text-xs font-semibold text-slate-400">{headerMetadataText}</p>
+              <p className="truncate text-sm font-black">{cleanPartnerApplicationName(readModel.organizationName)}</p>
+              <p className="text-xs font-semibold text-slate-400">Partner application · {headerMetadataText}</p>
             </div>
             <div className="flex shrink-0 items-center gap-2">
               <Link href="/customer-support" className="hidden h-9 items-center gap-2 rounded-lg border border-white/10 px-3 text-xs font-black text-slate-200 hover:border-[#f97316] sm:inline-flex">
@@ -3066,8 +3084,8 @@ export function MobileStepSelector({
   onSelect: (step: WorkspaceStepId) => void;
 }) {
   return (
-    <div className="mb-4 rounded-xl border border-white/10 bg-[#171a20] p-3 lg:hidden">
-      <label className="grid gap-2 text-xs font-black uppercase tracking-[0.12em] text-slate-400">
+    <div className="mb-4 min-w-0 rounded-xl border border-white/10 bg-[#171a20] p-3 lg:hidden">
+      <label className="grid min-w-0 gap-2 text-xs font-black uppercase tracking-[0.12em] text-slate-400">
         Application step
         <select
           value={activeStep}
@@ -3075,7 +3093,7 @@ export function MobileStepSelector({
             const step = event.target.value as WorkspaceStepId;
             if (partnerStepAccess(readiness).steps.some((item) => item.id === step && item.accessible)) onSelect(step);
           }}
-          className="h-10 rounded-lg border border-white/10 bg-[#0f1217] px-3 text-sm font-black normal-case tracking-normal text-white outline-none focus:border-[#f97316] focus:ring-2 focus:ring-[#f97316]/25"
+          className="h-10 w-full min-w-0 rounded-lg border border-white/10 bg-[#0f1217] px-3 text-sm font-black normal-case tracking-normal text-white outline-none focus:border-[#f97316] focus:ring-2 focus:ring-[#f97316]/25"
         >
           {workspaceSteps.map((step) => {
             const modelStep = readModel.steps.find((item) => item.id === step.id);
@@ -3124,7 +3142,7 @@ function TopProgress({
     if (current) return { node: "bg-[#f97316] text-white", segment: "border-[#f97316]/45 bg-[#f97316]/15 text-[#fed7aa]", connector: "text-[#f97316]", icon: "number" as const };
     if (status === "under-review") return { node: "bg-amber-400 text-[#11141a]", segment: "border-amber-400/35 bg-amber-400/10 text-amber-100", connector: "text-amber-300", icon: "number" as const };
     if (status === "in-progress") return { node: "bg-[#38bdf8] text-[#07111a]", segment: "border-[#38bdf8]/35 bg-[#38bdf8]/10 text-sky-100", connector: "text-[#38bdf8]", icon: "number" as const };
-    if (status === "not-started") return { node: "bg-[#2563eb] text-white", segment: "border-[#38bdf8]/25 bg-[#38bdf8]/8 text-slate-200", connector: "text-[#38bdf8]/70", icon: "number" as const };
+    if (status === "not-started") return { node: "bg-white/10 text-slate-400", segment: "border-white/10 bg-white/[0.03] text-slate-400", connector: "text-slate-600", icon: "number" as const };
     return { node: "bg-white/10 text-slate-400", segment: "border-white/10 bg-white/[0.03] text-slate-400", connector: "text-slate-600", icon: "number" as const };
   };
   return (
@@ -4203,7 +4221,7 @@ function ReviewSubmitStep({
           </div>
           <div className="rounded-xl border border-white/10 bg-[#11141a] p-4">
             <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-500">Application</p>
-            <p className="mt-1 text-sm font-black text-white">{readiness.organizationName || "Partner application"}</p>
+            <p className="mt-1 text-sm font-black text-white">{cleanPartnerApplicationName(readiness.organizationName)}</p>
             <StatusLabel label={stateLabel} status={readiness.applicationStatus} />
           </div>
         </div>
@@ -4333,7 +4351,7 @@ function ReviewSubmitSummary({ readiness, latestSubmission, loadStatus, stateLab
       ) : (
         <dl className="mt-4 grid gap-3 text-sm">
           <SummaryRow label="Status" value={stateLabel} />
-          <SummaryRow label="Application" value={readiness.organizationName || "Partner application"} />
+          <SummaryRow label="Application" value={cleanPartnerApplicationName(readiness.organizationName)} />
           <SummaryRow label="Revision" value={`Revision ${readiness.applicationRevision}`} />
           <SummaryRow label="Submission" value={visibleSubmissionReference(latestSubmission) ?? "Not submitted"} />
           {latestSubmission ? <SummaryRow label="Submitted" value={formatStep8Date(latestSubmission.submittedAt)} /> : null}
@@ -5557,10 +5575,10 @@ function makeLocationForm(input: { primary: LocationAddressForm; sameAsOperating
 function statusText(status: "idle" | "saving" | "saved" | "error", lastSavedAt: string | null): string {
   if (status === "saving") return "Saving...";
   if (status === "error") return "Save failed";
-  if (!lastSavedAt) return "Not saved yet";
+  if (!lastSavedAt) return "Application in progress";
   const elapsed = Math.max(0, Date.now() - new Date(lastSavedAt).getTime());
-  if (elapsed < 60_000) return "Saved just now";
-  return `Saved ${Math.floor(elapsed / 60_000)} min ago`;
+  if (elapsed < 60_000) return "Draft saved just now";
+  return `Draft saved ${Math.floor(elapsed / 60_000)} min ago`;
 }
 
 function step8TerminalCopy(status: PartnerApplicationReadiness["applicationStatus"], latestSubmission: PartnerApplicationSubmissionSummary | null): { title: string; detail: string } | null {
@@ -5573,7 +5591,7 @@ function step8TerminalCopy(status: PartnerApplicationReadiness["applicationStatu
   if (status === "CHANGES_REQUESTED") {
     return {
       title: "Changes requested",
-      detail: "Review the sections marked Needs attention and resubmit when the backend confirms the application is ready.",
+      detail: "Review the sections marked Action needed and resubmit when the application is ready.",
     };
   }
   if (status === "NOT_APPROVED") {
