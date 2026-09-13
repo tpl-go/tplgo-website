@@ -17,7 +17,7 @@ const menuItems: {
 }[] = [
   { key: "profile", label: "My Profile", icon: "👤" },
   { key: "coTraveller", label: "Co Traveller", icon: "👥" },
-  { key: "loggedDevices", label: "Logged in Device", icon: "🖥️" },
+  { key: "loggedDevices", label: "Device information", icon: "🖥️" },
   { key: "logout", label: "Log out", icon: "🚪" },
 ];
 
@@ -84,15 +84,15 @@ export default function ProfileSidebar({
           <div className="mt-10 border-t border-gray-200 pt-6">
             <button
               type="button"
-              onClick={() => onSectionChange("resetPassword")}
+              onClick={() => onSectionChange("signInSecurity")}
               className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left transition ${
-                activeSection === "resetPassword"
+                activeSection === "signInSecurity"
                   ? "bg-slate-100 text-slate-900"
                   : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
               }`}
             >
               <span className="text-[16px] leading-none">🔑</span>
-              <span className="text-[13px] font-medium">Reset Password</span>
+              <span className="text-[13px] font-medium">Sign-in &amp; Security</span>
             </button>
           </div>
         </div>

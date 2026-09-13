@@ -4,7 +4,7 @@ import type { ProfileSectionKey } from "@/app/account/profile/page";
 import MyProfileSection from "@/app/components/account/profile/sections/MyProfileSection";
 import CoTravellerSection from "@/app/components/account/profile/sections/CoTravellerSection";
 import LoggedDevicesSection from "@/app/components/account/profile/sections/LoggedDevicesSection";
-import ResetPasswordSection from "@/app/components/account/profile/sections/ResetPasswordSection";
+import SignInSecuritySection from "@/app/components/account/profile/sections/SignInSecuritySection";
 
 type ProfileDetailsProps = {
   activeSection: ProfileSectionKey;
@@ -21,8 +21,8 @@ export default function ProfileDetails({
     return <LoggedDevicesSection />;
   }
 
-  if (activeSection === "resetPassword") {
-    return <ResetPasswordSection />;
+  if (activeSection === "signInSecurity") {
+    return <SignInSecuritySection />;
   }
 
   return <MyProfileSection />;

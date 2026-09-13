@@ -16,6 +16,7 @@ import {
   type Wallet,
 } from "@/app/lib/wallet/walletStorage";
 import { getBackendFirstWallet } from "@/app/lib/api/walletApi";
+import { UserAccountTrustProvider, UserLoginEmail } from "@/app/components/account/UserAccountTrust";
 
 const tabs = [
   { href: "/account/profile", label: "My Profile" },
@@ -47,13 +48,17 @@ export default function AccountLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const { user } = useAuth();
+  return <UserAccountTrustProvider><AccountLayoutContent key={user?.id ?? "signed-out"}>{children}</AccountLayoutContent></UserAccountTrustProvider>;
+}
+
+function AccountLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { user } = useAuth();
 
   const [photo, setPhoto] = useState<string | null>(null);
   const [bannerName, setBannerName] = useState("Personal Account");
   const [bannerMobile, setBannerMobile] = useState("+91 0000000000");
-  const [bannerEmail, setBannerEmail] = useState("Add Email Address");
   const [wallet, setWallet] = useState<Wallet>({
     promoCredit: 0,
     earnedCredit: 0,
@@ -67,11 +72,6 @@ export default function AccountLayout({
     return authUser?.mobile || user?.mobile || "";
   };
 
-  const getActiveEmail = () => {
-    const authUser = getActiveAuthUser();
-    return authUser?.email || user?.email || "";
-  };
-
   const getActiveFullName = () => {
     const authUser = getActiveAuthUser();
     return authUser?.fullName || user?.fullName || "";
@@ -80,13 +80,11 @@ export default function AccountLayout({
   useEffect(() => {
     const syncProfile = () => {
       const activeMobile = getActiveMobile();
-      const activeEmail = getActiveEmail();
       const activeFullName = getActiveFullName();
 
       if (!activeMobile) {
         setBannerName("Personal Account");
         setBannerMobile("+91 0000000000");
-        setBannerEmail("Add Email Address");
         setPhoto(null);
         return;
       }
@@ -103,7 +101,6 @@ export default function AccountLayout({
 
       setBannerName(finalName || "Personal Account");
       setBannerMobile(profile.mobile || activeMobile || "+91 0000000000");
-      setBannerEmail(profile.email || activeEmail || "Add Email Address");
       setPhoto(profile.photo || null);
     };
 
@@ -174,7 +171,7 @@ export default function AccountLayout({
       const nextProfile = {
         ...profile,
         mobile: activeMobile,
-        email: profile.email || getActiveEmail(),
+        email: profile.email,
         photo: nextPhoto,
       };
 
@@ -264,7 +261,7 @@ export default function AccountLayout({
 
                       <div className="flex items-center gap-2">
                         <span>✉️</span>
-                        <span>{bannerEmail}</span>
+                        <UserLoginEmail />
                       </div>
                     </div>
                   </div>
@@ -338,7 +335,7 @@ export default function AccountLayout({
 
                     <div className="flex items-center justify-center gap-2 break-all">
                       <span>✉️</span>
-                      <span>{bannerEmail}</span>
+                      <UserLoginEmail />
                     </div>
                   </div>
 

@@ -9,7 +9,7 @@ export type ProfileSectionKey =
   | "profile"
   | "coTraveller"
   | "loggedDevices"
-  | "resetPassword";
+  | "signInSecurity";
 
 export default function ProfilePage() {
   const { logout } = useAuth();
