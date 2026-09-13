@@ -5,6 +5,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   ReactNode,
 } from "react";
@@ -108,6 +109,15 @@ export default function AuthProvider({ children }: AuthProviderProps) {
   const [redirectAfterLogin, setRedirectAfterLogin] = useState<string | null>(
     null
   );
+  const sessionRestoreSequenceRef = useRef(0);
+  const logoutRestoreBlockedRef = useRef(false);
+
+  const clearVisibleAuthState = useCallback(() => {
+    setUser(null);
+    setIsAuthenticated(false);
+    setActiveAccountType("personal");
+    setAuthError(null);
+  }, []);
 
   // ✅ PERSIST SESSION
   const persistSession = useCallback((nextUser: AuthUser | null, session?: StoredAuthSession["session"], notify = true) => {
@@ -125,21 +135,34 @@ export default function AuthProvider({ children }: AuthProviderProps) {
         );
       }
 
-      if (notify) window.dispatchEvent(new Event(AUTH_UPDATED_EVENT));
+      if (notify) {
+        window.dispatchEvent(new CustomEvent(AUTH_UPDATED_EVENT, { detail: { source: "auth-provider" } }));
+      }
     } catch (err) {
       console.error("Persist session error:", err);
     }
   }, []);
 
   const hydrateBackendCookieSession = useCallback(async () => {
+    const restoreSequence = sessionRestoreSequenceRef.current + 1;
+    sessionRestoreSequenceRef.current = restoreSequence;
+    const isCurrentRestore = () => sessionRestoreSequenceRef.current === restoreSequence;
+
+    if (logoutRestoreBlockedRef.current) {
+      clearVisibleAuthState();
+      return false;
+    }
+
     if (!API_BASE_URL) {
-      setUser(null);
-      setIsAuthenticated(false);
-      setAuthError("TPL account service is unavailable.");
+      if (isCurrentRestore()) {
+        clearVisibleAuthState();
+        setAuthError("TPL account service is unavailable.");
+      }
       return false;
     }
     try {
       const authResult = await readBackendSession(readStoredAuthToken());
+      if (!isCurrentRestore()) return false;
       const nextUser = authResult.user;
       setUser(nextUser);
       setIsAuthenticated(true);
@@ -148,17 +171,16 @@ export default function AuthProvider({ children }: AuthProviderProps) {
       persistSession(nextUser, authResult.session, false);
       return true;
     } catch (error) {
-      setUser(null);
-      setIsAuthenticated(false);
+      if (!isCurrentRestore()) return false;
+      clearVisibleAuthState();
       if (isUnauthorizedAuthError(error)) {
         persistSession(null, undefined, false);
-        setAuthError(null);
       } else {
         setAuthError("We could not confirm your TPL session. Please retry.");
       }
       return false;
     }
-  }, [persistSession]);
+  }, [clearVisibleAuthState, persistSession]);
 
   // ✅ INITIAL LOAD
   useEffect(() => {
@@ -207,7 +229,19 @@ export default function AuthProvider({ children }: AuthProviderProps) {
 
   // ✅ LISTEN TO AUTH CHANGE
   useEffect(() => {
-    const handleAuthUpdate = () => {
+    const handleAuthUpdate = (event?: Event) => {
+      if (
+        event instanceof CustomEvent &&
+        event.detail &&
+        typeof event.detail === "object" &&
+        event.detail.source === "auth-provider"
+      ) {
+        return;
+      }
+      if (readStoredAuthToken()) {
+        logoutRestoreBlockedRef.current = false;
+      }
+      clearVisibleAuthState();
       void hydrateBackendCookieSession();
     };
 
@@ -222,7 +256,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
       window.removeEventListener("focus", handleAuthUpdate);
       document.removeEventListener("visibilitychange", handleAuthUpdate);
     };
-  }, [hydrateBackendCookieSession]);
+  }, [clearVisibleAuthState, hydrateBackendCookieSession]);
 
   const openLoginModal = useCallback((options?: OpenLoginModalOptions) => {
     if (options?.accountType) setActiveAccountType(options.accountType);
@@ -265,6 +299,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
       setIsAuthenticated(true);
       setActiveAccountType(accountType);
       setAuthError(null);
+      logoutRestoreBlockedRef.current = false;
 
       persistSession(nextUser, authResult.session);
       registerCurrentDeviceSession();
@@ -288,6 +323,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
       setIsAuthenticated(true);
       setActiveAccountType(accountType);
       setAuthError(null);
+      logoutRestoreBlockedRef.current = false;
 
       persistSession(nextUser, authResult.session);
       registerCurrentDeviceSession();
@@ -325,6 +361,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
       setIsAuthenticated(true);
       setActiveAccountType(accountType);
       setAuthError(null);
+      logoutRestoreBlockedRef.current = false;
       persistSession(nextUser, authResult.session);
       registerCurrentDeviceSession();
 
@@ -342,6 +379,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
       setIsAuthenticated(true);
       setActiveAccountType(accountType);
       setAuthError(null);
+      logoutRestoreBlockedRef.current = false;
       persistSession(nextUser, authResult.session);
       registerCurrentDeviceSession();
 
@@ -352,25 +390,27 @@ export default function AuthProvider({ children }: AuthProviderProps) {
 
   const logout = useCallback(async () => {
     clearPartnerProfilePreference();
+    logoutRestoreBlockedRef.current = true;
+    sessionRestoreSequenceRef.current += 1;
     const token = readStoredAuthToken();
 
-    setUser(null);
     setIsAuthLoading(false);
-    setIsAuthenticated(false);
+    clearVisibleAuthState();
     setIsLoginModalOpen(false);
-    setActiveAccountType("personal");
     setLoginIntent("generic");
     setRedirectAfterLogin(null);
-    setAuthError(null);
 
     persistSession(null);
     try {
       await logoutBackendSession(token);
+      logoutRestoreBlockedRef.current = false;
     } catch (error) {
+      clearVisibleAuthState();
+      persistSession(null, undefined, false);
       const message = error instanceof Error ? error.message : 'Server logout could not be confirmed.';
       setAuthError(message);
     }
-  }, [persistSession]);
+  }, [clearVisibleAuthState, persistSession]);
 
   const requireAuth = useCallback(
     (options?: OpenLoginModalOptions) => {
@@ -388,6 +428,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
       : await readBackendSession(null);
     if (!resolved.session?.token) throw new Error("Sign in again to open your Partner account.");
     clearPartnerProfilePreference();
+    logoutRestoreBlockedRef.current = false;
     persistSession(resolved.user, resolved.session);
     setUser(resolved.user);
     setIsAuthenticated(true);
