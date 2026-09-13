@@ -3,7 +3,7 @@ import { parsePartnerAccess, type PartnerAccess } from "./partnerAccess";
 
 export const recoverySupportMessage = "We could not complete automatic recovery safely. Contact Partner Support for a reviewed recovery.";
 export class RecoveryError extends Error {
-  constructor(public readonly status: number) { super(status === 409 ? recoverySupportMessage : status === 401 ? "Your session has expired. Use Partner Login again." : status === 429 ? "Please wait before requesting another code." : "We could not verify this request. Please try again."); }
+  constructor(public readonly status: number) { super(status === 409 ? recoverySupportMessage : status === 401 ? "Your session has expired. Use Partner Login again." : status === 429 ? "Please wait before requesting another code. The wait does not confirm that a code was sent." : status >= 500 ? "Recovery is unavailable right now. Try again later or contact Partner Support." : "We could not verify this request. Please try again."); }
 }
 async function request(path: string, body: unknown): Promise<Record<string, unknown>> {
   const response = await tplApiRequest<unknown>(`/api/v1/partner/recovery/${path}`, { method: "POST", body, fallbackOnError: false });

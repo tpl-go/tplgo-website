@@ -22,7 +22,15 @@ function declarations(source: string) {
     for (const [name, value] of after) if (/Style$/.test(name)) expect(value, name).toBe(before.get(name));
   });
   test("preserves shared User Login controls, promo panel, tabs and original Google control", () => {
-    for (const name of ["PromoPanel", "TopAccountTabs", "MethodSelector", "MobileIdentityInput", "AuthDivider", "AuthMessageLayer"]) expect(after.get(name), name).toBe(before.get(name));
+    for (const name of ["PromoPanel", "TopAccountTabs", "MethodSelector", "AuthDivider", "AuthMessageLayer"]) expect(after.get(name), name).toBe(before.get(name));
+    // Only the unchanged country select was extracted for reuse by recovery.
+    // Substituting its original JSX must recover the entire accepted input,
+    // including paste handling, validation, layout, styles and keyboard behavior.
+    const originalMobile = before.get("MobileIdentityInput")!;
+    const originalSelect = originalMobile.match(/<select[\s\S]*?<\/select>/)![0];
+    expect(after.get("MobileIdentityInput")!.replace(/<CountryDialCodeSelect[^>]*\/>/, originalSelect)).toBe(originalMobile);
+    const countries = declarations(readFileSync("app/lib/auth/mobileCountries.ts", "utf8"));
+    expect(countries.get("COUNTRY_OPTIONS")!.replace(/^export /, "").replace(/\s+/g, "")).toBe(before.get("COUNTRY_OPTIONS")!.replace(/\s+/g, ""));
     expect(current).toContain('setSuccessText("Login successful. Welcome to TPL GO.")');
   });
   test("removes the alternative shell and entire duplicate registration path", () => {

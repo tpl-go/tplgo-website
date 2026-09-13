@@ -28,3 +28,7 @@ function response(data:unknown){return {ok:true,data,status:200,requestId:"test"
     request.mockResolvedValueOnce({ok:false,status,error:{message:"private-database-detail",code:"INTERNAL_PRIVATE"}} as Awaited<ReturnType<typeof tplApiRequest>>);
     await expect(startRecovery("email","old@example.test")).rejects.not.toThrow("private-database-detail");
   });
+  test("cooldown and provider-unavailable errors do not claim dispatch", () => {
+    expect(new RecoveryError(429).message).toContain("does not confirm that a code was sent");
+    expect(new RecoveryError(503).message).toContain("Try again later or contact Partner Support");
+  });

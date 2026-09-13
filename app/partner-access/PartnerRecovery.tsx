@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useAuth } from "@/app/hooks/useAuth";
 import { completeRecovery, RecoveryError, recoverySupportMessage, startRecovery, verifyRecovery, type RecoveryConfirmation } from "@/app/lib/partner/partnerRecovery";
 import type { PartnerAccess } from "@/app/lib/partner/partnerAccess";
+import CountryDialCodeSelect from "@/app/components/common/CountryDialCodeSelect";
+import { normalizeRecoveryMobile, recoveryMobilePaste } from "@/app/lib/partner/recoveryMobile";
 
 const action = "min-h-11 rounded-xl bg-amber-300 px-5 py-3 font-bold text-slate-950 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-amber-200";
 const secondary = "min-h-11 rounded-xl border border-white/20 px-5 py-3 font-semibold text-white disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-amber-200";
@@ -14,6 +16,8 @@ export default function PartnerRecovery({ onCancel, onComplete }: { onCancel: ()
   const [stage, setStage] = useState<"find" | "verify" | "confirm" | "support">("find");
   const [channel, setChannel] = useState<"mobile" | "email">("mobile");
   const [contact, setContact] = useState("");
+  const [countryCode, setCountryCode] = useState("IN");
+  const [retryUntil, setRetryUntil] = useState(0);
   const [otp, setOtp] = useState("");
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [challenge, setChallenge] = useState<Awaited<ReturnType<typeof startRecovery>> | null>(null);
@@ -25,17 +29,23 @@ export default function PartnerRecovery({ onCancel, onComplete }: { onCancel: ()
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 1000); return () => window.clearInterval(timer); }, []);
   useEffect(() => { heading.current?.focus(); }, [stage]);
-  const countdown = challenge ? Math.max(0, Math.ceil((Date.parse(challenge.resendAvailableAt) - now) / 1000)) : 0;
+  const countdown = Math.max(0, Math.ceil((Math.max(retryUntil, challenge ? Date.parse(challenge.resendAvailableAt) : 0) - now) / 1000));
   const expired = Boolean(challenge && Date.parse(challenge.expiresAt) <= now);
   async function run(operation: () => Promise<void>) {
     if (inFlight.current) return;
     inFlight.current = true; setBusy(true); setError("");
     try { await operation(); } catch (caught) {
+      if (caught instanceof RecoveryError && caught.status === 429) { setRetryUntil(Date.now() + 60_000); setNow(Date.now()); }
       if (caught instanceof RecoveryError && caught.status === 409) setStage("support");
       else setError(caught instanceof RecoveryError ? caught.message : "Recovery could not be completed. Please try again.");
     } finally { inFlight.current = false; setBusy(false); }
   }
-  const send = () => run(async () => { const result = await startRecovery(channel, contact); setChallenge(result); setOtp(""); setFailedAttempts(0); setNow(Date.now()); setStage("verify"); });
+  const send = () => {
+    if (countdown > 0 || inFlight.current) return;
+    const normalized = channel === "mobile" ? normalizeRecoveryMobile(contact, countryCode) : contact.trim();
+    if (!normalized) { setError("Enter a valid mobile number for the selected country, or paste the full international number."); return; }
+    return run(async () => { const result = await startRecovery(channel, normalized); setChallenge(result); setOtp(""); setFailedAttempts(0); setNow(Date.now()); setStage("verify"); });
+  };
   async function confirm() {
     if (!challenge) return;
     let result;
@@ -55,12 +65,14 @@ export default function PartnerRecovery({ onCancel, onComplete }: { onCancel: ()
     {stage === "find" && <form className="mt-6 space-y-5" onSubmit={(event) => { event.preventDefault(); void send(); }}>
       <p className="text-sm leading-6 text-slate-300">Use the mobile number or email registered on your existing application.</p>
       <label className="block text-sm font-semibold">Registered contact<select className={field} value={channel} disabled={busy} onChange={(event) => { setChannel(event.target.value as "mobile" | "email"); setContact(""); }}><option value="mobile">Mobile</option><option value="email">Email</option></select></label>
-      <label className="block text-sm font-semibold">{channel === "mobile" ? "Registered mobile number" : "Registered email"}<input className={field} type={channel === "mobile" ? "tel" : "email"} autoComplete="off" value={contact} required maxLength={channel === "mobile" ? 24 : 254} disabled={busy} placeholder={channel === "mobile" ? "+91 mobile number" : "Registered email"} onChange={(event) => setContact(event.target.value)} /></label>
-      {channel === "mobile" && <p className="text-xs text-slate-400">Include the country code for numbers outside India.</p>}
-      <button className={action} disabled={busy || !contact.trim()}>Send verification code</button>
+      {channel === "mobile" && <div><span className="block text-sm font-semibold">Country code</span><CountryDialCodeSelect label="Registered mobile number" value={countryCode} onChange={setCountryCode} disabled={busy} className={field} /></div>}
+      <label className="block text-sm font-semibold">{channel === "mobile" ? "Registered mobile number" : "Registered email"}<input className={field} type={channel === "mobile" ? "tel" : "email"} inputMode={channel === "mobile" ? "tel" : "email"} autoComplete="off" value={contact} required maxLength={channel === "mobile" ? 32 : 254} disabled={busy} placeholder={channel === "mobile" ? "Mobile number" : "Registered email"} onChange={(event) => setContact(event.target.value)} onPaste={(event) => { if (channel !== "mobile") return; const pasted = recoveryMobilePaste(event.clipboardData.getData("text"), countryCode); if (pasted) { event.preventDefault(); setCountryCode(pasted.countryCode); setContact(pasted.contact); } }} /></label>
+      {channel === "mobile" && <p className="text-xs text-slate-400">Select the country, or paste the full number with + and country code.</p>}
+      <button className={action} disabled={busy || countdown > 0 || !contact.trim()}>{countdown ? `Try again in ${countdown}s` : "Send verification code"}</button>
     </form>}
     {stage === "verify" && <form className="mt-6 space-y-5" onSubmit={(event) => { event.preventDefault(); void run(async () => { if (!challenge || failedAttempts >= 5) return; try { setConfirmation(await verifyRecovery(challenge.challenge, otp)); } catch (caught) { if (caught instanceof RecoveryError && caught.status === 400) setFailedAttempts((count) => count + 1); throw caught; } setOtp(""); setStage("confirm"); }); }}>
-      <p className="text-sm leading-6 text-slate-300">If automatic recovery is available, a code will be sent to the contact you entered.</p>
+      <p className="text-sm leading-6 text-slate-300">If this contact is eligible, we’ll try to send a code. This request does not confirm delivery.</p>
+      <p className="text-sm leading-6 text-slate-300">No code received? <Link className="underline underline-offset-4 focus-visible:outline focus-visible:outline-2" href="/customer-support">Contact Partner Support</Link>, or go back and use another login.</p>
       <label className="block text-sm font-semibold">Verification code<input className={`${field} text-center text-2xl tracking-[0.3em]`} inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} value={otp} disabled={busy || expired} required onChange={(event) => setOtp(event.target.value.replace(/\D/g, ""))} /></label>
       {expired && <p role="status" className="text-sm text-amber-200">This code has expired. Request a new code.</p>}
       {failedAttempts >= 5 && <p role="status" className="text-sm text-amber-200">Request a new code to try again.</p>}
