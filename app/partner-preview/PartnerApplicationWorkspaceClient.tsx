@@ -1534,6 +1534,10 @@ export default function PartnerApplicationWorkspaceClient({
         setMessage({ tone: "error", text: "We couldn't send the email code." });
         return;
       }
+      if (result.data.status !== "otp_sent") {
+        setMessage({ tone: "error", text: "Email delivery is unavailable. Please try again later." });
+        return;
+      }
       setEmailChallenge({ challengeId: result.data.challengeId, expiresAt: result.data.expiresAt });
       setMessage({ tone: "success", text: "Verification code sent." });
     } finally {

@@ -186,6 +186,7 @@ async function routeAccountApis(context, state) {
 
     if (url.pathname === '/api/v1/wallet') {
       if (state.walletStatus !== 200) return fulfill(route, state.walletStatus, null, 'WALLET_UNAVAILABLE', 'We could not load your wallet. Please retry.');
+      if (state.walletResolver) return fulfill(route, 200, state.walletResolver(request));
       return fulfill(route, 200, state.wallet ?? { promoCredit: 10, earnedCredit: 20, refundableBalance: 30 });
     }
 
@@ -285,7 +286,7 @@ function makeState(overrides = {}) {
 const browser = await chromium.launch({ headless: true });
 try {
   await withPage('cached-user-waits-for-server-validation', '/account/bookings', storedSession(users.old, sessions.old), makeState({ delays: new Map([['/api/v1/auth/session', 900]]), sessionResolver: () => ({ user: users.bearer, session: sessions.bearer }) }), async page => {
-    await page.getByText('Loading your account bookings…').waitFor({ timeout: 5000 });
+    await page.getByText('Confirming your session…').waitFor({ timeout: 5000 });
     assert.doesNotMatch(await text(page), /Stale Local Private Booking|Synthetic Old User|Server Account Flight/);
     await page.getByText('Server Account Flight').waitFor({ timeout: 10000 });
     assert.doesNotMatch(await text(page), /Stale Local Private Booking|Synthetic Old User/);
@@ -309,6 +310,12 @@ try {
     await page.getByRole('button', { name: /Yes, Logout/i }).click();
     await page.waitForFunction(() => location.pathname === '/');
     await page.waitForTimeout(250);
+    state.cookieUser = null;
+    state.sessionStatus = 401;
+    await page.goBack();
+    await page.reload();
+    await page.getByText('Sign in to view your account.').waitFor();
+    assert.doesNotMatch(await text(page), /Synthetic Cookie User|PK|0000000000|Available|Edit Profile|Save Profile/);
     assert.equal(state.logoutCalls, 1, 'cookie-only logout calls backend once');
     const logoutRequest = state.requests.find(r => r.path === '/api/v1/auth/logout');
     assert.ok(logoutRequest, 'logout request captured');
@@ -317,7 +324,7 @@ try {
 
   for (const [scenario, status] of [['expired-session-clears-private-ui', 401], ['revoked-session-clears-private-ui', 403]]) {
     await withPage(scenario, '/account/bookings', storedSession(users.bearer, sessions.bearer), makeState({ sessionStatus: status }), async page => {
-      await page.getByText('Sign in to view your account bookings.').waitFor({ timeout: 10000 });
+      await page.getByText('Sign in to view your account.').waitFor({ timeout: 10000 });
       assert.doesNotMatch(await text(page), /Stale Local Private Booking|Server Account Flight|Synthetic Bearer User/);
       const stored = await page.evaluate(() => localStorage.getItem('tpl_auth_session_v1'));
       assert.equal(stored, null, 'unauthorized restore clears stored auth session');
@@ -325,8 +332,8 @@ try {
   }
 
   await withPage('network-failure-shows-retry-unavailable-state', '/account/wallet', storedSession(users.bearer, sessions.bearer), makeState({ abortSession: true }), async page => {
-    await page.getByText('We could not confirm your TPL session. Please retry.').waitFor({ timeout: 10000 });
-    assert.doesNotMatch(await text(page), /Stale Local Ledger|₹77,777|Server Wallet Credit/);
+    await page.getByText('We could not confirm your session. Please retry.').waitFor({ timeout: 10000 });
+    assert.doesNotMatch(await text(page), /Stale Local Ledger|₹77,777|Server Wallet Credit|Available|\u20b90|No activity/);
   });
 
   await withPage('account-switch-rejects-delayed-restore-and-clears-previous-user', '/account/profile', storedSession(users.old, sessions.old), makeState({ delays: new Map([['/api/v1/auth/session', 800]]), sessionResolver: request => {
@@ -335,7 +342,7 @@ try {
     if (authorization === `Bearer ${sessions.next.token}`) return { user: users.next, session: sessions.next };
     return { user: users.bearer, session: sessions.bearer };
   }, verifiedEmails: ['next@example.test'] }), async (page) => {
-    await page.waitForFunction(() => document.body.innerText.includes('Personal Account'));
+    await page.waitForFunction(() => document.body.innerText.includes('Confirming your session'));
     await page.evaluate(({ nextUser, nextSession }) => {
       localStorage.setItem('tpl_auth_session_v1', JSON.stringify({ user: nextUser, token: nextSession.token, sessionToken: nextSession.token, session: nextSession }));
       window.dispatchEvent(new Event('TPL_AUTH_UPDATED'));
@@ -356,13 +363,35 @@ try {
     assert.equal(await page.evaluate(() => localStorage.getItem('tpl_auth_session_v1')), null, 'failed logout clears local auth session');
     assert.doesNotMatch(await text(page), /logout confirmed|server logout confirmed|session revoked/i);
     await page.goto(`${base}/account/bookings`, { waitUntil: 'domcontentloaded' });
-    await page.getByText('Sign in to view your account bookings.').waitFor({ timeout: 10000 });
+    await page.getByText('Sign in to view your account.').waitFor({ timeout: 10000 });
     assert.doesNotMatch(await text(page), /Server Account Flight|Stale Local Private Booking/);
   });
 
   await withPage('bookings-failure-does-not-reveal-local-authoritative-data', '/account/bookings', storedSession(users.bearer, sessions.bearer), makeState({ bookingsStatus: 500 }), async page => {
     await page.getByText('We could not load your account bookings. Please retry.').waitFor({ timeout: 10000 });
-    assert.doesNotMatch(await text(page), /Stale Local Private Booking|Server Account Flight/);
+    assert.doesNotMatch(await text(page), /Stale Local Private Booking|Server Account Flight|No upcoming bookings/);
+  });
+
+  await withPage('wallet-account-switch-rejects-late-old-balance', '/account/wallet', storedSession(users.old,sessions.old), makeState({delays:new Map([['/api/v1/wallet',900]]), walletResolver: request => ({promoCredit:request.headers().authorization === 'Bearer '+sessions.old.token ? 999999 : 23, earnedCredit:0, refundableBalance:0})}), async (page,state) => {
+    await waitUntil(()=>state.requests.some(r=>r.path==='/api/v1/wallet'),'old wallet request started');
+    await page.evaluate(({nextUser,nextSession})=>{localStorage.setItem('tpl_auth_session_v1',JSON.stringify({user:nextUser,token:nextSession.token,session:nextSession}));window.dispatchEvent(new Event('TPL_AUTH_UPDATED'));},{nextUser:users.next,nextSession:sessions.next});
+    await page.waitForTimeout(1600);
+    assert.doesNotMatch(await text(page), /999,999|9,99,999|Synthetic Old User/);
+    assert.match(await text(page), /Synthetic Next User/);
+  });
+  for (const width of [1440, 768, 390]) {
+    await withPage('signed-out-account-' + width, '/account/profile', null, makeState({sessionStatus:401}), async page => {
+      await page.setViewportSize({width, height:900});
+      await page.getByText('Sign in to view your account.').waitFor();
+      assert.doesNotMatch(await text(page), /PK|0000000000|Available|Edit Profile|Save Profile/);
+      await page.goto(base + '/account/wallet');
+      await page.getByText('Sign in to view your account.').waitFor();
+      assert.doesNotMatch(await text(page), /Available|No activity|\u20b90|0000000000/);
+    });
+  }
+  await withPage('authenticated-real-zero-wallet', '/account/wallet', storedSession(users.bearer,sessions.bearer), makeState({wallet:{promoCredit:0,earnedCredit:0,refundableBalance:0},ledger:[]}), async page => {
+    await page.waitForFunction(() => document.body.innerText.includes('Available'));
+    assert.match(await text(page), /\u20b90/);
   });
 
   await withPage('wallet-failure-does-not-reveal-local-authoritative-data', '/account/wallet', storedSession(users.bearer, sessions.bearer), makeState({ walletStatus: 500 }), async page => {
@@ -434,7 +463,7 @@ try {
     assert.match(stored || '', /u2-partner-token/, 'recovered partner session persisted');
   });
 
-  console.log(JSON.stringify({ result: 'PASS', proof: 'local synthetic browser runtime', scenarios: 15 }));
+  console.log(JSON.stringify({ result: 'PASS', proof: 'local synthetic browser runtime', scenarios: 20 }));
 } finally {
   await browser.close();
 }

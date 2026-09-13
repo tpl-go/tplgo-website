@@ -46,14 +46,7 @@ export default function MyProfileSection() {
 
   useEffect(() => {
     const loadProfile = () => {
-      let activeMobile = user?.mobile || "";
-
-      try {
-        const raw = localStorage.getItem("tpl_auth_session_v1");
-        const parsed = raw ? JSON.parse(raw) : null;
-
-        activeMobile = parsed?.user?.mobile || activeMobile;
-      } catch {}
+      const activeMobile = user?.mobile || "";
 
       if (!activeMobile) return;
 

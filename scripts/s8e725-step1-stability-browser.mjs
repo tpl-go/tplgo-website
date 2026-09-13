@@ -24,6 +24,7 @@ try {
   page.on('pageerror', error => console.log({ syntheticPageError: error.message }));
   const calls = { save: 0, readiness: 0, draft: 0, otp: 0, account: 0 };
   let locked = false, denied = false, sessionExpired = false, releaseReadiness, releaseOtp;
+  let emailStatus = "EMAIL_DELIVERY_NOT_CONFIGURED";
   let profileEmail = '', loginEmails = ['recovered@example.test'];
   await context.route('**/*', async route => {
     const url = new URL(route.request().url());
@@ -40,6 +41,7 @@ try {
       status = denied ? 403 : 200; data = { readiness: readiness(locked), latestSubmission: null };
     }
     else if (url.pathname.endsWith('/contact/mobile/request')) { calls.otp++; if (releaseOtp) await new Promise(resolve => { releaseOtp.resolve = resolve; }); data = { status: 'otp_sent', challengeId: 'synthetic-challenge', expiresAt: '2030-01-01T00:00:00Z', otpLength: 6, deliveryChannel: 'synthetic' }; }
+    else if (url.pathname.endsWith('/contact/email/request')) data = { status: emailStatus, challengeId: 'synthetic-email', expiresAt: '2030-01-01T00:00:00Z' };
     else if (url.pathname.endsWith('/service-catalogue')) data = { version: 1, domains: [], items: [] };
     else if (url.pathname.includes('/content/website-experience/')) data = { contexts: {} };
     else { status = 401; }
@@ -62,6 +64,16 @@ try {
     assert.equal(await page.locator('input[name="businessEmail"]').inputValue(), 'qa@example.test');
     assert.equal(await page.locator('input[name="businessEmail"]').locator('..').getByRole('button', { name: 'Verify', exact: true }).count(), 1, 'Business Email remains independently unverified');
   }
+  const emailSection = page.locator('input[name="businessEmail"]').locator('..');
+  await emailSection.getByRole('button', {name:'Verify',exact:true}).click();
+  await page.getByText('Email delivery is unavailable. Please try again later.').waitFor();
+  assert.equal(await page.locator('input[name="emailOtp"]').count(),0);
+  emailStatus = 'otp_sent';
+  await emailSection.getByRole('button', {name:'Verify',exact:true}).click();
+  await page.locator('input[name="emailOtp"]').fill('123');
+  await page.locator('input[name="businessEmail"]').fill('changed@example.test');
+  assert.equal(await page.locator('input[name="emailOtp"]').count(),0);
+  await page.locator('input[name="businessEmail"]').fill('qa@example.test');
   const editorNode = await name.elementHandle();
   await page.locator('input[name="businessMobile"]').fill('9876543210');
   const mobileSection = page.locator('input[name="businessMobile"]').locator('..');

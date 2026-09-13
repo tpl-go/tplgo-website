@@ -422,8 +422,6 @@ export default function PartnerGetStartedClient({
       setBackendError("Save the business profile to staging before submitting for review.");
       return false;
     }
-    const email = organizationProfile.businessEmail.trim();
-    if (email) void requestPartnerEmailVerification(backendBundle.organization.id, email);
     const result = await submitPartnerVerification(backendBundle.organization.id);
     if (!result.ok) {
       setBackendError(result.error.message);

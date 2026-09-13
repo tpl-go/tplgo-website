@@ -25,13 +25,15 @@ export default function BookingsDetails({
   const { authError, isAuthLoading, isAuthenticated, openLoginModal, user } = useAuth();
 
   const [bookings, setBookings] = useState<BookingItem[]>([]);
-  const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
+  const [status, setStatus] = useState<"idle" | "loading" | "error">("loading");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
+    let sequence = 0;
 
     const loadBookings = async () => {
+      const request = ++sequence;
       if (isAuthLoading) return;
 
       if (!isAuthenticated || !user?.id) {
@@ -46,7 +48,7 @@ export default function BookingsDetails({
       const result = await getBackendFirstBookings(undefined, {
         allowLocalFallback: false,
       });
-      if (cancelled) return;
+      if (cancelled || request !== sequence) return;
       setBookings(result.bookings);
       if (result.source === "backend") {
         setStatus("idle");
@@ -80,6 +82,8 @@ export default function BookingsDetails({
     onSignIn: () => openLoginModal({ intent: "booking", redirectAfterLogin: "/account/bookings" }),
     status,
   });
+
+  if (accountNotice) return accountNotice;
 
   if (activeSection === "completed") {
     return <>{accountNotice}<CompletedJourneySection bookings={completed} /></>;
@@ -143,6 +147,7 @@ function renderAccountNotice({
     return (
       <div className="mb-4 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-[13px] text-red-800">
         {errorMessage}
+        {" "}<button type="button" className="font-semibold underline" onClick={() => window.dispatchEvent(new Event(BOOKING_UPDATED_EVENT))}>Retry</button>
       </div>
     );
   }

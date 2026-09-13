@@ -34,13 +34,16 @@ export default function WalletDetails({
     refundableBalance: 0,
   });
   const [ledger, setLedger] = useState<WalletLedgerItem[]>([]);
-  const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
+  const [status, setStatus] = useState<"idle" | "loading" | "error">("loading");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [retry, setRetry] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
+    let sequence = 0;
 
     const loadWalletData = async () => {
+      const request = ++sequence;
       if (isAuthLoading) return;
 
       if (!isAuthenticated || !user?.id) {
@@ -62,7 +65,7 @@ export default function WalletDetails({
         getBackendFirstWalletLedger(undefined, { allowLocalFallback: false }),
       ]);
 
-      if (cancelled) return;
+      if (cancelled || request !== sequence) return;
       setWallet(walletResult.wallet);
       setLedger(ledgerResult.ledger);
       if (walletResult.source === "backend" && ledgerResult.source === "backend") {
@@ -84,7 +87,7 @@ export default function WalletDetails({
       window.removeEventListener(AUTH_UPDATED_EVENT, loadWalletData);
       window.removeEventListener("storage", loadWalletData);
     };
-  }, [authError, isAuthLoading, isAuthenticated, user?.id]);
+  }, [authError, isAuthLoading, isAuthenticated, user?.id, retry]);
 
   const accountNotice = renderWalletNotice({
     authError,
@@ -93,7 +96,10 @@ export default function WalletDetails({
     isAuthenticated,
     onSignIn: () => openLoginModal({ redirectAfterLogin: "/account/wallet" }),
     status,
+    onRetry: () => setRetry(value => value + 1),
   });
+
+  if (accountNotice) return accountNotice;
 
   if (activeSection === "tplCredit") {
     return <>{accountNotice}<TplCreditSection wallet={wallet} /></>;
@@ -121,6 +127,7 @@ function renderWalletNotice({
   isAuthenticated,
   onSignIn,
   status,
+  onRetry,
 }: {
   authError?: string | null;
   errorMessage: string | null;
@@ -128,6 +135,7 @@ function renderWalletNotice({
   isAuthenticated: boolean;
   onSignIn: () => void;
   status: "idle" | "loading" | "error";
+  onRetry: () => void;
 }) {
   if (isAuthLoading || status === "loading") {
     return (
@@ -152,6 +160,7 @@ function renderWalletNotice({
     return (
       <div className="mb-4 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-[13px] text-red-800">
         {errorMessage}
+        {" "}<button type="button" onClick={onRetry} className="font-semibold underline">Retry</button>
       </div>
     );
   }

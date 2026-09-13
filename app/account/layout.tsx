@@ -36,7 +36,15 @@ export default function AccountLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user } = useAuth();
+  const { user, isAuthLoading, isAuthenticated, authError, openLoginModal } = useAuth();
+  const pathname = usePathname();
+  if (isAuthLoading || !isAuthenticated || !user?.id) {
+    return <main className="min-h-screen bg-[#f6f8fb] p-6"><div className="mx-auto max-w-7xl rounded-2xl border bg-white p-6" role="status">
+      <h1 className="text-xl font-semibold">My Account</h1>
+      <p className="my-4">{isAuthLoading ? "Confirming your session…" : authError ? "We could not confirm your session. Please retry." : "Sign in to view your account."}</p>
+      {!isAuthLoading && (authError ? <button onClick={() => window.location.reload()}>Retry</button> : <button onClick={() => openLoginModal({ redirectAfterLogin: pathname })}>Sign in</button>)}
+    </div></main>;
+  }
   return <UserAccountTrustProvider><AccountLayoutContent key={user?.id ?? "signed-out"}>{children}</AccountLayoutContent></UserAccountTrustProvider>;
 }
 
@@ -46,12 +54,8 @@ function AccountLayoutContent({ children }: { children: React.ReactNode }) {
 
   const [photo, setPhoto] = useState<string | null>(null);
   const [bannerName, setBannerName] = useState("Personal Account");
-  const [bannerMobile, setBannerMobile] = useState("+91 0000000000");
-  const [wallet, setWallet] = useState<Wallet>({
-    promoCredit: 0,
-    earnedCredit: 0,
-    refundableBalance: 0,
-  });
+  const [bannerMobile, setBannerMobile] = useState("Mobile not added");
+  const [wallet, setWallet] = useState<Wallet | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -70,7 +74,7 @@ function AccountLayoutContent({ children }: { children: React.ReactNode }) {
 
       if (!activeMobile) {
         setBannerName("Personal Account");
-        setBannerMobile("+91 0000000000");
+        setBannerMobile("Mobile not added");
         setPhoto(null);
         return;
       }
@@ -86,7 +90,7 @@ function AccountLayoutContent({ children }: { children: React.ReactNode }) {
         : profileName;
 
       setBannerName(finalName || "Personal Account");
-      setBannerMobile(profile.mobile || activeMobile || "+91 0000000000");
+      setBannerMobile(profile.mobile || activeMobile || "Mobile not added");
       setPhoto(profile.photo || null);
     };
 
@@ -105,26 +109,21 @@ function AccountLayoutContent({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
+    let sequence = 0;
 
     const syncWallet = async () => {
+      const request = ++sequence;
+      setWallet(null);
       if (isAuthLoading || !isAuthenticated || !user?.id) {
-        setWallet({
-          promoCredit: 0,
-          earnedCredit: 0,
-          refundableBalance: 0,
-        });
+        setWallet(null);
         return;
       }
 
       const result = await getBackendFirstWallet(undefined, {
         allowLocalFallback: false,
       });
-      if (!cancelled) {
-        setWallet(result.source === "backend" ? result.wallet : {
-          promoCredit: 0,
-          earnedCredit: 0,
-          refundableBalance: 0,
-        });
+      if (!cancelled && request === sequence) {
+        setWallet(result.source === "backend" ? result.wallet : null);
       }
     };
 
@@ -175,9 +174,9 @@ function AccountLayoutContent({ children }: { children: React.ReactNode }) {
   };
 
   const totalWalletBalance =
-    Number(wallet.promoCredit || 0) +
-    Number(wallet.earnedCredit || 0) +
-    Number(wallet.refundableBalance || 0);
+    Number(wallet?.promoCredit || 0) +
+    Number(wallet?.earnedCredit || 0) +
+    Number(wallet?.refundableBalance || 0);
 
   return (
     <main className="bg-[#f6f8fb] min-h-screen pb-10">
@@ -267,11 +266,11 @@ function AccountLayoutContent({ children }: { children: React.ReactNode }) {
 
                     <div className="mt-2 flex items-end gap-2">
                       <h3 className="text-3xl font-bold leading-none">
-                        {formatWalletPrice(totalWalletBalance)}
+                        {wallet ? formatWalletPrice(totalWalletBalance) : "\u2014"}
                       </h3>
 
                       <span className="text-sm text-white/80 mb-1">
-                        Available
+                        {wallet ? "Available" : "Balance unavailable"}
                       </span>
                     </div>
 
@@ -338,11 +337,11 @@ function AccountLayoutContent({ children }: { children: React.ReactNode }) {
 
                     <div className="mt-2 flex items-end justify-center gap-2">
                       <h3 className="text-3xl font-extrabold leading-none">
-                        {formatWalletPrice(totalWalletBalance)}
+                        {wallet ? formatWalletPrice(totalWalletBalance) : "\u2014"}
                       </h3>
 
                       <span className="mb-1 text-xs text-white/75">
-                        Available
+                        {wallet ? "Available" : "Balance unavailable"}
                       </span>
                     </div>
 
