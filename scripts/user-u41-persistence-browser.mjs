@@ -95,5 +95,11 @@ try{
   await field(page,'FIRST NAME').waitFor();await page.getByRole('button',{name:/Co Traveller/}).click();await page.getByTitle('Delete traveller').click();
   await page.getByText('This traveller is no longer in your saved list. Existing bookings are unchanged.',{exact:true}).waitFor();assert.equal(await page.getByText('Remove synthetic',{exact:true}).count(),0);
  });
+ await scenario('fresh-validated-session-restores-saved-server-values',1363,{profile:record(user.id,{firstName:'Server saved'})},async(page,state)=>{
+  await field(page,'FIRST NAME').waitFor();await page.getByRole('button',{name:/Log out/i}).click();await page.getByRole('button',{name:/Yes, Logout/i}).click();await page.waitForURL(base+'/');
+  state.signedOut=false;
+  await page.evaluate(({user,session})=>localStorage.setItem('tpl_auth_session_v1',JSON.stringify({user,session,token:session.token})),{user:state.user,session:{...session,token:'synthetic-u41-new-session'}});
+  await page.goto(base+'/account/profile');await field(page,'FIRST NAME').waitFor();assert.equal(await field(page,'FIRST NAME').inputValue(),'Server saved');
+ });
  console.log(JSON.stringify({passed,liveProof:false}));
 }finally{await browser.close();}
