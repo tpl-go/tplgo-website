@@ -4,6 +4,7 @@ import {
   createContext,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -49,6 +50,7 @@ type AuthContextType = AuthState & {
   ) => Promise<AuthUser>;
   logout: () => Promise<void>;
   adoptRecoveredPartnerSession: (session: { token: string; expiresAt: string } | null) => Promise<void>;
+  adoptLinkedUserSession: (session: { token: string; expiresAt: string }, expectedOwner: string, previousToken: string | null) => Promise<void>;
   requireAuth: (options?: OpenLoginModalOptions) => boolean;
 };
 
@@ -111,6 +113,8 @@ export default function AuthProvider({ children }: AuthProviderProps) {
   );
   const sessionRestoreSequenceRef = useRef(0);
   const logoutRestoreBlockedRef = useRef(false);
+  const currentOwnerRef = useRef(user?.id);
+  useLayoutEffect(() => { currentOwnerRef.current = user?.id; }, [user?.id]);
 
   const clearVisibleAuthState = useCallback(() => {
     setUser(null);
@@ -436,6 +440,19 @@ export default function AuthProvider({ children }: AuthProviderProps) {
     setAuthError(null);
   }, [persistSession]);
 
+  const adoptLinkedUserSession = useCallback(async (session: { token: string; expiresAt: string }, expectedOwner: string, previousToken: string | null) => {
+    const sequence = sessionRestoreSequenceRef.current;
+    const resolved = await readBackendMeUser(session.token);
+    if (resolved.id !== expectedOwner || currentOwnerRef.current !== expectedOwner
+      || logoutRestoreBlockedRef.current || sessionRestoreSequenceRef.current !== sequence
+      || readStoredAuthToken() !== previousToken) throw new Error("Your account changed. Sign in again to continue.");
+    sessionRestoreSequenceRef.current += 1;
+    persistSession(resolved, session);
+    setUser(resolved);
+    setIsAuthenticated(true);
+    setAuthError(null);
+  }, [persistSession]);
+
   const value = useMemo(
     () => ({
       isAuthLoading,
@@ -458,6 +475,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
       logout,
       requireAuth,
       adoptRecoveredPartnerSession,
+      adoptLinkedUserSession,
     }),
     [
       isAuthLoading,
@@ -479,6 +497,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
       logout,
       requireAuth,
       adoptRecoveredPartnerSession,
+      adoptLinkedUserSession,
     ]
   );
 
