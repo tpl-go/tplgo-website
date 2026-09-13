@@ -1,6 +1,20 @@
 import { expect, test } from "vitest";
-import { latestAccountRead, readAccountDevices } from "./userAccountRead";
+import { latestAccountRead, readAccountDevices, loginMobileDisplay } from "./userAccountRead";
 import { accountEmailDisplay, readVerifiedLoginEmails } from "../partner/accountLoginEmail";
+
+test("login mobile uses masked canonical methods independently of legacy/profile contacts", () => {
+  const mobile = { id: "linked", provider: "mobile", verified: true, label: "+******0123" };
+  const payload = (methods: unknown[]) => ({ ok: true, data: { ownerId: "a", methods, mobile: "internal-placeholder", profile: { mobile: "+19995550000" } } });
+  expect(loginMobileDisplay(payload([mobile]), "a")).toBe("+******0123 · Verified");
+  expect(loginMobileDisplay(payload([{ ...mobile, id: "legacy-mobile" }]), "a")).toBe("+******0123 · Verified");
+  expect(loginMobileDisplay(payload([]), "a")).toBe("Mobile not added");
+  expect(loginMobileDisplay(payload([mobile, { ...mobile, id: "second", label: "+******0456" }]), "a")).toBe("2 verified login mobiles");
+  expect(loginMobileDisplay(payload([{ ...mobile, verified: false }, { ...mobile, status: "disabled" }]), "a")).toBe("Mobile not added");
+  expect(loginMobileDisplay(payload([mobile]), "b")).toBe("Login mobile unavailable");
+  for (const value of [undefined, { ok: false }, payload([null]), payload([{ ...mobile, label: "internal-placeholder" }])]) {
+    expect(loginMobileDisplay(value, "a")).toBe("Login mobile unavailable");
+  }
+});
 
   test("keeps verified login emails deterministic and independent of profile email", () => {
     const payload = { ok: true, data: { user: { id: "user-a", email: "profile@example.test", verifiedLoginEmails: ["Z@example.test", "a@example.test", "z@example.test"] } } };

@@ -4,11 +4,14 @@ import { useAuth } from "@/app/hooks/useAuth";
 import { accountEmailDisplay, readVerifiedLoginEmails } from "@/app/lib/partner/accountLoginEmail";
 import { useUserAccountRead } from "./useUserAccountRead";
 import { getSavedProfile, PROFILE_UPDATED_EVENT } from "@/app/lib/account/profileStorage";
+import { loginMobileDisplay } from "@/app/lib/account/userAccountRead";
 
-const TrustContext = createContext({ login: accountEmailDisplay(undefined), profile: accountEmailDisplay(undefined) });
+const TrustContext = createContext({ login: accountEmailDisplay(undefined), profile: accountEmailDisplay(undefined), mobile: "Loading login mobile…" });
 export function UserAccountTrustProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const read = useUserAccountRead("/api/v1/me");
+  const methods = useUserAccountRead("/api/v1/me/login-methods");
+  const mobile = methods.status === "loading" ? "Loading login mobile…" : methods.status === "ready" ? loginMobileDisplay(methods.payload, user?.id ?? "") : "Login mobile unavailable";
   const [, refreshProfile] = useState(0);
   useEffect(() => {
     const refresh = () => refreshProfile(value => value + 1);
@@ -21,7 +24,11 @@ export function UserAccountTrustProvider({ children }: { children: React.ReactNo
   const login = accountEmailDisplay(emails);
   const profile = profileEmail ? accountEmailDisplay([], profileEmail)
     : { value: "No profile email saved", status: "Not verified for sign-in", verified: false };
-  return <TrustContext.Provider value={{ login, profile }}>{children}</TrustContext.Provider>;
+  return <TrustContext.Provider value={{ login, profile, mobile }}>{children}</TrustContext.Provider>;
+}
+export function UserLoginMobile() {
+  const { mobile } = useContext(TrustContext);
+  return <span className="min-w-0 break-words" data-testid="user-login-mobile">{mobile}</span>;
 }
 export function UserLoginEmail() {
   const { login } = useContext(TrustContext);

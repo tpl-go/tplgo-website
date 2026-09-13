@@ -16,7 +16,7 @@ import {
   type Wallet,
 } from "@/app/lib/wallet/walletStorage";
 import { getBackendFirstWallet } from "@/app/lib/api/walletApi";
-import { UserAccountTrustProvider, UserLoginEmail } from "@/app/components/account/UserAccountTrust";
+import { UserAccountTrustProvider, UserLoginEmail, UserLoginMobile } from "@/app/components/account/UserAccountTrust";
 
 const tabs = [
   { href: "/account/profile", label: "My Profile" },
@@ -54,7 +54,6 @@ function AccountLayoutContent({ children }: { children: React.ReactNode }) {
 
   const [photo, setPhoto] = useState<string | null>(null);
   const [bannerName, setBannerName] = useState("Personal Account");
-  const [bannerMobile, setBannerMobile] = useState("Mobile not added");
   const [wallet, setWallet] = useState<Wallet | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -74,7 +73,6 @@ function AccountLayoutContent({ children }: { children: React.ReactNode }) {
 
       if (!activeMobile) {
         setBannerName("Personal Account");
-        setBannerMobile("Mobile not added");
         setPhoto(null);
         return;
       }
@@ -90,7 +88,6 @@ function AccountLayoutContent({ children }: { children: React.ReactNode }) {
         : profileName;
 
       setBannerName(finalName || "Personal Account");
-      setBannerMobile(profile.mobile || activeMobile || "Mobile not added");
       setPhoto(profile.photo || null);
     };
 
@@ -247,7 +244,7 @@ function AccountLayoutContent({ children }: { children: React.ReactNode }) {
                     <div className="mt-2 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-5 text-sm text-white/95">
                       <div className="flex items-center gap-2">
                         <span>📞</span>
-                        <span>{bannerMobile}</span>
+                        <UserLoginMobile />
                       </div>
 
                       <div className="flex items-center gap-2">
@@ -321,7 +318,7 @@ function AccountLayoutContent({ children }: { children: React.ReactNode }) {
                   <div className="mt-3 space-y-1 text-sm text-white/90">
                     <div className="flex items-center justify-center gap-2">
                       <span>📞</span>
-                      <span>{bannerMobile}</span>
+                      <UserLoginMobile />
                     </div>
 
                     <div className="flex items-center justify-center gap-2 break-all">

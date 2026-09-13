@@ -6,7 +6,7 @@ import { AUTH_UPDATED_EVENT } from "@/app/lib/booking/guestAuth";
 import { latestAccountRead } from "@/app/lib/account/userAccountRead";
 
 export type AccountRead = { status: "loading" | "ready" | "error" | "signed-out"; payload?: unknown };
-export function useUserAccountRead(path: "/api/v1/me" | "/api/v1/me/device-sessions"): AccountRead {
+export function useUserAccountRead(path: "/api/v1/me" | "/api/v1/me/device-sessions" | "/api/v1/me/login-methods"): AccountRead {
   const { user } = useAuth();
   const token = getStoredAuthToken();
   const [result, setResult] = useState<{ owner: typeof user; token: string | null; read: AccountRead } | null>(null);
