@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import type { FrequentFlyerEntry } from "@/app/lib/account/profileStorage";
 import { travellerForm as toForm, travellerInput, type TravellerForm } from "@/app/lib/account/basicAccount";
 import { useBasicAccount, AccountReadState, AccountDataError, SavedBasicReview } from "../../BasicAccountData";
@@ -39,6 +39,10 @@ export default function CoTravellerSection() {
   const [message, setMessage] = useState("");
   const [conflict, setConflict] = useState(false);
   const [latest, setLatest] = useState<TravellerForm | null>(null);
+  const [pendingRemoval, setPendingRemoval] = useState<TravellerForm | null>(null);
+  const removeButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const lastRemovalTrigger = useRef<string | null>(null);
+  const dialogCancelRef = useRef<HTMLButtonElement | null>(null);
   const openNewForm = () => {
     setOperation(crypto.randomUUID()); setMessage(""); setConflict(false); setLatest(null);
     setEditingTravellerId(null);
@@ -129,6 +133,10 @@ export default function CoTravellerSection() {
     setIsFormOpen(true);
   };
 
+  const requestDeleteTraveller = (id: string) => {
+    if (saving) return;
+    const row = travellers.rows.find(r => r.id === id); if (row) { lastRemovalTrigger.current = id; setPendingRemoval(toForm(row)); }
+  };
   const handleDeleteTraveller = async (id: string) => {
     if (saving) return;
     const row = travellers.rows.find(r => r.id === id); if (!row) return;
@@ -137,6 +145,13 @@ export default function CoTravellerSection() {
     catch { try { const current = await travellers.reload(); setMessage(current.some(r => r.id === id) ? "Removal was not confirmed. Review the saved details before retrying." : "This traveller is no longer in your saved list. Existing bookings are unchanged."); } catch { setMessage("Removal could not be confirmed. Retry loading the saved list."); } }
     finally { setSaving(false); }
   };
+  useEffect(() => {
+    if (!pendingRemoval) { const trigger = lastRemovalTrigger.current; if (trigger) removeButtonRefs.current[trigger]?.focus(); return; }
+    dialogCancelRef.current?.focus();
+    const onKeyDown = (event: KeyboardEvent) => { if (event.key === "Escape") setPendingRemoval(null); };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [pendingRemoval]);
   if (travellers.status !== "ready" && !isFormOpen) return <AccountReadState resource={travellers} />;
 
   return (
@@ -158,7 +173,7 @@ export default function CoTravellerSection() {
       <div className="space-y-6 px-6 py-6">
         <p role="status" className="text-sm">{message}</p>{conflict && <button onClick={reviewLatest} className="underline">Review latest saved details</button>}
         {latest && <SavedBasicReview details={latest} />}
-        <p className="text-xs text-slate-600">Save reusable basic details only. One name is sufficient. Include + and the international phone code. Browser records are preserved and are not imported. Removing a saved traveller does not change bookings.</p>
+        <p className="text-xs text-slate-600">Save reusable traveller details. One name is enough. Removing a saved traveller does not change existing bookings.</p>
         {isFormOpen && (
           <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
             <div className="flex items-center justify-between">
@@ -255,7 +270,7 @@ export default function CoTravellerSection() {
                 </div>
               </section>
 
-              <section><h3 className="text-[15px] font-semibold text-slate-900">Document Details</h3><p className="mt-2 text-xs text-slate-600">Passport and PAN editing are unavailable until protected storage is ready. Basic saves do not upload or change existing document values.</p></section>
+              <section><h3 className="text-[15px] font-semibold text-slate-900">Document Details</h3><p className="mt-2 text-xs text-slate-600">Document and photo updates are currently unavailable.</p></section>
 
               <section>
                 <h3 className="text-[15px] font-semibold text-slate-900">
@@ -359,7 +374,8 @@ export default function CoTravellerSection() {
 
                   <button
                     type="button"
-                    onClick={() => handleDeleteTraveller(traveller.id)} disabled={saving || isFormOpen}
+                    ref={node => { removeButtonRefs.current[traveller.id] = node; }}
+                    onClick={() => requestDeleteTraveller(traveller.id)} disabled={saving || isFormOpen}
                     className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-red-200 text-[14px] text-red-600 transition hover:bg-red-50"
                     title="Delete traveller" aria-label="Delete traveller"
                   >
@@ -369,6 +385,17 @@ export default function CoTravellerSection() {
               </div>
             ))}
         </div>
+        {pendingRemoval && <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4" role="dialog" aria-modal="true" aria-labelledby="remove-traveller-title" aria-describedby="remove-traveller-description">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            <h2 id="remove-traveller-title" className="text-lg font-semibold text-slate-900">Remove saved traveller?</h2>
+            <p className="mt-2 text-sm font-medium text-slate-900">{[pendingRemoval.firstName, pendingRemoval.lastName].filter(Boolean).join(" ") || "Unnamed traveller"}</p>
+            <p id="remove-traveller-description" className="mt-3 text-sm text-slate-600">This removes them from your saved travellers. Existing bookings stay unchanged.</p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button ref={dialogCancelRef} type="button" onClick={() => setPendingRemoval(null)} className="rounded-xl border border-gray-300 px-4 py-2 text-sm">Cancel</button>
+              <button type="button" disabled={saving} onClick={async () => { const selected = pendingRemoval; if (!selected) return; setPendingRemoval(null); await handleDeleteTraveller(selected.id); }} className="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">Remove traveller</button>
+            </div>
+          </div>
+        </div>}
       </div>
     </div>
   );
@@ -383,10 +410,11 @@ function InputField({
 }) {
   return (
     <div>
-      <label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+      <label htmlFor={`traveller-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`} className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
         {label}
       </label>
       <input
+        id={`traveller-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
         {...props}
         className={`h-12 w-full rounded-xl border border-gray-300 bg-white px-4 text-[14px] font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#0b5fff] ${className}`}
       />
@@ -425,7 +453,7 @@ function SelectField({
 
   return (
     <div>
-      <label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+      <label htmlFor={`traveller-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`} className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
         {label}
       </label>
 
@@ -434,6 +462,7 @@ function SelectField({
         className={`relative flex h-12 w-full cursor-pointer items-center rounded-xl border border-gray-300 bg-white px-4 text-[14px] font-medium text-slate-900 transition focus-within:border-[#0b5fff] ${className}`}
       >
         <select
+          id={`traveller-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
           ref={selectRef}
           {...props}
           className="absolute inset-0 h-full w-full cursor-pointer appearance-none rounded-xl bg-transparent px-4 pr-10 text-[14px] font-medium text-slate-900 outline-none"

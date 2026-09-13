@@ -110,7 +110,7 @@ export default function MyProfileSection() {
       <fieldset disabled={saving} className="min-w-0 space-y-8 px-6 py-6">
         {conflict && <button onClick={reviewLatest} className="underline">Review latest saved details</button>}
         {latest && <SavedBasicReview details={latest} />}
-        <p className="text-xs text-slate-600">Save basic personal details only. Browser records are preserved; re-enter details you want to save. Login methods and Partner contacts stay separate.</p>
+        <p className="text-xs text-slate-600">Updating these details won’t change how you sign in.</p>
         <UserSignInDetails />
 
         <div className="flex flex-col gap-3 rounded-2xl border border-[#ddb0b0] bg-[#fff4f4] px-4 py-3 md:flex-row md:items-center md:justify-between">
@@ -198,7 +198,7 @@ export default function MyProfileSection() {
             Contact Details
           </h2>
           <p className="mt-1 text-[12px] text-slate-500">
-            Optional personal contacts are saved to your account. Include + and the international country code. These contacts do not add or verify login methods.
+            Add optional contact details. Updating these details won’t change how you sign in.
           </p>
 
           <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -208,7 +208,7 @@ export default function MyProfileSection() {
               onChange={(e) => updateField("mobile", e.target.value)}
             />
             <InputField
-              label="PROFILE EMAIL (NOT VERIFIED FOR SIGN-IN)"
+              label="PERSONAL EMAIL"
               value={formData.email}
               onChange={(e) => updateField("email", e.target.value)}
               placeholder="name@example.com"
@@ -216,7 +216,7 @@ export default function MyProfileSection() {
           </div>
         </section>
 
-        <section><h2 className="text-[15px] font-semibold text-slate-900">Document Details</h2><p className="mt-2 text-xs text-slate-600">Passport, PAN and photo editing are unavailable until protected storage is ready. Basic saves do not upload or change existing document or photo values.</p></section>
+        <section><h2 className="text-[15px] font-semibold text-slate-900">Document Details</h2><p className="mt-2 text-xs text-slate-600">Document and photo updates are currently unavailable.</p></section>
 
         <section>
           <h2 className="text-[15px] font-semibold text-slate-900">
@@ -282,10 +282,11 @@ function InputField({
 }) {
   return (
     <div>
-      <label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+      <label htmlFor={`profile-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`} className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
         {label}
       </label>
       <input
+        id={`profile-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
         {...props}
         className={`h-12 w-full rounded-xl border border-gray-300 bg-white px-4 text-[14px] font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#0b5fff] ${className}`}
       />
@@ -328,7 +329,7 @@ function SelectField({
 
   return (
     <div>
-      <label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+      <label htmlFor={`profile-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`} className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
         {label}
       </label>
 
@@ -337,6 +338,7 @@ function SelectField({
         className={`relative flex h-12 w-full cursor-pointer items-center rounded-xl border border-gray-300 bg-white px-4 text-[14px] font-medium text-slate-900 transition focus-within:border-[#0b5fff] ${className}`}
       >
         <select
+          id={`profile-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
           ref={selectRef}
           {...props}
           className="absolute inset-0 h-full w-full cursor-pointer appearance-none rounded-xl bg-transparent px-4 pr-10 text-[14px] font-medium text-slate-900 outline-none"
