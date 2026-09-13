@@ -55,6 +55,8 @@ assert.equal(await page.getByRole("dialog").getByText("Asha Sharma", { exact: tr
 await page.keyboard.press("Escape");
 assert.equal(await page.getByRole("dialog").count(), 0);
 assert.equal(state.mutations.length, 1);
+await page.waitForTimeout(50);
+assert.equal(await page.evaluate(() => document.activeElement?.getAttribute("aria-label")), "Delete traveller");
 await page.getByRole("button", { name: "Delete traveller" }).click();
 await page.getByRole("dialog").getByRole("button", { name: "Cancel", exact: true }).click();
 assert.equal(state.mutations.length, 1);
