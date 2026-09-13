@@ -26,7 +26,7 @@ type WalletDetailsProps = {
 export default function WalletDetails({
   activeSection,
 }: WalletDetailsProps) {
-  const { user } = useAuth();
+  const { authError, isAuthLoading, isAuthenticated, openLoginModal, user } = useAuth();
 
   const [wallet, setWallet] = useState<Wallet>({
     promoCredit: 0,
@@ -34,37 +34,43 @@ export default function WalletDetails({
     refundableBalance: 0,
   });
   const [ledger, setLedger] = useState<WalletLedgerItem[]>([]);
+  const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
     const loadWalletData = async () => {
-      let activeMobile = user?.mobile || "";
+      if (isAuthLoading) return;
 
-      try {
-        const raw = localStorage.getItem("tpl_auth_session_v1");
-        const parsed = raw ? JSON.parse(raw) : null;
-        activeMobile = parsed?.user?.mobile || activeMobile;
-      } catch {}
-
-      if (!activeMobile) {
+      if (!isAuthenticated || !user?.id) {
         setWallet({
           promoCredit: 0,
           earnedCredit: 0,
           refundableBalance: 0,
         });
         setLedger([]);
+        setStatus("idle");
+        setErrorMessage(null);
         return;
       }
 
+      setStatus("loading");
+      setErrorMessage(null);
       const [walletResult, ledgerResult] = await Promise.all([
-        getBackendFirstWallet(activeMobile),
-        getBackendFirstWalletLedger(activeMobile),
+        getBackendFirstWallet(undefined, { allowLocalFallback: false }),
+        getBackendFirstWalletLedger(undefined, { allowLocalFallback: false }),
       ]);
 
       if (cancelled) return;
       setWallet(walletResult.wallet);
       setLedger(ledgerResult.ledger);
+      if (walletResult.source === "backend" && ledgerResult.source === "backend") {
+        setStatus("idle");
+      } else {
+        setStatus("error");
+        setErrorMessage(walletResult.error?.message || ledgerResult.error?.message || "We could not load your wallet. Please retry.");
+      }
     };
 
     void loadWalletData();
@@ -78,23 +84,77 @@ export default function WalletDetails({
       window.removeEventListener(AUTH_UPDATED_EVENT, loadWalletData);
       window.removeEventListener("storage", loadWalletData);
     };
-  }, [user?.mobile]);
+  }, [authError, isAuthLoading, isAuthenticated, user?.id]);
+
+  const accountNotice = renderWalletNotice({
+    authError,
+    errorMessage,
+    isAuthLoading,
+    isAuthenticated,
+    onSignIn: () => openLoginModal({ redirectAfterLogin: "/account/wallet" }),
+    status,
+  });
 
   if (activeSection === "tplCredit") {
-    return <TplCreditSection wallet={wallet} />;
+    return <>{accountNotice}<TplCreditSection wallet={wallet} /></>;
   }
 
   if (activeSection === "refundWallet") {
-    return <RefundWalletSection wallet={wallet} />;
+    return <>{accountNotice}<RefundWalletSection wallet={wallet} /></>;
   }
 
   if (activeSection === "activity") {
-    return <WalletActivitySection items={ledger} />;
+    return <>{accountNotice}<WalletActivitySection items={ledger} /></>;
   }
 
   if (activeSection === "statement") {
-    return <WalletStatementSection wallet={wallet} items={ledger} />;
+    return <>{accountNotice}<WalletStatementSection wallet={wallet} items={ledger} /></>;
   }
 
-  return <WalletOverviewSection wallet={wallet} items={ledger} />;
+  return <>{accountNotice}<WalletOverviewSection wallet={wallet} items={ledger} /></>;
+}
+
+function renderWalletNotice({
+  authError,
+  errorMessage,
+  isAuthLoading,
+  isAuthenticated,
+  onSignIn,
+  status,
+}: {
+  authError?: string | null;
+  errorMessage: string | null;
+  isAuthLoading: boolean;
+  isAuthenticated: boolean;
+  onSignIn: () => void;
+  status: "idle" | "loading" | "error";
+}) {
+  if (isAuthLoading || status === "loading") {
+    return (
+      <div className="mb-4 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-[13px] font-medium text-blue-800">
+        Loading your wallet…
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] text-amber-900">
+        {authError || "Sign in to view your wallet."}{" "}
+        <button type="button" onClick={onSignIn} className="font-semibold underline">
+          Sign in
+        </button>
+      </div>
+    );
+  }
+
+  if (status === "error") {
+    return (
+      <div className="mb-4 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-[13px] text-red-800">
+        {errorMessage}
+      </div>
+    );
+  }
+
+  return null;
 }

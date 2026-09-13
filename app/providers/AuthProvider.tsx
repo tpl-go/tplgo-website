@@ -81,6 +81,7 @@ type BackendAuthResponse = {
     expiresAt?: string | undefined;
   } | undefined;
   error?: {
+    code?: string | undefined;
     message?: string | undefined;
   } | undefined;
   message?: string | undefined;
@@ -99,6 +100,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [activeAccountType, setActiveAccountType] =
     useState<AccountType>("personal");
@@ -107,45 +109,8 @@ export default function AuthProvider({ children }: AuthProviderProps) {
     null
   );
 
-  // 🔥 CENTRAL SYNC FUNCTION
-  const syncAuthFromStorage = useCallback((): boolean => {
-    try {
-      const raw = localStorage.getItem(AUTH_STORAGE_KEY);
-
-      if (!raw) {
-        setUser(null);
-        setIsAuthenticated(false);
-        return false;
-      }
-
-      const parsed = JSON.parse(raw);
-
-      if (
-        parsed?.user &&
-        typeof parsed.user.id === "string" &&
-        parsed.user.id.trim()
-      ) {
-        setUser(parsed.user);
-        setIsAuthenticated(true);
-        setActiveAccountType(parsed.user.accountType || "personal");
-        return true;
-      } else {
-        setUser(null);
-        setIsAuthenticated(false);
-        localStorage.removeItem(AUTH_STORAGE_KEY);
-        return false;
-      }
-    } catch (err) {
-      console.error("Auth restore failed:", err);
-      setUser(null);
-      setIsAuthenticated(false);
-      localStorage.removeItem(AUTH_STORAGE_KEY);
-      return false;
-    }
-  }, []);
-
   // ✅ PERSIST SESSION
-  const persistSession = useCallback((nextUser: AuthUser | null, session?: StoredAuthSession["session"]) => {
+  const persistSession = useCallback((nextUser: AuthUser | null, session?: StoredAuthSession["session"], notify = true) => {
     try {
       if (!nextUser) {
         localStorage.removeItem(AUTH_STORAGE_KEY);
@@ -160,24 +125,37 @@ export default function AuthProvider({ children }: AuthProviderProps) {
         );
       }
 
-      // 🔥 CRITICAL: notify immediately
-      window.dispatchEvent(new Event(AUTH_UPDATED_EVENT));
+      if (notify) window.dispatchEvent(new Event(AUTH_UPDATED_EVENT));
     } catch (err) {
       console.error("Persist session error:", err);
     }
   }, []);
 
   const hydrateBackendCookieSession = useCallback(async () => {
-    if (!API_BASE_URL) return false;
+    if (!API_BASE_URL) {
+      setUser(null);
+      setIsAuthenticated(false);
+      setAuthError("TPL account service is unavailable.");
+      return false;
+    }
     try {
-      const authResult = await readBackendCookieSession();
+      const authResult = await readBackendSession(readStoredAuthToken());
       const nextUser = authResult.user;
       setUser(nextUser);
       setIsAuthenticated(true);
       setActiveAccountType(nextUser.accountType || "personal");
-      persistSession(nextUser, authResult.session);
+      setAuthError(null);
+      persistSession(nextUser, authResult.session, false);
       return true;
-    } catch {
+    } catch (error) {
+      setUser(null);
+      setIsAuthenticated(false);
+      if (isUnauthorizedAuthError(error)) {
+        persistSession(null, undefined, false);
+        setAuthError(null);
+      } else {
+        setAuthError("We could not confirm your TPL session. Please retry.");
+      }
       return false;
     }
   }, [persistSession]);
@@ -186,11 +164,6 @@ export default function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     let cancelled = false;
     const timer = window.setTimeout(() => {
-      const restored = syncAuthFromStorage();
-      if (restored) {
-        if (!cancelled) setIsAuthLoading(false);
-        return;
-      }
       void hydrateBackendCookieSession().finally(() => {
         if (!cancelled) setIsAuthLoading(false);
       });
@@ -199,7 +172,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [hydrateBackendCookieSession, syncAuthFromStorage]);
+  }, [hydrateBackendCookieSession]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -235,7 +208,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
   // ✅ LISTEN TO AUTH CHANGE
   useEffect(() => {
     const handleAuthUpdate = () => {
-      syncAuthFromStorage();
+      void hydrateBackendCookieSession();
     };
 
     window.addEventListener(AUTH_UPDATED_EVENT, handleAuthUpdate);
@@ -249,7 +222,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
       window.removeEventListener("focus", handleAuthUpdate);
       document.removeEventListener("visibilitychange", handleAuthUpdate);
     };
-  }, [syncAuthFromStorage]);
+  }, [hydrateBackendCookieSession]);
 
   const openLoginModal = useCallback((options?: OpenLoginModalOptions) => {
     if (options?.accountType) setActiveAccountType(options.accountType);
@@ -291,6 +264,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
       setUser(nextUser);
       setIsAuthenticated(true);
       setActiveAccountType(accountType);
+      setAuthError(null);
 
       persistSession(nextUser, authResult.session);
       registerCurrentDeviceSession();
@@ -313,6 +287,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
       setUser(nextUser);
       setIsAuthenticated(true);
       setActiveAccountType(accountType);
+      setAuthError(null);
 
       persistSession(nextUser, authResult.session);
       registerCurrentDeviceSession();
@@ -349,6 +324,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
       setUser(nextUser);
       setIsAuthenticated(true);
       setActiveAccountType(accountType);
+      setAuthError(null);
       persistSession(nextUser, authResult.session);
       registerCurrentDeviceSession();
 
@@ -365,6 +341,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
       setUser(nextUser);
       setIsAuthenticated(true);
       setActiveAccountType(accountType);
+      setAuthError(null);
       persistSession(nextUser, authResult.session);
       registerCurrentDeviceSession();
 
@@ -384,9 +361,15 @@ export default function AuthProvider({ children }: AuthProviderProps) {
     setActiveAccountType("personal");
     setLoginIntent("generic");
     setRedirectAfterLogin(null);
+    setAuthError(null);
 
     persistSession(null);
-    if (token) await logoutBackendSession(token);
+    try {
+      await logoutBackendSession(token);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Server logout could not be confirmed.';
+      setAuthError(message);
+    }
   }, [persistSession]);
 
   const requireAuth = useCallback(
@@ -402,13 +385,14 @@ export default function AuthProvider({ children }: AuthProviderProps) {
   const adoptRecoveredPartnerSession = useCallback(async (session: { token: string; expiresAt: string } | null) => {
     const resolved = session
       ? { user: await readBackendMeUser(session.token), session }
-      : await readBackendCookieSession();
+      : await readBackendSession(null);
     if (!resolved.session?.token) throw new Error("Sign in again to open your Partner account.");
     clearPartnerProfilePreference();
     persistSession(resolved.user, resolved.session);
     setUser(resolved.user);
     setIsAuthenticated(true);
-    setActiveAccountType("partner");
+    setActiveAccountType('partner');
+    setAuthError(null);
   }, [persistSession]);
 
   const value = useMemo(
@@ -416,6 +400,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
       isAuthLoading,
       isAuthenticated,
       user,
+      authError,
       isLoginModalOpen,
       activeAccountType,
       loginIntent,
@@ -437,6 +422,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
       isAuthLoading,
       isAuthenticated,
       user,
+      authError,
       isLoginModalOpen,
       activeAccountType,
       loginIntent,
@@ -567,17 +553,18 @@ async function readBackendMeUser(token: string): Promise<AuthUser> {
   return normalizeAuthUser(data?.user, "personal");
 }
 
-async function readBackendCookieSession(): Promise<{ user: AuthUser; session?: StoredAuthSession["session"] | undefined }> {
+async function readBackendSession(token?: string | null): Promise<{ user: AuthUser; session?: StoredAuthSession["session"] | undefined }> {
   const response = await fetch(`${API_BASE_URL}/api/v1/auth/session`, {
     method: "GET",
     credentials: "include",
     headers: {
       Accept: "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
   });
   const payload = await readAuthJson(response);
   if (!response.ok || payload?.ok !== true) {
-    throw authApiError(payload, "Failed to load authenticated session.");
+    throw authApiError(payload, "Failed to load authenticated session.", response.status);
   }
   return {
     user: normalizeAuthUser(payload?.data?.user, "personal"),
@@ -585,18 +572,19 @@ async function readBackendCookieSession(): Promise<{ user: AuthUser; session?: S
   };
 }
 
-async function logoutBackendSession(token: string): Promise<void> {
+async function logoutBackendSession(token?: string | null): Promise<void> {
   if (!API_BASE_URL) return;
-  try {
-    await fetch(`${API_BASE_URL}/api/v1/auth/logout`, {
-      method: "POST",
-      credentials: "include",
-      headers: {
-        Accept: "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-    });
-  } catch {
+  const response = await fetch(`${API_BASE_URL}/api/v1/auth/logout`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      Accept: "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+  const payload = await readAuthJson(response);
+  if (!response.ok || payload?.ok !== true) {
+    throw authApiError(payload, "Server logout could not be confirmed.", response.status);
   }
 }
 
@@ -676,8 +664,19 @@ function stringValue(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
 
-function authApiError(payload: BackendAuthResponse | null, fallbackMessage: string): Error {
-  return new Error(payload?.error?.message || payload?.message || fallbackMessage);
+type AuthApiError = Error & { status?: number; code?: string };
+
+function authApiError(payload: BackendAuthResponse | null, fallbackMessage: string, status?: number): AuthApiError {
+  const error = new Error(payload?.error?.message || payload?.message || fallbackMessage) as AuthApiError;
+  error.status = status;
+  error.code = payload?.error?.code;
+  return error;
+}
+
+function isUnauthorizedAuthError(error: unknown): boolean {
+  if (!error || typeof error !== "object" || !("status" in error)) return false;
+  const status = Number((error as AuthApiError).status);
+  return status === 401 || status === 403;
 }
 
 function authNetworkFallbackError(message: string): Error {

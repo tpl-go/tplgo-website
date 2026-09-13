@@ -22,21 +22,38 @@ type BookingsDetailsProps = {
 export default function BookingsDetails({
   activeSection,
 }: BookingsDetailsProps) {
-  const { user } = useAuth();
+  const { authError, isAuthLoading, isAuthenticated, openLoginModal, user } = useAuth();
 
   const [bookings, setBookings] = useState<BookingItem[]>([]);
+  const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
     const loadBookings = async () => {
-      if (!user?.mobile) {
+      if (isAuthLoading) return;
+
+      if (!isAuthenticated || !user?.id) {
         setBookings([]);
+        setStatus("idle");
+        setErrorMessage(null);
         return;
       }
 
-      const result = await getBackendFirstBookings(user.mobile);
-      if (!cancelled) setBookings(result.bookings);
+      setStatus("loading");
+      setErrorMessage(null);
+      const result = await getBackendFirstBookings(undefined, {
+        allowLocalFallback: false,
+      });
+      if (cancelled) return;
+      setBookings(result.bookings);
+      if (result.source === "backend") {
+        setStatus("idle");
+      } else {
+        setStatus("error");
+        setErrorMessage(result.error?.message || "We could not load your account bookings. Please retry.");
+      }
     };
 
     void loadBookings();
@@ -49,23 +66,86 @@ export default function BookingsDetails({
       window.removeEventListener(BOOKING_UPDATED_EVENT, loadBookings);
       window.removeEventListener("storage", loadBookings);
     };
-  }, [user?.mobile]);
+  }, [authError, isAuthLoading, isAuthenticated, user?.id]);
 
   const upcoming = bookings.filter((b) => b.status === "upcoming");
   const completed = bookings.filter((b) => b.status === "completed");
   const cancelled = bookings.filter((b) => b.status === "cancelled");
 
+  const accountNotice = renderAccountNotice({
+    authError,
+    errorMessage,
+    isAuthLoading,
+    isAuthenticated,
+    onSignIn: () => openLoginModal({ intent: "booking", redirectAfterLogin: "/account/bookings" }),
+    status,
+  });
+
   if (activeSection === "completed") {
-    return <CompletedJourneySection bookings={completed} />;
+    return <>{accountNotice}<CompletedJourneySection bookings={completed} /></>;
   }
 
   if (activeSection === "cancelled") {
-    return <CancelledJourneySection bookings={cancelled} />;
+    return <>{accountNotice}<CancelledJourneySection bookings={cancelled} /></>;
   }
 
   if (activeSection === "refund") {
-    return <RefundStatusSection bookings={bookings.filter((b) => b.refund)} />;
+    return <>{accountNotice}<RefundStatusSection bookings={bookings.filter((b) => b.refund)} /></>;
   }
 
-  return <UpcomingJourneySection bookings={upcoming} />;
+  return (
+    <>
+      {accountNotice}
+      <UpcomingJourneySection
+        bookings={upcoming}
+        serverAuthoritative
+        onRefresh={() => window.dispatchEvent(new Event(BOOKING_UPDATED_EVENT))}
+      />
+    </>
+  );
+}
+
+function renderAccountNotice({
+  authError,
+  errorMessage,
+  isAuthLoading,
+  isAuthenticated,
+  onSignIn,
+  status,
+}: {
+  authError?: string | null;
+  errorMessage: string | null;
+  isAuthLoading: boolean;
+  isAuthenticated: boolean;
+  onSignIn: () => void;
+  status: "idle" | "loading" | "error";
+}) {
+  if (isAuthLoading || status === "loading") {
+    return (
+      <div className="mb-4 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-[13px] font-medium text-blue-800">
+        Loading your account bookings…
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] text-amber-900">
+        {authError || "Sign in to view your account bookings."}{" "}
+        <button type="button" onClick={onSignIn} className="font-semibold underline">
+          Sign in
+        </button>
+      </div>
+    );
+  }
+
+  if (status === "error") {
+    return (
+      <div className="mb-4 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-[13px] text-red-800">
+        {errorMessage}
+      </div>
+    );
+  }
+
+  return null;
 }

@@ -7,6 +7,7 @@ import {
   getRefundEstimate,
   type BookingItem,
 } from "@/app/lib/booking/bookingStorage";
+import { cancelBackendBooking } from "@/app/lib/api/manageBookingApi";
 
 import { shareBooking } from "@/app/lib/booking/bookingActionHelpers";
 import { printBookingDocument } from "@/app/lib/booking/print/bookingPrintDispatcher";
@@ -82,12 +83,17 @@ function isDomesticFlightBooking(booking: BookingItem) {
 
 type UpcomingJourneySectionProps = {
   bookings: BookingItem[];
+  serverAuthoritative?: boolean;
+  onRefresh?: () => void;
 };
 
 export default function UpcomingJourneySection({
   bookings,
+  serverAuthoritative = false,
+  onRefresh,
 }: UpcomingJourneySectionProps) {
   const [cancelTarget, setCancelTarget] = useState<BookingItem | null>(null);
+  const [cancelError, setCancelError] = useState<string | null>(null);
 
   const router = useRouter();
 
@@ -127,10 +133,33 @@ export default function UpcomingJourneySection({
     window.open(DIGI_YATRA_REDIRECT_URL, "_blank", "noopener,noreferrer");
   };
 
-  const handleConfirmCancel = () => {
+  const handleConfirmCancel = async () => {
     if (!cancelTarget) return;
 
+    if (serverAuthoritative) {
+      const bookingId = resolveBackendBookingId(cancelTarget);
+      if (!bookingId) {
+        setCancelError("This booking could not be matched to an account booking. Please refresh and try again.");
+        return;
+      }
+
+      const result = await cancelBackendBooking(
+        bookingId,
+        { reason: "Cancelled by user from My Bookings" },
+        createCancellationIdempotencyKey(bookingId)
+      );
+      if (!result.ok) {
+        setCancelError(result.error.message || "Cancellation could not be completed. Please retry.");
+        return;
+      }
+      setCancelError(null);
+      setCancelTarget(null);
+      onRefresh?.();
+      return;
+    }
+
     cancelBooking(cancelTarget.id, "Cancelled by user from My Bookings");
+    setCancelError(null);
     setCancelTarget(null);
   };
 
@@ -316,8 +345,27 @@ export default function UpcomingJourneySection({
         onClose={() => setCancelTarget(null)}
         onConfirm={handleConfirmCancel}
       />
+      {cancelError ? (
+        <div className="px-3 pb-4 md:px-6">
+          <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-[13px] text-red-800">
+            {cancelError}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
+}
+
+function resolveBackendBookingId(booking: BookingItem): string {
+  return String(booking.backendBookingId || booking.backendBookingRef || booking.bookingId || booking.id || "").trim();
+}
+
+function createCancellationIdempotencyKey(bookingId: string): string {
+  const randomValue =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  return `account-booking-cancel:${bookingId}:${randomValue}`;
 }
 
 function ActionButton({

@@ -48,7 +48,7 @@ export type BackendWalletLedgerResult =
 
 export type BackendFirstWalletResult = {
   wallet: Wallet;
-  source: "backend" | "local_fallback";
+  source: "backend" | "local_fallback" | "unavailable";
   requestId?: string;
   error?: {
     status?: number;
@@ -59,7 +59,7 @@ export type BackendFirstWalletResult = {
 
 export type BackendFirstWalletLedgerResult = {
   ledger: WalletLedgerItem[];
-  source: "backend" | "local_fallback";
+  source: "backend" | "local_fallback" | "unavailable";
   requestId?: string;
   error?: {
     status?: number;
@@ -84,39 +84,52 @@ const backendLedgerTypes = new Set<WalletLedgerItem["type"]>([
   "adjustment",
 ]);
 
+type BackendFirstOptions = {
+  allowLocalFallback?: boolean;
+};
+
 export async function fetchBackendWallet(
-  mobile?: string
+  mobile?: string,
+  options: BackendFirstOptions = {}
 ): Promise<BackendWalletResult> {
   const path = mobile?.trim()
     ? `/api/v1/wallet?mobile=${encodeURIComponent(mobile.trim())}`
     : "/api/v1/wallet";
 
-  const result = await tplApiRequest<unknown>(path);
+  const result = await tplApiRequest<unknown>(path, {
+    fallbackOnError: options.allowLocalFallback ?? true,
+  });
   return normalizeWalletResult(result);
 }
 
 export async function fetchBackendWalletLedger(
-  mobile?: string
+  mobile?: string,
+  options: BackendFirstOptions = {}
 ): Promise<BackendWalletLedgerResult> {
   const path = mobile?.trim()
     ? `/api/v1/wallet/ledger?mobile=${encodeURIComponent(mobile.trim())}`
     : "/api/v1/wallet/ledger";
 
-  const result = await tplApiRequest<unknown>(path);
+  const result = await tplApiRequest<unknown>(path, {
+    fallbackOnError: options.allowLocalFallback ?? true,
+  });
   return normalizeLedgerResult(result);
 }
 
 export async function getBackendFirstWallet(
-  mobile?: string
+  mobile?: string,
+  options: BackendFirstOptions = {}
 ): Promise<BackendFirstWalletResult> {
-  if (!getStoredAuthToken()) {
+  const allowLocalFallback = options.allowLocalFallback ?? true;
+
+  if (!getStoredAuthToken() && allowLocalFallback) {
     return {
       wallet: getWallet(mobile),
       source: "local_fallback",
     };
   }
 
-  const result = await fetchBackendWallet();
+  const result = await fetchBackendWallet(undefined, { allowLocalFallback });
   if (result.ok) {
     return {
       wallet: result.wallet,
@@ -126,8 +139,8 @@ export async function getBackendFirstWallet(
   }
 
   return {
-    wallet: getWallet(mobile),
-    source: "local_fallback",
+    wallet: allowLocalFallback ? getWallet(mobile) : emptyWallet,
+    source: allowLocalFallback ? "local_fallback" : "unavailable",
     requestId: result.requestId,
     error: {
       status: result.status,
@@ -138,16 +151,19 @@ export async function getBackendFirstWallet(
 }
 
 export async function getBackendFirstWalletLedger(
-  mobile?: string
+  mobile?: string,
+  options: BackendFirstOptions = {}
 ): Promise<BackendFirstWalletLedgerResult> {
-  if (!getStoredAuthToken()) {
+  const allowLocalFallback = options.allowLocalFallback ?? true;
+
+  if (!getStoredAuthToken() && allowLocalFallback) {
     return {
       ledger: getWalletLedger(mobile),
       source: "local_fallback",
     };
   }
 
-  const result = await fetchBackendWalletLedger();
+  const result = await fetchBackendWalletLedger(undefined, { allowLocalFallback });
   if (result.ok) {
     return {
       ledger: result.ledger,
@@ -157,8 +173,8 @@ export async function getBackendFirstWalletLedger(
   }
 
   return {
-    ledger: getWalletLedger(mobile),
-    source: "local_fallback",
+    ledger: allowLocalFallback ? getWalletLedger(mobile) : [],
+    source: allowLocalFallback ? "local_fallback" : "unavailable",
     requestId: result.requestId,
     error: {
       status: result.status,

@@ -27,6 +27,7 @@ export type AuthState = {
   isAuthLoading: boolean;
   isAuthenticated: boolean;
   user: AuthUser | null;
+  authError?: string | null;
   isLoginModalOpen: boolean;
   activeAccountType: AccountType;
   loginIntent: AuthIntent;

@@ -107,7 +107,7 @@ export async function tplApiRequest<TData>(
   const fallbackOnError = options.fallbackOnError ?? true;
 
   if (!API_BASE_URL) {
-    return buildFallbackFailure(requestId, "TPL_API_NOT_CONFIGURED", "TPL API base URL is not configured.", 0);
+    return buildFallbackFailure(requestId, "TPL_API_NOT_CONFIGURED", "TPL API base URL is not configured.", 0, fallbackOnError);
   }
 
   const headers: Record<string, string> = {
@@ -132,6 +132,7 @@ export async function tplApiRequest<TData>(
   try {
     const response = await fetch(`${API_BASE_URL}${normalizePath(path)}`, {
       method: options.method || "GET",
+      credentials: "include",
       headers,
       body: typeof options.body === "undefined" ? undefined : JSON.stringify(options.body),
     });
@@ -161,7 +162,7 @@ export async function tplApiRequest<TData>(
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : "TPL API request failed.";
-    return buildFallbackFailure(requestId, "TPL_API_NETWORK_ERROR", message, 0);
+    return buildFallbackFailure(requestId, "TPL_API_NETWORK_ERROR", message, 0, fallbackOnError);
   }
 }
 
@@ -207,14 +208,15 @@ function buildFallbackFailure(
   requestId: string,
   code: string,
   message: string,
-  status: number
+  status: number,
+  fallback = true
 ): TplApiFailure {
   return {
     ok: false,
     error: { code, message },
     status,
     requestId,
-    fallback: true,
+    fallback,
   };
 }
 

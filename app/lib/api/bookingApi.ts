@@ -15,7 +15,7 @@ import { getBookingPayload } from "@/app/lib/booking/bookingActionHelpers";
 
 export type BackendFirstBookingsResult = {
   bookings: BookingItem[];
-  source: "backend" | "local_fallback";
+  source: "backend" | "local_fallback" | "unavailable";
   requestId?: string;
   error?: {
     status?: number;
@@ -40,7 +40,7 @@ export type BackendBookingDetailResult = {
 export type BackendFirstBookingPayloadResult<T = unknown> = {
   booking: BookingItem | null;
   payload: T | null;
-  source: "backend" | "local_fallback";
+  source: "backend" | "local_fallback" | "unavailable";
   requestId?: string;
   error?: {
     status?: number;
@@ -69,14 +69,20 @@ const bookingStatuses = new Set<BookingStatus>([
   "cancelled",
 ]);
 
+type BackendFirstOptions = {
+  allowLocalFallback?: boolean;
+};
+
 export async function getBackendFirstBookings(
-  mobile?: string
+  mobile?: string,
+  options: BackendFirstOptions = {}
 ): Promise<BackendFirstBookingsResult> {
+  const allowLocalFallback = options.allowLocalFallback ?? true;
   const localBookings = mobile
     ? getAllBookings().filter((booking) => booking.mobile === mobile)
     : getAllBookings();
 
-  if (!getStoredAuthToken()) {
+  if (!getStoredAuthToken() && allowLocalFallback) {
     return {
       bookings: localBookings,
       source: "local_fallback",
@@ -86,12 +92,12 @@ export async function getBackendFirstBookings(
   const path = mobile?.trim()
     ? `/api/v1/bookings?mobile=${encodeURIComponent(mobile.trim())}`
     : "/api/v1/bookings";
-  const result = await tplApiRequest<unknown>(path);
+  const result = await tplApiRequest<unknown>(path, { fallbackOnError: allowLocalFallback });
 
   if (!result.ok) {
     return {
-      bookings: localBookings,
-      source: "local_fallback",
+      bookings: allowLocalFallback ? localBookings : [],
+      source: allowLocalFallback ? "local_fallback" : "unavailable",
       requestId: result.requestId,
       error: {
         status: result.status,
@@ -102,8 +108,10 @@ export async function getBackendFirstBookings(
   }
 
   const backendBookings = normalizeBookingList(result.data);
-  const bookings = mergeBackendAndLocalBookings(backendBookings, localBookings);
-  cacheMergedBookings(bookings);
+  const bookings = allowLocalFallback
+    ? mergeBackendAndLocalBookings(backendBookings, localBookings)
+    : backendBookings;
+  if (allowLocalFallback) cacheMergedBookings(bookings);
 
   return {
     bookings,
@@ -113,22 +121,24 @@ export async function getBackendFirstBookings(
 }
 
 export async function getBackendFirstBookingById(
-  bookingId: string
+  bookingId: string,
+  options: BackendFirstOptions = {}
 ): Promise<BackendFirstBookingsResult> {
+  const allowLocalFallback = options.allowLocalFallback ?? true;
   const localBooking = getAllBookings().find((booking) => booking.id === bookingId);
 
-  if (!getStoredAuthToken()) {
+  if (!getStoredAuthToken() && allowLocalFallback) {
     return {
       bookings: localBooking ? [localBooking] : [],
       source: "local_fallback",
     };
   }
 
-  const result = await tplApiRequest<unknown>(`/api/v1/bookings/${encodeURIComponent(bookingId)}`);
+  const result = await tplApiRequest<unknown>(`/api/v1/bookings/${encodeURIComponent(bookingId)}`, { fallbackOnError: allowLocalFallback });
   if (!result.ok) {
     return {
-      bookings: localBooking ? [localBooking] : [],
-      source: "local_fallback",
+      bookings: allowLocalFallback && localBooking ? [localBooking] : [],
+      source: allowLocalFallback ? "local_fallback" : "unavailable",
       requestId: result.requestId,
       error: {
         status: result.status,
@@ -140,7 +150,7 @@ export async function getBackendFirstBookingById(
 
   const booking = normalizeBookingItem(result.data);
   return {
-    bookings: booking ? [booking] : localBooking ? [localBooking] : [],
+    bookings: booking ? [booking] : allowLocalFallback && localBooking ? [localBooking] : [],
     source: "backend",
     requestId: result.requestId,
   };

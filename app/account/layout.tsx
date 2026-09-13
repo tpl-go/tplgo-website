@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/app/hooks/useAuth";
 import { AUTH_UPDATED_EVENT } from "@/app/lib/booking/guestAuth";
 import {
@@ -26,18 +26,6 @@ const tabs = [
   { href: "/account/wallet", label: "My Wallet" },
 ];
 
-function getActiveAuthUser() {
-  if (typeof window === "undefined") return null;
-
-  try {
-    const raw = localStorage.getItem("tpl_auth_session_v1");
-    const parsed = raw ? JSON.parse(raw) : null;
-    return parsed?.user || null;
-  } catch {
-    return null;
-  }
-}
-
 function isDefaultProfileName(name: string) {
   const clean = name.trim().toLowerCase();
   return clean === "" || clean === "pk";
@@ -54,7 +42,7 @@ export default function AccountLayout({
 
 function AccountLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { user } = useAuth();
+  const { isAuthLoading, isAuthenticated, user } = useAuth();
 
   const [photo, setPhoto] = useState<string | null>(null);
   const [bannerName, setBannerName] = useState("Personal Account");
@@ -67,15 +55,13 @@ function AccountLayoutContent({ children }: { children: React.ReactNode }) {
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const getActiveMobile = () => {
-    const authUser = getActiveAuthUser();
-    return authUser?.mobile || user?.mobile || "";
-  };
+  const getActiveMobile = useCallback(() => {
+    return isAuthenticated ? user?.mobile || "" : "";
+  }, [isAuthenticated, user?.mobile]);
 
-  const getActiveFullName = () => {
-    const authUser = getActiveAuthUser();
-    return authUser?.fullName || user?.fullName || "";
-  };
+  const getActiveFullName = useCallback(() => {
+    return isAuthenticated ? user?.fullName || "" : "";
+  }, [isAuthenticated, user?.fullName]);
 
   useEffect(() => {
     const syncProfile = () => {
@@ -115,15 +101,13 @@ function AccountLayoutContent({ children }: { children: React.ReactNode }) {
       window.removeEventListener(AUTH_UPDATED_EVENT, syncProfile);
       window.removeEventListener("storage", syncProfile);
     };
-  }, [user?.mobile]);
+  }, [getActiveFullName, getActiveMobile]);
 
   useEffect(() => {
     let cancelled = false;
 
     const syncWallet = async () => {
-      const activeMobile = getActiveMobile();
-
-      if (!activeMobile) {
+      if (isAuthLoading || !isAuthenticated || !user?.id) {
         setWallet({
           promoCredit: 0,
           earnedCredit: 0,
@@ -132,8 +116,16 @@ function AccountLayoutContent({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      const result = await getBackendFirstWallet(activeMobile);
-      if (!cancelled) setWallet(result.wallet);
+      const result = await getBackendFirstWallet(undefined, {
+        allowLocalFallback: false,
+      });
+      if (!cancelled) {
+        setWallet(result.source === "backend" ? result.wallet : {
+          promoCredit: 0,
+          earnedCredit: 0,
+          refundableBalance: 0,
+        });
+      }
     };
 
     void syncWallet();
@@ -148,7 +140,7 @@ function AccountLayoutContent({ children }: { children: React.ReactNode }) {
       window.removeEventListener(AUTH_UPDATED_EVENT, syncWallet);
       window.removeEventListener("storage", syncWallet);
     };
-  }, [user?.mobile]);
+  }, [getActiveMobile, isAuthLoading, isAuthenticated, user?.id]);
 
   const handlePhotoClick = () => {
     fileInputRef.current?.click();
