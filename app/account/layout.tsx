@@ -2,14 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/app/hooks/useAuth";
 import { AUTH_UPDATED_EVENT } from "@/app/lib/booking/guestAuth";
-import {
-  PROFILE_UPDATED_EVENT,
-  getSavedProfile,
-  saveProfile,
-} from "@/app/lib/account/profileStorage";
+import { BasicAccountProvider, useBasicAccount } from "@/app/components/account/BasicAccountData";
 import {
   WALLET_UPDATED_EVENT,
   formatWalletPrice,
@@ -26,10 +22,6 @@ const tabs = [
   { href: "/account/wallet", label: "My Wallet" },
 ];
 
-function isDefaultProfileName(name: string) {
-  const clean = name.trim().toLowerCase();
-  return clean === "" || clean === "pk";
-}
 
 export default function AccountLayout({
   children,
@@ -45,64 +37,23 @@ export default function AccountLayout({
       {!isAuthLoading && (authError ? <button onClick={() => window.location.reload()}>Retry</button> : <button onClick={() => openLoginModal({ redirectAfterLogin: pathname })}>Sign in</button>)}
     </div></main>;
   }
-  return <UserAccountTrustProvider><AccountLayoutContent key={user?.id ?? "signed-out"}>{children}</AccountLayoutContent></UserAccountTrustProvider>;
+  return <BasicAccountProvider key={user.id}><UserAccountTrustProvider><AccountLayoutContent key={user.id}>{children}</AccountLayoutContent></UserAccountTrustProvider></BasicAccountProvider>;
 }
 
 function AccountLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { isAuthLoading, isAuthenticated, user } = useAuth();
 
-  const [photo, setPhoto] = useState<string | null>(null);
-  const [bannerName, setBannerName] = useState("Personal Account");
+  const { profile } = useBasicAccount();
+  const photo = null;
+  const bannerName = profile.status === "ready" ? [profile.rows[0]?.firstName, profile.rows[0]?.lastName].filter(Boolean).join(" ") || "Personal Account" : profile.status === "loading" ? "Loading profile..." : "Profile unavailable";
   const [wallet, setWallet] = useState<Wallet | null>(null);
 
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
 
   const getActiveMobile = useCallback(() => {
     return isAuthenticated ? user?.mobile || "" : "";
   }, [isAuthenticated, user?.mobile]);
-
-  const getActiveFullName = useCallback(() => {
-    return isAuthenticated ? user?.fullName || "" : "";
-  }, [isAuthenticated, user?.fullName]);
-
-  useEffect(() => {
-    const syncProfile = () => {
-      const activeMobile = getActiveMobile();
-      const activeFullName = getActiveFullName();
-
-      if (!activeMobile) {
-        setBannerName("Personal Account");
-        setPhoto(null);
-        return;
-      }
-
-      const profile = getSavedProfile(activeMobile);
-
-      const profileName = `${profile.firstName || ""} ${
-        profile.lastName || ""
-      }`.trim();
-
-      const finalName = isDefaultProfileName(profileName)
-        ? activeFullName || "Personal Account"
-        : profileName;
-
-      setBannerName(finalName || "Personal Account");
-      setPhoto(profile.photo || null);
-    };
-
-    syncProfile();
-
-    window.addEventListener(PROFILE_UPDATED_EVENT, syncProfile);
-    window.addEventListener(AUTH_UPDATED_EVENT, syncProfile);
-    window.addEventListener("storage", syncProfile);
-
-    return () => {
-      window.removeEventListener(PROFILE_UPDATED_EVENT, syncProfile);
-      window.removeEventListener(AUTH_UPDATED_EVENT, syncProfile);
-      window.removeEventListener("storage", syncProfile);
-    };
-  }, [getActiveFullName, getActiveMobile]);
 
   useEffect(() => {
     let cancelled = false;
@@ -137,38 +88,6 @@ function AccountLayoutContent({ children }: { children: React.ReactNode }) {
       window.removeEventListener("storage", syncWallet);
     };
   }, [getActiveMobile, isAuthLoading, isAuthenticated, user?.id]);
-
-  const handlePhotoClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const activeMobile = getActiveMobile();
-    if (!activeMobile) return;
-
-    const reader = new FileReader();
-
-    reader.onloadend = () => {
-      const nextPhoto = reader.result as string;
-      setPhoto(nextPhoto);
-
-      const profile = getSavedProfile(activeMobile);
-      const nextProfile = {
-        ...profile,
-        mobile: activeMobile,
-        email: profile.email,
-        photo: nextPhoto,
-      };
-
-      saveProfile(activeMobile, nextProfile);
-      window.dispatchEvent(new CustomEvent(PROFILE_UPDATED_EVENT));
-    };
-
-    reader.readAsDataURL(file);
-  };
 
   const totalWalletBalance =
     Number(wallet?.promoCredit || 0) +
@@ -208,7 +127,7 @@ function AccountLayoutContent({ children }: { children: React.ReactNode }) {
                   <div className="relative">
                     <button
                       type="button"
-                      onClick={handlePhotoClick}
+                      disabled aria-label="Profile photo changes are unavailable" title="Photo persistence requires protected storage"
                       className="w-24 h-24 rounded-full overflow-hidden bg-white/18 backdrop-blur-md border border-white/30 text-white shadow-lg flex items-center justify-center hover:bg-white/22 transition"
                     >
                       {photo ? (
@@ -221,19 +140,11 @@ function AccountLayoutContent({ children }: { children: React.ReactNode }) {
                         <div className="text-white text-center">
                           <div className="text-2xl leading-none">📷</div>
                           <div className="text-[11px] font-medium mt-1">
-                            Add Photo
+                            Photo unavailable
                           </div>
                         </div>
                       )}
                     </button>
-
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleFileChange}
-                    />
                   </div>
 
                   <div className="text-white pb-1">
@@ -284,7 +195,7 @@ function AccountLayoutContent({ children }: { children: React.ReactNode }) {
                 <div className="flex flex-col items-center text-center">
                   <button
                     type="button"
-                    onClick={handlePhotoClick}
+                    disabled aria-label="Profile photo changes are unavailable" title="Photo persistence requires protected storage"
                     className="h-24 w-24 overflow-hidden rounded-full border border-white/30 bg-white/15 backdrop-blur-md shadow-xl"
                   >
                     {photo ? (
@@ -297,19 +208,11 @@ function AccountLayoutContent({ children }: { children: React.ReactNode }) {
                       <div className="flex h-full w-full flex-col items-center justify-center text-white">
                         <div className="text-2xl">📷</div>
                         <div className="mt-1 text-[10px] font-medium">
-                          Add Photo
+                          Photo unavailable
                         </div>
                       </div>
                     )}
                   </button>
-
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleFileChange}
-                  />
 
                   <h1 className="mt-4 text-[22px] font-extrabold leading-tight text-white">
                     {bannerName}

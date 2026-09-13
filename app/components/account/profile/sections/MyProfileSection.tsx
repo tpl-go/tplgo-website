@@ -2,31 +2,10 @@
 
 import React, { useEffect, useState } from "react";
 import { UserSignInDetails } from "../../UserAccountTrust";
-import { useAuth } from "@/app/hooks/useAuth";
-import { AUTH_UPDATED_EVENT } from "@/app/lib/booking/guestAuth";
-import {
-  FrequentFlyerEntry,
-  ProfileFormData,
-  defaultProfileData,
-  getSavedProfile,
-  saveProfile,
-} from "@/app/lib/account/profileStorage";
-
-const countryStateCityMap: Record<string, Record<string, string[]>> = {
-  India: {
-    Rajasthan: ["Jaipur", "Udaipur", "Jodhpur", "Kota"],
-    Maharashtra: ["Mumbai", "Pune", "Nagpur"],
-    Delhi: ["New Delhi"],
-  },
-  UAE: {
-    Dubai: ["Dubai City"],
-    AbuDhabi: ["Abu Dhabi City"],
-  },
-  USA: {
-    California: ["Los Angeles", "San Francisco"],
-    Texas: ["Houston", "Dallas"],
-  },
-};
+import { useBasicAccount, AccountReadState, AccountDataError, SavedBasicReview } from "../../BasicAccountData";
+import { profileForm, profileInput } from "@/app/lib/account/basicAccount";
+import type { FrequentFlyerEntry, ProfileFormData } from "@/app/lib/account/profileStorage";
+import { countryMaster } from "@/app/lib/partner/countryMaster";
 
 const airlineOptions = [
   "Air India",
@@ -39,45 +18,16 @@ const airlineOptions = [
 ];
 
 export default function MyProfileSection() {
-  const { user } = useAuth();
-
-  const [formData, setFormData] = useState<ProfileFormData>(defaultProfileData);
+  const { profile } = useBasicAccount();
+  const [formData, setFormData] = useState<ProfileFormData>(() => profileForm(null));
+  const [version, setVersion] = useState<number | null>(null);
   const [savedMessage, setSavedMessage] = useState("");
-
+  const [saving, setSaving] = useState(false);
+  const [conflict, setConflict] = useState(false);
+  const [latest, setLatest] = useState<ProfileFormData | null>(null);
   useEffect(() => {
-    const loadProfile = () => {
-      const activeMobile = user?.mobile || "";
-
-      if (!activeMobile) return;
-
-      const saved = getSavedProfile(activeMobile);
-
-      setFormData({
-        ...saved,
-        mobile: activeMobile,
-        email: saved.email,
-      });
-    };
-
-    loadProfile();
-
-    window.addEventListener(AUTH_UPDATED_EVENT, loadProfile);
-    window.addEventListener("storage", loadProfile);
-
-    return () => {
-      window.removeEventListener(AUTH_UPDATED_EVENT, loadProfile);
-      window.removeEventListener("storage", loadProfile);
-    };
-  }, [user?.mobile]);
-
-  const countryOptions = Object.keys(countryStateCityMap);
-  const stateOptions = formData.country
-    ? Object.keys(countryStateCityMap[formData.country] || {})
-    : [];
-  const cityOptions =
-    formData.country && formData.state
-      ? countryStateCityMap[formData.country]?.[formData.state] || []
-      : [];
+    if (profile.status === "ready" && version === null) { setFormData(profileForm(profile.rows[0] ?? null)); setVersion(profile.rows[0]?.version ?? 0); }
+  }, [profile.status, profile.rows, version]);
 
   const updateField = (key: keyof ProfileFormData, value: string | null) => {
     setFormData((prev) => ({
@@ -123,17 +73,18 @@ export default function MyProfileSection() {
     }));
   };
 
-  const handleSave = () => {
-    const activeMobile = formData.mobile || user?.mobile;
-    if (!activeMobile) return;
-
-    saveProfile(activeMobile, formData);
-    setSavedMessage("Profile saved successfully.");
-
-    window.setTimeout(() => {
-      setSavedMessage("");
-    }, 2500);
+  const handleSave = async () => {
+    if (saving || version === null || conflict) return;
+    setSaving(true); setSavedMessage("");
+    try { const row = await profile.save("PUT", profileInput(formData, version)); setVersion(row.version); setSavedMessage("Basic profile details saved to your account."); setLatest(null); }
+    catch (error) { if (error instanceof AccountDataError && error.code === "USER_VERSION_CONFLICT") setConflict(true); setSavedMessage(error instanceof Error ? error.message : "Save failed. Your edits are still here."); }
+    finally { setSaving(false); }
   };
+  const reviewLatest = async () => {
+    try { const rows = await profile.reload(); setLatest(profileForm(rows[0] ?? null)); setVersion(rows[0]?.version ?? 0); setConflict(false); setSavedMessage("Review the latest saved values below against your unchanged edits before saving."); }
+    catch { setSavedMessage("Latest details could not be loaded. Your edits remain; retry review."); }
+  };
+  if (version === null) return <AccountReadState resource={profile} />;
 
   return (
     <div className="bg-white">
@@ -143,20 +94,23 @@ export default function MyProfileSection() {
             My Profile
           </h1>
           {savedMessage ? (
-            <p className="mt-1 text-[12px] text-green-600">{savedMessage}</p>
+            <p className="mt-1 text-[12px] text-slate-700">{savedMessage}</p>
           ) : null}
         </div>
 
         <button
           type="button"
-          onClick={handleSave}
+          onClick={handleSave} disabled={saving || conflict}
           className="h-10 rounded-xl bg-[#0b5fff] px-5 text-[12px] font-semibold tracking-wide text-white transition hover:bg-[#094ee0]"
         >
-          SAVE
+          {saving ? "SAVING..." : "SAVE BASIC DETAILS"}
         </button>
       </div>
 
-      <div className="space-y-8 px-6 py-6">
+      <fieldset disabled={saving} className="min-w-0 space-y-8 px-6 py-6">
+        {conflict && <button onClick={reviewLatest} className="underline">Review latest saved details</button>}
+        {latest && <SavedBasicReview details={latest} />}
+        <p className="text-xs text-slate-600">Save basic personal details only. Browser records are preserved; re-enter details you want to save. Login methods and Partner contacts stay separate.</p>
         <UserSignInDetails />
 
         <div className="flex flex-col gap-3 rounded-2xl border border-[#ddb0b0] bg-[#fff4f4] px-4 py-3 md:flex-row md:items-center md:justify-between">
@@ -212,10 +166,9 @@ export default function MyProfileSection() {
               onChange={(e) => updateField("dob", e.target.value)}
             />
 
-            <SelectField
+            <InputField
               label="NATIONALITY"
               value={formData.nationality}
-              options={["Indian", "American", "British"]}
               onChange={(e) => updateField("nationality", e.target.value)}
             />
 
@@ -233,48 +186,10 @@ export default function MyProfileSection() {
               onChange={(e) => updateField("anniversary", e.target.value)}
             />
 
-            <SelectField
-              label="COUNTRY"
-              value={formData.country}
-              options={countryOptions}
-              onChange={(e) => {
-                const nextCountry = e.target.value;
-                const nextStates = Object.keys(
-                  countryStateCityMap[nextCountry] || {}
-                );
-
-                updateField("country", nextCountry);
-                updateField("state", nextStates[0] || "");
-                updateField(
-                  "city",
-                  nextStates[0]
-                    ? countryStateCityMap[nextCountry]?.[nextStates[0]]?.[0] ||
-                        ""
-                    : ""
-                );
-              }}
-            />
-
-            <SelectField
-              label="STATE"
-              value={formData.state}
-              options={stateOptions}
-              onChange={(e) => {
-                const nextState = e.target.value;
-                updateField("state", nextState);
-                updateField(
-                  "city",
-                  countryStateCityMap[formData.country]?.[nextState]?.[0] || ""
-                );
-              }}
-            />
-
-            <SelectField
-              label="CITY"
-              value={formData.city}
-              options={cityOptions}
-              onChange={(e) => updateField("city", e.target.value)}
-            />
+            <InputField label="COUNTRY CODE (OPTIONAL, E.G. IN)" value={formData.country} onChange={e => updateField("country", e.target.value.toUpperCase())} maxLength={2} list="personal-countries" />
+            <datalist id="personal-countries">{countryMaster.map(c => <option key={c.countryCode} value={c.countryCode}>{c.displayName}</option>)}</datalist>
+            <InputField label="STATE / REGION (OPTIONAL)" value={formData.state} onChange={e => updateField("state", e.target.value)} />
+            <InputField label="CITY (OPTIONAL)" value={formData.city} onChange={e => updateField("city", e.target.value)} />
           </div>
         </section>
 
@@ -283,7 +198,7 @@ export default function MyProfileSection() {
             Contact Details
           </h2>
           <p className="mt-1 text-[12px] text-slate-500">
-            These personal details are saved in this browser. A profile email is separate from your verified login emails.
+            Optional personal contacts are saved to your account. Include + and the international country code. These contacts do not add or verify login methods.
           </p>
 
           <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -301,40 +216,7 @@ export default function MyProfileSection() {
           </div>
         </section>
 
-        <section>
-          <h2 className="text-[15px] font-semibold text-slate-900">
-            Document Details
-          </h2>
-
-          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-            <InputField
-              label="PASSPORT NO."
-              value={formData.passportNo}
-              onChange={(e) => updateField("passportNo", e.target.value)}
-            />
-            <InputField
-              label="EXPIRY DATE"
-              type="date"
-              value={formData.passportExpiry}
-              onChange={(e) => updateField("passportExpiry", e.target.value)}
-            />
-            <SelectField
-              label="ISSUING COUNTRY"
-              value={formData.issuingCountry}
-              options={countryOptions}
-              onChange={(e) => updateField("issuingCountry", e.target.value)}
-            />
-            <InputField
-              label="PAN CARD NUMBER"
-              value={formData.panCard}
-              onChange={(e) => updateField("panCard", e.target.value)}
-            />
-          </div>
-
-          <p className="mt-2 text-[11px] text-slate-500">
-            Note: Your PAN No. will only be used for international bookings as per RBI guidelines.
-          </p>
-        </section>
+        <section><h2 className="text-[15px] font-semibold text-slate-900">Document Details</h2><p className="mt-2 text-xs text-slate-600">Passport, PAN and photo editing are unavailable until protected storage is ready. Basic saves do not upload or change existing document or photo values.</p></section>
 
         <section>
           <h2 className="text-[15px] font-semibold text-slate-900">
@@ -386,7 +268,7 @@ export default function MyProfileSection() {
             + Add
           </button>
         </section>
-      </div>
+      </fieldset>
     </div>
   );
 }

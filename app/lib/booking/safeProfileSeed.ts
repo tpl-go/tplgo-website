@@ -1,9 +1,5 @@
 "use client";
 
-import {
-  getSavedProfile,
-  saveProfile,
-} from "@/app/lib/account/profileStorage";
 
 export type SafeTravellerSource =
   | "flight"
@@ -86,14 +82,8 @@ function getTravellerKey(mobile: string) {
 }
 
 export function getSavedTravellers(mobile: string): SavedTraveller[] {
-  if (typeof window === "undefined") return [];
-
-  try {
-    const raw = localStorage.getItem(getTravellerKey(mobile));
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
+  // Legacy browser presence is not ownership proof. Manual booking entry remains available.
+  void mobile; return [];
 }
 
 export function saveTravellers(mobile: string, travellers: SavedTraveller[]) {
@@ -196,73 +186,10 @@ export function saveTravellerUnderMobile(params: {
   return nextTraveller;
 }
 
-function isProfileEmpty(profile: any) {
-  return !profile?.firstName && !profile?.lastName && !profile?.email;
-}
-
-function isSameAsProfile(profile: any, traveller: SafeTravellerInput) {
-  const { firstName, lastName } = splitName(traveller);
-
-  const profileName = `${profile?.firstName || ""} ${
-    profile?.lastName || ""
-  }`
-    .toLowerCase()
-    .trim();
-
-  const travellerName = `${firstName || ""} ${lastName || ""}`
-    .toLowerCase()
-    .trim();
-
-  if (!profileName || !travellerName) return false;
-
-  return profileName === travellerName;
-}
-
+/** Booking confirmation is not consent to create or merge reusable account records. */
 export function seedAccountAndTravellerSafely(params: {
-  mobile: string;
-  email?: string;
-  traveller: SafeTravellerInput;
-  source: SafeTravellerSource;
+  mobile: string; email?: string; traveller: SafeTravellerInput; source: SafeTravellerSource;
 }) {
-  if (typeof window === "undefined") return null;
-
-  const mobile = cleanMobile(params.mobile);
-  if (!mobile) return null;
-
-  const { firstName, lastName } = splitName(params.traveller);
-  const email = normalize(params.email || params.traveller.email);
-
-  const existingProfile = getSavedProfile(mobile);
-
-  if (isProfileEmpty(existingProfile)) {
-    saveProfile(mobile, {
-      ...existingProfile,
-      firstName,
-      lastName,
-      gender: normalize(params.traveller.gender),
-      mobile,
-      email,
-      nationality: existingProfile?.nationality || "Indian",
-    });
-  } else if (isSameAsProfile(existingProfile, params.traveller)) {
-    saveProfile(mobile, {
-      ...existingProfile,
-      firstName: existingProfile.firstName || firstName,
-      lastName: existingProfile.lastName || lastName,
-      gender: existingProfile.gender || normalize(params.traveller.gender),
-      mobile,
-      email: existingProfile.email || email,
-      nationality: existingProfile.nationality || "Indian",
-    });
-  }
-
-  return saveTravellerUnderMobile({
-    mobile,
-    traveller: {
-      ...params.traveller,
-      email,
-      mobile,
-    },
-    source: params.source,
-  });
+  void params;
+  return null;
 }

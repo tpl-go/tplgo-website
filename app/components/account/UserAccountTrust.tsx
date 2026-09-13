@@ -1,9 +1,9 @@
 "use client";
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext } from "react";
 import { useAuth } from "@/app/hooks/useAuth";
 import { accountEmailDisplay, readVerifiedLoginEmails } from "@/app/lib/partner/accountLoginEmail";
 import { useUserAccountRead } from "./useUserAccountRead";
-import { getSavedProfile, PROFILE_UPDATED_EVENT } from "@/app/lib/account/profileStorage";
+import { useBasicAccount } from "./BasicAccountData";
 import { loginMobileDisplay } from "@/app/lib/account/userAccountRead";
 
 const TrustContext = createContext({ login: accountEmailDisplay(undefined), profile: accountEmailDisplay(undefined), mobile: "Loading login mobile…" });
@@ -12,17 +12,11 @@ export function UserAccountTrustProvider({ children }: { children: React.ReactNo
   const read = useUserAccountRead("/api/v1/me");
   const methods = useUserAccountRead("/api/v1/me/login-methods");
   const mobile = methods.status === "loading" ? "Loading login mobile…" : methods.status === "ready" ? loginMobileDisplay(methods.payload, user?.id ?? "") : "Login mobile unavailable";
-  const [, refreshProfile] = useState(0);
-  useEffect(() => {
-    const refresh = () => refreshProfile(value => value + 1);
-    window.addEventListener(PROFILE_UPDATED_EVENT, refresh);
-    return () => window.removeEventListener(PROFILE_UPDATED_EVENT, refresh);
-  }, []);
+  const { profile: savedProfile } = useBasicAccount();
   const emails = read.status === "loading" ? undefined : read.status === "ready" ? readVerifiedLoginEmails(read.payload, user?.id ?? "") : null;
-  // This is the existing editable browser profile, not the legacy /me.email field.
-  const profileEmail = user ? getSavedProfile(user.mobile || "").email : "";
+  const profileEmail = savedProfile.rows[0]?.email ?? "";
   const login = accountEmailDisplay(emails);
-  const profile = profileEmail ? accountEmailDisplay([], profileEmail)
+  const profile = savedProfile.status !== "ready" ? { value: savedProfile.status === "loading" ? "Loading profile email..." : "Profile email unavailable", status: "Not confirmed", verified: false } : profileEmail ? accountEmailDisplay([], profileEmail)
     : { value: "No profile email saved", status: "Not verified for sign-in", verified: false };
   return <TrustContext.Provider value={{ login, profile, mobile }}>{children}</TrustContext.Provider>;
 }

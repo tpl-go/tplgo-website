@@ -1,3 +1,4 @@
+import { profileForm } from "./basicAccount";
 export const PROFILE_STORAGE_KEY = "tpl_profile_v1";
 export const PROFILE_UPDATED_EVENT = "tpl-profile-updated";
 
@@ -86,30 +87,13 @@ function getProfileKey(mobile: string) {
 /* =========================
    ✅ UPDATED GET
 ========================= */
-export function getSavedProfile(mobile: string): ProfileFormData {
-  if (typeof window === "undefined" || !mobile) {
-    return defaultProfileData;
-  }
-
-  try {
-    const raw = window.localStorage.getItem(getProfileKey(mobile));
-    if (!raw) return { ...defaultProfileData, mobile };
-
-    const parsed = JSON.parse(raw) as Partial<ProfileFormData>;
-
-    return {
-      ...defaultProfileData,
-      ...parsed,
-      mobile,
-      frequentFlyers:
-        parsed.frequentFlyers && parsed.frequentFlyers.length > 0
-          ? parsed.frequentFlyers
-          : defaultProfileData.frequentFlyers,
-      coTravellers: parsed.coTravellers || [],
-    };
-  } catch {
-    return defaultProfileData;
-  }
+/** @deprecated Mobile-keyed browser records do not establish canonical ownership.
+ * Kept as a neutral compatibility seed for existing manual/guest booking forms.
+ * Existing storage is deliberately neither read, imported nor deleted.
+ */
+export function getSavedProfile(_mobile: string): ProfileFormData {
+  void _mobile;
+  return profileForm(null);
 }
 
 /* =========================
