@@ -32,7 +32,7 @@ async function scenario(name, width, fn) {
       if (state.unavailable) return reply(null, 503, 'Login methods unavailable');
       return reply({ ownerId: state.owner.id, methods: [{ id: methodId, provider: 'email', label: state.owner.id === other.id ? 'b****@example.test' : 'a****@example.test', verified: true }, { id: '44444444-4444-4444-8444-444444444444', provider: 'google', label: 'Google connected', verified: true }, ...(state.rotated ? [{ id: challengeId, provider: 'email', label: 'n****@example.test', verified: true }] : [])], googleConnected: true });
     }
-    if (path.endsWith('/reauth/start')) { if (state.delay) await new Promise(resolve => setTimeout(resolve, state.delay)); return reply({ actionId, challenge: challengeId, accepted: true }); }
+    if (path.endsWith('/reauth/start')) { if (state.delay) await new Promise(resolve => setTimeout(resolve, state.delay)); return request.postDataJSON().methodId === '44444444-4444-4444-8444-444444444444' ? reply({actionId, authorizationUrl:'https://accounts.google.com/o/oauth2/v2/auth?synthetic=true'}) : reply({ actionId, challenge: challengeId, accepted: true }); }
     if (path.endsWith('/reauth/verify')) return state.expired ? reply(null, 401, 'This check has expired. Start again.') : reply({ actionId, verified: true });
     if (path.endsWith('/link/start')) {
       const input = request.postDataJSON(); state.completionKey = input.completionKey; state.target = input.contact;
@@ -70,6 +70,24 @@ async function existingProof(page, channel = 'email') {
   await page.getByLabel(`New ${channel}`, { exact: true }).waitFor();
 }
 try {
+  await scenario('google-return-focus-preserves-current-proof-flow', 1363, async (page, state) => {
+    await page.evaluate(() => { window.open = () => null; });
+    await page.getByRole('button', { name: 'Add email', exact: true }).click();
+    await page.getByLabel('Existing login method').selectOption('44444444-4444-4444-8444-444444444444');
+    await page.getByRole('button', { name: 'Continue', exact: true }).click();
+    await page.getByText(/Complete Google verification in the separate window/).waitFor();
+    const reads = state.calls.filter(p => p.endsWith('/auth/session')).length;
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+    await page.waitForTimeout(500);
+    assert(state.calls.filter(p => p.endsWith('/auth/session')).length > reads, 'focus still validates server session');
+    await page.getByText(/Complete Google verification in the separate window/).waitFor({timeout:2000});
+    await page.getByRole('button', { name: 'Continue', exact: true }).click();
+    await page.getByLabel('New email', { exact: true }).waitFor();
+    state.signedOut = true;
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+    await page.getByText('Sign in to view your account.', { exact: true }).waitFor();
+    assert.equal(await page.getByLabel('New email', { exact: true }).count(), 0, 'revocation clears sensitive flow');
+  });
   for (const width of [1363, 768, 390]) {
     await scenario('explicit-add-email', width, async (page, state) => {
       await existingProof(page);

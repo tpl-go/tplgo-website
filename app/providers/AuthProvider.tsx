@@ -114,9 +114,11 @@ export default function AuthProvider({ children }: AuthProviderProps) {
   const sessionRestoreSequenceRef = useRef(0);
   const logoutRestoreBlockedRef = useRef(false);
   const currentOwnerRef = useRef(user?.id);
+  const validatedTokenRef = useRef<string | null | undefined>(undefined);
   useLayoutEffect(() => { currentOwnerRef.current = user?.id; }, [user?.id]);
 
   const clearVisibleAuthState = useCallback(() => {
+    validatedTokenRef.current = undefined;
     setUser(null);
     setIsAuthenticated(false);
     setActiveAccountType("personal");
@@ -128,6 +130,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
     try {
       if (!nextUser) {
         localStorage.removeItem(AUTH_STORAGE_KEY);
+        validatedTokenRef.current = undefined;
       } else {
         const token = session?.token;
         localStorage.setItem(
@@ -137,6 +140,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
             ...(token ? { token, sessionToken: token, session } : {}),
           })
         );
+        validatedTokenRef.current = token ?? null;
       }
 
       if (notify) {
@@ -245,7 +249,10 @@ export default function AuthProvider({ children }: AuthProviderProps) {
       if (readStoredAuthToken()) {
         logoutRestoreBlockedRef.current = false;
       }
-      clearVisibleAuthState();
+      // Focus revalidates an already server-validated session without destroying
+      // an in-progress Google reauthentication flow. Known identity changes clear immediately.
+      if (event?.type === AUTH_UPDATED_EVENT || !currentOwnerRef.current ||
+          validatedTokenRef.current !== readStoredAuthToken()) clearVisibleAuthState();
       void hydrateBackendCookieSession();
     };
 
