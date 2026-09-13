@@ -51,10 +51,10 @@ test("personal login keeps its existing verification and close behavior", () => 
 });
 
 test("application hydration cannot render a speculative edit lock", () => {
-  expect(workspace).toContain('loadStatus !== "ready" || step8LoadStatus !== "ready"');
+  expect(workspace).toContain('loadStatus !== "ready" || loadedApplicationScope !== applicationScope || !step8Readiness');
   expect(workspace.match(/Opening your Partner application…/g)?.length).toBeGreaterThanOrEqual(2);
   expect(workspace).toContain('{activeStepReadOnly ? <ReadOnlyStepNotice stateLabel={step8StateLabel} /> : null}');
-  expect(workspace.indexOf('loadStatus !== "ready" || step8LoadStatus !== "ready"')).toBeLessThan(workspace.indexOf("{activeStepReadOnly ? <ReadOnlyStepNotice"));
+  expect(workspace.indexOf('loadStatus !== "ready" || loadedApplicationScope !== applicationScope || !step8Readiness')).toBeLessThan(workspace.indexOf("{activeStepReadOnly ? <ReadOnlyStepNotice"));
 });
 
 test("confirmed submitted and review states remain locked", () => {

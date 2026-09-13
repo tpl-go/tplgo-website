@@ -602,6 +602,18 @@ export default function PartnerApplicationWorkspaceClient({
   const [bundle, setBundle] = useState<PartnerOrganizationBundle | null>(null);
   const [requestedStep, setActiveStep] = useState<WorkspaceStepId | null>(null);
   const stepSearchParams = useSearchParams();
+  const applicationScope = `${user?.id ?? ""}:${stepSearchParams.get("organizationId") ?? ""}`;
+  const applicationScopeRef = useRef(applicationScope);
+  applicationScopeRef.current = applicationScope;
+  const [loadedApplicationScope, setLoadedApplicationScope] = useState<string | null>(null);
+  const readinessRequestRef = useRef(0);
+  const savedAccountContactRef = useRef<string | null>(null);
+  const accountContactSaveRef = useRef<Promise<unknown> | null>(null);
+  const savedBundleRef = useRef<PartnerOrganizationBundle | null>(null);
+  const mobileRequestRef = useRef(false);
+  const emailRequestRef = useRef(false);
+  const mobileContactRevisionRef = useRef(0);
+  const emailContactRevisionRef = useRef(0);
   const [form, setForm] = useState<AccountContactForm>(() => emptyForm());
   const [businessForm, setBusinessForm] = useState<BusinessIdentityForm>(() => emptyBusinessForm());
   const [locationForm, setLocationForm] = useState<BusinessLocationForm>(() => emptyLocationForm());
@@ -691,6 +703,7 @@ export default function PartnerApplicationWorkspaceClient({
   const canCompleteStepSix = isPayoutTaxComplete(payoutTaxForm) || ["SUBMITTED", "UNDER_REVIEW", "VERIFIED"].includes(activeBundle?.payoutTaxReview?.status ?? "");
   const canCompleteStepSeven = isAgreementPartnerSigningComplete(activeBundle?.agreement?.status);
   const effectiveStep8Readiness = qaPreviewEnabled ? step8Readiness ?? buildPartnerQaPreviewReadiness(qaPreviewState) : step8Readiness;
+  const hasStep8Readiness = Boolean(effectiveStep8Readiness);
   const effectiveStep8Submission = qaPreviewEnabled ? step8Submission : step8Submission ?? step8Readiness?.latestSubmission ?? null;
   const step8StateLabel = effectiveStep8Readiness ? partnerStep8StateLabel(effectiveStep8Readiness.applicationStatus, effectiveStep8Readiness.submissionReady) : "Application in progress";
   const step8CanSubmit = Boolean(step8LoadStatus === "ready" && effectiveStep8Readiness && canSubmitPartnerStep8(effectiveStep8Readiness, acceptedStep8Declarations));
@@ -792,12 +805,15 @@ export default function PartnerApplicationWorkspaceClient({
 
   async function loadStep8ApplicationState(options: { silent?: boolean } = {}) {
     if (qaPreviewEnabled || !isAuthenticated) return;
+    const request = ++readinessRequestRef.current;
+    const scope = applicationScope;
     setStep8LoadStatus("loading");
     setSubmitConfirmOpen(false);
     if (!options.silent) {
       setStep8Error(null);
     }
     const result = await fetchPartnerApplicationSubmission();
+    if (scope !== applicationScopeRef.current || request !== readinessRequestRef.current) return;
     if (result.ok) {
       setStep8Readiness(result.data.readiness);
       setStep8Submission(result.data.latestSubmission ?? result.data.readiness.latestSubmission);
@@ -831,10 +847,10 @@ export default function PartnerApplicationWorkspaceClient({
   }, [qaPreviewEnabled, qaPreviewState]);
 
   useEffect(() => {
-    if (qaPreviewEnabled || !isAuthenticated) return;
+    if (qaPreviewEnabled || !isAuthenticated || !bundle || loadedApplicationScope !== applicationScope) return;
     void loadStep8ApplicationState({ silent: false });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, qaPreviewEnabled, bundle]);
+  }, [isAuthenticated, qaPreviewEnabled, bundle, loadedApplicationScope, applicationScope]);
 
   useEffect(() => {
     if (qaPreviewEnabled || !isAuthenticated || activeStep !== "review_submit") return;
@@ -875,6 +891,12 @@ export default function PartnerApplicationWorkspaceClient({
     }
     let cancelled = false;
     setLoadStatus("loading");
+    setStep8Readiness(null);
+    setMobileChallenge(null);
+    setMobileOtp("");
+    setEmailChallenge(null);
+    setEmailOtp("");
+    savedAccountContactRef.current = null;
     fetchPartnerApplicationDraft().then((result) => {
       if (cancelled) return;
       if (result.ok) {
@@ -883,7 +905,11 @@ export default function PartnerApplicationWorkspaceClient({
           return;
         }
         setBundle(result.data);
-        setForm(formFromBundle(result.data, user));
+        savedBundleRef.current = result.data;
+        const loadedForm = formFromBundle(result.data, user);
+        savedAccountContactRef.current = accountContactSaveKey(loadedForm);
+        formRef.current = loadedForm;
+        setForm(loadedForm);
         setBusinessForm(businessFormFromBundle(result.data));
         setLocationForm(locationFormFromBundle(result.data));
         const nextServicesForm = servicesFormFromBundle(result.data);
@@ -894,6 +920,7 @@ export default function PartnerApplicationWorkspaceClient({
         setLastSavedAt(readLastSaved(result.data));
         setActiveStep(null);
         setLoadStatus("ready");
+        setLoadedApplicationScope(applicationScope);
       } else {
         if (result.status === 401) {
           void logout();
@@ -907,16 +934,19 @@ export default function PartnerApplicationWorkspaceClient({
     return () => {
       cancelled = true;
     };
-  }, [initialQaStep, isAuthenticated, logout, qaPreviewEnabled, qaPreviewState, serviceCatalogueState.items, user]);
+    // Hydration belongs to the authenticated account/organization, not new user
+    // object identities or catalogue responses. Those must not reset editor/OTP.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialQaStep, isAuthenticated, logout, qaPreviewEnabled, qaPreviewState, applicationScope]);
 
   useEffect(() => {
     if (qaPreviewEnabled || !isAuthenticated || loadStatus !== "ready" || !effectiveStep8Readiness || activeStepReadOnly || activeStep !== "account_contact") return;
     const timer = window.setTimeout(() => {
-      if (form.organizationId || hasMeaningfulStepOneInput(form)) void saveDraft({ silent: true });
+      if (accountContactSaveKey(formRef.current) !== savedAccountContactRef.current && (form.organizationId || hasMeaningfulStepOneInput(form))) void saveDraft({ silent: true });
     }, 1400);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeStep, activeStepReadOnly, effectiveStep8Readiness, form.contactPersonFullName, form.designation, form.roleOther, form.businessMobile, form.businessEmail, form.authorizedRepresentative]);
+  }, [activeStep, activeStepReadOnly, hasStep8Readiness, form.contactPersonFullName, form.designation, form.roleOther, form.countryCode, form.businessMobile, form.businessEmail, form.authorizedRepresentative]);
 
   useEffect(() => {
     if (qaPreviewEnabled || !isAuthenticated || loadStatus !== "ready" || !effectiveStep8Readiness || activeStepReadOnly || activeStep !== "business_identity") return;
@@ -925,7 +955,7 @@ export default function PartnerApplicationWorkspaceClient({
     }, 1400);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeStep, activeStepReadOnly, effectiveStep8Readiness, businessForm.legalName, businessForm.brandName, businessForm.organizationType, businessForm.organizationTypeOther, businessForm.description, businessForm.yearEstablished, businessForm.registrationType, businessForm.registrationNumber, businessForm.registrationDate]);
+  }, [activeStep, activeStepReadOnly, hasStep8Readiness, businessForm.legalName, businessForm.brandName, businessForm.organizationType, businessForm.organizationTypeOther, businessForm.description, businessForm.yearEstablished, businessForm.registrationType, businessForm.registrationNumber, businessForm.registrationDate]);
 
   useEffect(() => {
     if (qaPreviewEnabled || !isAuthenticated || loadStatus !== "ready" || !effectiveStep8Readiness || activeStepReadOnly || activeStep !== "business_location") return;
@@ -934,7 +964,7 @@ export default function PartnerApplicationWorkspaceClient({
     }, 1400);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeStep, activeStepReadOnly, effectiveStep8Readiness, locationForm.primaryLocation, locationForm.sameAsOperating, locationForm.operatingLocation, locationForm.serviceAreas]);
+  }, [activeStep, activeStepReadOnly, hasStep8Readiness, locationForm.primaryLocation, locationForm.sameAsOperating, locationForm.operatingLocation, locationForm.serviceAreas]);
 
   useEffect(() => {
     if (qaPreviewEnabled || !isAuthenticated || loadStatus !== "ready" || !effectiveStep8Readiness || activeStepReadOnly || activeStep !== "services") return;
@@ -943,10 +973,22 @@ export default function PartnerApplicationWorkspaceClient({
     }, 1400);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeStep, activeStepReadOnly, effectiveStep8Readiness, servicesForm.selectedServiceCodes, servicesForm.requestedServices]);
+  }, [activeStep, activeStepReadOnly, hasStep8Readiness, servicesForm.selectedServiceCodes, servicesForm.requestedServices]);
 
   function updateForm(next: Partial<AccountContactForm>) {
     if (!canEditPartnerStep(effectiveStep8Readiness, "account_contact")) return;
+    const currentContact = formRef.current;
+    const nextContact = { ...currentContact, ...next };
+    if (normalizedMobile(nextContact.businessMobile, nextContact.countryCode) !== normalizedMobile(currentContact.businessMobile, currentContact.countryCode)) {
+      mobileContactRevisionRef.current++;
+      setMobileChallenge(null);
+      setMobileOtp("");
+    }
+    if (normalizeEmail(nextContact.businessEmail) !== normalizeEmail(currentContact.businessEmail)) {
+      emailContactRevisionRef.current++;
+      setEmailChallenge(null);
+      setEmailOtp("");
+    }
     setForm((current) => {
       const mobileChanged = next.businessMobile !== undefined && next.businessMobile !== current.businessMobile || next.countryCode !== undefined && next.countryCode !== current.countryCode;
       const emailChanged = next.businessEmail !== undefined && normalizeEmail(next.businessEmail) !== normalizeEmail(current.businessEmail);
@@ -1137,7 +1179,8 @@ export default function PartnerApplicationWorkspaceClient({
     return saveDraft({ silent: true });
   }
 
-  async function saveDraft(options: { silent?: boolean; continueAfter?: boolean } = {}) {
+  async function saveDraft(options: { silent?: boolean; continueAfter?: boolean } = {}): Promise<PartnerOrganizationBundle | null> {
+    if (applicationScope !== applicationScopeRef.current) return null;
     if (activeStepReadOnly || activeStep === "review_submit" || (!qaPreviewEnabled && !effectiveStep8Readiness)) return null;
     if (qaPreviewEnabled) {
       const savedAt = new Date().toISOString();
@@ -1153,24 +1196,38 @@ export default function PartnerApplicationWorkspaceClient({
     if (activeStep === "documents_compliance") return saveVerificationDraft(options);
     if (activeStep === "payout_tax") return savePayoutTaxDraft(options);
     if (activeStep === "partner_agreement") return saveAgreementDraft(options);
+    if (accountContactSaveRef.current) {
+      await accountContactSaveRef.current;
+      return saveDraft(options);
+    }
+    const currentForm = formRef.current;
+    const savedKey = accountContactSaveKey(currentForm);
+    if (savedKey === savedAccountContactRef.current) return savedBundleRef.current;
+    const scope = applicationScope;
     setSaveStatus("saving");
     if (!options.silent) setMessage({ tone: "info", text: "Saving your draft." });
     const payload = {
-      organizationId: form.organizationId,
-      contactPersonFullName: form.contactPersonFullName,
-      designation: form.designation,
-      roleOther: form.roleOther,
-      businessMobile: normalizedMobile(form.businessMobile, form.countryCode),
-      businessEmail: normalizeEmail(form.businessEmail),
-      authorizedRepresentative: form.authorizedRepresentative,
+      organizationId: currentForm.organizationId,
+      contactPersonFullName: currentForm.contactPersonFullName,
+      designation: currentForm.designation,
+      roleOther: currentForm.roleOther,
+      businessMobile: normalizedMobile(currentForm.businessMobile, currentForm.countryCode),
+      businessEmail: normalizeEmail(currentForm.businessEmail),
+      authorizedRepresentative: currentForm.authorizedRepresentative,
     };
-    const result = await savePartnerAccountContactDraft(payload);
+    const pendingSave = savePartnerAccountContactDraft(payload);
+    accountContactSaveRef.current = pendingSave;
+    const result = await pendingSave.finally(() => { accountContactSaveRef.current = null; });
+    if (scope !== applicationScopeRef.current) return null;
     if (!result.ok) {
+      if (result.status === 401 || result.status === 403) setLoadStatus("error");
       setSaveStatus("error");
       if (!options.silent) setMessage({ tone: "error", text: "Could not save your changes." });
       return null;
     }
     setBundle(result.data);
+    savedBundleRef.current = result.data;
+    savedAccountContactRef.current = savedKey;
     setForm((current) => ({ ...current, organizationId: result.data.organization.id }));
     const savedAt = readLastSaved(result.data) ?? new Date().toISOString();
     setLastSavedAt(savedAt);
@@ -1380,29 +1437,41 @@ export default function PartnerApplicationWorkspaceClient({
   }
 
   async function requestMobileOtp() {
-    if (qaPreviewEnabled) {
-      setMobileChallenge({ status: "otp_sent", challengeId: "preview-mobile", expiresAt: new Date(Date.now() + 5 * 60_000).toISOString(), otpLength: 6, deliveryChannel: "preview" });
-      setMessage({ tone: "success", text: "Verification code sent." });
-      return;
-    }
-    const draft = await ensureDraft();
-    const organizationId = draft?.organization.id ?? form.organizationId;
-    if (!organizationId) return;
+    if (mobileRequestRef.current) return;
+    mobileRequestRef.current = true;
     setBusyAction("mobile-request");
-    const result = await requestPartnerMobileVerification(organizationId, normalizedMobile(form.businessMobile, form.countryCode));
-    setBusyAction(null);
-    if (!result.ok) {
-      setMessage({ tone: "error", text: "We couldn't send the verification code." });
-      return;
+    const scope = applicationScope;
+    const revision = mobileContactRevisionRef.current;
+    const isCurrent = () => scope === applicationScopeRef.current && revision === mobileContactRevisionRef.current;
+    try {
+      if (qaPreviewEnabled) {
+        setMobileChallenge({ status: "otp_sent", challengeId: "preview-mobile", expiresAt: new Date(Date.now() + 5 * 60_000).toISOString(), otpLength: 6, deliveryChannel: "preview" });
+        setMessage({ tone: "success", text: "Verification code sent." });
+        return;
+      }
+      const draft = await ensureDraft();
+      if (!draft || !isCurrent()) return;
+      const organizationId = draft?.organization.id ?? form.organizationId;
+      if (!organizationId) return;
+      setBusyAction("mobile-request");
+      const result = await requestPartnerMobileVerification(organizationId, normalizedMobile(form.businessMobile, form.countryCode));
+      if (!isCurrent()) return;
+      if (!result.ok) {
+        setMessage({ tone: "error", text: "We couldn't send the verification code." });
+        return;
+      }
+      if (result.data.status === "verified_via_tpl_identity") {
+        setMessage({ tone: "success", text: "Mobile number verified." });
+        const refreshed = await fetchPartnerApplicationDraft();
+        if (isCurrent() && refreshed.ok) setBundle(refreshed.data);
+        return;
+      }
+      setMobileChallenge(result.data);
+      setMessage({ tone: "success", text: "Verification code sent." });
+    } finally {
+      mobileRequestRef.current = false;
+      setBusyAction(null);
     }
-    if (result.data.status === "verified_via_tpl_identity") {
-      setMessage({ tone: "success", text: "Mobile number verified." });
-      const refreshed = await fetchPartnerApplicationDraft();
-      if (refreshed.ok) setBundle(refreshed.data);
-      return;
-    }
-    setMobileChallenge(result.data);
-    setMessage({ tone: "success", text: "Verification code sent." });
   }
 
   async function confirmMobileOtp() {
@@ -1418,6 +1487,9 @@ export default function PartnerApplicationWorkspaceClient({
       return;
     }
     if (!mobileChallenge || !form.organizationId) return;
+    const scope = applicationScope;
+    const revision = mobileContactRevisionRef.current;
+    const isCurrent = () => scope === applicationScopeRef.current && revision === mobileContactRevisionRef.current;
     setBusyAction("mobile-verify");
     const result = await verifyPartnerMobile(form.organizationId, {
       challengeId: mobileChallenge.challengeId,
@@ -1425,6 +1497,7 @@ export default function PartnerApplicationWorkspaceClient({
       otp: mobileOtp,
     });
     setBusyAction(null);
+    if (!isCurrent()) return;
     if (!result.ok) {
       setMessage({ tone: "error", text: "We couldn't verify that code." });
       return;
@@ -1433,27 +1506,39 @@ export default function PartnerApplicationWorkspaceClient({
     setMobileOtp("");
     setMessage({ tone: "success", text: "Mobile number verified." });
     const refreshed = await fetchPartnerApplicationDraft();
-    if (refreshed.ok) setBundle(refreshed.data);
+    if (isCurrent() && refreshed.ok) setBundle(refreshed.data);
   }
 
   async function requestEmailOtp() {
-    if (qaPreviewEnabled) {
-      setEmailChallenge({ challengeId: "preview-email", expiresAt: new Date(Date.now() + 5 * 60_000).toISOString() });
-      setMessage({ tone: "success", text: "Verification code sent." });
-      return;
-    }
-    const draft = await ensureDraft();
-    const organizationId = draft?.organization.id ?? form.organizationId;
-    if (!organizationId) return;
+    if (emailRequestRef.current) return;
+    emailRequestRef.current = true;
     setBusyAction("email-request");
-    const result = await requestPartnerEmailVerification(organizationId, normalizeEmail(form.businessEmail));
-    setBusyAction(null);
-    if (!result.ok) {
-      setMessage({ tone: "error", text: "We couldn't send the email code." });
-      return;
+    const scope = applicationScope;
+    const revision = emailContactRevisionRef.current;
+    const isCurrent = () => scope === applicationScopeRef.current && revision === emailContactRevisionRef.current;
+    try {
+      if (qaPreviewEnabled) {
+        setEmailChallenge({ challengeId: "preview-email", expiresAt: new Date(Date.now() + 5 * 60_000).toISOString() });
+        setMessage({ tone: "success", text: "Verification code sent." });
+        return;
+      }
+      const draft = await ensureDraft();
+      if (!draft || !isCurrent()) return;
+      const organizationId = draft?.organization.id ?? form.organizationId;
+      if (!organizationId) return;
+      setBusyAction("email-request");
+      const result = await requestPartnerEmailVerification(organizationId, normalizeEmail(form.businessEmail));
+      if (!isCurrent()) return;
+      if (!result.ok) {
+        setMessage({ tone: "error", text: "We couldn't send the email code." });
+        return;
+      }
+      setEmailChallenge({ challengeId: result.data.challengeId, expiresAt: result.data.expiresAt });
+      setMessage({ tone: "success", text: "Verification code sent." });
+    } finally {
+      emailRequestRef.current = false;
+      setBusyAction(null);
     }
-    setEmailChallenge({ challengeId: result.data.challengeId, expiresAt: result.data.expiresAt });
-    setMessage({ tone: "success", text: "Verification code sent." });
   }
 
   async function confirmEmailOtp() {
@@ -1469,6 +1554,9 @@ export default function PartnerApplicationWorkspaceClient({
       return;
     }
     if (!emailChallenge || !form.organizationId) return;
+    const scope = applicationScope;
+    const revision = emailContactRevisionRef.current;
+    const isCurrent = () => scope === applicationScopeRef.current && revision === emailContactRevisionRef.current;
     setBusyAction("email-verify");
     const result = await verifyPartnerEmail(form.organizationId, {
       challengeId: emailChallenge.challengeId,
@@ -1476,6 +1564,7 @@ export default function PartnerApplicationWorkspaceClient({
       token: emailOtp,
     });
     setBusyAction(null);
+    if (!isCurrent()) return;
     if (!result.ok) {
       setMessage({ tone: "error", text: "We couldn't verify that code." });
       return;
@@ -1484,7 +1573,7 @@ export default function PartnerApplicationWorkspaceClient({
     setEmailOtp("");
     setMessage({ tone: "success", text: "Email verified." });
     const refreshed = await fetchPartnerApplicationDraft();
-    if (refreshed.ok) setBundle(refreshed.data);
+    if (isCurrent() && refreshed.ok) setBundle(refreshed.data);
   }
 
   async function saveAndContinue() {
@@ -1689,7 +1778,9 @@ export default function PartnerApplicationWorkspaceClient({
     );
   }
 
-  if (!qaPreviewEnabled && (loadStatus !== "ready" || step8LoadStatus !== "ready")) {
+  // Keep an authorized loaded editor mounted during background readiness reads.
+  // Initial/scope loading and any authoritative error still replace it safely.
+  if (!qaPreviewEnabled && (loadStatus !== "ready" || loadedApplicationScope !== applicationScope || !step8Readiness || step8Readiness.organizationId !== bundle?.organization.id || step8LoadStatus === "error")) {
     const failed = loadStatus === "error" || step8LoadStatus === "error";
     return (
       <main data-partner-application-workspace="true" className="min-h-screen bg-[#101216] text-white">
@@ -5031,6 +5122,10 @@ function minimalProfile(form: AccountContactForm) {
     country: "India",
     savedForPreview: false,
   };
+}
+
+function accountContactSaveKey(form: AccountContactForm): string {
+  return JSON.stringify([form.organizationId, form.contactPersonFullName, form.designation, form.roleOther, normalizedMobile(form.businessMobile, form.countryCode), normalizeEmail(form.businessEmail), form.authorizedRepresentative]);
 }
 
 function normalizedMobile(value: string, countryCode: string): string {
