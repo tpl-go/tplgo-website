@@ -5,6 +5,8 @@ import { mkdir } from 'node:fs/promises';
 const base = process.env.TPL_STABILITY_URL || 'http://127.0.0.1:3125';
 if (new URL(base).hostname !== '127.0.0.1') throw new Error('LOCAL_SYNTHETIC_ONLY');
 const baseline = process.env.TPL_STABILITY_BASELINE === '1';
+const accountEmailQa = process.env.TPL_ACCOUNT_EMAIL_QA === '1';
+const artifacts = accountEmailQa ? 'tmp/s8e726-artifacts' : 'tmp/s8e725-artifacts';
 const organizationId = '11111111-1111-4111-8111-111111111111';
 const bundle = {
   organization: { id: organizationId, legalName: 'Synthetic Stability QA', status: 'draft', country: 'India', metadata: { application: { accountContact: { contactPersonFullName: 'Synthetic Operator', designation: 'Owner', businessMobile: '+919876543210', businessEmail: 'qa@example.test' } } }, updatedAt: '2026-09-13T00:00:00Z' },
@@ -14,19 +16,21 @@ const bundle = {
 const steps = ['account_contact','business_identity','business_location','services','verification_compliance','payout_tax','partner_agreement'];
 function readiness(locked) { return { organizationId, applicationId: organizationId, organizationName: 'Synthetic Stability QA', organizationStatus: 'draft', applicationStatus: locked ? 'UNDER_REVIEW' : 'DRAFT_INCOMPLETE', applicationRevision: 1, submissionReady: false, approvalReady: false, steps: steps.map(step => ({ step, label: step, status: 'NEEDS_ATTENTION', reason: 'Continue', blockerCodes: [], warningCodes: [], correctionRoute: `/partner-preview?step=${step}` })), submissionBlockers: ['APPLICATION_INCOMPLETE'], approvalBlockers: [], warnings: [], activeDeclarations: [], latestSubmission: null }; }
 const browser = await chromium.launch({ headless: true });
-await mkdir('tmp/s8e725-artifacts', { recursive: true });
+await mkdir(artifacts, { recursive: true });
 try {
  for (const width of baseline ? [1363] : [1363,768,390]) {
   const context = await browser.newContext({ viewport: { width, height: 950 } });
   const page = await context.newPage();
   page.on('pageerror', error => console.log({ syntheticPageError: error.message }));
-  const calls = { save: 0, readiness: 0, draft: 0, otp: 0 };
+  const calls = { save: 0, readiness: 0, draft: 0, otp: 0, account: 0 };
   let locked = false, denied = false, sessionExpired = false, releaseReadiness, releaseOtp;
+  let profileEmail = '', loginEmails = ['recovered@example.test'];
   await context.route('**/*', async route => {
     const url = new URL(route.request().url());
     if (!url.pathname.includes('/api/v1/')) return url.hostname === '127.0.0.1' ? route.continue() : route.abort();
     let data = {}, status = 200;
-    if (url.pathname === '/api/v1/auth/session' || url.pathname === '/api/v1/me') { status = sessionExpired ? 401 : 200; data = { user: { id: 'synthetic-user', fullName: 'Synthetic Operator', mobile: '', email: '', accountType: 'partner' }, session: { token: 'synthetic-local-only-session', expiresAt: '2030-01-01T00:00:00Z' } }; }
+    if (url.pathname === '/api/v1/me') calls.account++;
+    if (url.pathname === '/api/v1/auth/session' || url.pathname === '/api/v1/me') { status = sessionExpired ? 401 : 200; data = { user: { id: 'synthetic-user', fullName: 'Synthetic Operator', mobile: '', email: profileEmail, verifiedLoginEmails: loginEmails, accountType: 'partner' }, session: { token: 'synthetic-local-only-session', expiresAt: '2030-01-01T00:00:00Z' } }; }
     else if (url.pathname.endsWith('/application/draft/account-contact')) { calls.save++; data = bundle; }
     else if (url.pathname.endsWith('/application/draft')) { calls.draft++; data = bundle; }
     else if (url.pathname.endsWith('/application/submission')) {
@@ -52,6 +56,12 @@ try {
     await context.close(); continue;
   }
   assert.equal(calls.save, 0, 'Loaded unchanged draft must not autosave at idle');
+  const accountCard = page.getByRole('heading', { name: 'Your TPL Account', exact: true }).locator('..');
+  if (accountEmailQa) {
+    await accountCard.getByText('r••••@example.test', { exact: true }).waitFor();
+    assert.equal(await page.locator('input[name="businessEmail"]').inputValue(), 'qa@example.test');
+    assert.equal(await page.locator('input[name="businessEmail"]').locator('..').getByRole('button', { name: 'Verify', exact: true }).count(), 1, 'Business Email remains independently unverified');
+  }
   const editorNode = await name.elementHandle();
   await page.locator('input[name="businessMobile"]').fill('9876543210');
   const mobileSection = page.locator('input[name="businessMobile"]').locator('..');
@@ -77,7 +87,7 @@ try {
   assert.equal(await otp.inputValue(), '1234');
   assert.ok(await editorNode.evaluate(node => node.isConnected));
   assert.equal(calls.otp, 1);
-  await page.screenshot({ path: `tmp/s8e725-artifacts/stable-${width}.png`, fullPage: true });
+  await page.screenshot({ path: `${artifacts}/stable-${width}.png`, fullPage: true });
   await page.locator('input[name="businessMobile"]').fill('9876543211');
   assert.equal(await otp.count(), 0, 'Changing contact clears the old challenge');
   await page.locator('input[name="businessMobile"]').fill('9876543210');
@@ -106,6 +116,21 @@ try {
   sessionExpired = true; await page.reload();
   await page.waitForTimeout(1200);
   assert.equal(await name.count(), 0, 'Expired session cannot retain editor');
+  if (accountEmailQa) {
+    sessionExpired = false; denied = false;
+    await page.reload(); await accountCard.getByText('r••••@example.test', { exact: true }).waitFor();
+    loginEmails = []; await page.reload(); await accountCard.getByText('Email not added', { exact: true }).waitFor();
+    profileEmail = 'profile@example.test';
+    await page.evaluate(() => window.dispatchEvent(new Event('TPL_AUTH_UPDATED')));
+    await accountCard.getByText('Profile email · Not verified', { exact: true }).waitFor();
+    assert.equal(await accountCard.getByText('Verified', { exact: true }).count(), 0);
+    loginEmails = ['z@example.test', 'a@example.test']; await page.reload();
+    await accountCard.getByText('a••••@example.test, z••••@example.test', { exact: true }).waitFor();
+    assert.equal(await page.locator('input[name="businessEmail"]').inputValue(), 'qa@example.test');
+    loginEmails = undefined; await page.reload();
+    await accountCard.getByText('Login email unavailable', { exact: true }).waitFor();
+    console.log(JSON.stringify({ width, accountEmailQa: true, recoveredEmailAndRefresh: true, mobileOnly: true, profileUnverified: true, multipleEmails: true, businessEmailIndependent: true, unavailableContract: true }));
+  }
   await context.close();
  }
 } finally { await browser.close(); }

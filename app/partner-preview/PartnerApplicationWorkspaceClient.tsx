@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
+import AccountLoginEmail from "./AccountLoginEmail";
 import { useRouter, useSearchParams } from "next/navigation";
 import { canEditPartnerStep, partnerStepAccess, resolvePartnerStep } from "../lib/partner/partnerStepAccess";
 import {
@@ -2131,8 +2132,7 @@ function AccountContactStep({
                 </div>
                 <div className="rounded-lg border border-white/10 bg-[#0f1217] p-3">
                   <p className="text-slate-500">Email</p>
-                  <p className="mt-1 text-white">{maskEmail(user?.email)}</p>
-                  {user?.email ? <p className="mt-1 text-emerald-300">Verified</p> : <p className="mt-1 text-slate-500">Not added</p>}
+                  <AccountLoginEmail user={user} qaPreviewEnabled={qaPreviewEnabled} />
                 </div>
               </div>
             </div>
@@ -5834,13 +5834,6 @@ function mergeServicesForm(input: Partial<ServicesForm>): ServicesForm {
 function maskMobile(value?: string): string {
   const digits = value?.replace(/\D/g, "") ?? "";
   return digits.length >= 4 ? `•••••• ${digits.slice(-4)}` : "Mobile not added";
-}
-
-function maskEmail(value?: string): string {
-  if (!value) return "Email not added";
-  const [name, domain] = value.split("@");
-  if (!name || !domain) return "Email added";
-  return `${name.slice(0, 1)}••••@${domain}`;
 }
 
 function parseQaPreviewState(value: string | undefined): PartnerQaPreviewState {
