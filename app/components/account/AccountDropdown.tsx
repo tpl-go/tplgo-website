@@ -25,6 +25,19 @@ const menuItems = [
   ["/account/medical-care", "Medical Care", "🩺"],
 ] as const;
 
+const primaryRouteIds = new Set([
+  "/account/profile",
+  "/account/bookings",
+  "/account/trips",
+  "/account/wallet",
+]);
+const secondaryRouteIds = new Set([
+  "/account/wishlist",
+  "/account/orders",
+  "/account/downloads",
+  "/account/medical-care",
+]);
+
 type CreatorEntry = { href: string; label: string };
 const safeCreatorEntry: CreatorEntry = { href: "/creators", label: "Explore Creators" };
 
@@ -95,8 +108,8 @@ export default function AccountDropdown({ user, onLogout, onClose }: AccountDrop
   }, [user]);
 
   const activeRoute = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
-  const primaryItems = menuItems.slice(0, 4);
-  const moreItems = menuItems.slice(4);
+  const primaryItems = menuItems.filter(([href]) => primaryRouteIds.has(href));
+  const moreItems = menuItems.filter(([href]) => secondaryRouteIds.has(href));
   const activeMoreRoute = moreItems.some(([href]) => activeRoute(href));
 
   return (
