@@ -39,6 +39,24 @@ const menuItems = [
     description: "View wallet balance, offers and future credits",
     icon: "💳",
   },
+  {
+    href: "/account/orders",
+    title: "My Orders",
+    description: "Marketplace purchases and order updates",
+    icon: "📦",
+  },
+  {
+    href: "/account/downloads",
+    title: "My Downloads",
+    description: "Purchased digital content and licences",
+    icon: "⬇️",
+  },
+  {
+    href: "/account/medical-care",
+    title: "Medical Care",
+    description: "Medical enquiries and care-related updates",
+    icon: "🩺",
+  },
 ];
 
 export default function AccountDropdown({
@@ -57,7 +75,7 @@ export default function AccountDropdown({
 
       <div className="py-1.5">
         {menuItems.map((item) => {
-          const isActive = pathname === item.href;
+          const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
 
           return (
             <Link

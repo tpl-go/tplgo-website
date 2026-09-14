@@ -3,11 +3,14 @@ export default function WishlistPage() {
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
       <h2 className="text-2xl font-bold text-black">Wishlist</h2>
       <p className="text-gray-600 mt-2">
-        Save your favourite packages, hotels and stays here.
+        Saved travel items will appear here when Wishlist is available.
       </p>
 
-      <div className="mt-8 rounded-2xl border border-dashed border-gray-300 p-10 text-center text-gray-500">
-        Your wishlist is empty right now.
+      <div className="mt-8 rounded-2xl border border-blue-100 bg-blue-50/60 p-8 text-center">
+        <h3 className="text-lg font-semibold text-slate-900">Coming soon</h3>
+        <p className="mt-2 text-sm text-slate-600">
+          Wishlist saving is being prepared. Your account does not have a saved-item list yet.
+        </p>
       </div>
     </div>
   );
