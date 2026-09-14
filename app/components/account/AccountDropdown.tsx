@@ -60,11 +60,16 @@ export default function AccountDropdown({ user, onLogout, onClose }: AccountDrop
     restoreFocusRef.current = document.activeElement as HTMLElement | null;
     const isSmallScreen = window.matchMedia("(max-width: 767px)").matches;
     const previousOverflow = document.body.style.overflow;
-    if (isSmallScreen) document.body.style.overflow = "hidden";
+    const previousRootOverflow = document.documentElement.style.overflow;
+    if (isSmallScreen) {
+      document.body.style.overflow = "hidden";
+      document.documentElement.style.overflow = "hidden";
+    }
 
     const focusable = () => Array.from(menuRef.current?.querySelectorAll<HTMLElement>(
       'a[href],button:not([disabled]),[tabindex]:not([tabindex="-1"])',
-    ) ?? []);
+    ) ?? []).filter((element) => element.getClientRects().length > 0
+      && window.getComputedStyle(element).visibility !== "hidden");
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -91,6 +96,7 @@ export default function AccountDropdown({ user, onLogout, onClose }: AccountDrop
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
       document.body.style.overflow = previousOverflow;
+      if (isSmallScreen) document.documentElement.style.overflow = previousRootOverflow;
       restoreFocusRef.current?.focus();
     };
   }, [onClose]);

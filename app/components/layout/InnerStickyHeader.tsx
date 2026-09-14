@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ChevronDown, UserRound } from "lucide-react";
@@ -31,7 +31,16 @@ function isActive(pathname: string, href: string) {
   return pathname.startsWith(`/${base}`);
 }
 
+const subscribeDesktop = (notify: () => void) => {
+  const query = window.matchMedia("(min-width: 768px)");
+  query.addEventListener("change", notify);
+  return () => query.removeEventListener("change", notify);
+};
+const desktopSnapshot = () => window.matchMedia("(min-width: 768px)").matches;
+const serverDesktopSnapshot = () => false;
+
 export default function InnerStickyHeader() {
+  const isDesktop = useSyncExternalStore(subscribeDesktop, desktopSnapshot, serverDesktopSnapshot);
   const pathname = usePathname();
   const router = useRouter();
   const accountRefs = useRef<Array<HTMLDivElement | null>>([]);
@@ -58,7 +67,9 @@ export default function InnerStickyHeader() {
   };
 
   return (
-    <div className="sticky top-0 z-[300] border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur-xl">
+    // A backdrop filter creates a containing block for fixed descendants. While
+    // the mobile sheet is open, let its fixed positioning use the viewport.
+    <div className={`sticky top-0 z-[300] border-b border-slate-200 bg-white/95 shadow-sm ${accountOpen && !isDesktop ? "" : "backdrop-blur-xl"}`}>
       {/* DESKTOP — untouched */}
       <div className="hidden md:flex mx-auto h-[66px] max-w-[1500px] items-center justify-between gap-4 px-5">
         <Link href="/" className="flex shrink-0 items-center gap-2">
@@ -122,7 +133,7 @@ export default function InnerStickyHeader() {
                 <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
               </button>
 
-              {accountOpen && (
+              {accountOpen && isDesktop && (
                 <AccountDropdown
                   user={user}
                   onClose={() => setAccountOpen(false)}
@@ -190,7 +201,7 @@ export default function InnerStickyHeader() {
                 <ChevronDown className="h-3 w-3" aria-hidden="true" />
               </button>
 
-                {accountOpen && (
+                {accountOpen && !isDesktop && (
                   <AccountDropdown
                     user={user}
                     onClose={() => setAccountOpen(false)}
