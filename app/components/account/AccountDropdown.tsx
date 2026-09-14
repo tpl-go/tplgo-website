@@ -2,152 +2,155 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import type { AuthUser } from "@/app/lib/auth/auth.types";
+import { creatorAccessDestination } from "@/app/lib/creators/creatorAccessContract";
+import { readCreatorAccess } from "@/app/lib/creators/creatorTestingReadAdapter";
 
 type AccountDropdownProps = {
+  user?: AuthUser | null;
   onLogout: () => void;
   onClose: () => void;
 };
 
 const menuItems = [
-  {
-    href: "/account/profile",
-    title: "My Profile",
-    description: "Manage profile, traveller details and login info",
-    icon: "👤",
-  },
-  {
-    href: "/account/bookings",
-    title: "My Bookings",
-    description: "Check bookings, trips, cancellations and status",
-    icon: "🧳",
-  },
-  {
-    href: "/account/trips",
-    title: "My Trips",
-    description: "Open saved Smart Planner journeys and drafts",
-    icon: "🗺️",
-  },
-  {
-    href: "/account/wishlist",
-    title: "Wishlist",
-    description: "Save and access your favourite packages and stays",
-    icon: "❤️",
-  },
-  {
-    href: "/account/wallet",
-    title: "My Wallet",
-    description: "View wallet balance, offers and future credits",
-    icon: "💳",
-  },
-  {
-    href: "/account/orders",
-    title: "My Orders",
-    description: "Marketplace purchases and order updates",
-    icon: "📦",
-  },
-  {
-    href: "/account/downloads",
-    title: "My Downloads",
-    description: "Purchased digital content and licences",
-    icon: "⬇️",
-  },
-  {
-    href: "/account/medical-care",
-    title: "Medical Care",
-    description: "Medical enquiries and care-related updates",
-    icon: "🩺",
-  },
-];
+  ["/account/profile", "My Profile", "👤"],
+  ["/account/bookings", "My Bookings", "🧳"],
+  ["/account/trips", "My Trips", "🗺️"],
+  ["/account/wishlist", "Wishlist", "❤️"],
+  ["/account/wallet", "My Wallet", "💳"],
+  ["/account/orders", "My Orders", "📦"],
+  ["/account/downloads", "My Downloads", "⬇️"],
+  ["/account/medical-care", "Medical Care", "🩺"],
+] as const;
 
-export default function AccountDropdown({
-  onLogout,
-  onClose,
-}: AccountDropdownProps) {
+type CreatorEntry = { href: string; label: string };
+const safeCreatorEntry: CreatorEntry = { href: "/creators", label: "Explore Creators" };
+
+function creatorEntryForStatus(status: Parameters<typeof creatorAccessDestination>[0]): CreatorEntry {
+  if (status === "approved") return { href: "/creator-studio", label: "Open Creator Studio" };
+  const destination = creatorAccessDestination(status);
+  if (destination === "/creators/onboarding") return { href: destination, label: "Continue Creator application" };
+  if (destination === "/creators/become-a-creator") return { href: destination, label: "Become a Creator" };
+  return safeCreatorEntry;
+}
+
+export default function AccountDropdown({ user, onLogout, onClose }: AccountDropdownProps) {
   const pathname = usePathname();
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const restoreFocusRef = useRef<HTMLElement | null>(null);
+  const [creatorEntry, setCreatorEntry] = useState<CreatorEntry>(safeCreatorEntry);
+
+  useEffect(() => {
+    restoreFocusRef.current = document.activeElement as HTMLElement | null;
+    const isSmallScreen = window.matchMedia("(max-width: 767px)").matches;
+    const previousOverflow = document.body.style.overflow;
+    if (isSmallScreen) document.body.style.overflow = "hidden";
+
+    const focusable = () => Array.from(menuRef.current?.querySelectorAll<HTMLElement>(
+      'a[href],button:not([disabled]),[tabindex]:not([tabindex="-1"])',
+    ) ?? []);
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const items = focusable();
+      if (!items.length) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    window.requestAnimationFrame(() => focusable()[0]?.focus());
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+      restoreFocusRef.current?.focus();
+    };
+  }, [onClose]);
+
+  useEffect(() => {
+    let active = true;
+    if (!user) {
+      return () => { active = false; };
+    }
+    void readCreatorAccess(user).then((result) => {
+      if (!active) return;
+      setCreatorEntry(result.data ? creatorEntryForStatus(result.data.status) : safeCreatorEntry);
+    });
+    return () => { active = false; };
+  }, [user]);
+
+  const activeRoute = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
   return (
-    <div className="absolute right-0 mt-2 w-[280px] sm:w-[300px] max-w-[calc(100vw-24px)] overflow-hidden rounded-xl border border-gray-200 bg-white shadow-[0_14px_32px_rgba(15,23,42,0.14)] z-50">
-      <div className="border-b border-gray-100 bg-gradient-to-r from-blue-50 to-white px-3 py-2">
-        <p className="text-[11px] font-medium leading-4 text-gray-500">
-          Personal Account
-        </p>
-      </div>
+    <>
+      <div className="fixed inset-0 z-[240] bg-slate-950/25 md:hidden" aria-hidden="true" onMouseDown={onClose} />
+      <div
+        ref={menuRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="My Account menu"
+        onMouseDown={(event) => event.stopPropagation()}
+        className="fixed inset-x-0 bottom-0 z-[250] max-h-[min(82vh,38rem)] overflow-y-auto overscroll-contain rounded-t-2xl border border-slate-200 bg-white p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-[0_-14px_40px_rgba(15,23,42,0.2)] md:absolute md:inset-x-auto md:bottom-auto md:right-0 md:top-full md:mt-2 md:max-h-none md:w-[250px] md:rounded-xl md:p-2 md:pb-2 md:shadow-[0_14px_32px_rgba(15,23,42,0.14)]"
+      >
+        <div className="flex items-center justify-between border-b border-slate-100 px-2 pb-2 md:hidden">
+          <span className="text-sm font-bold text-slate-900">My Account</span>
+          <button type="button" onClick={onClose} className="rounded-lg px-2 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-100" aria-label="Close My Account menu">
+            Close
+          </button>
+        </div>
 
-      <div className="py-1.5">
-        {menuItems.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
-
-          return (
+        <nav className="py-1" aria-label="Personal account links">
+          {menuItems.map(([href, label, icon]) => (
             <Link
-              key={item.href}
-              href={item.href}
+              key={href}
+              href={href}
               onClick={onClose}
-              className={`flex items-start gap-2.5 px-3 py-2.5 transition ${
-                isActive ? "bg-blue-50" : "hover:bg-gray-50"
-              }`}
+              className={`flex min-h-10 items-center gap-3 rounded-lg px-3 py-2 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${activeRoute(href) ? "bg-blue-50 text-blue-700" : "text-slate-800 hover:bg-slate-50"}`}
             >
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-sm">
-                {item.icon}
-              </div>
-
-              <div className="min-w-0 flex-1">
-                <div
-                  className={`text-[14px] font-semibold leading-5 ${
-                    isActive ? "text-blue-700" : "text-black"
-                  }`}
-                >
-                  {item.title}
-                </div>
-
-                <p className="mt-0.5 text-[11px] leading-4 text-gray-500">
-                  {item.description}
-                </p>
-              </div>
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-slate-100 text-sm" aria-hidden="true">{icon}</span>
+              <span className="min-w-0">{label}</span>
             </Link>
-          );
-        })}
+          ))}
+        </nav>
 
-        <div className="px-3 py-1.5">
-          <div className="mb-2 h-px bg-gradient-to-r from-transparent via-blue-100 to-transparent" />
-
+        <div className="mt-1 border-t border-slate-100 pt-1">
           <Link
-            href="/explore"
+            href={creatorEntry.href}
             onClick={onClose}
-            className="group relative flex items-center gap-3 overflow-hidden rounded-xl border border-blue-100 bg-gradient-to-br from-[#eef5ff] via-white to-[#f3f8ff] p-2.5 transition hover:border-blue-200 hover:shadow-sm"
+            className="flex min-h-10 items-center gap-3 rounded-lg px-3 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
           >
-            <div className="absolute right-2 top-2 rounded-full bg-orange-500 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-white shadow-sm">
-              Soon
-            </div>
-
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#061839] via-[#0b5cff] to-[#00a8ff] text-base text-white shadow-sm">
-              🎬
-            </div>
-
-            <div className="min-w-0 flex-1 pr-8">
-              <h3 className="text-[13px] font-extrabold leading-4 text-[#0f172a]">
-                Switch to Creator Mode
-              </h3>
-
-              <p className="mt-0.5 text-[10px] leading-4 text-slate-600">
-                Explore upcoming creator ecosystem
-              </p>
-            </div>
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-slate-100 text-sm" aria-hidden="true">🎬</span>
+            <span>{creatorEntry.label}</span>
           </Link>
         </div>
 
-        <div className="px-3 pt-1 pb-3">
+        <div className="mt-1 border-t border-slate-100 pt-1">
           <button
             type="button"
             onClick={() => {
               onClose();
               onLogout();
             }}
-            className="w-full rounded-lg border border-red-100 px-3 py-2 text-left text-[13px] font-semibold text-red-600 transition hover:bg-red-50"
+            className="flex min-h-10 w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-semibold text-red-600 transition hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
           >
-            🚪 Logout
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-red-50 text-sm" aria-hidden="true">🚪</span>
+            <span>Logout</span>
           </button>
         </div>
       </div>
-    </div>
+    </>
   );
 }

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { ChevronDown, UserRound } from "lucide-react";
 import { useAuth } from "@/app/hooks/useAuth";
 import AccountDropdown from "@/app/components/account/AccountDropdown";
 
@@ -112,13 +113,18 @@ export default function InnerStickyHeader() {
               <button
                 type="button"
                 onClick={() => setAccountOpen((prev) => !prev)}
-                className="h-9 rounded-lg bg-blue-600 px-3 text-xs font-bold text-white hover:bg-blue-700"
+                aria-expanded={accountOpen}
+                aria-haspopup="dialog"
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-blue-600 px-3 text-xs font-bold text-white hover:bg-blue-700"
               >
+                <UserRound className="h-4 w-4" aria-hidden="true" />
                 My Account
+                <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
               </button>
 
               {accountOpen && (
                 <AccountDropdown
+                  user={user}
                   onClose={() => setAccountOpen(false)}
                   onLogout={handleLogout}
                 />
@@ -172,16 +178,21 @@ export default function InnerStickyHeader() {
 
             {isAuthenticated && user ? (
               <div ref={accountRef} className="relative">
-                <button
-                  type="button"
-                  onClick={() => setAccountOpen((prev) => !prev)}
-                  className="h-8 rounded-lg bg-blue-600 px-2.5 text-[11px] font-bold text-white"
-                >
-                  Account
-                </button>
+              <button
+                type="button"
+                onClick={() => setAccountOpen((prev) => !prev)}
+                aria-expanded={accountOpen}
+                aria-haspopup="dialog"
+                className="inline-flex h-8 items-center gap-1 rounded-lg bg-blue-600 px-2.5 text-[11px] font-bold text-white"
+              >
+                <UserRound className="h-3.5 w-3.5" aria-hidden="true" />
+                My Account
+                <ChevronDown className="h-3 w-3" aria-hidden="true" />
+              </button>
 
                 {accountOpen && (
                   <AccountDropdown
+                    user={user}
                     onClose={() => setAccountOpen(false)}
                     onLogout={handleLogout}
                   />

@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ChevronDown, UserRound } from "lucide-react";
 import { useAuth } from "@/app/hooks/useAuth";
 import AccountDropdown from "@/app/components/account/AccountDropdown";
 import HeaderPrintModal from "@/app/components/common/print/HeaderPrintModal";
@@ -201,14 +202,18 @@ export default function TopHeader({ onChatWithAI }: TopHeaderProps) {
                 <button
                   type="button"
                   onClick={() => setOpenMenu((prev) => (prev === "account" ? null : "account"))}
-                  className="bg-blue-600 text-white px-2.5 md:px-3 py-1.5 rounded text-xs md:text-sm font-medium hover:bg-blue-700 transition"
+                  aria-expanded={openMenu === "account"}
+                  aria-haspopup="dialog"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-2.5 py-1.5 text-xs font-medium text-white transition hover:bg-blue-700 md:px-3 md:text-sm"
                 >
-                  <span className="hidden md:inline">My Account</span>
-                  <span className="md:hidden">Account</span>
+                  <UserRound className="h-4 w-4" aria-hidden="true" />
+                  <span>My Account</span>
+                  <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
                 </button>
 
                 {openMenu === "account" && (
                   <AccountDropdown
+                    user={user}
                     onClose={() => setOpenMenu(null)}
                     onLogout={handleLogout}
                   />
