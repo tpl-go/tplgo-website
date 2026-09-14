@@ -34,15 +34,15 @@ function isActive(pathname: string, href: string) {
 export default function InnerStickyHeader() {
   const pathname = usePathname();
   const router = useRouter();
-  const accountRef = useRef<HTMLDivElement | null>(null);
+  const accountRefs = useRef<Array<HTMLDivElement | null>>([]);
 
   const { openLoginModal, user, isAuthenticated, logout } = useAuth();
   const [accountOpen, setAccountOpen] = useState(false);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (!accountRef.current) return;
-      if (!accountRef.current.contains(event.target as Node)) {
+      const clickedInsideAccount = accountRefs.current.some((ref) => ref?.contains(event.target as Node));
+      if (!clickedInsideAccount) {
         setAccountOpen(false);
       }
     }
@@ -109,7 +109,7 @@ export default function InnerStickyHeader() {
           </div>
 
           {isAuthenticated && user ? (
-            <div ref={accountRef} className="relative">
+            <div ref={(element) => { accountRefs.current[0] = element; }} className="relative">
               <button
                 type="button"
                 onClick={() => setAccountOpen((prev) => !prev)}
@@ -177,7 +177,7 @@ export default function InnerStickyHeader() {
             </div>
 
             {isAuthenticated && user ? (
-              <div ref={accountRef} className="relative">
+              <div ref={(element) => { accountRefs.current[1] = element; }} className="relative">
               <button
                 type="button"
                 onClick={() => setAccountOpen((prev) => !prev)}
