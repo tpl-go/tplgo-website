@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { MoreHorizontal } from "lucide-react";
 import type { AuthUser } from "@/app/lib/auth/auth.types";
 import { creatorAccessDestination } from "@/app/lib/creators/creatorAccessContract";
 import { readCreatorAccess } from "@/app/lib/creators/creatorTestingReadAdapter";
@@ -40,6 +41,7 @@ export default function AccountDropdown({ user, onLogout, onClose }: AccountDrop
   const menuRef = useRef<HTMLDivElement | null>(null);
   const restoreFocusRef = useRef<HTMLElement | null>(null);
   const [creatorEntry, setCreatorEntry] = useState<CreatorEntry>(safeCreatorEntry);
+  const [moreOpen, setMoreOpen] = useState(false);
 
   useEffect(() => {
     restoreFocusRef.current = document.activeElement as HTMLElement | null;
@@ -93,6 +95,9 @@ export default function AccountDropdown({ user, onLogout, onClose }: AccountDrop
   }, [user]);
 
   const activeRoute = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+  const primaryItems = menuItems.slice(0, 4);
+  const moreItems = menuItems.slice(4);
+  const activeMoreRoute = moreItems.some(([href]) => activeRoute(href));
 
   return (
     <>
@@ -113,7 +118,7 @@ export default function AccountDropdown({ user, onLogout, onClose }: AccountDrop
         </div>
 
         <nav className="py-1" aria-label="Personal account links">
-          {menuItems.map(([href, label, icon]) => (
+          {primaryItems.map(([href, label, icon]) => (
             <Link
               key={href}
               href={href}
@@ -124,6 +129,33 @@ export default function AccountDropdown({ user, onLogout, onClose }: AccountDrop
               <span className="min-w-0">{label}</span>
             </Link>
           ))}
+          <button
+            type="button"
+            aria-expanded={moreOpen}
+            aria-controls="account-menu-more-links"
+            aria-label={activeMoreRoute ? "More account links, current section" : "More account links"}
+            onClick={() => setMoreOpen((open) => !open)}
+            className={`flex min-h-10 w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${activeMoreRoute ? "bg-blue-50 text-blue-700" : "text-slate-800 hover:bg-slate-50"}`}
+          >
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-slate-100" aria-hidden="true"><MoreHorizontal className="h-4 w-4" /></span>
+            <span className="min-w-0">{moreOpen ? "Less" : "More"}</span>
+            {activeMoreRoute && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-blue-600" aria-hidden="true" />}
+          </button>
+          {moreOpen && (
+            <div id="account-menu-more-links" className="mt-1 border-l-2 border-slate-100 pl-2" aria-label="More account links">
+              {moreItems.map(([href, label, icon]) => (
+                <Link
+                  key={href}
+                  href={href}
+                  onClick={onClose}
+                  className={`flex min-h-10 items-center gap-3 rounded-lg px-3 py-2 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${activeRoute(href) ? "bg-blue-50 text-blue-700" : "text-slate-800 hover:bg-slate-50"}`}
+                >
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-slate-100 text-sm" aria-hidden="true">{icon}</span>
+                  <span className="min-w-0">{label}</span>
+                </Link>
+              ))}
+            </div>
+          )}
         </nav>
 
         <div className="mt-1 border-t border-slate-100 pt-1">
