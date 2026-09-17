@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/app/hooks/useAuth";
@@ -13,6 +14,7 @@ import {
 } from "@/app/lib/wallet/walletStorage";
 import { getBackendFirstWallet } from "@/app/lib/api/walletApi";
 import { UserAccountTrustProvider, UserLoginEmail, UserLoginMobile } from "@/app/components/account/UserAccountTrust";
+import { useCanonicalProfilePhoto } from "@/app/lib/account/profilePhoto";
 
 const tabs = [
   { href: "/account/profile", label: "My Profile" },
@@ -48,7 +50,7 @@ function AccountLayoutContent({ children }: { children: React.ReactNode }) {
   const { isAuthLoading, isAuthenticated, user } = useAuth();
 
   const { profile } = useBasicAccount();
-  const photo = null;
+  const { photo } = useCanonicalProfilePhoto();
   const bannerName = profile.status === "ready" ? [profile.rows[0]?.firstName, profile.rows[0]?.lastName].filter(Boolean).join(" ") || "Personal Account" : profile.status === "loading" ? "Loading profile..." : "Profile unavailable";
   const [wallet, setWallet] = useState<Wallet | null>(null);
 
@@ -128,26 +130,24 @@ function AccountLayoutContent({ children }: { children: React.ReactNode }) {
               <div className="hidden md:flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5">
                 <div className="flex items-end gap-4">
                   <div className="relative">
-                    <button
-                      type="button"
-                      disabled aria-label="Profile photo changes are unavailable" title="Photo persistence requires protected storage"
+                    <Link
+                      href="/account/profile"
+                      aria-label="Open My Profile photo settings"
                       className="w-24 h-24 rounded-full overflow-hidden bg-white/18 backdrop-blur-md border border-white/30 text-white shadow-lg flex items-center justify-center hover:bg-white/22 transition"
                     >
                       {photo ? (
-                        <img
-                          src={photo}
-                          alt="User"
+                        <Image
+                          key={photo.version} src={photo.thumbnailUrl}
+                          alt="Your profile"
+                          width={96} height={96} unoptimized
                           className="w-full h-full object-cover"
                         />
                       ) : (
                         <div className="text-white text-center">
-                          <div className="text-2xl leading-none">📷</div>
-                          <div className="text-[11px] font-medium mt-1">
-                            Photo unavailable
-                          </div>
+                          <div className="text-2xl leading-none">👤</div>
                         </div>
                       )}
-                    </button>
+                    </Link>
                   </div>
 
                   <div className="text-white pb-1">
@@ -196,26 +196,24 @@ function AccountLayoutContent({ children }: { children: React.ReactNode }) {
               {/* MOBILE */}
               <div className="md:hidden">
                 <div className="flex flex-col items-center text-center">
-                  <button
-                    type="button"
-                    disabled aria-label="Profile photo changes are unavailable" title="Photo persistence requires protected storage"
+                  <Link
+                    href="/account/profile"
+                    aria-label="Open My Profile photo settings"
                     className="h-24 w-24 overflow-hidden rounded-full border border-white/30 bg-white/15 backdrop-blur-md shadow-xl"
                   >
                     {photo ? (
-                      <img
-                        src={photo}
-                        alt="User"
+                      <Image
+                        key={photo.version} src={photo.thumbnailUrl}
+                        alt="Your profile"
+                        width={96} height={96} unoptimized
                         className="h-full w-full object-cover"
                       />
                     ) : (
                       <div className="flex h-full w-full flex-col items-center justify-center text-white">
-                        <div className="text-2xl">📷</div>
-                        <div className="mt-1 text-[10px] font-medium">
-                          Photo unavailable
-                        </div>
+                        <div className="text-2xl">👤</div>
                       </div>
                     )}
-                  </button>
+                  </Link>
 
                   <h1 className="mt-4 text-[22px] font-extrabold leading-tight text-white">
                     {bannerName}
