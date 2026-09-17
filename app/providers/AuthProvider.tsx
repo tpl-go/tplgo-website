@@ -21,6 +21,10 @@ import {
 import { registerCurrentDeviceSession } from "@/app/lib/account/deviceSessions";
 import { AUTH_UPDATED_EVENT } from "@/app/lib/booking/guestAuth";
 import { clearPartnerProfilePreference } from "@/app/lib/partner/partnerProfilePreference";
+import {
+  readGoogleReturnOutcome,
+  removeGoogleReturnQuery,
+} from "@/app/lib/auth/googleReturn";
 
 type AuthContextType = AuthState & {
   openLoginModal: (options?: OpenLoginModalOptions) => void;
@@ -104,6 +108,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<AuthUser | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [loginModalError, setLoginModalError] = useState<string | null>(null);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [activeAccountType, setActiveAccountType] =
     useState<AccountType>("personal");
@@ -205,17 +210,17 @@ export default function AuthProvider({ children }: AuthProviderProps) {
   }, [hydrateBackendCookieSession]);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("auth") !== "google") return;
-    const status = params.get("status");
-    const cleanUrl = `${window.location.pathname}${removeAuthQuery(window.location.search)}${window.location.hash}`;
+    const outcome = readGoogleReturnOutcome(window.location.search);
+    if (outcome.kind === "none") return;
+    const cleanUrl = `${window.location.pathname}${removeGoogleReturnQuery(window.location.search)}${window.location.hash}`;
     window.history.replaceState({}, "", cleanUrl || "/");
     let cancelled = false;
     const timer = window.setTimeout(() => {
-    if (status === "success") {
+    if (outcome.kind === "success") {
       void hydrateBackendCookieSession().then((hydrated) => {
         if (cancelled) return;
         if (hydrated) {
+          setLoginModalError(null);
           setIsLoginModalOpen(false);
           const safeRedirect = normalizeRedirectAfterLogin(redirectAfterLogin);
           if (safeRedirect) {
@@ -225,6 +230,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
         }
       });
     } else {
+      setLoginModalError(outcome.message);
       setIsLoginModalOpen(true);
     }
     }, 0);
@@ -275,10 +281,12 @@ export default function AuthProvider({ children }: AuthProviderProps) {
     if (options?.redirectAfterLogin !== undefined) {
       setRedirectAfterLogin(options.redirectAfterLogin);
     }
+    setLoginModalError(null);
     setIsLoginModalOpen(true);
   }, []);
 
   const closeLoginModal = useCallback(() => {
+    setLoginModalError(null);
     setIsLoginModalOpen(false);
   }, []);
 
@@ -511,7 +519,11 @@ export default function AuthProvider({ children }: AuthProviderProps) {
   return (
     <AuthContext.Provider value={value}>
       {children}
-      <LoginModal isOpen={isLoginModalOpen} onClose={closeLoginModal} />
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={closeLoginModal}
+        externalError={loginModalError}
+      />
     </AuthContext.Provider>
   );
 }
@@ -773,13 +785,4 @@ function normalizeRedirectAfterLogin(value: string | null): string | null {
   if (!value) return null;
   if (!value.startsWith("/") || value.startsWith("//")) return null;
   return value;
-}
-
-function removeAuthQuery(search: string): string {
-  const params = new URLSearchParams(search);
-  params.delete("auth");
-  params.delete("status");
-  params.delete("code");
-  const next = params.toString();
-  return next ? `?${next}` : "";
 }

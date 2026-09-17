@@ -30,6 +30,7 @@ import {
 type LoginModalProps = {
   isOpen: boolean;
   onClose: () => void;
+  externalError?: string | null;
 };
 
 type LoginStep = "mobile" | "otp";
@@ -39,7 +40,7 @@ type AccountTab = "personal" | "partner";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_TPL_API_BASE_URL?.replace(/\/+$/, "") || "";
 
-export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
+export default function LoginModal({ isOpen, onClose, externalError = null }: LoginModalProps) {
   const {
     activeAccountType,
     setActiveAccountType,
@@ -156,6 +157,13 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
       document.body.style.overflow = previousOverflow;
     };
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen || !externalError) return;
+    setErrorText(externalError);
+    setInfoText("");
+    setSuccessText("");
+  }, [externalError, isOpen]);
 
   const resetChallengeState = useCallback(() => {
     setStep("mobile");
