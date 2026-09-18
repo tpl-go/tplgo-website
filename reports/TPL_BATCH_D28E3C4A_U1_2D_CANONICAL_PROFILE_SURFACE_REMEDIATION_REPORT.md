@@ -172,3 +172,34 @@ The Mobile portion cannot run until a development APK containing `expo-image-pic
 Open launch gates remain unchanged, including security-notification provider/template configuration, credential-incident remediation, dependency/license advisories, authenticated responsive/security/provider/legal checks and account deletion before launch.
 
 Exact next action: obtain an available EAS Android build allocation (quota reset or separately approved plan), build and install the development APK from Mobile commit `65d1770`, then perform the explicit GOLD_QA_USER checklist above. Only after every live observation passes may `MOBILE_USER_PARITY` be marked complete and the master be updated. Do not begin Partner Steps 1–8 before that closure.
+
+## U1.2E build/install and stopped live Website profile gate — 2026-09-18 08:04 IST
+
+The Starter allocation became active and the held native work was integrated into self-contained Mobile commit `50c43904d17783da7e9abbac1ebef354543fc3ea`. EAS build `39c750eb-3a0e-47ea-84d4-dab3257e10cb` finished successfully as an internal development APK. Its SHA-256 is `EE0E3CAE7EEDF840F5C2D85D8900CE242A8312B60C84630BFABAFABC8C877138`. Pre-install checks confirmed `com.tplgo.mobile`, ExpoCrypto, SecureStore, ImagePicker and the approved Visual 3 launcher/splash resources. Scoped `adb install -r` succeeded without uninstalling or clearing app data. Operator launcher-icon and native-splash QA both passed, and the preserved signed-in session loaded after the existing Metro workflow was recovered in supported offline dev-client mode following a network change.
+
+The controlled live profile gate then stopped before saving because staging Website photo upload failed and the live Country/State/City interaction did not pass:
+
+- profile photo upload: **FAIL**;
+- required photo interaction: direct photo-icon action in the top profile hero/banner, not a separate lower-page Add Photo section;
+- Country selection: **FAIL**;
+- required Country interaction: compact anchored panel immediately below the control with progressive scrolling/rendering, not a long list or full-screen sheet;
+- State/Region selector: **FAIL / unavailable after Country failure**;
+- City selector: **FAIL / unavailable after Country failure**.
+
+Read-only source review shows the current editable photo block remains in `MyProfileSection` and `ProfileLocationFields` uses a fixed modal/sheet plus a sliced option list. That does not meet the clarified hero-action and anchored-list requirement. The upload failure requires a narrow non-secret request/CORS/object-storage diagnostic before repair; no cause is fabricated here.
+
+No Website/backend/source repair, identity mutation, login-method change, database change or production change was made in this QA continuation. DOB/anniversary, both photo round trips, personal-contact round trips, Partner-entry, logout and signed-out guards remain unrun after the first blocker. `MOBILE USER PARITY` and `PHASE 1 STEP 1` remain **OPEN**. The master was updated with this factual OPEN/HOLD checkpoint only. Partner Steps 1–8 were not started.
+
+Exact next action: run a narrow staging Website profile-surface remediation for upload reliability, top-hero photo interaction, and compact anchored progressive Country plus dependent State/City selectors; then restart the held operator checklist from the Website profile gate.
+
+## U1.2F Website profile-surface remediation — 2026-09-18
+
+Detailed report: `C:\Users\Admin\tpl-project-d28e1a-integration\reports\TPL_BATCH_D28E3C4A_U1_2F_WEBSITE_PROFILE_SURFACE_REMEDIATION_REPORT.md`.
+
+U1.2F confirmed the live photo blocker as the provider-signed browser PUT preflight returning HTTP 403 without allowed-origin/method/header metadata. The Website therefore created pending upload sessions but could not complete the direct provider upload. A backward-compatible authenticated API-proxy `PUT /api/v1/me/profile/photo` now reuses the canonical owner-bound media service, image validation, private versioned variants and canonical response. Existing signed-upload routes remain available for Mobile.
+
+The profile photo action now sits on the top hero avatar, the duplicate lower block is removed, and Country/State/City use compact anchored, searchable and scrollable controls backed by the existing shared authority. Focus, keyboard, outside dismissal, dependent loading, manual fallback and parent-change clearing were covered in the production-build rendered harness at 390×844, 768×1024 and 1365×900. Backend focused tests, Website typecheck/lint/copy guard/build, scoped secret/diff checks and unchanged Mobile route regressions passed.
+
+Backend source `eede155404c` is deployed on backend4100 from `/home/tpladmin/tpl-api-releases/user-u12f-eede155404c`. Website source `c28a5fa190a20e53bd8ef06e6767827f1aa31b57` is deployment `dpl_HB5wvC4LBhv8DMLDUej5E2vSvCAq`, READY and aliased only to `staging.tplgo.com`. Staging API health and frontend final response are HTTP 200. Production was untouched.
+
+Authenticated GOLD_QA_USER mutation-based closure was not run because the supported browser remained unavailable after its previously recorded one failed setup; no reset loop was repeated. Live selectors, exact date saves, both photo directions, contact parity, Partner-entry, cold restore, Logout and signed-out guards remain open. No profile data, login identity or Partner authority changed. `MOBILE USER PARITY` and `PHASE 1 STEP 1` remain **OPEN**; Partner Steps 1–8 remain **NOT STARTED**.
