@@ -31,7 +31,7 @@ try {
     });
     const page = await context.newPage();
     await page.goto(`${base}/account/profile`, { waitUntil: "networkidle" });
-    try { await page.getByRole("heading", { name: "Personal Information" }).waitFor({ timeout: 30000 }); }
+    try { await page.getByRole("heading", { name: "General Information" }).waitFor({ timeout: 30000 }); }
     catch (error) { await page.screenshot({ path: `${out}/profile-${viewport.width}x${viewport.height}-failure.png`, fullPage: true }); throw new Error(`Profile did not render at ${page.url()}: ${(await page.locator("body").innerText()).slice(0, 1200)}`, { cause: error }); }
     const dob = await page.getByLabel("DATE OF BIRTH").inputValue();
     const anniversary = await page.getByLabel("ANNIVERSARY").inputValue();
