@@ -6,6 +6,7 @@ import Link from "next/link";
 import AccountLoginEmail from "./AccountLoginEmail";
 import { SavedApplicationReview } from "./SavedApplicationReview";
 import { useRouter, useSearchParams } from "next/navigation";
+import { partnerMutationLockMessage } from "../lib/partner/partnerReviewLock";
 import { canEditPartnerStep, partnerStepAccess, resolvePartnerStep } from "../lib/partner/partnerStepAccess";
 import {
   ArrowLeft,
@@ -713,8 +714,9 @@ export default function PartnerApplicationWorkspaceClient({
   const step8NavigationStatusOverrides = useMemo(() => partnerStep8NavigationStatusOverrides(effectiveStep8Readiness), [effectiveStep8Readiness]);
   const step8ReadOnlyStepOverrides = useMemo(() => partnerStep8ReadOnlyStepOverrides(effectiveStep8Readiness), [effectiveStep8Readiness]);
   const activeStep = resolvePartnerStep(requestedStep ?? stepSearchParams.get("step"), effectiveStep8Readiness);
-  const stepAccess = partnerStepAccess(effectiveStep8Readiness);
-  const activeStepReadOnly = !canEditPartnerStep(effectiveStep8Readiness, activeStep) || step8ReadOnlyStepOverrides[activeStep] === true;
+  const stepAccess = partnerStepAccess(effectiveStep8Readiness, activeBundle);
+  const activeStepLockReason = stepAccess.steps.find((item) => item.id === activeStep)?.reason || "Editing is locked for this application section.";
+  const activeStepReadOnly = !canEditPartnerStep(effectiveStep8Readiness, activeStep, activeBundle) || step8ReadOnlyStepOverrides[activeStep] === true;
   const selectStep = (step: WorkspaceStepId) => {
     if (!stepAccess.steps.some((item) => item.id === step && item.accessible)) return;
     setActiveStep(step);
@@ -978,7 +980,7 @@ export default function PartnerApplicationWorkspaceClient({
   }, [activeStep, activeStepReadOnly, hasStep8Readiness, servicesForm.selectedServiceCodes, servicesForm.requestedServices]);
 
   function updateForm(next: Partial<AccountContactForm>) {
-    if (!canEditPartnerStep(effectiveStep8Readiness, "account_contact")) return;
+    if (!canEditPartnerStep(effectiveStep8Readiness, "account_contact", activeBundle)) return;
     const currentContact = formRef.current;
     const nextContact = { ...currentContact, ...next };
     if (normalizedMobile(nextContact.businessMobile, nextContact.countryCode) !== normalizedMobile(currentContact.businessMobile, currentContact.countryCode)) {
@@ -1004,7 +1006,7 @@ export default function PartnerApplicationWorkspaceClient({
   }
 
   function updateBusinessForm(next: Partial<BusinessIdentityForm>) {
-    if (!canEditPartnerStep(effectiveStep8Readiness, "business_identity")) return;
+    if (!canEditPartnerStep(effectiveStep8Readiness, "business_identity", activeBundle)) return;
     setBusinessForm((current) => {
       const resolved = { ...current, ...next };
       businessFormRef.current = resolved;
@@ -1014,7 +1016,7 @@ export default function PartnerApplicationWorkspaceClient({
   }
 
   function updateLocationForm(next: Partial<BusinessLocationForm>) {
-    if (!canEditPartnerStep(effectiveStep8Readiness, "business_location")) return;
+    if (!canEditPartnerStep(effectiveStep8Readiness, "business_location", activeBundle)) return;
     setLocationForm((current) => {
       const resolved = { ...current, ...next };
       locationFormRef.current = resolved;
@@ -1024,7 +1026,7 @@ export default function PartnerApplicationWorkspaceClient({
   }
 
   function updateServicesForm(next: ServicesFormUpdate) {
-    if (!canEditPartnerStep(effectiveStep8Readiness, "services")) return;
+    if (!canEditPartnerStep(effectiveStep8Readiness, "services", activeBundle)) return;
     if (step8ReadOnlyStepOverrides.services === true) return;
     setServicesForm((current) => {
       const resolved = { ...current, ...(typeof next === "function" ? next(current) : next) };
@@ -1035,7 +1037,7 @@ export default function PartnerApplicationWorkspaceClient({
   }
 
   function updatePayoutTaxForm(next: Partial<PayoutTaxForm>) {
-    if (!canEditPartnerStep(effectiveStep8Readiness, "payout_tax")) return;
+    if (!canEditPartnerStep(effectiveStep8Readiness, "payout_tax", activeBundle)) return;
     setPayoutTaxForm((current) => {
       const resolved = { ...current, ...next };
       payoutTaxFormRef.current = resolved;
@@ -1045,7 +1047,7 @@ export default function PartnerApplicationWorkspaceClient({
   }
 
   function updateAgreementForm(next: Partial<AgreementForm>) {
-    if (!canEditPartnerStep(effectiveStep8Readiness, "partner_agreement")) return;
+    if (!canEditPartnerStep(effectiveStep8Readiness, "partner_agreement", activeBundle)) return;
     setAgreementForm((current) => {
       const resolved = { ...current, ...next };
       agreementFormRef.current = resolved;
@@ -1066,7 +1068,7 @@ export default function PartnerApplicationWorkspaceClient({
   }
 
   function removeSelectedServiceDomain(domainId: PartnerServiceDomainId) {
-    if (!canEditPartnerStep(effectiveStep8Readiness, "services")) return;
+    if (!canEditPartnerStep(effectiveStep8Readiness, "services", activeBundle)) return;
     if (step8ReadOnlyStepOverrides.services === true) return;
     updateServicesForm((current) => ({
       selectedServiceCodes: current.selectedServiceCodes.filter((code) => findPartnerCatalogueItemIn(serviceCatalogueState.items, code)?.domain !== domainId),
@@ -1075,13 +1077,13 @@ export default function PartnerApplicationWorkspaceClient({
   }
 
   function openSelectedServiceDomain(domainId: PartnerServiceDomainId) {
-    if (!canEditPartnerStep(effectiveStep8Readiness, "services")) return;
+    if (!canEditPartnerStep(effectiveStep8Readiness, "services", activeBundle)) return;
     if (step8ReadOnlyStepOverrides.services === true) return;
     setActiveServiceDomainIds((current) => current.includes(domainId) ? current : [...current, domainId]);
   }
 
   function updateActiveServiceDomains(next: PartnerServiceDomainId[] | ((current: PartnerServiceDomainId[]) => PartnerServiceDomainId[])) {
-    if (!canEditPartnerStep(effectiveStep8Readiness, "services")) return;
+    if (!canEditPartnerStep(effectiveStep8Readiness, "services", activeBundle)) return;
     if (step8ReadOnlyStepOverrides.services === true) return;
     setActiveServiceDomainIds(next);
   }
@@ -1224,7 +1226,7 @@ export default function PartnerApplicationWorkspaceClient({
     if (!result.ok) {
       if (result.status === 401 || result.status === 403) setLoadStatus("error");
       setSaveStatus("error");
-      if (!options.silent) setMessage({ tone: "error", text: "Could not save your changes." });
+      if (!options.silent) setMessage({ tone: "error", text: partnerMutationLockMessage(result.error.code) ?? "Could not save your changes. Your edits are still here." });
       return null;
     }
     setBundle(result.data);
@@ -1239,7 +1241,7 @@ export default function PartnerApplicationWorkspaceClient({
   }
 
   async function saveBusinessIdentityDraft(options: { silent?: boolean; continueAfter?: boolean } = {}) {
-    if (!canEditPartnerStep(effectiveStep8Readiness, "business_identity")) return null;
+    if (!canEditPartnerStep(effectiveStep8Readiness, "business_identity", activeBundle)) return null;
     setSaveStatus("saving");
     if (!options.silent) setMessage({ tone: "info", text: "Saving your draft." });
     const payload = {
@@ -1262,7 +1264,7 @@ export default function PartnerApplicationWorkspaceClient({
     const result = await savePartnerBusinessIdentityDraft(payload);
     if (!result.ok) {
       setSaveStatus("error");
-      if (!options.silent) setMessage({ tone: "error", text: "Could not save your changes." });
+      if (!options.silent) setMessage({ tone: "error", text: partnerMutationLockMessage(result.error.code) ?? "Could not save your changes. Your edits are still here." });
       return null;
     }
     setBundle(result.data);
@@ -1276,7 +1278,7 @@ export default function PartnerApplicationWorkspaceClient({
   }
 
   async function saveBusinessLocationDraft(options: { silent?: boolean; continueAfter?: boolean } = {}) {
-    if (!canEditPartnerStep(effectiveStep8Readiness, "business_location")) return null;
+    if (!canEditPartnerStep(effectiveStep8Readiness, "business_location", activeBundle)) return null;
     setSaveStatus("saving");
     if (!options.silent) setMessage({ tone: "info", text: "Saving your draft." });
     const result = await savePartnerBusinessLocationDraft({
@@ -1288,7 +1290,7 @@ export default function PartnerApplicationWorkspaceClient({
     });
     if (!result.ok) {
       setSaveStatus("error");
-      if (!options.silent) setMessage({ tone: "error", text: "Could not save your changes." });
+      if (!options.silent) setMessage({ tone: "error", text: partnerMutationLockMessage(result.error.code) ?? "Could not save your changes. Your edits are still here." });
       return null;
     }
     setBundle(result.data);
@@ -1303,7 +1305,7 @@ export default function PartnerApplicationWorkspaceClient({
   }
 
   async function saveServicesDraft(options: { silent?: boolean; continueAfter?: boolean } = {}) {
-    if (!canEditPartnerStep(effectiveStep8Readiness, "services")) return null;
+    if (!canEditPartnerStep(effectiveStep8Readiness, "services", activeBundle)) return null;
     setSaveStatus("saving");
     if (!options.silent) setMessage({ tone: "info", text: "Saving your draft." });
     const result = await savePartnerServicesDraft({
@@ -1320,7 +1322,7 @@ export default function PartnerApplicationWorkspaceClient({
     });
     if (!result.ok) {
       setSaveStatus("error");
-      if (!options.silent) setMessage({ tone: "error", text: "Could not save your services." });
+      if (!options.silent) setMessage({ tone: "error", text: partnerMutationLockMessage(result.error.code) ?? "Could not save your services. Your edits are still here." });
       return null;
     }
     setBundle(result.data);
@@ -1336,7 +1338,7 @@ export default function PartnerApplicationWorkspaceClient({
   }
 
   async function saveVerificationDraft(options: { silent?: boolean; continueAfter?: boolean } = {}) {
-    if (!canEditPartnerStep(effectiveStep8Readiness, "documents_compliance")) return null;
+    if (!canEditPartnerStep(effectiveStep8Readiness, "documents_compliance", activeBundle)) return null;
     if (qaPreviewEnabled) {
       const savedAt = new Date().toISOString();
       setSaveStatus("saved");
@@ -1367,7 +1369,7 @@ export default function PartnerApplicationWorkspaceClient({
   }
 
   async function savePayoutTaxDraft(options: { silent?: boolean; continueAfter?: boolean } = {}) {
-    if (!canEditPartnerStep(effectiveStep8Readiness, "payout_tax")) return null;
+    if (!canEditPartnerStep(effectiveStep8Readiness, "payout_tax", activeBundle)) return null;
     if (qaPreviewEnabled) {
       const savedAt = new Date().toISOString();
       setSaveStatus("saved");
@@ -1399,7 +1401,7 @@ export default function PartnerApplicationWorkspaceClient({
   }
 
   async function saveAgreementDraft(options: { silent?: boolean; continueAfter?: boolean } = {}) {
-    if (!canEditPartnerStep(effectiveStep8Readiness, "partner_agreement")) return null;
+    if (!canEditPartnerStep(effectiveStep8Readiness, "partner_agreement", activeBundle)) return null;
     if (qaPreviewEnabled) {
       const savedAt = new Date().toISOString();
       setSaveStatus("saved");
@@ -1648,7 +1650,7 @@ export default function PartnerApplicationWorkspaceClient({
   }
 
   async function uploadEvidence(requirement: PartnerRequirement, file: File, details?: { documentNumber?: string; issueDate?: string; expiryDate?: string; noExpiry?: boolean }) {
-    if (!canEditPartnerStep(effectiveStep8Readiness, "documents_compliance")) return;
+    if (!canEditPartnerStep(effectiveStep8Readiness, "documents_compliance", activeBundle)) return;
     const organizationId = activeBundle?.organization.id || form.organizationId;
     if (!organizationId) {
       setMessage({ tone: "warning", text: "Save your application before uploading evidence." });
@@ -1869,7 +1871,7 @@ export default function PartnerApplicationWorkspaceClient({
               />
             ) : (
               <>
-                {activeStepReadOnly ? <ReadOnlyStepNotice stateLabel={step8StateLabel} /> : null}
+                {activeStepReadOnly ? <ReadOnlyStepNotice reason={activeStepLockReason} /> : null}
                 <fieldset disabled={activeStepReadOnly} className="contents">
                   {isApprovedState && !qaPreviewEnabled ? (
                     <StateCard title="Your Partner account is ready" detail="The verified Partner Business Desk opens in the next approved phase." tone="success" />
@@ -1921,7 +1923,7 @@ export default function PartnerApplicationWorkspaceClient({
                     />
                   ) : activeStep === "services" ? (
                     <ServicesStep
-                      readOnly={!canEditPartnerStep(effectiveStep8Readiness, "services")}
+                      readOnly={!canEditPartnerStep(effectiveStep8Readiness, "services", activeBundle)}
                       form={servicesForm}
                       businessType={businessForm.organizationType}
                       countryCode={locationForm.primaryLocation.countryCode}
@@ -1979,7 +1981,7 @@ export default function PartnerApplicationWorkspaceClient({
             ) : null}
             servicesSummary={activeStep === "services" ? (
               <SelectedServicesSummary
-                readOnly={!canEditPartnerStep(effectiveStep8Readiness, "services")}
+                readOnly={!canEditPartnerStep(effectiveStep8Readiness, "services", activeBundle)}
                 form={servicesForm}
                 headingId="selected-services-summary-desktop"
                 countryCode={locationForm.primaryLocation.countryCode}
@@ -2007,7 +2009,7 @@ export default function PartnerApplicationWorkspaceClient({
             onSubmit={() => setSubmitConfirmOpen(true)}
           />
         ) : activeStepReadOnly ? (
-          <ReadOnlyStepFooter previousStep={previousStep} stateLabel={step8StateLabel} onPrevious={() => setActiveStep(previousStep)} />
+          <ReadOnlyStepFooter previousStep={previousStep} reason={activeStepLockReason} onPrevious={() => setActiveStep(previousStep)} />
         ) : (
           <footer className="sticky bottom-0 z-30 border-t border-white/10 bg-[#11141a]/95 px-4 py-3 backdrop-blur">
             <div className="mx-auto flex max-w-7xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -4575,15 +4577,15 @@ function PlaceholderStep({ step }: { step: (typeof workspaceSteps)[number] }) {
   );
 }
 
-function ReadOnlyStepNotice({ stateLabel }: { stateLabel: string }) {
+export function ReadOnlyStepNotice({ reason }: { reason: string }) {
   return (
     <div className="mb-4 rounded-2xl border border-amber-400/30 bg-amber-400/10 p-4 text-sm font-semibold leading-6 text-amber-100" role="status">
-      This section is read-only while the application status is {stateLabel.toLowerCase()}.
+      {reason}
     </div>
   );
 }
 
-function ReadOnlyStepFooter({ previousStep, stateLabel, onPrevious }: { previousStep: WorkspaceStepId; stateLabel: string; onPrevious: () => void }) {
+export function ReadOnlyStepFooter({ previousStep, reason, onPrevious }: { previousStep: WorkspaceStepId; reason: string; onPrevious: () => void }) {
   return (
     <footer className="sticky bottom-0 z-30 border-t border-white/10 bg-[#11141a]/95 px-4 py-3 backdrop-blur">
       <div className="mx-auto flex max-w-7xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -4596,7 +4598,7 @@ function ReadOnlyStepFooter({ previousStep, stateLabel, onPrevious }: { previous
           <ArrowLeft size={16} aria-hidden="true" />
           Previous
         </button>
-        <p className="text-sm font-semibold text-slate-300">Editing is locked while the application status is {stateLabel.toLowerCase()}.</p>
+        <p className="text-sm font-semibold text-slate-300">{reason}</p>
       </div>
     </footer>
   );
