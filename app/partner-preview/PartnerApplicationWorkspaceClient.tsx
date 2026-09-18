@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import AccountLoginEmail from "./AccountLoginEmail";
+import { SavedApplicationReview } from "./SavedApplicationReview";
 import { useRouter, useSearchParams } from "next/navigation";
 import { canEditPartnerStep, partnerStepAccess, resolvePartnerStep } from "../lib/partner/partnerStepAccess";
 import {
@@ -1847,6 +1848,7 @@ export default function PartnerApplicationWorkspaceClient({
               <LoadingCard />
             ) : activeStep === "review_submit" ? (
               <ReviewSubmitStep
+                bundle={activeBundle}
                 content={reviewSubmitContent}
                 readiness={effectiveStep8Readiness}
                 latestSubmission={effectiveStep8Submission}
@@ -4263,6 +4265,7 @@ function payoutTaxStatusLabel(status: string): string {
 }
 
 function ReviewSubmitStep({
+  bundle,
   content,
   readiness,
   latestSubmission,
@@ -4277,6 +4280,7 @@ function ReviewSubmitStep({
   onRefresh,
   onStepAction,
 }: {
+  bundle: PartnerOrganizationBundle | null;
   content: Pick<AgreementContent, "title" | "subtitle" | "helperText">;
   readiness: PartnerApplicationReadiness | null;
   latestSubmission: PartnerApplicationSubmissionSummary | null;
@@ -4356,9 +4360,10 @@ function ReviewSubmitStep({
         <div className="mt-4 grid gap-3">
           {readiness.steps.map((step) => (
             <div key={step.step} className="flex flex-col gap-3 rounded-xl border border-white/10 bg-[#11141a] p-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="text-sm font-black text-white">{step.label}</p>
                 <p className="mt-1 text-sm font-semibold leading-6 text-slate-300">{step.reason}</p>
+                <SavedApplicationReview bundle={bundle} organizationId={readiness.organizationId} step={step.step} />
               </div>
               <div className="flex shrink-0 flex-wrap items-center gap-2">
                 <StatusLabel label={partnerStep8StepStatusLabel(step.status)} status={step.status} />
