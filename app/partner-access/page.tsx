@@ -26,6 +26,7 @@ import { visibleSubmissionReference } from "@/app/lib/partner/partnerStep8Review
 import PartnerAccessShell from "./PartnerAccessShell";
 import PartnerProfileChooser from "./PartnerProfileChooser";
 import PartnerRecovery from "./PartnerRecovery";
+import { partnerApplicationPreviewHref } from "../lib/partner/partnerSubmittedDestination";
 
 type PartnerView = "access" | "landing" | "recovery";
 type PartnerStatusSummary = {
@@ -357,8 +358,9 @@ function SubmittedStatus({ profile, summary, summaryState, onBack }: { profile: 
         {date ? <StatusDetail label="Submitted" value={formatPartnerDate(date)} /> : null}
         <StatusDetail label="Current status" value={status} />
       </div>
-      <p className="mt-5 text-sm font-medium leading-6 text-slate-300">TPL GO is reviewing your application. We will update this Partner account when the review is complete.</p>
+      <p className="mt-5 text-sm font-medium leading-6 text-slate-300">{lifecycle === "NOT_APPROVED" ? "Your application was not approved. Contact Partner Support if you need help." : "Your application has been received for review. Submission does not activate services or payouts."}</p>
       <SummaryNotice state={summaryState} />
+      {summaryState === "ready" && summary?.readiness.organizationId ? <Link href={partnerApplicationPreviewHref(summary.readiness.organizationId)} className={`${secondaryActionClass} mt-6`}>Preview application</Link> : null}
       <button type="button" onClick={onBack} className={`${backActionClass} mt-8`}><ArrowLeft aria-hidden="true" className="h-4 w-4" />Back</button>
     </div>
   );

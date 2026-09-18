@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { partnerSubmittedDestination } from "../lib/partner/partnerSubmittedDestination";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import AccountLoginEmail from "./AccountLoginEmail";
@@ -726,13 +727,15 @@ export default function PartnerApplicationWorkspaceClient({
   };
   useEffect(() => {
     if (step8LoadStatus !== "ready") return;
+    const statusDestination = !qaPreviewEnabled && partnerSubmittedDestination(effectiveStep8Readiness?.applicationStatus, stepSearchParams.get("view"), Boolean(activeBundle?.organization.id && effectiveStep8Readiness?.organizationId === activeBundle.organization.id));
+    if (statusDestination) { router.replace(statusDestination); return; }
     const query = new URLSearchParams(stepSearchParams.toString());
     const requested = query.get("step");
     if (requested && resolvePartnerStep(requested, effectiveStep8Readiness) !== requested) {
       query.set("step", stepAccess.latestAccessible);
       router.replace(`/partner-preview?${query.toString()}`, { scroll: false });
     }
-  }, [effectiveStep8Readiness, router, step8LoadStatus, stepAccess.latestAccessible, stepSearchParams]);
+  }, [activeBundle?.organization.id, effectiveStep8Readiness, qaPreviewEnabled, router, step8LoadStatus, stepAccess.latestAccessible, stepSearchParams]);
   useEffect(() => { setActiveStep(null); }, [stepSearchParams]);
   const headerMetadataText = partnerStep8HeaderMetadata(effectiveStep8Readiness, effectiveStep8Submission, statusText(saveStatus, lastSavedAt));
 
@@ -1145,6 +1148,7 @@ export default function PartnerApplicationWorkspaceClient({
       setAcceptedStep8Declarations({});
       setSubmitStatus("success");
       setMessage({ tone: "success", text: "Application submitted for review." });
+      router.replace("/partner-access");
       return;
     }
     const code = normalizeStep8ErrorCode(result.status, result.error.code);
