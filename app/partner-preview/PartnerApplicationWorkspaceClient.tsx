@@ -297,8 +297,8 @@ const workspaceSteps: Array<{
 
 const roleOptions = ["Owner", "Director", "Manager", "Authorized Representative", "Other"];
 const verificationUploadMimeTypes = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
-const verificationUploadMaxBytes = 25 * 1024 * 1024;
-const verificationUploadAllowedMimeLabel = "PDF, JPG, PNG, or WebP (max 25 MB)";
+const verificationUploadMaxBytes = 15 * 1024 * 1024;
+const verificationUploadAllowedMimeLabel = "PDF, JPG, PNG, or WebP (max 15 MB)";
 const organizationTypeOptions = [
   "Individual / Independent Professional",
   "Sole Proprietorship",

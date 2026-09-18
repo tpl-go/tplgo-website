@@ -46,6 +46,12 @@ test("Step 5 uses the existing secure upload API and avoids permanent frontend s
   assert.match(workspaceSource, /Document upload failed\. Please try again\./);
 });
 
+test("Step 5 matches the deployed 15 MB document boundary", () => {
+  assert.match(workspaceSource, /const verificationUploadMaxBytes = 15 \* 1024 \* 1024;/);
+  assert.match(workspaceSource, /PDF, JPG, PNG, or WebP \(max 15 MB\)/);
+  assert.doesNotMatch(workspaceSource, /max 25 MB/);
+});
+
 test("Step 5 keeps QA preview clearly isolated from normal runtime behavior", () => {
   assert.match(workspaceSource, /Preview example — Fictional data only\. No documents are uploaded or verified\./);
   assert.match(workspaceSource, /qaPreviewEnabled/);
