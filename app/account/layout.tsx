@@ -3,7 +3,8 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Camera } from "lucide-react";
 import { useAuth } from "@/app/hooks/useAuth";
 import { AUTH_UPDATED_EVENT } from "@/app/lib/booking/guestAuth";
 import { BasicAccountProvider, useBasicAccount } from "@/app/components/account/BasicAccountData";
@@ -14,7 +15,7 @@ import {
 } from "@/app/lib/wallet/walletStorage";
 import { getBackendFirstWallet } from "@/app/lib/api/walletApi";
 import { UserAccountTrustProvider, UserLoginEmail, UserLoginMobile } from "@/app/components/account/UserAccountTrust";
-import { useCanonicalProfilePhoto } from "@/app/lib/account/profilePhoto";
+import { removeProfilePhoto, uploadProfilePhoto, useCanonicalProfilePhoto, type ProfilePhoto } from "@/app/lib/account/profilePhoto";
 
 const tabs = [
   { href: "/account/profile", label: "My Profile" },
@@ -50,7 +51,24 @@ function AccountLayoutContent({ children }: { children: React.ReactNode }) {
   const { isAuthLoading, isAuthenticated, user } = useAuth();
 
   const { profile } = useBasicAccount();
-  const { photo } = useCanonicalProfilePhoto();
+  const { photo, status: photoStatus } = useCanonicalProfilePhoto();
+  const photoInput = useRef<HTMLInputElement>(null);
+  const [photoProgress,setPhotoProgress]=useState<number|null>(null);
+  const [photoMessage,setPhotoMessage]=useState("");
+  const photoEditable=pathname==="/account/profile";
+  const choosePhoto=async(file:File)=>{
+    setPhotoMessage("");setPhotoProgress(0);
+    try{await uploadProfilePhoto(file,setPhotoProgress);setPhotoMessage("Profile photo updated.");}
+    catch(error){setPhotoMessage(error instanceof Error?error.message:"Your photo could not be updated. Please try again.");}
+    finally{setPhotoProgress(null);if(photoInput.current)photoInput.current.value="";}
+  };
+  const removePhoto=async()=>{
+    if(!window.confirm("Remove your profile photo?"))return;
+    setPhotoMessage("");setPhotoProgress(0);
+    try{await removeProfilePhoto();setPhotoMessage("Profile photo removed.");}
+    catch(error){setPhotoMessage(error instanceof Error?error.message:"Your photo could not be removed. Please try again.");}
+    finally{setPhotoProgress(null);}
+  };
   const bannerName = profile.status === "ready" ? [profile.rows[0]?.firstName, profile.rows[0]?.lastName].filter(Boolean).join(" ") || "Personal Account" : profile.status === "loading" ? "Loading profile..." : "Profile unavailable";
   const [wallet, setWallet] = useState<Wallet | null>(null);
 
@@ -101,6 +119,7 @@ function AccountLayoutContent({ children }: { children: React.ReactNode }) {
 
   return (
     <main className="bg-[#f6f8fb] min-h-screen pb-10">
+      <input ref={photoInput} type="file" className="sr-only" accept="image/jpeg,image/png,image/webp" aria-label="Choose a profile photo" onChange={event=>{const file=event.target.files?.[0];if(file)void choosePhoto(file);}} />
       {/* MOBILE TOP SPACING — inner sticky header overlap fix */}
       <div className="h-[12px] md:hidden" />
 
@@ -129,26 +148,7 @@ function AccountLayoutContent({ children }: { children: React.ReactNode }) {
               {/* DESKTOP */}
               <div className="hidden md:flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5">
                 <div className="flex items-end gap-4">
-                  <div className="relative">
-                    <Link
-                      href="/account/profile"
-                      aria-label="Open My Profile photo settings"
-                      className="w-24 h-24 rounded-full overflow-hidden bg-white/18 backdrop-blur-md border border-white/30 text-white shadow-lg flex items-center justify-center hover:bg-white/22 transition"
-                    >
-                      {photo ? (
-                        <Image
-                          key={photo.version} src={photo.thumbnailUrl}
-                          alt="Your profile"
-                          width={96} height={96} unoptimized
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="text-white text-center">
-                          <div className="text-2xl leading-none">👤</div>
-                        </div>
-                      )}
-                    </Link>
-                  </div>
+                  <HeroAvatar photo={photo} editable={photoEditable} busy={photoProgress!==null||photoStatus==="loading"} onEdit={()=>photoInput.current?.click()} />
 
                   <div className="text-white pb-1">
                     <h1 className="text-2xl md:text-3xl font-bold leading-tight">
@@ -166,6 +166,7 @@ function AccountLayoutContent({ children }: { children: React.ReactNode }) {
                         <UserLoginEmail />
                       </div>
                     </div>
+                    {photoEditable?<div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-white/95"><button type="button" disabled={photoProgress!==null||photoStatus==="loading"} onClick={()=>photoInput.current?.click()} className="font-semibold underline underline-offset-2 disabled:opacity-60">{photo?"Replace photo":"Add photo"}</button>{photo?<button type="button" disabled={photoProgress!==null} onClick={()=>void removePhoto()} className="font-semibold underline underline-offset-2 disabled:opacity-60">Remove photo</button>:null}{photoProgress!==null?<span role="status">Uploading… {photoProgress}%</span>:null}{photoMessage?<span role="status">{photoMessage}</span>:null}</div>:null}
                   </div>
                 </div>
 
@@ -196,28 +197,14 @@ function AccountLayoutContent({ children }: { children: React.ReactNode }) {
               {/* MOBILE */}
               <div className="md:hidden">
                 <div className="flex flex-col items-center text-center">
-                  <Link
-                    href="/account/profile"
-                    aria-label="Open My Profile photo settings"
-                    className="h-24 w-24 overflow-hidden rounded-full border border-white/30 bg-white/15 backdrop-blur-md shadow-xl"
-                  >
-                    {photo ? (
-                      <Image
-                        key={photo.version} src={photo.thumbnailUrl}
-                        alt="Your profile"
-                        width={96} height={96} unoptimized
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full flex-col items-center justify-center text-white">
-                        <div className="text-2xl">👤</div>
-                      </div>
-                    )}
-                  </Link>
+                  <HeroAvatar photo={photo} editable={photoEditable} busy={photoProgress!==null||photoStatus==="loading"} onEdit={()=>photoInput.current?.click()} />
 
                   <h1 className="mt-4 text-[22px] font-extrabold leading-tight text-white">
                     {bannerName}
                   </h1>
+                  {photoEditable?<div className="mt-2 flex flex-wrap items-center justify-center gap-3 text-xs text-white/95"><button type="button" disabled={photoProgress!==null||photoStatus==="loading"} onClick={()=>photoInput.current?.click()} className="font-semibold underline underline-offset-2 disabled:opacity-60">{photo?"Replace photo":"Add photo"}</button>{photo?<button type="button" disabled={photoProgress!==null} onClick={()=>void removePhoto()} className="font-semibold underline underline-offset-2 disabled:opacity-60">Remove photo</button>:null}</div>:null}
+                  {photoEditable&&photoProgress!==null?<p role="status" className="mt-2 text-xs text-white/95">Uploading… {photoProgress}%</p>:null}
+                  {photoEditable&&photoMessage?<p role="status" className="mt-2 text-xs text-white/95">{photoMessage}</p>:null}
 
                   <div className="mt-3 space-y-1 text-sm text-white/90">
                     <div className="flex items-center justify-center gap-2">
@@ -310,4 +297,10 @@ function AccountLayoutContent({ children }: { children: React.ReactNode }) {
       </div>
     </main>
   );
+}
+
+function HeroAvatar({photo,editable,busy,onEdit}:{photo:ProfilePhoto|null;editable:boolean;busy:boolean;onEdit:()=>void}){
+  const picture=<span className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border border-white/30 bg-white/15 text-white shadow-xl backdrop-blur-md">{photo?<Image key={photo.version} src={photo.thumbnailUrl} alt="Your profile" width={96} height={96} unoptimized className="h-full w-full object-cover"/>:<span className="text-2xl" aria-label="No profile photo">👤</span>}</span>;
+  if(!editable)return <Link href="/account/profile" aria-label="Open My Profile" className="rounded-full outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-slate-800">{picture}</Link>;
+  return <div className="relative h-24 w-24 shrink-0">{picture}<button type="button" disabled={busy} onClick={onEdit} aria-label={photo?"Replace profile photo":"Add profile photo"} className="absolute -bottom-1 -right-1 inline-flex h-10 w-10 items-center justify-center rounded-full border-2 border-white bg-blue-600 text-white shadow-lg outline-none transition hover:bg-blue-700 focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-blue-600 disabled:opacity-60"><Camera className="h-4 w-4" aria-hidden="true"/></button></div>;
 }

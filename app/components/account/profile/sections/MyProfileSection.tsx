@@ -1,13 +1,11 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
-import Image from "next/image";
+import React, { useEffect, useState } from "react";
 import { UserSignInDetails } from "../../UserAccountTrust";
 import { useBasicAccount, AccountReadState, AccountDataError, SavedBasicReview } from "../../BasicAccountData";
 import { profileForm, profileInput } from "@/app/lib/account/basicAccount";
 import type { FrequentFlyerEntry, ProfileFormData } from "@/app/lib/account/profileStorage";
 import { ProfileLocationFields } from "@/app/components/account/profile/ProfileLocationFields";
-import { removeProfilePhoto, uploadProfilePhoto, useCanonicalProfilePhoto } from "@/app/lib/account/profilePhoto";
 
 const airlineOptions = [
   "Air India",
@@ -27,9 +25,6 @@ export default function MyProfileSection() {
   const [saving, setSaving] = useState(false);
   const [conflict, setConflict] = useState(false);
   const [latest, setLatest] = useState<ProfileFormData | null>(null);
-  const { photo, status: photoStatus } = useCanonicalProfilePhoto();
-  const photoInput = useRef<HTMLInputElement>(null);
-  const [photoMessage,setPhotoMessage]=useState(""),[photoProgress,setPhotoProgress]=useState<number|null>(null);
   useEffect(() => {
     if (profile.status === "ready" && version === null) { setFormData(profileForm(profile.rows[0] ?? null)); setVersion(profile.rows[0]?.version ?? 0); }
   }, [profile.status, profile.rows, version]);
@@ -216,34 +211,6 @@ export default function MyProfileSection() {
               placeholder="name@example.com"
             />
           </div>
-        </section>
-
-        <section>
-          <h2 className="text-[15px] font-semibold text-slate-900">Profile photo</h2>
-          <p className="mt-1 text-xs text-slate-600">Your account photo is shared across the TPL Website and Mobile app. JPEG, PNG or WebP, up to 5 MB.</p>
-          <div className="mt-4 flex flex-wrap items-center gap-4">
-            <div className="h-24 w-24 overflow-hidden rounded-full border bg-slate-100">
-              {photo ? <Image key={photo.version} src={photo.displayUrl} alt="Your profile" width={96} height={96} unoptimized className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-2xl" aria-label="No profile photo">👤</div>}
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <input ref={photoInput} type="file" className="sr-only" accept="image/jpeg,image/png,image/webp" onChange={async (event) => {
-                const file = event.target.files?.[0]; if (!file) return;
-                setPhotoMessage(""); setPhotoProgress(0);
-                try { await uploadProfilePhoto(file, setPhotoProgress); setPhotoMessage("Profile photo updated."); }
-                catch (error) { setPhotoMessage(error instanceof Error ? error.message : "Photo upload failed."); }
-                finally { setPhotoProgress(null); event.target.value = ""; }
-              }} />
-              <button type="button" disabled={photoProgress !== null || photoStatus === "loading"} onClick={() => photoInput.current?.click()} className="h-11 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white disabled:opacity-50">{photo ? "Replace photo" : "Add photo"}</button>
-              {photo ? <button type="button" disabled={photoProgress !== null} onClick={async () => {
-                if (!window.confirm("Remove your profile photo?")) return;
-                setPhotoMessage("");
-                try { await removeProfilePhoto(); setPhotoMessage("Profile photo removed."); }
-                catch (error) { setPhotoMessage(error instanceof Error ? error.message : "Photo could not be removed."); }
-              }} className="h-11 rounded-xl border border-red-200 px-4 text-sm font-semibold text-red-700">Remove photo</button> : null}
-            </div>
-          </div>
-          {photoProgress !== null ? <p role="status" className="mt-2 text-xs text-slate-600">Uploading… {photoProgress}%</p> : null}
-          {photoMessage ? <p role="status" className="mt-2 text-xs text-slate-700">{photoMessage}</p> : null}
         </section>
 
         <section><h2 className="text-[15px] font-semibold text-slate-900">Document details</h2><p className="mt-2 text-xs text-slate-600">Passport and PAN updates are currently unavailable.</p></section>
