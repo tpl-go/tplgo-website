@@ -179,3 +179,11 @@ No actual date/contact value, identifier or photo content should be entered into
 - Production changed: **NO**.
 
 Exact next action: complete the ten-item GOLD_QA_USER checklist above with secure operator confirmations. If the native verified contact actions are incomplete, the next narrow implementation batch is **Mobile verified login-contact Add/Change parity**, reusing the canonical sensitive-action APIs, OTP/reauthentication rules and duplicate-owner protection. Do not start Partner Steps 1–8 until Mobile User parity closes.
+
+## U1.2G live-closure gate reference — 2026-09-18
+
+Detailed continuation: `C:\Users\Admin\tpl-project-d28e1a-integration\reports\TPL_BATCH_D28E3C4A_U1_2G_WEBSITE_MOBILE_LIVE_CLOSURE_REPORT.md`.
+
+The U1.2G precheck preserved the exact U1.2F deployment and confirmed Website staging, backend4100, the public staging API, Metro and production-isolation health. The supported browser remained unavailable after one startup attempt, and Android debugging was unavailable from the current shell, so authenticated GOLD_QA_USER browser/device observations remain operator-controlled and unrun. No profile, identity, app or production data changed.
+
+Current source also confirms Website Add Mobile/Add Email is present while Mobile verified methods are view-only. `MOBILE_VERIFIED_CONTACT_PARITY_REQUIRED` is therefore open independently of the remaining live profile checks. `MOBILE_USER_PARITY` and `PHASE_1_STEP_1` remain **OPEN**; Partner Steps 1–8 remain **NOT STARTED**.
