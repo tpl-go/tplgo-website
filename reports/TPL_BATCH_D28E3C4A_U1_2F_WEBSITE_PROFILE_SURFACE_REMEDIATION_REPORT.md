@@ -1,6 +1,6 @@
 # TPL Batch D28E3C.4A U1.2F — Website Profile Surface Remediation
 
-Date: 2026-09-18 IST  
+Date: 2026-09-18 IST
 Status: **STAGING IMPLEMENTATION DEPLOYED; AUTHENTICATED GOLD_QA_USER CLOSURE OPEN**
 
 ## Scope and checkpoint
