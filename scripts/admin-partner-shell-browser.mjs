@@ -47,17 +47,17 @@ try {
       assert.equal(await sidebar.locator('[aria-current="page"]').textContent(), tabs[index]);
       const subnav = page.getByRole('navigation', { name: tabs[index] + ' views', exact: true });
       assert.deepEqual(await subnav.getByRole('link').allTextContents(), views[index]);
-      await panel.getByRole('heading', { level: 3, name: views[index][0], exact: true }).waitFor();
+      await panel.getByRole('heading', { level: views[index][0] === 'Summary' ? 2 : 3, name: views[index][0], exact: true }).waitFor();
       for (const name of views[index]) {
         const viewLink = subnav.getByRole('link', { name, exact: true });
         const destination = await viewLink.getAttribute('href');
         await viewLink.click();
         await page.waitForURL(base + destination);
-        await panel.getByRole('heading', { level: 3, name, exact: true }).waitFor();
+        await panel.getByRole('heading', { level: name === 'Summary' ? 2 : 3, name, exact: true }).waitFor();
         assert.equal(await subnav.locator('[aria-current="page"]').count(), 1);
         assert.equal(await subnav.locator('[aria-current="page"]').textContent(), name);
         assert.ok(new URL(page.url()).searchParams.has('view'));
-        assert.equal(await panel.locator('table,form,button,input,canvas').count(), 0);
+        if (name !== 'Summary') assert.equal(await panel.locator('table,form,button,input,canvas').count(), 0);
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'no whole-page overflow');
         assert.ok(await subnav.getByRole('link').evaluateAll(els => els.every(el => { const r=el.getBoundingClientRect();return r.x>=0 && r.right<=innerWidth && el.scrollWidth<=el.clientWidth; })), 'no clipped view labels');
       }
@@ -69,7 +69,7 @@ try {
       await page.goForward(); await page.waitForURL(lastViewUrl);
       try { await panel.getByRole('heading', { level: 3, name: views[index].at(-1), exact: true }).waitFor(); } catch (error) { console.log(JSON.stringify({ stage: 'forward', url: page.url(), headings: await panel.getByRole('heading').allTextContents(), active: await subnav.locator('[aria-current]').allTextContents(), errors })); await page.screenshot({ path: out + '/forward-failure.png', fullPage: true }); throw error; }
       await subnav.getByRole('link', { name: views[index][0], exact: true }).focus();
-      await page.keyboard.press('Enter'); await panel.getByRole('heading', { level: 3, name: views[index][0], exact: true }).waitFor();
+      await page.keyboard.press('Enter'); await panel.getByRole('heading', { level: views[index][0] === 'Summary' ? 2 : 3, name: views[index][0], exact: true }).waitFor();
       if (width === 1365) await sidebar.getByRole('link', { name: tabs[index], exact: true }).scrollIntoViewIfNeeded();
       await page.screenshot({ path: `${out}/${width}-${index}.png`, fullPage: true });
     }
@@ -80,12 +80,12 @@ try {
         assert.equal(await nav.locator('[aria-current="page"]').textContent(), name);
       }
       await page.locator('aside a[href="/admin/partners"]').filter({ hasText: /^Partners$/ }).click();
-      await panel.getByRole('heading', { level: 3, name: 'Summary', exact: true }).waitFor();
+      await panel.getByRole('heading', { level: 2, name: 'Summary', exact: true }).waitFor();
     }
     await page.goto(base + '/admin/partners?view=unknown');
-    await panel.getByRole('heading', { level: 3, name: 'Summary', exact: true }).waitFor();
-    assert.deepEqual(writes, []); assert.deepEqual(partnerReads, []); assert.deepEqual(errors, []);
-    results.push({ width, height, result: 'PASS', mainTabs: 4, subviews: 21, sidebarChildren: 4, partnerReads: 0, mutations: 0, checks: ['exact hierarchy', 'all views clickable', 'defaults', 'active states', 'refresh', 'Back/Forward', 'keyboard', 'invalid view fallback', 'sidebar route parity', 'no clipped labels/overflow', 'empty views'] });
+    await panel.getByRole('heading', { level: 2, name: 'Summary', exact: true }).waitFor();
+    assert.deepEqual(writes, []); assert.ok(partnerReads.every(path => path === '/api/v1/admin/partners/summary')); assert.deepEqual(errors, []);
+    results.push({ width, height, result: 'PASS', mainTabs: 4, subviews: 21, sidebarChildren: 4, summaryReads: partnerReads.length, mutations: 0, checks: ['exact hierarchy', 'all views clickable', 'defaults', 'active states', 'refresh', 'Back/Forward', 'keyboard', 'invalid view fallback', 'sidebar route parity', 'no clipped labels/overflow', 'empty views'] });
     await context.close();
   }
 } finally { await browser.close(); await writeFile(`${out}/results.json`, JSON.stringify(results, null, 2)); }

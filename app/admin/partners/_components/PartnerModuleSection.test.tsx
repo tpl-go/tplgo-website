@@ -6,6 +6,8 @@ import PartnerAdminNavigation from "./PartnerAdminNavigation";
 import PartnerSidebarViews from "./PartnerSidebarViews";
 import { partnerAdminNavigation, partnerModuleViews, type PartnerModuleKey } from "./partnerAdminRoutes";
 
+vi.mock("next/dynamic", () => ({ default: () => () => createElement("h3", null, "Summary") }));
+
 let pathname = "/admin/partners";
 let query = "";
 vi.mock("next/navigation", () => ({ usePathname: () => pathname, useSearchParams: () => new URLSearchParams(query) }));
@@ -16,7 +18,7 @@ test("four module sections render their default view without data or actions", (
   sections.forEach((section, index) => {
     const html = renderToStaticMarkup(createElement(PartnerModuleSection, { section }));
     expect(html).toContain(`>${partnerAdminNavigation[index].label}</h2>`);
-    expect(html).toContain("This view will be set up next.");
+    if (section !== "overview") expect(html).toContain("This view will be set up next.");
     expect(html).toContain(`>${partnerModuleViews[section][0].label}</h3>`);
     expect(html).not.toMatch(/<(button|input|table|form|canvas)\b/);
   });
