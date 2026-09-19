@@ -6,7 +6,7 @@ import PartnerAdminNavigation from "./PartnerAdminNavigation";
 import PartnerSidebarViews from "./PartnerSidebarViews";
 import { partnerAdminNavigation, partnerModuleViews, type PartnerModuleKey } from "./partnerAdminRoutes";
 
-vi.mock("next/dynamic", () => ({ default: () => () => createElement("h3", null, "Summary") }));
+vi.mock("next/dynamic", () => ({ default: (loader: () => unknown) => () => createElement("h3", null, loader.toString().includes("PartnerPerformanceDashboard") ? "Performance" : "Summary") }));
 
 let pathname = "/admin/partners";
 let query = "";
