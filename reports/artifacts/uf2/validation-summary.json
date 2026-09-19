@@ -1,0 +1,32 @@
+{
+  "backend": {
+    "service": 61,
+    "routes": 36,
+    "exports": 8,
+    "isolatedPostgresUF2": 2,
+    "isolatedPostgresUF1": 3,
+    "typecheckBuild": "PASS"
+  },
+  "website": {
+    "focusedTests": 67,
+    "typecheckScoped": "PASS",
+    "unfilteredTypecheck": "Existing test declaration errors; not a full PASS",
+    "scopedLint": "PASS",
+    "productionBuild": "PASS",
+    "syntheticBrowserWidths": [
+      1365,
+      768,
+      390
+    ],
+    "liveAdminListDetail": "Operator observed PASS"
+  },
+  "mobile": {
+    "focusedTests": 56,
+    "typecheck": "PASS",
+    "scopedLint": "PASS",
+    "hermesExport": "PASS",
+    "publicConfig": "PASS",
+    "fullJest": "Not rerun; focused affected suites only",
+    "live": "Android bundle delivered; Login screen observed by masked ADB read. Secure operator login pending; submitted/correction flow not yet live-certified."
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "id": "dpl_4avbsmrWxafbSdaEnHLWF3hRteFY",
+  "url": "tplgo-website-84ibmesfg-tplgo.vercel.app",
+  "source": "25606679632bc43c36b9acbb0f7884f8a67a8f6a",
+  "state": "READY",
+  "target": null,
+  "sources": [
+    {
+      "path": "app/admin/partners/_components/PartnerModuleSection.tsx",
+      "match": true
+    },
+    {
+      "path": "app/admin/partners/applications/PartnerApplicationList.tsx",
+      "match": true
+    },
+    {
+      "path": "app/admin/partners/applications/partnerApplicationExport.ts",
+      "match": true
+    },
+    {
+      "path": "app/admin/partners/applications/ApplicationReviewClient.tsx",
+      "match": true
+    },
+    {
+      "path": "app/admin/partners/applications/AdminPartnerApplicationsClient.tsx",
+      "match": true
+    },
+    {
+      "path": "app/admin/partners/applications/[submissionId]/page.tsx",
+      "match": true
+    },
+    {
+      "path": "app/lib/partner/partnerApiClient.ts",
+      "match": true
+    },
+    {
+      "path": "app/partner-preview/PartnerApplicationWorkspaceClient.tsx",
+      "match": true
+    },
+    {
+      "path": "app/partner-access/page.tsx",
+      "match": true
+    },
+    {
+      "path": "app/admin/partners/_components/PartnerSidebarViews.tsx",
+      "match": true
+    },
+    {
+      "path": "app/admin/_components/AdminShell.tsx",
+      "match": true
+    },
+    {
+      "path": "app/admin/partners/_components/partnerAdminRoutes.ts",
+      "match": true
+    },
+    {
+      "path": "app/admin/partners/_components/PartnerAdminNavigation.tsx",
+      "match": true
+    }
+  ],
+  "productionAction": false,
+  "alias": "staging.tplgo.com",
+  "aliasVerified": true
+}

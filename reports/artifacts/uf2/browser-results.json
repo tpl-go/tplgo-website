@@ -1,0 +1,62 @@
+[
+  {
+    "width": 1365,
+    "height": 1000,
+    "result": "PASS",
+    "checks": [
+      "bounded list queries",
+      "keyset next/previous",
+      "applied search",
+      "download request",
+      "real detail component",
+      "start review",
+      "explicit correction fields",
+      "confirmation cancel/confirm",
+      "no horizontal overflow",
+      "private print summary",
+      "403 clears detail",
+      "logout delayed-response exclusion"
+    ],
+    "synthetic": true
+  },
+  {
+    "width": 768,
+    "height": 1024,
+    "result": "PASS",
+    "checks": [
+      "bounded list queries",
+      "keyset next/previous",
+      "applied search",
+      "download request",
+      "real detail component",
+      "start review",
+      "explicit correction fields",
+      "confirmation cancel/confirm",
+      "no horizontal overflow",
+      "private print summary",
+      "403 clears detail",
+      "logout delayed-response exclusion"
+    ],
+    "synthetic": true
+  },
+  {
+    "width": 390,
+    "height": 844,
+    "result": "PASS",
+    "checks": [
+      "bounded list queries",
+      "keyset next/previous",
+      "applied search",
+      "download request",
+      "real detail component",
+      "start review",
+      "explicit correction fields",
+      "confirmation cancel/confirm",
+      "no horizontal overflow",
+      "private print summary",
+      "403 clears detail",
+      "logout delayed-response exclusion"
+    ],
+    "synthetic": true
+  }
+]

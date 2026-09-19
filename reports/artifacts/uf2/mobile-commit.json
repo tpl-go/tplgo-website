@@ -1,0 +1,12 @@
+{
+  "head": "09988baac40c0fdd5b75c16b540a14626ebd8160",
+  "branch": "codex/mobile-m2-authentication",
+  "files": [
+    "src/components/partner/partner-application-workspace.tsx",
+    "src/components/partner/partner-business-identity.rendered.test.js",
+    "src/features/partner/partnerApplicationApi.test.ts",
+    "src/features/partner/partnerApplicationApi.ts",
+    "src/features/partner/partnerApplicationModel.ts"
+  ],
+  "pushed": true
+}

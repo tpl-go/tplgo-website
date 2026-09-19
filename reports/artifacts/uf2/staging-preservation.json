@@ -1,0 +1,51 @@
+{
+  "fixture": "PARTNER_QA_FIXTURE",
+  "comparisons": [
+    {
+      "recordGroup": "catalogue",
+      "count": 1,
+      "preserved": true
+    },
+    {
+      "recordGroup": "content",
+      "count": 1,
+      "preserved": true
+    },
+    {
+      "recordGroup": "submission",
+      "count": 1,
+      "preserved": true
+    },
+    {
+      "recordGroup": "organization",
+      "count": 1,
+      "preserved": true
+    },
+    {
+      "recordGroup": "requirements",
+      "count": 9,
+      "preserved": true
+    },
+    {
+      "recordGroup": "documents",
+      "count": 5,
+      "preserved": true
+    },
+    {
+      "recordGroup": "links",
+      "count": 2,
+      "preserved": true
+    },
+    {
+      "recordGroup": "agreement",
+      "count": 1,
+      "preserved": true
+    },
+    {
+      "recordGroup": "unrelated_active",
+      "count": 1,
+      "preserved": true
+    }
+  ],
+  "recoveryExecutionEnabled": false
+}

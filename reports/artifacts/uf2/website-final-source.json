@@ -1,0 +1,43 @@
+{
+  "head": "25606679632bc43c36b9acbb0f7884f8a67a8f6a",
+  "out": ".tmp/uf2-preview-25606679632b",
+  "testedSourceMatched": true,
+  "files": [
+    {
+      "path": "app/admin/partners/_components/PartnerModuleSection.tsx",
+      "sha256": "d669c1d0df2a98a8baffd24e3f84fcc3c45b1bfb797fd22302effb2227030b80"
+    },
+    {
+      "path": "app/admin/partners/applications/PartnerApplicationList.tsx",
+      "sha256": "b760177dbbd06c6923fe38821794253854e3697a5fc94531dd0d1f8b5bbff4c5"
+    },
+    {
+      "path": "app/admin/partners/applications/partnerApplicationExport.ts",
+      "sha256": "2b474fb1654a42d83784a2454146d0895a036893f8c7676c27f659fad7333007"
+    },
+    {
+      "path": "app/admin/partners/applications/ApplicationReviewClient.tsx",
+      "sha256": "367a027cbc2ebd27aff04b726db0c0ae15938852aea92eb4088c8527b67ef52e"
+    },
+    {
+      "path": "app/admin/partners/applications/AdminPartnerApplicationsClient.tsx",
+      "sha256": "5582c6cc86d46d75491491988c3438155e8bdc9a53e508fa6ff8eb9326c22122"
+    },
+    {
+      "path": "app/admin/partners/applications/[submissionId]/page.tsx",
+      "sha256": "c5a007b8d4ccce5aa601f36b9dde6bb83cdff50ba9cb561b9f890fd486fa8831"
+    },
+    {
+      "path": "app/lib/partner/partnerApiClient.ts",
+      "sha256": "957997e76d7c73585f26ac7261a22b4624ac50a87801993f72341ae09aba03ab"
+    },
+    {
+      "path": "app/partner-preview/PartnerApplicationWorkspaceClient.tsx",
+      "sha256": "b34b4543567affa4cb209306e9916457aaf353d7ec03f824391938043b832586"
+    },
+    {
+      "path": "app/partner-access/page.tsx",
+      "sha256": "91ae46be6dec3f161f7831e3006cf51de85937ec9187f7ad8b662206da6af9d1"
+    }
+  ]
+}

@@ -2,6 +2,10 @@
 
 Recorded: 2026-09-19. Status: **IMPLEMENTED / STAGING DELIVERED / LIVE CERTIFICATION OPEN**. This report is supporting evidence; the sole master remains `C:\Users\Admin\tpl-api\reports\TPL_MASTER_REMAINING_WORK_LOG.md`.
 
+## UF2 follow-up — authenticated Admin record visibility, 2026-09-19
+
+The operator opened staging Admin Partners → Applications and the same synthetic application after UF2 delivery, and reported: “List aur details dikh rahe hain; error nahi.” This closes the limited Admin same-fixture list/detail visibility check. No reviewer assignment, Start Review, correction, resubmission or decision was performed. UF2 read-only preservation checks still match all nine UF1 record-group hashes. Actual approved publication-to-all-consumers timing remains OPEN. The UF1 checkpoint below is historical; its no-UF2-start statement describes that earlier batch only. See `TPL_PARTNER_UF2_APPLICATION_REVIEW_AND_CORRECTION_REPORT.md` for current delivery.
+
 ## Current checkpoint
 
 UF1 extends the existing configuration authority and Partner application, without another catalogue, new navigation or infrastructure. Backend, Website and Mobile scoped changes are committed and pushed. Backend staging health and clean Website Preview health are HTTP 200. Only `staging.tplgo.com` was repointed. No migration, production action, catalogue publication, application decision, upload, identity change, cleanup or APK build occurred.

@@ -1,0 +1,13 @@
+{
+  "source": "09988baac40c0fdd5b75c16b540a14626ebd8160",
+  "publicConfig": "PASS",
+  "androidPackagePreserved": true,
+  "ownerPreserved": true,
+  "projectIdPreserved": true,
+  "newNativeDependency": false,
+  "newApk": false,
+  "bundleSha256": "aedb83bec2beedbcddd750fc2d413b12cbe13bf8eeb12d239e395429c4ba15d1",
+  "bundlePath": "_expo/static/js/android/entry-9484c0f55ff618a099f282876151dc08.hbc",
+  "workingTreeOverlayIncluded": true,
+  "cleanCommitOnlyRuntime": false
+}

@@ -1,0 +1,20 @@
+{
+  "head": "25606679632bc43c36b9acbb0f7884f8a67a8f6a",
+  "branch": "d28e1a-integration-preview",
+  "files": [
+    "app/admin/partners/_components/PartnerModuleSection.tsx",
+    "app/admin/partners/applications/PartnerApplicationList.tsx",
+    "app/admin/partners/applications/partnerApplicationExport.ts",
+    "app/admin/partners/applications/ApplicationReviewClient.tsx",
+    "app/admin/partners/applications/AdminPartnerApplicationsClient.tsx",
+    "app/admin/partners/applications/[submissionId]/page.tsx",
+    "app/lib/partner/partnerApiClient.ts",
+    "app/partner-preview/PartnerApplicationWorkspaceClient.tsx",
+    "app/partner-access/page.tsx",
+    "app/admin/partners/applications/AdminPartnerApplicationsClient.s8d.test.ts",
+    "app/admin/partners/applications/AdminPartnerApplicationsClient.s8d1.test.ts",
+    "app/admin/partners/_components/PartnerModuleSection.test.tsx",
+    "scripts/uf2-admin-application-browser.mjs"
+  ],
+  "pushed": true
+}

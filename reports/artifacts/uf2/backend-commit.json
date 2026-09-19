@@ -1,0 +1,25 @@
+{
+  "head": "36593a3a2e7ee0b7eeb3f6d3d2a2d793c4f0f6a3",
+  "branch": "d28e3c3a-qa2b-provider-partner-integration",
+  "files": [
+    "drizzle/0054_partner_application_review.sql",
+    "drizzle/meta/_journal.json",
+    "package.json",
+    "package-lock.json",
+    "src/db/schema/partner/index.ts",
+    "src/modules/partner/in-memory-partner.repository.ts",
+    "src/modules/partner/partner.repository.ts",
+    "src/modules/partner/partner.routes.test.ts",
+    "src/modules/partner/partner.routes.ts",
+    "src/modules/partner/partner.service.test.ts",
+    "src/modules/partner/partner.service.ts",
+    "src/modules/partner/partner.types.ts",
+    "src/modules/partner/partner.validation.ts",
+    "src/modules/partner/postgres-partner.repository.ts",
+    "src/modules/partner/partner.application-export.ts",
+    "src/modules/partner/partner.application-export.test.ts",
+    "src/modules/partner/partner.application-review.ts",
+    "src/modules/partner/partner.application-review.pg.test.ts"
+  ],
+  "pushed": true
+}

@@ -1,0 +1,23 @@
+[
+  {
+    "scope": "website",
+    "files": 13,
+    "diffCheck": "PASS",
+    "scopedPatternSecretScan": "PASS",
+    "limitations": "pattern scan, not exhaustive certification"
+  },
+  {
+    "scope": "backend",
+    "files": 18,
+    "diffCheck": "PASS",
+    "scopedPatternSecretScan": "PASS",
+    "limitations": "pattern scan, not exhaustive certification"
+  },
+  {
+    "scope": "mobile",
+    "files": 5,
+    "diffCheck": "PASS",
+    "scopedPatternSecretScan": "PASS",
+    "limitations": "pattern scan, not exhaustive certification"
+  }
+]
