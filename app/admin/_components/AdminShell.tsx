@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
@@ -48,6 +48,7 @@ import { adminLogout, getAdminNotificationCenter, readAdminSession, refreshAdmin
 import type { AdminSession } from "../../lib/admin/adminApiClient";
 import { canAccessPartnerModule, partnerAdminRoute } from "../partners/_components/partnerAdminRoutes";
 import PartnerAdminNavigation from "../partners/_components/PartnerAdminNavigation";
+import PartnerSidebarViews from "../partners/_components/PartnerSidebarViews";
 
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -247,7 +248,7 @@ export default function AdminShell({
                 <Link
                   key={item.href}
                   href={item.href}
-                  aria-current={active ? "page" : undefined}
+                  aria-current={active ? "location" : undefined}
                   className={[
                     "flex h-10 items-center gap-3 rounded border-l-2 px-3 text-sm font-medium",
                     serviceCatalogueShell
@@ -260,6 +261,7 @@ export default function AdminShell({
                 </Link>
               );
             })}
+            {canAccessPartnerModule(session?.admin.permissions ?? []) ? <PartnerSidebarViews permissions={session?.admin.permissions ?? []} /> : null}
           </div>
           <div className={serviceCatalogueShell ? "space-y-1 border-t border-sky-300/10 pt-4" : "space-y-1 border-t border-slate-100 pt-4"}>
             <p className={serviceCatalogueShell ? "border-l-2 border-cyan-400 px-3 pb-2 text-[11px] font-semibold uppercase text-cyan-300" : "border-l-2 border-purple-500 px-3 pb-2 text-[11px] font-semibold uppercase text-purple-700"}>Website & Content</p>

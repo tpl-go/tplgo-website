@@ -1,5 +1,14 @@
 import { expect, test } from "vitest";
-import { partnerAdminLegacyRoutes, partnerAdminNavigation, partnerAdminRoute, partnerQueueReturn, visiblePartnerAdminNavigation } from "./partnerAdminRoutes";
+import { partnerAdminLegacyRoutes, partnerAdminNavigation, partnerAdminRoute, partnerModuleViews, partnerQueueReturn, visiblePartnerAdminNavigation } from "./partnerAdminRoutes";
+
+test("approved view hierarchy has exact membership and order", () => {
+  expect(Object.fromEntries(Object.entries(partnerModuleViews).map(([key, views]) => [key, views.map(view => view.label)]))).toEqual({
+    overview: ["Summary", "Performance", "Revenue", "Services", "Alerts & Actions"],
+    applications: ["All Applications", "New", "Under Review", "Documents Pending", "Approved", "Rejected"],
+    partners: ["All", "Active", "Inactive", "Suspended"],
+    reports: ["Partner Performance", "Business & Bookings", "Revenue & Commission", "Settlement & Payments", "Domain & Service", "Geography"],
+  });
+});
 
 test.each(partnerAdminNavigation)("$label is active for its canonical and query route", (item: typeof partnerAdminNavigation[number]) => {
   expect(partnerAdminRoute(item.href)).toEqual(item);

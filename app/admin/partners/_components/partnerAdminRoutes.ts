@@ -5,6 +5,45 @@ export const partnerAdminNavigation = [
   { key: "reports", href: "/admin/partners/reports", label: "Reports", permission: "partner_verification.read" },
 ];
 
+export const partnerModuleViews = {
+  overview: [
+    { key: "summary", label: "Summary" },
+    { key: "performance", label: "Performance" },
+    { key: "revenue", label: "Revenue" },
+    { key: "services", label: "Services" },
+    { key: "alerts-actions", label: "Alerts & Actions" },
+  ],
+  applications: [
+    { key: "all", label: "All Applications" },
+    { key: "new", label: "New" },
+    { key: "under-review", label: "Under Review" },
+    { key: "documents-pending", label: "Documents Pending" },
+    { key: "approved", label: "Approved" },
+    { key: "rejected", label: "Rejected" },
+  ],
+  partners: [
+    { key: "all", label: "All" },
+    { key: "active", label: "Active" },
+    { key: "inactive", label: "Inactive" },
+    { key: "suspended", label: "Suspended" },
+  ],
+  reports: [
+    { key: "partner-performance", label: "Partner Performance" },
+    { key: "business-bookings", label: "Business & Bookings" },
+    { key: "revenue-commission", label: "Revenue & Commission" },
+    { key: "settlement-payments", label: "Settlement & Payments" },
+    { key: "domain-service", label: "Domain & Service" },
+    { key: "geography", label: "Geography" },
+  ],
+} as const;
+
+export type PartnerModuleKey = keyof typeof partnerModuleViews;
+
+export function partnerModuleView(section: PartnerModuleKey, requested: string | null) {
+  const views = partnerModuleViews[section];
+  return views.find((view) => view.key === requested) ?? views[0];
+}
+
 // Retain existing specialist/detail routes, but do not expose them as module tabs.
 export const partnerAdminLegacyRoutes = [
   { href: "/admin/partners/active", label: "Active Partners", permission: "partner_verification.read" },

@@ -1,4 +1,8 @@
-import { partnerAdminNavigation } from "./partnerAdminRoutes";
+"use client";
+
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { partnerAdminNavigation, partnerModuleView, partnerModuleViews, type PartnerModuleKey } from "./partnerAdminRoutes";
 
 const sections = {
   overview: { description: "A clear view of your partner network." },
@@ -7,12 +11,20 @@ const sections = {
   reports: { description: "A dedicated space for partner reporting." },
 } as const;
 
-export default function PartnerModuleSection({ section }: { section: keyof typeof sections }) {
+export default function PartnerModuleSection({ section }: { section: PartnerModuleKey }) {
+  const query = useSearchParams();
   const content = sections[section];
-  const title = partnerAdminNavigation.find((item) => item.key === section)?.label;
+  const route = partnerAdminNavigation.find((item) => item.key === section)!;
+  const activeView = partnerModuleView(section, query.get("view"));
   return <section aria-labelledby="partner-section-title" data-partner-module-panel className="min-h-72 rounded-xl border border-sky-300/15 bg-[#0b1628] px-6 py-8 sm:min-h-80 sm:px-8">
-    <h2 id="partner-section-title" className="text-xl font-semibold tracking-tight text-slate-100">{title}</h2>
+    <h2 id="partner-section-title" className="text-xl font-semibold tracking-tight text-slate-100">{route.label}</h2>
     <p className="mt-3 max-w-xl text-sm leading-6 text-slate-400">{content.description}</p>
-    <div className="mt-10 border-t border-sky-300/10 pt-6"><p className="text-sm text-slate-500">This section will be set up next.</p></div>
+    <nav aria-label={`${route.label} views`} className="mt-6 flex flex-wrap gap-2 border-b border-sky-300/10 pb-5">
+      {partnerModuleViews[section].map((view) => <Link key={view.key} href={`${route.href}?view=${view.key}`} prefetch={false} scroll={false} aria-current={view.key === activeView.key ? "page" : undefined} className={`inline-flex min-h-11 max-w-full items-center rounded-lg border px-3 py-2 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300 ${view.key === activeView.key ? "border-sky-400/40 bg-sky-400/10 text-sky-200" : "border-transparent text-slate-400 hover:bg-white/5 hover:text-slate-100"}`}>{view.label}</Link>)}
+    </nav>
+    <div className="py-8" aria-labelledby="partner-view-title" data-partner-view>
+      <h3 id="partner-view-title" className="text-base font-medium text-slate-200">{activeView.label}</h3>
+      <p className="mt-3 text-sm text-slate-500">This view will be set up next.</p>
+    </div>
   </section>;
 }
