@@ -8,11 +8,12 @@ const adminClient = readFileSync("app/lib/admin/adminApiClient.ts", "utf8");
 const step8 = readFileSync("app/partner-preview/PartnerApplicationWorkspaceClient.tsx", "utf8");
 const partnerClient = readFileSync("app/lib/partner/partnerApiClient.ts", "utf8");
 
-test("four-tab framework keeps Applications landing empty and preserves direct final-review routes", () => {
+test("four-tab framework mounts the bounded Applications list and protected review route", () => {
   expect(page).toContain("PartnerModuleSection");
   expect(page).not.toContain("AdminPartnerApplicationsClient");
   expect(page).not.toContain("PartnerAdminReadModel");
-  expect(detailPage).toContain("initialSubmissionId");
+  expect(detailPage).toContain("ApplicationReviewClient submissionId={resolved.submissionId}");
+  expect(readFileSync("app/admin/partners/_components/PartnerModuleSection.tsx", "utf8")).toContain("PartnerApplicationList");
 });
 
 test("queue states, actionable counts, filters and search are operator-facing", () => {

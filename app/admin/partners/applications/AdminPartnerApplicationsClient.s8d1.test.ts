@@ -4,7 +4,7 @@ vi.mock("@/app/lib/admin/adminApiClient", () => ({ adminApiRequest: vi.fn() }));
 import { adminApiRequest } from "@/app/lib/admin/adminApiClient";
 import { actionDisabledReason, createQaState, simulateQaAction } from "./AdminPartnerApplicationsClient";
 
-const input = { partnerMessage: "Please correct the service details.", privateNote: "Internal evidence check", reasonCategory: "specialist_readiness", correctionSections: ["services" as const] };
+const input = { partnerMessage: "Please correct the business description.", privateNote: "Internal evidence check", reasonCategory: "specialist_readiness", correctionSections: ["business_identity" as const], correctionFields: ["description"] };
 const source = readFileSync("app/admin/partners/applications/AdminPartnerApplicationsClient.tsx", "utf8");
 type ReviewAction = Parameters<typeof simulateQaAction>[2];
 
@@ -36,7 +36,7 @@ test("changes preserve corrections and keep private note out of Partner message 
   expect(detail.submission.workflowStatus).toBe("CHANGES_REQUESTED");
   expect(detail.messages.partnerVisible).toBe(input.partnerMessage);
   expect(detail.messages.privateAdminNotes[0].note).toBe(input.privateNote);
-  expect(detail.timeline.at(-1)?.correctionSections).toEqual(["services"]);
+  expect(detail.timeline.at(-1)?.correctionSections).toEqual(["business_identity"]);
   expect(JSON.stringify(detail.timeline)).not.toContain(input.privateNote);
 });
 

@@ -6,19 +6,19 @@ import PartnerAdminNavigation from "./PartnerAdminNavigation";
 import PartnerSidebarViews from "./PartnerSidebarViews";
 import { partnerAdminNavigation, partnerModuleViews, type PartnerModuleKey } from "./partnerAdminRoutes";
 
-vi.mock("next/dynamic", () => ({ default: (loader: () => unknown) => () => createElement("h3", null, loader.toString().includes("PartnerServicesDashboard") ? "Services" : loader.toString().includes("PartnerRevenueDashboard") ? "Revenue" : loader.toString().includes("PartnerPerformanceDashboard") ? "Performance" : "Summary") }));
+vi.mock("next/dynamic", () => ({ default: (loader: () => unknown) => () => createElement("h3", null, loader.toString().includes("PartnerApplicationList") ? (partnerModuleViews.applications.find(v => v.key === new URLSearchParams(query).get("view"))?.label ?? "All Applications") : loader.toString().includes("PartnerServicesDashboard") ? "Services" : loader.toString().includes("PartnerRevenueDashboard") ? "Revenue" : loader.toString().includes("PartnerPerformanceDashboard") ? "Performance" : "Summary") }));
 
 let pathname = "/admin/partners";
 let query = "";
 vi.mock("next/navigation", () => ({ usePathname: () => pathname, useSearchParams: () => new URLSearchParams(query) }));
 
-test("four module sections render their default view without data or actions", () => {
+test("four module sections preserve navigation and dynamically mount completed views", () => {
   query = "";
   const sections = ["overview", "applications", "partners", "reports"] as const;
   sections.forEach((section, index) => {
     const html = renderToStaticMarkup(createElement(PartnerModuleSection, { section }));
     expect(html).toContain(`>${partnerAdminNavigation[index].label}</h2>`);
-    if (section !== "overview") expect(html).toContain("This view will be set up next.");
+    if (section !== "overview" && section !== "applications") expect(html).toContain("This view will be set up next.");
     expect(html).toContain(`>${partnerModuleViews[section][0].label}</h3>`);
     expect(html).not.toMatch(/<(button|input|table|form|canvas)\b/);
   });

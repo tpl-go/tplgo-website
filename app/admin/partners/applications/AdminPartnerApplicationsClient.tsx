@@ -39,7 +39,9 @@ export type QueueResponse = {
   filters: Record<string, string>;
 };
 
-type DetailResponse = {
+export type DetailResponse = {
+  orderedReview?: { currentLevel: number; pendingWith: string; requiredAction: string; nextStep: string };
+  assignment?: { reviewers: [string,string,string]; version: number } | null;
   submission: {
     id: string;
     applicationId: string;
@@ -69,6 +71,7 @@ type DetailResponse = {
   messages: { partnerVisible: string | null; privateAdminNotes: Array<{ id: string; author: string; createdAt: string; note: string }> };
   permissions: { canRead: boolean; canReview: boolean; canManage: boolean; canFinalApprove: boolean };
   actions: {
+    canCompleteLevel?: boolean;
     canStartReview: boolean;
     canRequestChanges: boolean;
     canNotApprove: boolean;
@@ -343,16 +346,17 @@ export function applicationDetailHref(id: string, query: string, qa: boolean) {
   return `/admin/partners/applications/${encodeURIComponent(id)}${params.size ? `?${params}` : ""}`;
 }
 
-function Detail({ detail, assignedReviewer, qa, notice, onNotice, onReload, onQaAction }: { detail: DetailResponse; assignedReviewer?: string | null; qa: boolean; notice: string; onNotice: (value: string) => void; onReload: () => Promise<void> | void; onQaAction: (action: ReviewAction, input: ActionInput) => boolean }) {
+export function Detail({ detail, assignedReviewer, qa, notice, onNotice, onReload, onQaAction }: { detail: DetailResponse; assignedReviewer?: string | null; qa: boolean; notice: string; onNotice: (value: string) => void; onReload: () => Promise<void> | void; onQaAction: (action: ReviewAction, input: ActionInput) => boolean }) {
   const query = useSearchParams();
   const [message, setMessage] = useState(detail.messages.partnerVisible ?? "");
   const [privateNote, setPrivateNote] = useState("");
   const [reasonCategory, setReasonCategory] = useState("specialist_readiness");
-  const [sections, setSections] = useState<Set<StepKey>>(new Set(["services"]));
+  const [sections, setSections] = useState<Set<StepKey>>(new Set(["business_identity"]));
+  const [fields, setFields] = useState<string[]>(["description"]);
   const [pending, setPending] = useState<ReviewAction | null>(null);
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
-  const input = { partnerMessage: message, privateNote, reasonCategory, correctionSections: [...sections] };
+  const input = { partnerMessage: message, privateNote, reasonCategory, correctionSections: [...sections], correctionFields: fields };
   const reason = (action: ReviewAction) => busy ? "An action is being recorded." : actionDisabledReason(detail, action, input);
   const doAction = async (action: ReviewAction) => {
     if (busyRef.current) return;
@@ -369,6 +373,7 @@ function Detail({ detail, assignedReviewer, qa, notice, onNotice, onReload, onQa
     const body = {
       expectedTransitionVersion: detail.submission.transitionVersion,
       correctionSections: [...sections],
+      correctionFields: fields,
       partnerMessage: message,
       privateNote,
       reasonCategory,
@@ -400,11 +405,11 @@ function Detail({ detail, assignedReviewer, qa, notice, onNotice, onReload, onQa
           <h2 className="mt-2 text-xl font-semibold text-slate-950">{detail.organization.name}</h2>
           <p className="mt-1 text-sm text-slate-500">{detail.submission.submissionKind === "RESUBMISSION" ? "Resubmission" : "Submission"} {detail.submission.submissionRevision} · {statusLabel(detail.submission.workflowStatus)}</p>
         </div>
-        <Pill label={`Transition v${detail.submission.transitionVersion}`} />
+        <Pill label={`Review Level ${detail.orderedReview?.currentLevel ?? 1}`} />
       </div>
       {pending ? <ActionConfirmation action={pending} onCancel={() => setPending(null)} onConfirm={() => void doAction(pending)} /> : null}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Info label="Assigned reviewer" value={assignedReviewer ?? "Unassigned"} />
+        <Info label="Assigned reviewer" value={detail.orderedReview?.pendingWith ?? assignedReviewer ?? "Assignment required"} />
         <Info label="Submitted" value={formatDate(detail.submission.submittedAt)} />
         <Info label="Contact" value={`${detail.contact.displayName} · ${detail.contact.email}`} />
         <Info label="Activation" value="Not changed by final approval" />
@@ -448,7 +453,7 @@ function Detail({ detail, assignedReviewer, qa, notice, onNotice, onReload, onQa
           <textarea aria-label="Private Admin note" value={privateNote} onChange={(event) => setPrivateNote(event.target.value)} className="min-h-20 rounded border border-slate-200 p-3 text-sm" placeholder="Private Admin note" />
           <input aria-label="Reason category" value={reasonCategory} onChange={(event) => setReasonCategory(event.target.value)} className="h-10 rounded border border-slate-200 px-3 text-sm" placeholder="Reason category" />
           <div className="flex flex-wrap gap-2">
-            {(Object.keys(stepLabels) as StepKey[]).map((step) => (
+            {(["business_identity"] as StepKey[]).map((step) => (
               <label key={step} className="inline-flex items-center gap-2 rounded bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700">
                 <input type="checkbox" checked={sections.has(step)} onChange={(event) => setSections((current) => {
                   const next = new Set(current);
@@ -460,8 +465,11 @@ function Detail({ detail, assignedReviewer, qa, notice, onNotice, onReload, onQa
               </label>
             ))}
           </div>
+          <fieldset className="flex flex-wrap gap-4"><legend className="mb-2 text-xs font-semibold">Fields the Partner may correct</legend>{[["brandName","Brand name"],["description","Business description"]].map(([key,label])=><label key={key} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={fields.includes(key)} onChange={event=>setFields(current=>event.target.checked?[...current,key]:current.filter(item=>item!==key))}/>{label}</label>)}</fieldset>
+          <p className="text-xs text-slate-500">Each resubmission restarts review at Level 1. Other submitted evidence stays unchanged.</p>
           <div className="flex flex-wrap gap-2">
             <ActionButton label="Start review" icon={ShieldCheck} enabled={!reason("start-review")} reason={reason("start-review")} onClick={() => void doAction("start-review")} />
+            <ActionButton label="Complete review level" icon={ShieldCheck} enabled={!reason("complete-level")} reason={reason("complete-level")} onClick={() => setPending("complete-level")} />
             <ActionButton label="Request changes" icon={MessageSquare} enabled={!reason("request-changes")} reason={reason("request-changes")} onClick={() => setPending("request-changes")} />
             <ActionButton label="Not approve" icon={Lock} enabled={!reason("not-approve")} reason={reason("not-approve")} onClick={() => setPending("not-approve")} />
             <ActionButton label="Approve final application" icon={CheckCircle2} enabled={!reason("approve")} reason={reason("approve")} onClick={() => setPending("approve")} />
@@ -540,9 +548,10 @@ function actionLabel(value: string) {
   return statusLabel(value.replace(/-/g, "_"));
 }
 
-type ReviewAction = "start-review" | "request-changes" | "not-approve" | "approve" | "notes";
-type ActionInput = { partnerMessage: string; privateNote: string; reasonCategory: string; correctionSections: StepKey[] };
+type ReviewAction = "complete-level" | "start-review" | "request-changes" | "not-approve" | "approve" | "notes";
+type ActionInput = { partnerMessage: string; privateNote: string; reasonCategory: string; correctionSections: StepKey[]; correctionFields?: string[] };
 const actionKeys = {
+  "complete-level": ["canCompleteLevel", "completeLevel"],
   "start-review": ["canStartReview", "startReview"],
   "request-changes": ["canRequestChanges", "requestChanges"],
   "not-approve": ["canNotApprove", "notApprove"],
@@ -563,6 +572,8 @@ export function actionDisabledReason(detail: DetailResponse, action: ReviewActio
   if (action === "request-changes" && !input.correctionSections.length) missing.push("Select at least one correction section.");
   if (action === "not-approve" && !input.reasonCategory.trim()) missing.push("Reason category is required.");
   if ((action === "request-changes" || action === "not-approve") && !input.partnerMessage.trim()) missing.push("Partner-visible message is required.");
+  if (action === "complete-level" && !input.privateNote.trim()) missing.push("Record a review finding in the private note.");
+  if (action === "request-changes" && !input.correctionFields?.length) missing.push("Choose a correction field.");
   if (action === "notes" && !input.privateNote.trim()) missing.push("Private Admin note is required.");
   return missing.join(" ");
 }

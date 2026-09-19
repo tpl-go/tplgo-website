@@ -359,6 +359,7 @@ function SubmittedStatus({ profile, summary, summaryState, onBack }: { profile: 
         <StatusDetail label="Current status" value={status} />
       </div>
       <p className="mt-5 text-sm font-medium leading-6 text-slate-300">{lifecycle === "NOT_APPROVED" ? "Your application was not approved. Contact Partner Support if you need help." : "Your application has been received for review. Submission does not activate services or payouts."}</p>
+      {summary?.latestSubmission?.reviewProgress ? <section className="mt-5 space-y-2 rounded-xl border border-white/10 p-4 text-sm"><h2 className="font-semibold">{summary.latestSubmission.reviewProgress.pendingWith}</h2><p>{summary.latestSubmission.reviewProgress.requiredAction}</p><p>Next: {summary.latestSubmission.reviewProgress.nextStep}</p>{summary.latestSubmission.reviewProgress.timeline.map((item,index)=><p key={index} className="text-slate-300">{item.label} · {formatPartnerDate(item.occurredAt)}{item.message?` — ${item.message}`:""}</p>)}</section> : null}
       <SummaryNotice state={summaryState} />
       {summaryState === "ready" && summary?.readiness.organizationId ? <Link href={partnerApplicationPreviewHref(summary.readiness.organizationId)} className={`${secondaryActionClass} mt-6`}>Preview application</Link> : null}
       <button type="button" onClick={onBack} className={`${backActionClass} mt-8`}><ArrowLeft aria-hidden="true" className="h-4 w-4" />Back</button>

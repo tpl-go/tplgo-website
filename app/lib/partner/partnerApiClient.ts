@@ -172,6 +172,8 @@ export type PartnerApplicationSubmissionSummary = {
   submittedByUserId: string;
   partnerVisibleMessage?: string | null;
   correctionSections?: PartnerApplicationStepKey[];
+  correctionFields?: string[];
+  reviewProgress?: {currentLevel:number;pendingWith:string;requiredAction:string;nextStep:string;timeline:Array<{label:string;occurredAt:string;message:string|null}>};
 };
 
 export type PartnerApplicationReadiness = {

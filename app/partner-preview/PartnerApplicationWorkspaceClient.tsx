@@ -1255,7 +1255,9 @@ export default function PartnerApplicationWorkspaceClient({
       },
       requirementClassifications: businessIdentityRequirementClassifications(businessForm.organizationType),
     };
-    const result = await savePartnerBusinessIdentityDraft(payload);
+    const correction = effectiveStep8Readiness?.applicationStatus === "CHANGES_REQUESTED";
+    const allowed = effectiveStep8Readiness?.latestSubmission?.correctionFields ?? [];
+    const result = await savePartnerBusinessIdentityDraft(correction ? { organizationId: payload.organizationId, ...Object.fromEntries(allowed.filter(key => key === "brandName" || key === "description").map(key => [key, payload[key as "brandName" | "description"]])) } : payload);
     if (!result.ok) {
       setSaveStatus("error");
       if (!options.silent) setMessage({ tone: "error", text: partnerMutationLockMessage(result.error.code) ?? "Could not save your changes. Your edits are still here." });
@@ -2258,6 +2260,7 @@ function AccountContactStep({
 }
 
 function BusinessIdentityStep({
+  correctionFields,
   publishedCopy,
   form,
   showsRegistrationSection,
@@ -2265,6 +2268,7 @@ function BusinessIdentityStep({
   qaPreviewEnabled,
   onChange,
 }: {
+  correctionFields?: string[];
   publishedCopy?: { title?: string; subtitle?: string; helperText?: string };
   form: BusinessIdentityForm;
   showsRegistrationSection: boolean;
@@ -2272,6 +2276,7 @@ function BusinessIdentityStep({
   qaPreviewEnabled: boolean;
   onChange: (next: Partial<BusinessIdentityForm>) => void;
 }) {
+  if (correctionFields) return <section className="space-y-5 rounded-xl border border-white/10 bg-[#171a20] p-5"><h1 className="text-xl font-semibold">Requested business updates</h1><p className="text-sm text-slate-300">Only the requested fields can be changed. Your other submitted details remain unchanged. Resubmission starts review again at Level 1.</p>{correctionFields.includes("brandName")?<label className="block space-y-2 text-sm"><span>Brand name</span><input className="min-h-11 w-full rounded border border-slate-500 bg-slate-900 px-3" value={form.brandName} maxLength={120} onChange={event=>onChange({brandName:event.target.value})}/></label>:null}{correctionFields.includes("description")?<label className="block space-y-2 text-sm"><span>Business description</span><textarea className="min-h-32 w-full rounded border border-slate-500 bg-slate-900 p-3" value={form.description} maxLength={500} onChange={event=>onChange({description:event.target.value})}/></label>:null}{!correctionFields.length?<p role="alert">The requested fields could not be confirmed. Refresh before editing.</p>:null}</section>;
   return (
     <div data-application-active-step="business_identity" className="rounded-2xl border border-white/10 bg-[#171a20] shadow-2xl">
       <div className="border-b border-white/10 p-5">
