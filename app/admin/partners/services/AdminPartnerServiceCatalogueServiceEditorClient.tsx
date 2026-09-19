@@ -1,5 +1,7 @@
 "use client";
 
+import { catalogueDomainTitle } from "./catalogueDomainTitle";
+
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { CentralSchedulePanel } from "../../_components/CentralSchedulePanel";
@@ -282,7 +284,7 @@ export function AdminPartnerServiceCatalogueServiceEditorClient({
           {preview ? (
             <PreviewPanel form={form} domainName={domainName} statusLabel={statusLabel} onBack={() => setPreview(false)} onSave={saveDraft} busy={busy} canManage={canManage} />
           ) : (
-            <ServiceForm form={form} setForm={setForm} disabled={!canManage || ["in_review", "approved"].includes(workflowState)} placementOptions={placementOptions} capabilityOptions={data.schema.capabilities} mode={mode} />
+            <ServiceForm domainOptions={[...new Set(data.draft.items.map(item => item.domain))].map(id => [id, catalogueDomainTitle(id, data.draft.items)])} form={form} setForm={setForm} disabled={!canManage || ["in_review", "approved"].includes(workflowState)} placementOptions={placementOptions} capabilityOptions={data.schema.capabilities} mode={mode} />
           )}
         </main>
         <aside className="min-w-0 space-y-4">
@@ -305,6 +307,7 @@ function ServiceForm(props: {
   form: FormState;
   setForm: (value: FormState | ((current: FormState) => FormState)) => void;
   disabled: boolean;
+  domainOptions: string[][];
   placementOptions: string[][];
   capabilityOptions: string[];
   mode: Mode;
@@ -319,7 +322,7 @@ function ServiceForm(props: {
         <Field label="Display order" value={props.form.displayOrder} onChange={(value) => update({ displayOrder: value.replace(/[^0-9]/g, "") })} disabled={props.disabled} />
       </FormSection>
       <FormSection title="Placement">
-        <SelectField label="Domain" value={props.form.domainId} onChange={(value) => update({ domainId: value, parentCode: "" })} disabled={props.disabled || props.mode === "edit"} options={partnerServiceCatalog.map((domain) => [domain.id, domain.title])} />
+        <SelectField label="Domain" value={props.form.domainId} onChange={(value) => update({ domainId: value, parentCode: "" })} disabled={props.disabled || props.mode === "edit"} options={props.domainOptions} />
         <SelectField label="Category or parent" value={props.form.parentCode} onChange={(value) => update({ parentCode: value })} disabled={props.disabled} options={[["", "No parent"], ...props.placementOptions]} />
       </FormSection>
       <FormSection title="Availability">

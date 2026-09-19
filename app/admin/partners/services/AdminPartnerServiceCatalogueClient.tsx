@@ -1,5 +1,7 @@
 "use client";
 
+import { catalogueDomainTitle } from "./catalogueDomainTitle";
+
 import { useEffect, useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import Link from "next/link";
 import {
@@ -721,7 +723,7 @@ function CataloguePreviewModal({ item, data, onClose, onEdit }: { item: AdminPar
           <div>
             <p className="text-xs font-black uppercase text-orange-300">{data.hasUnpublishedChanges ? "Draft Preview" : "Published Preview"} · Not Live Change</p>
             <h3 id="catalogue-preview-title" className="mt-1 text-2xl font-black text-cyan-100">{item.name}</h3>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">Previewing {domainTitle(item.domain)} / {titleKind(kind)}. This preview never publishes catalogue changes.</p>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">Previewing {domainTitle(item.domain, domainItems)} / {titleKind(kind)}. This preview never publishes catalogue changes.</p>
           </div>
           <button type="button" onClick={onClose} className="premiumButton compact secondary" aria-label="Close preview"><X size={16} /></button>
         </div>
@@ -729,7 +731,7 @@ function CataloguePreviewModal({ item, data, onClose, onEdit }: { item: AdminPar
           <Detail label="Workflow" value={workflowTitle(state)} />
           <Detail label="Draft Version" value={`v${data.draftVersion}`} />
           <Detail label="Published Version" value={`v${data.publishedVersion}`} />
-          <Detail label="Domain" value={domainTitle(item.domain)} />
+          <Detail label="Domain" value={domainTitle(item.domain, domainItems)} />
           <Detail label="Type" value={titleKind(kind)} />
           <Detail label="Status" value={item.status} />
           <Detail label="Partner Step 4 Visibility" value={item.status === "active" && item.applicationSelectable ? "Eligible after publish and policy filtering" : "Not selectable for new Partner applications"} />
@@ -740,7 +742,7 @@ function CataloguePreviewModal({ item, data, onClose, onEdit }: { item: AdminPar
           <h4 className="text-lg font-black text-sky-100">How this service card will read</h4>
           <div className="mt-3 rounded-2xl border border-cyan-300/20 bg-[#07111f] p-4">
             <div className="flex flex-wrap gap-2">
-              <StatusChip label={domainTitle(item.domain)} tone="cyan" />
+              <StatusChip label={domainTitle(item.domain, domainItems)} tone="cyan" />
               <StatusChip label={item.applicationSelectable ? "Selectable" : "Not selectable"} tone={item.applicationSelectable ? "green" : "slate"} />
             </div>
             <h5 className="mt-3 text-xl font-black text-slate-100">{item.name}</h5>
@@ -796,7 +798,7 @@ function buildDomainRows(items: AdminPartnerServiceCatalogueItem[], publishedCod
   const domainIds = [...new Set([...partnerServiceCatalog.map((domain) => domain.id), ...items.map((item) => item.domain)])];
   return domainIds.map((id) => {
     const domainItems = items.filter((item) => item.domain === id);
-    const domain = { id, title: domainTitle(id) };
+    const domain = { id, title: domainTitle(id, domainItems) };
     const visibleItems = domainItems.filter((item) => !isDomainRootItem(item, domain));
     const statuses = domainItems.map((item) => item.status);
     const draftCount = domainItems.filter((item) => !item.published && !publishedCodes.has(item.stableCode)).length;
@@ -856,7 +858,7 @@ function filterDomainItems(items: AdminPartnerServiceCatalogueItem[], allDomainI
 function itemKind(item: AdminPartnerServiceCatalogueItem, domainItems: AdminPartnerServiceCatalogueItem[]): ItemKind {
   const hasChildren = domainItems.some((candidate) => candidate.parentCode === item.stableCode);
   const parent = item.parentCode ? domainItems.find((candidate) => candidate.stableCode === item.parentCode) : undefined;
-  if (parent && isDomainRootItem(parent, { id: item.domain, title: domainTitle(item.domain) })) {
+  if (parent && isDomainRootItem(parent, { id: item.domain, title: domainTitle(item.domain, domainItems) })) {
     if (hasChildren && !item.applicationSelectable) return "category";
     return "service";
   }
@@ -944,8 +946,8 @@ function initialQueryParam(key: string) {
   return new URLSearchParams(window.location.search).get(key) ?? "";
 }
 
-function domainTitle(id: string) {
-  return partnerServiceCatalog.find((domain) => domain.id === id)?.title ?? id.split("-").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" ");
+function domainTitle(id: string, items: AdminPartnerServiceCatalogueItem[] = []) {
+  return catalogueDomainTitle(id, items);
 }
 
 function domainDescription(id: string) {

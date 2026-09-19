@@ -95,7 +95,7 @@ export type RequestedPartnerServiceFoundation = {
   status: "new" | "mapped_to_existing" | "draft_service_created" | "closed";
 };
 
-const domains: Record<PartnerServiceDomainId, { title: string; description: string; icon: string }> = {
+export const partnerServiceDomainMetadata: Record<PartnerServiceDomainId, { title: string; description: string; icon: string }> = {
   "stay-accommodation": { title: "Stay & Accommodation", description: "Accommodation properties and stay experiences.", icon: "bed" },
   "travel-agencies-dmc-tour-operators": { title: "Travel Agencies, DMC & Tour Operators", description: "Travel businesses, operators, consultants, and destination teams.", icon: "briefcase" },
   "tours-packages-journeys": { title: "Tours, Packages & Journeys", description: "Package-led travel, group departures, and planned journeys.", icon: "map" },
@@ -339,7 +339,7 @@ export const partnerServiceCatalogue: PartnerServiceCatalogueItem[] = [
   ]),
 ].sort((a, b) => a.displayOrder - b.displayOrder || a.name.localeCompare(b.name));
 
-export const partnerServiceCatalog: PartnerServiceCategory[] = Object.entries(domains).map(([id, domain]) => ({
+export const partnerServiceCatalog: PartnerServiceCategory[] = Object.entries(partnerServiceDomainMetadata).map(([id, domain]) => ({
   id: id as PartnerServiceDomainId,
   title: domain.title,
   description: domain.description,
@@ -497,7 +497,7 @@ export function normalizeSearchText(value: string): string {
 }
 
 function domainTitleFor(domainId: PartnerServiceDomainId): string {
-  return domains[domainId]?.title ?? "Service";
+  return partnerServiceDomainMetadata[domainId]?.title ?? "Service";
 }
 
 function items(
@@ -507,14 +507,14 @@ function items(
   serviceApprovalRequired: boolean,
   rows: Array<[string, string, string, string?, string?]>
 ): PartnerServiceCatalogueItem[] {
-  const offset = Object.keys(domains).indexOf(domain) * 1000;
+  const offset = Object.keys(partnerServiceDomainMetadata).indexOf(domain) * 1000;
   return rows.map(([stableCode, name, shortDescription, verificationOverride, alias], index) => ({
     id: `svc_${stableCode}`,
     stableCode,
     name,
     shortDescription,
     domain,
-    icon: domains[domain].icon,
+    icon: partnerServiceDomainMetadata[domain].icon,
     displayOrder: offset + index + 1,
     status: "active",
     published: true,
@@ -531,14 +531,14 @@ function items(
 
 function travelDocumentationInsuranceItems(): PartnerServiceCatalogueItem[] {
   const domain: PartnerServiceDomainId = "travel-documentation-insurance";
-  const offset = Object.keys(domains).indexOf(domain) * 1000;
+  const offset = Object.keys(partnerServiceDomainMetadata).indexOf(domain) * 1000;
   const category = (stableCode: string, name: string, index: number): PartnerServiceCatalogueItem => ({
     id: `svc_${stableCode}`,
     stableCode,
     name,
     shortDescription: `${name} grouping for travel documentation and insurance services.`,
     domain,
-    icon: domains[domain].icon,
+    icon: partnerServiceDomainMetadata[domain].icon,
     displayOrder: offset + index,
     status: "active",
     published: true,
@@ -549,7 +549,7 @@ function travelDocumentationInsuranceItems(): PartnerServiceCatalogueItem[] {
     serviceApprovalRequired: true,
     verificationProfileKey: "manual_review",
     capabilities: ["project_enquiries"],
-    aliases: [name, domains[domain].title],
+    aliases: [name, partnerServiceDomainMetadata[domain].title],
   });
   const service = (
     parentCode: string,
@@ -568,7 +568,7 @@ function travelDocumentationInsuranceItems(): PartnerServiceCatalogueItem[] {
     shortDescription,
     domain,
     parentCode,
-    icon: domains[domain].icon,
+    icon: partnerServiceDomainMetadata[domain].icon,
     displayOrder: offset + displayOrder,
     status: "active",
     published: true,
@@ -579,7 +579,7 @@ function travelDocumentationInsuranceItems(): PartnerServiceCatalogueItem[] {
     serviceApprovalRequired: true,
     verificationProfileKey,
     capabilities,
-    aliases: [name, domains[domain].title, ...aliases],
+    aliases: [name, partnerServiceDomainMetadata[domain].title, ...aliases],
   });
   const visa = "visa-travel-documentation";
   const travelInsurance = "travel-insurance";
