@@ -6,6 +6,8 @@ node_modules/
 outputs/
 tmp/
 reports/
+!app/admin/partners/reports/
+!app/admin/partners/reports/page.tsx
 *.log
 *_REPORT.md
 *_RESULT.json
