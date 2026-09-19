@@ -1,8 +1,8 @@
 "use client";
+import { usePartnerPublishedRead } from "./usePartnerPublishedRead";
 
-import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
+import {  useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { ArrowRight, BarChart3, ChevronDown, RefreshCcw, SlidersHorizontal, X } from "lucide-react";
-import { adminApiRequest, readAdminSession } from "@/app/lib/admin/adminApiClient";
 import { performanceLabels, performanceNumber } from "./partnerPerformanceContract";
 import {
   defaultRevenueFilters, revenueMoney, revenueParams, revenuePermissions,
@@ -16,31 +16,10 @@ const focus = "focus-visible:outline focus-visible:outline-2 focus-visible:outli
 const button = `inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-slate-600 px-3 text-sm text-slate-200 hover:bg-white/5 disabled:opacity-40 ${focus}`;
 const input = `h-10 w-full min-w-0 rounded-lg border border-slate-700 bg-slate-950/70 px-3 text-sm text-slate-200 ${focus}`;
 type State = "loading" | "ready" | "error" | "forbidden";
-function ownerKey() { const s = readAdminSession(); return s ? JSON.stringify([s.admin.id,s.session.id,s.session.token,s.admin.permissions]) : ""; }
-function useRevenue<T>(path: string | null, validate: (v: unknown) => v is T) {
-  const [result,setResult] = useState<{ key: string; state: State; data: T | null }>({ key: "",state: "loading",data: null });
-  const [tick,setTick] = useState(0); const sequence = useRef(0);
-  useEffect(() => {
-    if (!path) return;
-    const counter = sequence, ticket = ++counter.current, owner = ownerKey(); let live = true;
-    const current = readAdminSession();
-    const allowed = !!current && revenuePermissions.every(p => current.admin.permissions.includes(p));
-    const clear = () => { if (ownerKey() !== owner) { counter.current++; setResult({ key: path,state: "forbidden",data: null }); } };
-    window.addEventListener("storage",clear); window.addEventListener("focus",clear);
-    const timer = window.setInterval(clear,1000);
-    const start = window.setTimeout(() => {
-      setResult({ key: path,state: allowed ? "loading" : "forbidden",data: null });
-      if (!allowed) return;
-      void adminApiRequest<T>(path).then(r => {
-        if (!live || ticket !== counter.current || ownerKey() !== owner) return;
-        const valid = r.ok && validate(r.data);
-        setResult({ key: path,state: valid ? "ready" : !r.ok && [401,403].includes(r.status) ? "forbidden" : "error",data: valid && r.ok ? r.data : null });
-      }).catch(() => { if (live && ticket === counter.current) setResult({ key: path,state: "error",data: null }); });
-    },0);
-    return () => { live = false; counter.current++; clearInterval(timer); clearTimeout(start); window.removeEventListener("storage",clear); window.removeEventListener("focus",clear); };
-  },[path,tick,validate]);
-  return { data: result.key === path ? result.data : null,state: result.key === path ? result.state : "loading" as State,retry: useCallback(() => setTick(t => t+1),[]) };
+function useRevenue<T>(path: string | null, validate: (v: unknown) => boolean) {
+  return usePartnerPublishedRead<T>(path, revenuePermissions, validate);
 }
+
 function Section({ title,note,children,aside }: { title: string; note?: string; children: ReactNode; aside?: ReactNode }) {
   return <section aria-label={title} className={`${panel} min-w-0 p-4 sm:p-5`}>
     <div className="mb-4 flex flex-wrap items-start justify-between gap-3"><div><h3 className="text-base font-semibold text-slate-100">{title}</h3>{note && <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">{note}</p>}</div>{aside}</div>{children}
@@ -49,7 +28,7 @@ function Section({ title,note,children,aside }: { title: string; note?: string; 
 function ReadState({ state,retry,empty = false }: { state: State; retry: () => void; empty?: boolean }) {
   if (state === "ready" && !empty) return null;
   return <div role={state === "error" || state === "forbidden" ? "alert" : "status"} className="flex min-h-20 flex-wrap items-center justify-center gap-3 p-4 text-sm text-slate-400">
-    <span>{state === "loading" ? "Loading…" : state === "forbidden" ? "Revenue requires Partner financial reporting access." : state === "error" ? "Revenue could not be loaded." : "No matching results."}</span>
+    <span>{state === "loading" ? "Loading…" : state === "forbidden" ? "Revenue requires Partner financial reporting access." : state === "error" ? "Updates are unavailable. Previously loaded results may be out of date." : "No matching results."}</span>
     {state === "error" && <button type="button" className={button} onClick={retry}>Retry</button>}
   </div>;
 }

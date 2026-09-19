@@ -1,9 +1,9 @@
 "use client";
+import { usePartnerPublishedRead } from "./usePartnerPublishedRead";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { ArrowRight, ArrowUpRight, Building2, CalendarDays, CheckCircle2, CircleDollarSign, ClipboardList, CreditCard, RefreshCcw, Search, Wallet } from "lucide-react";
-import { adminApiRequest, readAdminSession } from "@/app/lib/admin/adminApiClient";
 
 export type SummaryCounts = Record<string, number | null>;
 export type PartnerSummaryData = {
@@ -55,28 +55,14 @@ function SmallLink({ label, value, href, loading, tone = "bg-slate-500" }: { lab
   return <Link href={href} prefetch={false} className={`group flex min-h-20 items-center justify-between gap-3 rounded-lg border border-slate-700/40 px-4 py-3 hover:border-sky-400/50 hover:bg-white/[.02] ${focus}`}><div><p className="flex items-center gap-2 text-xs text-slate-400"><span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${tone}`} />{label}</p><p className="mt-2 text-xl font-semibold text-slate-100"><Value value={value} loading={loading} /></p></div><ArrowUpRight aria-hidden="true" className="h-4 w-4 text-slate-500 group-hover:text-sky-300" /></Link>;
 }
 export default function PartnerSummaryDashboard() {
-  const [data, setData] = useState<PartnerSummaryData | null>(null);
-  const [state, setState] = useState<"loading" | "ready" | "error" | "forbidden">("loading");
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("");
   const [cursor, setCursor] = useState("");
   const [previous, setPrevious] = useState<string[]>([]);
-  const sequence = useRef(0);
-  const load = useCallback(async () => {
-    const ticket = ++sequence.current;
-    const session = readAdminSession();
-    if (!session?.admin.permissions.includes("partner_verification.read")) { setData(null); setState("forbidden"); return; }
-    const owner = session.admin.id, token = session.session.token;
-    setState("loading"); setData(null);
-    const query = new URLSearchParams({ limit: "8", search: filter, after: cursor });
-    const result = await adminApiRequest<PartnerSummaryData>(`/api/v1/admin/partners/summary?${query}`);
-    const current = readAdminSession();
-    if (ticket !== sequence.current) return;
-    if (!current || current.admin.id !== owner || current.session.token !== token) { setData(null); setState("forbidden"); return; }
-    if (result.ok && isPartnerSummaryData(result.data)) { setData(result.data); setState("ready"); }
-    else { setData(null); setState(result.status === 401 || result.status === 403 ? "forbidden" : "error"); }
-  }, [filter, cursor]);
-  useEffect(() => { const counter = sequence; const timer = setTimeout(() => void load(), 0); return () => { clearTimeout(timer); counter.current++; }; }, [load]);
+  const query = new URLSearchParams({ limit: "8", search: filter, after: cursor });
+  const { data, state, retry: load } = usePartnerPublishedRead<PartnerSummaryData>(
+    `/api/v1/admin/partners/summary?${query}`, ["partner_verification.read"], isPartnerSummaryData,
+  );
   const loading = state === "loading";
   const count = (group: "partners" | "applications" | "business" | "financial" | "attention", key: string) => data?.[group]?.[key];
   const kpis = [

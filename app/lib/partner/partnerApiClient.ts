@@ -454,6 +454,7 @@ export type PartnerRequestedServiceInput = {
 };
 
 export type PartnerServicesDraftInput = {
+  expectedCatalogueVersion?: number;
   organizationId?: string;
   selectedServiceCodes?: string[];
   requestedServices?: PartnerRequestedServiceInput[];
@@ -788,4 +789,14 @@ function buildPartnerOrganizationPayload(profile: PartnerOrganizationPreviewProf
       serviceLabel: service.label,
     })),
   };
+}
+
+export type PartnerPublishedConfiguration = {
+  contractVersion: 1;
+  versions: { catalogue: number; content: number; policy: number };
+  catalogue: PartnerServiceCatalogueRuntimeResponse;
+  applicationContent: Array<{ id: string; title?: string; subtitle?: string; helperText?: string }>;
+};
+export function fetchPartnerPublishedConfiguration(): Promise<TplApiResult<PartnerPublishedConfiguration>> {
+  return tplApiRequest("/api/v1/partner/configuration", { authToken: null, fallbackOnError: false });
 }

@@ -1,9 +1,9 @@
 "use client";
+import { usePartnerPublishedRead } from "./usePartnerPublishedRead";
 
 import Link from "next/link";
-import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
+import {  useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { ArrowDownRight, ArrowUpRight, BarChart3, ChevronDown, RefreshCcw, Search, SlidersHorizontal, X } from "lucide-react";
-import { adminApiRequest, readAdminSession } from "@/app/lib/admin/adminApiClient";
 import { defaultPerformanceFilters, performanceLabels, performanceNumber as number, performanceParams, validPerformanceOverview, type Breakdown, type Metric, type PartnerPerformancePage, type PerformanceFilters, type PerformanceOptions, type PerformanceOverview, type TrendPoint } from "./partnerPerformanceContract";
 
 const panel = "rounded-xl border border-slate-700/55 bg-[#0c1625]";
@@ -11,31 +11,12 @@ const focus = "focus-visible:outline focus-visible:outline-2 focus-visible:outli
 const button = `inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-slate-600 px-3 text-sm text-slate-200 hover:bg-white/5 disabled:opacity-40 ${focus}`;
 const input = `h-10 w-full min-w-0 rounded-lg border border-slate-700 bg-slate-950/70 px-3 text-sm text-slate-200 ${focus}`;
 type LoadState = "loading" | "ready" | "error" | "forbidden";
-function sessionKey() { const s = readAdminSession(); return s ? JSON.stringify([s.admin.id,s.session.id,s.session.token,s.admin.permissions]) : ""; }
 function usePerformance<T>(path: string | null, validate?: (v: unknown) => boolean) {
-  const [result,setResult] = useState<{ key: string; owner: string; state: LoadState; data: T | null }>({ key: "",owner:"",state:"loading",data:null });
-  const [tick,setTick] = useState(0); const sequence = useRef(0);
-  useEffect(() => {
-    if (!path) return;
-    const counter = sequence; const seq = ++counter.current, owner = sessionKey(); let live = true;
-    const current = readAdminSession(); const allowed = current?.admin.permissions.includes("partner_verification.read") && current.admin.permissions.includes("partner_service_catalogue.read");
-    const reset = () => { if (sessionKey() !== owner) { sequence.current++; setResult({ key:path,owner:"",state:"forbidden",data:null }); } };
-    window.addEventListener("storage",reset); window.addEventListener("focus",reset); const timer = window.setInterval(reset,1000);
-    const start = window.setTimeout(() => {
-      setResult({ key:path,owner,state:allowed ? "loading" : "forbidden",data:null });
-      if (!allowed) return;
-      void adminApiRequest<T>(path).then(r => {
-        if (!live || seq !== sequence.current || sessionKey() !== owner) return;
-        setResult({ key:path,owner,state:r.ok && (!validate || validate(r.data)) ? "ready" : !r.ok && [401,403].includes(r.status) ? "forbidden" : "error",data:r.ok && (!validate || validate(r.data)) ? r.data : null });
-      }).catch(() => { if (live && seq === sequence.current) setResult({ key:path,owner,state:"error",data:null }); });
-    },0);
-    return () => { live=false; clearTimeout(start); clearInterval(timer); counter.current++; window.removeEventListener("storage",reset); window.removeEventListener("focus",reset); };
-  },[path,tick,validate]);
-  const matching = path === result.key;
-  return { data:matching ? result.data : null,state:matching ? result.state : "loading" as LoadState,retry:useCallback(() => setTick(t => t+1),[]) };
+  return usePartnerPublishedRead<T>(path, ["partner_verification.read", "partner_service_catalogue.read"], validate);
 }
+
 function Section({ title,note,children,aside }: { title:string; note?:string; children:ReactNode; aside?:ReactNode }) { return <section className={`${panel} min-w-0 p-4 sm:p-5`} aria-label={title}><div className="mb-4 flex flex-wrap items-start justify-between gap-3"><div><h3 className="text-base font-semibold text-slate-100">{title}</h3>{note && <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">{note}</p>}</div>{aside}</div>{children}</section>; }
-function State({ state,retry,empty = false }: { state:LoadState; retry:()=>void; empty?:boolean }) { if (state === "ready" && !empty) return null; return <div className="flex min-h-20 flex-wrap items-center justify-center gap-3 p-4 text-sm text-slate-400" role={state === "error" || state === "forbidden" ? "alert" : "status"}>{state === "loading" ? "Loading…" : state === "forbidden" ? "Partner review and catalogue read access are required." : state === "error" ? "Could not load this section." : "No matching results."}{state === "error" && <button className={button} onClick={retry}>Retry</button>}</div>; }
+function State({ state,retry,empty = false }: { state:LoadState; retry:()=>void; empty?:boolean }) { if (state === "ready" && !empty) return null; return <div className="flex min-h-20 flex-wrap items-center justify-center gap-3 p-4 text-sm text-slate-400" role={state === "error" || state === "forbidden" ? "alert" : "status"}>{state === "loading" ? "Loading…" : state === "forbidden" ? "Partner review and catalogue read access are required." : state === "error" ? "Updates are unavailable. Previously loaded results may be out of date." : "No matching results."}{state === "error" && <button className={button} onClick={retry}>Retry</button>}</div>; }
 function Change({ metric,inverse=false }: { metric?:Metric; inverse?:boolean }) { const n=metric?.changePercent; if (n == null) return <span className="text-xs text-slate-500">{metric?.basis === "current_snapshot" ? "Current status · comparison unavailable" : "Comparison unavailable"}</span>; const positive=inverse ? n<0 : n>0; const Icon=n<0?ArrowDownRight:ArrowUpRight; return <span className={`inline-flex items-center gap-1 text-xs ${n===0 ? "text-slate-400" : positive ? "text-emerald-300" : "text-amber-300"}`}><Icon className="h-3 w-3" aria-hidden="true" />{n>0?"+":""}{number(n,"percent")} vs comparison</span>; }
 function PagedSelect({ field,label,filters,value,onChange,disabled=false, displayLabel }: { field:string; displayLabel?:string; label:string; filters:PerformanceFilters; value:string; onChange:(v:string,label:string)=>void; disabled?:boolean }) {
   const id=useId(),root=useRef<HTMLDivElement>(null),trigger=useRef<HTMLButtonElement>(null); const [open,setOpen]=useState(false),[term,setTerm]=useState(""),[after,setAfter]=useState(""),[history,setHistory]=useState<string[]>([]),[savedLabel,setSavedLabel]=useState(""); const [searchTerm,setSearchTerm]=useState(""); useEffect(()=>{const timer=setTimeout(()=>setSearchTerm(term),250);return()=>clearTimeout(timer);},[term]);

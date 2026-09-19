@@ -1,5 +1,7 @@
 "use client";
 
+import { acceptsPublishedVersions, watchVisiblePublication, type PublishedVersions } from "../lib/partner/publishedRefresh";
+import { fetchPartnerPublishedConfiguration } from "../lib/partner/partnerApiClient";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { partnerSubmittedDestination } from "../lib/partner/partnerSubmittedDestination";
 import { createPortal } from "react-dom";
@@ -37,7 +39,6 @@ import { useAuth } from "../hooks/useAuth";
 import {
   fetchPartnerApplicationDraft,
   fetchPartnerApplicationSubmission,
-  fetchPartnerServiceCatalogue,
   requestPartnerEmailVerification,
   requestPartnerMobileVerification,
   savePartnerAccountContactDraft,
@@ -663,6 +664,8 @@ export default function PartnerApplicationWorkspaceClient({
   const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const submitAttemptKeyRef = useRef<string | null>(null);
+  const [publishedApplicationCopy, setPublishedApplicationCopy] = useState<Record<string, { title?: string; subtitle?: string; helperText?: string }>>({});
+  const [configurationStale, setConfigurationStale] = useState(false);
   const [serviceCatalogueState, setServiceCatalogueState] = useState<RuntimeCatalogueState>({
     status: "loading",
     version: null,
@@ -765,50 +768,37 @@ export default function PartnerApplicationWorkspaceClient({
 
   useEffect(() => {
     let cancelled = false;
-    setServiceCatalogueState((current) => ({ ...current, status: "loading" }));
-    fetchPartnerServiceCatalogue().then((result) => {
-      if (cancelled) return;
-      if (result.ok) {
-        setServiceCatalogueState({
-          status: "ready",
-          version: result.data.version,
-          updatedAt: result.data.updatedAt,
-          domains: result.data.domains,
-          items: result.data.items,
+    let versions: PublishedVersions | null = null;
+    const stop = watchVisiblePublication(async () => {
+      try {
+        const [result, content] = await Promise.all([fetchPartnerPublishedConfiguration(), fetchPublishedPartnerApplicationContent()]);
+        if (cancelled) return;
+        if (!result.ok || result.data.contractVersion !== 1 || !acceptsPublishedVersions(versions, result.data.versions)) {
+          setConfigurationStale(true);
+          setServiceCatalogueState(current => current.version === null ? { ...current, status: "error" } : current);
+          return;
+        }
+        versions = result.data.versions;
+        setPublishedApplicationCopy(Object.fromEntries(result.data.applicationContent.map(node => [node.id, node])));
+        const catalogue = result.data.catalogue;
+        setServiceCatalogueState(current => current.version !== null && catalogue.version < current.version ? current : {
+          status: "ready", version: catalogue.version, updatedAt: catalogue.updatedAt, domains: catalogue.domains, items: catalogue.items,
         });
-      } else {
-        setServiceCatalogueState({ status: "error", version: null, updatedAt: null, domains: [], items: [] });
+        // Content and catalogue versions are independent. Do not accept mixed snapshots.
+        const contentVersion = content.ok ? Number(content.data.version?.split(":").at(-1)) : NaN;
+        setConfigurationStale(!content.ok || contentVersion !== versions.content);
+        if (!content.ok || contentVersion !== versions.content) return;
+        const children = content.data.contexts?.partner_application?.applicationTree?.children;
+        setPayoutTaxContent(payoutTaxContentFromNode(children?.find(node => node.id === "step-6-payout-tax")));
+        setAgreementContent(agreementContentFromNode(children?.find(node => node.id === "step-7-partner-agreement")));
+        const node = children?.find(node => node.id === "step-8-review-submit");
+        setReviewSubmitContent({ title: safePublishedCopy(node?.title, "Review & Submit"), subtitle: safePublishedCopy(node?.subtitle, "Review your application before sending it to TPL GO."), helperText: safePublishedCopy(node?.helperText, ""), signerInstructions: "", signingMethodCopy: "", documentInstructions: "", reviewReadyCopy: "", reviewIncompleteCopy: "" });
+      } catch {
+        if (!cancelled) setConfigurationStale(true);
       }
     });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetchPublishedPartnerApplicationContent().then((result) => {
-      if (cancelled || !result.ok) return;
-      const stepSixNode = result.data.contexts?.partner_application?.applicationTree?.children.find((node) => node.id === "step-6-payout-tax");
-      const stepSevenNode = result.data.contexts?.partner_application?.applicationTree?.children.find((node) => node.id === "step-7-partner-agreement");
-      const stepEightNode = result.data.contexts?.partner_application?.applicationTree?.children.find((node) => node.id === "step-8-review-submit");
-      setPayoutTaxContent(payoutTaxContentFromNode(stepSixNode));
-      setAgreementContent(agreementContentFromNode(stepSevenNode));
-      setReviewSubmitContent({
-        title: safePublishedCopy(stepEightNode?.title, "Review & Submit"),
-        subtitle: safePublishedCopy(stepEightNode?.subtitle, "Review your application before sending it to TPL GO."),
-        helperText: safePublishedCopy(stepEightNode?.helperText, ""),
-        signerInstructions: "",
-        signingMethodCopy: "",
-        documentInstructions: "",
-        reviewReadyCopy: "",
-        reviewIncompleteCopy: "",
-      });
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    return () => { cancelled = true; stop(); };
+  }, [applicationScope]);
 
   async function loadStep8ApplicationState(options: { silent?: boolean } = {}) {
     if (qaPreviewEnabled || !isAuthenticated) return;
@@ -1313,6 +1303,7 @@ export default function PartnerApplicationWorkspaceClient({
     setSaveStatus("saving");
     if (!options.silent) setMessage({ tone: "info", text: "Saving your draft." });
     const result = await savePartnerServicesDraft({
+      expectedCatalogueVersion: serviceCatalogueState.version ?? undefined,
       organizationId: servicesForm.organizationId || locationForm.organizationId || businessForm.organizationId || form.organizationId,
       selectedServiceCodes: servicesForm.selectedServiceCodes,
       requestedServices: servicesForm.requestedServices
@@ -1326,7 +1317,7 @@ export default function PartnerApplicationWorkspaceClient({
     });
     if (!result.ok) {
       setSaveStatus("error");
-      if (!options.silent) setMessage({ tone: "error", text: partnerMutationLockMessage(result.error.code) ?? "Could not save your services. Your edits are still here." });
+      if (!options.silent) setMessage({ tone: "error", text: partnerMutationLockMessage(result.error.code) ?? (result.error.code === "PARTNER_CATALOGUE_VERSION_CONFLICT" ? "Services have changed. Refresh services, review your selections and save again. Your edits are still here." : "Could not save your services. Your edits are still here.") });
       return null;
     }
     setBundle(result.data);
@@ -1844,6 +1835,7 @@ export default function PartnerApplicationWorkspaceClient({
         </header>
 
         {qaPreviewEnabled ? <QaPreviewBar selectedState={qaPreviewState} onChange={changeQaPreviewState} onReset={resetQaPreviewData} /> : null}
+        {configurationStale ? <div role="status" className="mb-3 rounded-lg border border-amber-400/30 p-3 text-sm text-amber-100">Updates are temporarily unavailable. Your saved choices and edits have been kept. <button type="button" className="underline" onClick={() => window.dispatchEvent(new Event("tpl:refresh-partner-configuration"))}>Retry updates</button></div> : null}
         {message ? <WorkspaceToast tone={message.tone} text={message.text} onDismiss={() => setMessage(null)} /> : null}
 
         <div className="grid flex-1 gap-4 px-4 py-4 lg:grid-cols-[270px_minmax(0,1fr)] xl:grid-cols-[280px_minmax(0,1fr)_360px] 2xl:grid-cols-[300px_minmax(0,1fr)_390px]">
@@ -1881,6 +1873,7 @@ export default function PartnerApplicationWorkspaceClient({
                     <StateCard title="Your Partner account is ready" detail="The verified Partner Business Desk opens in the next approved phase." tone="success" />
                   ) : activeStep === "account_contact" ? (
                     <AccountContactStep
+                      publishedCopy={publishedApplicationCopy["step-1-account-contact"]}
                       form={form}
                       user={user}
                       mobileVerified={mobileVerified}
@@ -1912,6 +1905,7 @@ export default function PartnerApplicationWorkspaceClient({
                     />
                   ) : activeStep === "business_identity" ? (
                     <BusinessIdentityStep
+                      publishedCopy={publishedApplicationCopy["step-2-business-identity"]}
                       form={businessForm}
                       showsRegistrationSection={showsRegistrationSection}
                       canComplete={canCompleteStepTwo}
@@ -1920,6 +1914,7 @@ export default function PartnerApplicationWorkspaceClient({
                     />
                   ) : activeStep === "business_location" ? (
                     <BusinessLocationStep
+                      publishedCopy={publishedApplicationCopy["step-3-business-location"]}
                       form={locationForm}
                       canComplete={canCompleteStepThree}
                       qaPreviewEnabled={qaPreviewEnabled}
@@ -1927,6 +1922,7 @@ export default function PartnerApplicationWorkspaceClient({
                     />
                   ) : activeStep === "services" ? (
                     <ServicesStep
+                      publishedCopy={publishedApplicationCopy["step-4-services"]}
                       readOnly={!canEditPartnerStep(effectiveStep8Readiness, "services", activeBundle)}
                       form={servicesForm}
                       businessType={businessForm.organizationType}
@@ -1946,6 +1942,7 @@ export default function PartnerApplicationWorkspaceClient({
                     />
                   ) : activeStep === "documents_compliance" ? (
                     <VerificationComplianceStep
+                      publishedCopy={publishedApplicationCopy["step-5-verification-compliance"]}
                       bundle={activeBundle}
                       selectedServiceCodes={servicesForm.selectedServiceCodes}
                       serviceCatalogueItems={serviceCatalogueState.items}
@@ -2062,6 +2059,7 @@ export default function PartnerApplicationWorkspaceClient({
 }
 
 function AccountContactStep({
+  publishedCopy,
   form,
   user,
   mobileVerified,
@@ -2083,6 +2081,7 @@ function AccountContactStep({
   onConfirmEmail,
   onEmailOtpChange,
 }: {
+  publishedCopy?: { title?: string; subtitle?: string; helperText?: string };
   form: AccountContactForm;
   user: ReturnType<typeof useAuth>["user"];
   mobileVerified: boolean;
@@ -2108,8 +2107,9 @@ function AccountContactStep({
     <div className="rounded-2xl border border-white/10 bg-[#171a20] shadow-2xl">
       <div className="border-b border-white/10 p-5">
         <p className="text-xs font-black uppercase tracking-[0.16em] text-[#fb923c]">Step 1</p>
-        <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Account & Contact</h1>
-        <p className="mt-2 text-sm font-semibold leading-6 text-slate-300">Tell us who we should contact about your Partner application.</p>
+        <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">{publishedCopy?.title || "Account & Contact"}</h1>
+        <p className="mt-2 text-sm font-semibold leading-6 text-slate-300">{publishedCopy?.subtitle || "Tell us who we should contact about your Partner application."}</p>
+        {publishedCopy?.helperText ? <p className="mt-2 text-sm text-slate-300">{publishedCopy.helperText}</p> : null}
       </div>
 
       <div className="grid gap-5 p-5">
@@ -2258,12 +2258,14 @@ function AccountContactStep({
 }
 
 function BusinessIdentityStep({
+  publishedCopy,
   form,
   showsRegistrationSection,
   canComplete,
   qaPreviewEnabled,
   onChange,
 }: {
+  publishedCopy?: { title?: string; subtitle?: string; helperText?: string };
   form: BusinessIdentityForm;
   showsRegistrationSection: boolean;
   canComplete: boolean;
@@ -2274,10 +2276,9 @@ function BusinessIdentityStep({
     <div data-application-active-step="business_identity" className="rounded-2xl border border-white/10 bg-[#171a20] shadow-2xl">
       <div className="border-b border-white/10 p-5">
         <p className="text-xs font-black uppercase tracking-[0.16em] text-[#fb923c]">Step 2</p>
-        <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Business Identity</h1>
-        <p className="mt-2 text-sm font-semibold leading-6 text-slate-300">
-          Tell us about the business or professional entity behind your Partner account.
-        </p>
+        <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">{publishedCopy?.title || "Business Identity"}</h1>
+        <p className="mt-2 text-sm font-semibold leading-6 text-slate-300">{publishedCopy?.subtitle || "Tell us about the business or professional entity behind your Partner account."}</p>
+        {publishedCopy?.helperText ? <p className="mt-2 text-sm text-slate-300">{publishedCopy.helperText}</p> : null}
       </div>
 
       <div className="grid gap-5 p-5">
@@ -2450,11 +2451,13 @@ function BusinessIdentityStep({
 }
 
 function BusinessLocationStep({
+  publishedCopy,
   form,
   canComplete,
   qaPreviewEnabled,
   onChange,
 }: {
+  publishedCopy?: { title?: string; subtitle?: string; helperText?: string };
   form: BusinessLocationForm;
   canComplete: boolean;
   qaPreviewEnabled: boolean;
@@ -2491,10 +2494,9 @@ function BusinessLocationStep({
     <div data-application-active-step="business_location" className="rounded-2xl border border-white/10 bg-[#171a20] shadow-2xl">
       <div className="border-b border-white/10 p-5">
         <p className="text-xs font-black uppercase tracking-[0.16em] text-[#fb923c]">Step 3</p>
-        <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Business Location</h1>
-        <p className="mt-2 text-sm font-semibold leading-6 text-slate-300">
-          Tell us where your business is based and where you provide your services.
-        </p>
+        <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">{publishedCopy?.title || "Business Location"}</h1>
+        <p className="mt-2 text-sm font-semibold leading-6 text-slate-300">{publishedCopy?.subtitle || "Tell us where your business is based and where you provide your services."}</p>
+        {publishedCopy?.helperText ? <p className="mt-2 text-sm text-slate-300">{publishedCopy.helperText}</p> : null}
       </div>
 
       <div className="grid gap-5 p-5">
@@ -2598,6 +2600,7 @@ function BusinessLocationStep({
 }
 
 function ServicesStep({
+  publishedCopy,
   readOnly,
   form,
   businessType,
@@ -2615,6 +2618,7 @@ function ServicesStep({
   onOpenSelectedServiceDomain,
   onChange,
 }: {
+  publishedCopy?: { title?: string; subtitle?: string; helperText?: string };
   form: ServicesForm;
   businessType: string;
   countryCode: string;
@@ -2702,8 +2706,9 @@ function ServicesStep({
     <div data-application-active-step="services" className="rounded-2xl border border-white/10 bg-[#171a20] shadow-2xl">
       <div className="border-b border-white/10 p-5">
         <p className="text-xs font-black uppercase tracking-[0.16em] text-[#fb923c]">Step 4</p>
-        <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Services</h1>
-        <p className="mt-2 text-sm font-semibold leading-6 text-slate-300">Choose the services your business provides through TPL GO.</p>
+        <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">{publishedCopy?.title || "Services"}</h1>
+        <p className="mt-2 text-sm font-semibold leading-6 text-slate-300">{publishedCopy?.subtitle || "Choose the services your business provides through TPL GO."}</p>
+        {publishedCopy?.helperText ? <p className="mt-2 text-sm text-slate-300">{publishedCopy.helperText}</p> : null}
       </div>
 
       <div className="grid gap-5 p-5">
@@ -3469,6 +3474,7 @@ function WorkspaceToast({ tone, text, onDismiss }: { tone: "success" | "info" | 
 }
 
 function VerificationComplianceStep({
+  publishedCopy,
   bundle,
   selectedServiceCodes,
   serviceCatalogueItems,
@@ -3479,6 +3485,7 @@ function VerificationComplianceStep({
   focusSectionId,
   onFocusSectionHandled,
 }: {
+  publishedCopy?: { title?: string; subtitle?: string; helperText?: string };
   bundle: PartnerOrganizationBundle | null;
   selectedServiceCodes: string[];
   serviceCatalogueItems: PartnerServiceCatalogueItem[];
@@ -3588,10 +3595,9 @@ function VerificationComplianceStep({
       <div data-application-active-step="documents_compliance" className="rounded-2xl border border-white/10 bg-[#171a20] shadow-2xl">
         <div className="border-b border-white/10 p-5">
           <p className="text-xs font-black uppercase tracking-[0.16em] text-[#fb923c]">Step 5</p>
-          <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Verification & Compliance</h1>
-          <p className="mt-2 text-sm font-semibold leading-6 text-slate-300">
-            We couldn&apos;t load your verification checklist.
-          </p>
+          <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">{publishedCopy?.title || "Verification & Compliance"}</h1>
+          <p className="mt-2 text-sm font-semibold leading-6 text-slate-300">{publishedCopy?.subtitle || "We couldn&apos;t load your verification checklist."}</p>
+        {publishedCopy?.helperText ? <p className="mt-2 text-sm text-slate-300">{publishedCopy.helperText}</p> : null}
           <button
             type="button"
             onClick={() => window.location.reload()}
