@@ -8,8 +8,9 @@ const adminClient = readFileSync("app/lib/admin/adminApiClient.ts", "utf8");
 const step8 = readFileSync("app/partner-preview/PartnerApplicationWorkspaceClient.tsx", "utf8");
 const partnerClient = readFileSync("app/lib/partner/partnerApiClient.ts", "utf8");
 
-test("Admin Partner Applications route uses the final-review workspace", () => {
-  expect(page).toContain("AdminPartnerApplicationsClient");
+test("four-tab framework keeps Applications landing empty and preserves direct final-review routes", () => {
+  expect(page).toContain("PartnerModuleSection");
+  expect(page).not.toContain("AdminPartnerApplicationsClient");
   expect(page).not.toContain("PartnerAdminReadModel");
   expect(detailPage).toContain("initialSubmissionId");
 });

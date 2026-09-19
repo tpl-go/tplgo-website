@@ -16,7 +16,6 @@ import {
   CreditCard,
   Database,
   FileText,
-  FileSearch,
   FileBarChart,
   FileClock,
   Gauge,
@@ -47,7 +46,7 @@ import {
 } from "lucide-react";
 import { adminLogout, getAdminNotificationCenter, readAdminSession, refreshAdminSession } from "../../lib/admin/adminApiClient";
 import type { AdminSession } from "../../lib/admin/adminApiClient";
-import { partnerAdminNavigation, partnerAdminRoute } from "../partners/_components/partnerAdminRoutes";
+import { canAccessPartnerModule, partnerAdminRoute } from "../partners/_components/partnerAdminRoutes";
 import PartnerAdminNavigation from "../partners/_components/PartnerAdminNavigation";
 
 const navItems = [
@@ -82,8 +81,7 @@ const navItems = [
 ];
 
 const partnerNavItems = [
-  ...partnerAdminNavigation.map((item) => ({ ...item, icon: item.label === "Applications" ? ClipboardCheck : item.label === "Verification" ? ShieldCheck : item.label === "Overview" ? Building2 : FileText })),
-  { href: "/admin/partner-verification/rules", label: "Verification Rules", icon: FileSearch, permission: "partner_verification_policy.read" },
+  { href: "/admin/partners", label: "Partners", icon: Building2, permission: "partner_verification.read" },
 ];
 
 const websiteContentNavItems = [
@@ -242,10 +240,9 @@ export default function AdminShell({
           })}
           </div>
           <div className={serviceCatalogueShell ? "space-y-1 border-t border-sky-300/10 pt-4" : "space-y-1 border-t border-slate-100 pt-4"}>
-            <p className={serviceCatalogueShell ? "border-l-2 border-orange-400 px-3 pb-2 text-[11px] font-semibold uppercase text-orange-300" : "border-l-2 border-emerald-500 px-3 pb-2 text-[11px] font-semibold uppercase text-emerald-700"}>Partners</p>
-            {partnerNavItems.filter((item) => Boolean(session?.admin.permissions.includes(item.permission))).map((item) => {
+            {partnerNavItems.filter(() => canAccessPartnerModule(session?.admin.permissions ?? [])).map((item) => {
               const Icon = item.icon;
-              const active = pathname === item.href || (item.href !== "/admin/partners" && item.href !== "/admin/partner-verification" && pathname.startsWith(`${item.href}/`));
+              const active = Boolean(partnerAdminRoute(pathname));
               return (
                 <Link
                   key={item.href}
@@ -393,12 +390,12 @@ export default function AdminShell({
           <p className={serviceCatalogueShell ? "text-[11px] font-semibold uppercase text-sky-300" : "text-[11px] font-semibold uppercase text-slate-400"}>Admin quick links</p>
           <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
             {[
-              ...partnerNavItems.filter((item) => Boolean(session?.admin.permissions.includes(item.permission))),
+              ...partnerNavItems.filter(() => canAccessPartnerModule(session?.admin.permissions ?? [])),
               ...websiteContentNavItems.filter((item) => canAccess(item.permission)),
               ...secondaryNavItems.filter(isAdminNavLinkItem).filter((item) => !missingPermission(item.permission)),
             ].map((item) => {
               const Icon = item.icon;
-              const active = pathname === item.href || (item.href !== "/admin/partners" && item.href !== "/admin/partner-verification" && pathname.startsWith(`${item.href}/`));
+              const active = item.href === "/admin/partners" ? Boolean(partnerAdminRoute(pathname)) : pathname === item.href || pathname.startsWith(`${item.href}/`);
               return (
                 <Link
                   key={item.href}

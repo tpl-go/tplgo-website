@@ -1,12 +1,12 @@
 import AdminProtected from "../../_components/AdminProtected";
 import AdminShell from "../../_components/AdminShell";
-import { PartnerAdminReadModel } from "../_components/PartnerAdminReadModel";
+import PartnerModuleSection from "../_components/PartnerModuleSection";
 
 export default function AdminPartnerOrganizationsPage() {
   return (
     <AdminProtected>
-      <AdminShell title="Partner Organizations">
-        <PartnerAdminReadModel mode="organizations" />
+      <AdminShell title="Partners">
+        <PartnerModuleSection section="partners" />
       </AdminShell>
     </AdminProtected>
   );

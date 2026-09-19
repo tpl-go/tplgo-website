@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { partnerAdminNavigation, partnerAdminRoute, partnerQueueReturn, visiblePartnerAdminNavigation } from "./partnerAdminRoutes";
+import { partnerAdminLegacyRoutes, partnerAdminNavigation, partnerAdminRoute, partnerQueueReturn, visiblePartnerAdminNavigation } from "./partnerAdminRoutes";
 
 test.each(partnerAdminNavigation)("$label is active for its canonical and query route", (item: typeof partnerAdminNavigation[number]) => {
   expect(partnerAdminRoute(item.href)).toEqual(item);
@@ -11,12 +11,13 @@ test("Verification Rules remains inside Verification", () => {
   expect(partnerAdminRoute("/admin/partners-other")).toBeUndefined();
 });
 test("Service Catalogue keeps Website Experience ownership", () => {
-  expect(partnerAdminNavigation.find((item) => item.label === "Service Catalogue")?.href).toBe("/admin/website-experience/pages/partner/service-catalogue");
+  expect(partnerAdminLegacyRoutes.find((item) => item.label === "Service Catalogue")?.href).toBe("/admin/website-experience/pages/partner/service-catalogue");
+  expect(partnerAdminNavigation.map((item) => item.label)).toEqual(["Overview", "Applications", "All Partners", "Reports"]);
 });
 test("both navigation surfaces can fail closed on missing permissions", () => {
   expect(visiblePartnerAdminNavigation([])).toEqual([]);
-  expect(visiblePartnerAdminNavigation(["partner_application.read"]).map((item) => item.label)).toEqual(["Applications"]);
-  expect(visiblePartnerAdminNavigation(partnerAdminNavigation.map((item) => item.permission))).toHaveLength(9);
+  expect(visiblePartnerAdminNavigation(["partner_application.read"]).map((item) => item.label)).toEqual(["Overview", "Applications", "All Partners", "Reports"]);
+  expect(visiblePartnerAdminNavigation(partnerAdminNavigation.map((item) => item.permission))).toHaveLength(4);
 });
 test("queue return preserves filters without record selectors or external destinations", () => {
   expect(partnerQueueReturn("/admin/partners/applications/record", "status=SUBMITTED&search=demo&submission=record&returnTo=https://example.test&token=discard")).toBe("/admin/partners/applications?status=SUBMITTED&search=demo");

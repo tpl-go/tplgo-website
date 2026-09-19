@@ -1,12 +1,12 @@
 import AdminProtected from "../_components/AdminProtected";
 import AdminShell from "../_components/AdminShell";
-import PartnerOverview from "./_components/PartnerOverview";
+import PartnerModuleSection from "./_components/PartnerModuleSection";
 
 export default function AdminPartnersOverviewPage() {
   return (
     <AdminProtected>
       <AdminShell title="Partners">
-        <PartnerOverview />
+        <PartnerModuleSection section="overview" />
       </AdminShell>
     </AdminProtected>
   );
