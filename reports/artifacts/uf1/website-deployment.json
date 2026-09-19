@@ -1,0 +1,60 @@
+{
+  "id": "dpl_cu1W5WtLif28pCqLwsYuktuw6RpX",
+  "url": "tplgo-website-bklxjkqeb-tplgo.vercel.app",
+  "source": "8db0b554118eebd0e3ea6b60a4b40c218a2aeffe",
+  "state": "READY",
+  "target": null,
+  "sources": [
+    {
+      "path": "app/lib/partner/publishedRefresh.ts",
+      "match": true
+    },
+    {
+      "path": "app/lib/partner/partnerApiClient.ts",
+      "match": true
+    },
+    {
+      "path": "app/partner-preview/PartnerApplicationWorkspaceClient.tsx",
+      "match": true
+    },
+    {
+      "path": "app/admin/partners/_components/usePartnerPublishedRead.ts",
+      "match": true
+    },
+    {
+      "path": "app/admin/partners/_components/PartnerSummaryDashboard.tsx",
+      "match": true
+    },
+    {
+      "path": "app/admin/partners/_components/PartnerServicesDashboard.tsx",
+      "match": true
+    },
+    {
+      "path": "app/admin/partners/_components/PartnerPerformanceDashboard.tsx",
+      "match": true
+    },
+    {
+      "path": "app/admin/partners/_components/PartnerRevenueDashboard.tsx",
+      "match": true
+    },
+    {
+      "path": "app/admin/partners/_components/PartnerSidebarViews.tsx",
+      "match": true
+    },
+    {
+      "path": "app/admin/_components/AdminShell.tsx",
+      "match": true
+    },
+    {
+      "path": "app/admin/partners/_components/partnerAdminRoutes.ts",
+      "match": true
+    },
+    {
+      "path": "app/admin/partners/_components/PartnerAdminNavigation.tsx",
+      "match": true
+    }
+  ],
+  "productionAction": false,
+  "alias": "staging.tplgo.com",
+  "aliasVerified": true
+}

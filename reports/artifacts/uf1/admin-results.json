@@ -1,0 +1,68 @@
+[
+  {
+    "width": 1365,
+    "height": 1000,
+    "result": "PASS",
+    "mutations": 0,
+    "checks": [
+      "published exact names",
+      "service metrics",
+      "pagination",
+      "dependent location/catalogue filters",
+      "date cohort",
+      "service-to-Partner drill-down",
+      "safe existing record link",
+      "reset",
+      "keyboard Escape/focus",
+      "new publication after refresh",
+      "no horizontal overflow",
+      "retry",
+      "RBAC denial",
+      "logout delayed-response isolation"
+    ]
+  },
+  {
+    "width": 768,
+    "height": 1024,
+    "result": "PASS",
+    "mutations": 0,
+    "checks": [
+      "published exact names",
+      "service metrics",
+      "pagination",
+      "dependent location/catalogue filters",
+      "date cohort",
+      "service-to-Partner drill-down",
+      "safe existing record link",
+      "reset",
+      "keyboard Escape/focus",
+      "new publication after refresh",
+      "no horizontal overflow",
+      "retry",
+      "RBAC denial",
+      "logout delayed-response isolation"
+    ]
+  },
+  {
+    "width": 390,
+    "height": 844,
+    "result": "PASS",
+    "mutations": 0,
+    "checks": [
+      "published exact names",
+      "service metrics",
+      "pagination",
+      "dependent location/catalogue filters",
+      "date cohort",
+      "service-to-Partner drill-down",
+      "safe existing record link",
+      "reset",
+      "keyboard Escape/focus",
+      "new publication after refresh",
+      "no horizontal overflow",
+      "retry",
+      "RBAC denial",
+      "logout delayed-response isolation"
+    ]
+  }
+]

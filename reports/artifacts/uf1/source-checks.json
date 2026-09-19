@@ -1,0 +1,56 @@
+{
+  "website": {
+    "head": "8db0b554118eebd0e3ea6b60a4b40c218a2aeffe",
+    "branch": "d28e1a-integration-preview",
+    "diffCheck": "PASS",
+    "scopedPatternSecretScan": "PASS",
+    "hashes": {
+      "app/lib/partner/publishedRefresh.ts": "c5dc79e47b776a9cc7f6bf0faffd6112fb19ffecb222965fb54b74f90e820a6d",
+      "app/lib/partner/partnerApiClient.ts": "5e154b569c2ab5d7f56055faf2e989fe147165a05970e252ecbfd9036d513383",
+      "app/partner-preview/PartnerApplicationWorkspaceClient.tsx": "690b50dfef5b9f58048b37538df84309ece7346e398405af60c84db5da10037e",
+      "app/admin/partners/_components/usePartnerPublishedRead.ts": "d1356bb36f6d803716042ed823691365dea21f660b133c67177785a6b818a171",
+      "app/admin/partners/_components/PartnerSummaryDashboard.tsx": "c3aa8f7b02befac5ccfe1ec3a54b9dbd1200a9323bc7ab7970733f8c4058beb4",
+      "app/admin/partners/_components/PartnerServicesDashboard.tsx": "1968ab8be0511ab2b2a96df60756c170e07558f4f751a8b3f8b5b486ca82263d",
+      "app/admin/partners/_components/PartnerPerformanceDashboard.tsx": "3d07b20ef8b3dd05ff4d9b232f2cd80766fc7511637ffe8dc7ced3d5cced8159",
+      "app/admin/partners/_components/PartnerRevenueDashboard.tsx": "cc945c0d1b197b76f50ff099b3c2bf00f73eac1415ee5407b9af936687da6009",
+      "scripts/uf1-admin-configuration-browser.mjs": "e50896631aa267dba13300fa0455704d51c91e9ea2ef0ae6b27c42af5b82f713",
+      "scripts/uf1-partner-configuration-browser.mjs": "dc97ccc8f2a4d9c14e1cc0fe26c3af67a714bee67d37be6778c335ca860a8094",
+      "app/lib/partner/publishedRefresh.test.ts": "dfaa49defeefd71d8c080a62da128bfc89432a0df09526f80482acc105cb1879"
+    }
+  },
+  "backend": {
+    "head": "67f4a4dc16c83a582cd5cea8be9b7693d827d11e",
+    "branch": "d28e3c3a-qa2b-provider-partner-integration",
+    "diffCheck": "PASS",
+    "scopedPatternSecretScan": "PASS",
+    "hashes": {
+      "src/modules/admin/admin.routes.ts": "406900648a26ee80136c1531157adfa501ea2fdcc73a793c083c02ebe31175db",
+      "src/modules/admin/partner-configuration-transaction.ts": "60ea164d4b0049371d14d7118115c8b78f899a4ffeeaa5b02d5b533798395309",
+      "src/modules/admin/partner-configuration-transaction.test.ts": "59b27253e87217a567b0b7ec9e94536e5f406bd432c87eb305941762fdd1b89b",
+      "src/modules/admin/partner-performance.ts": "9089cea542ce23bc90fcda14694d40cccb8ab7a1baccc46510603a230b943b6c",
+      "src/modules/admin/partner-revenue.ts": "ad63bc666f4d0e18a918cceba4eefb08945a4768350d72ddf032ebc12eea6665",
+      "src/modules/admin/partner-service-catalogue.ts": "47f97085c0a4467e627e5bad04c08d6fbd46a7d48610548ef33072bdadc9276b",
+      "src/modules/admin/partner-summary.ts": "79bb5d2a5e1890f9ca0c21fad2f94ff0b1386c811aa78ca8d744a1d1b6bfb17e",
+      "src/modules/admin/website-experience.ts": "8e8c61986532be2b1678617edede3cf6915abf389f6884094f669beaa7342321",
+      "src/modules/partner/partner.configuration.ts": "895c91ed0bac0074ddec64ddaf0678e137357a45562ba943c2793dcd0dbb7129",
+      "src/modules/partner/partner.routes.ts": "83256700a315344d882f168f5cb486d678209312ed25232893921e553ddb0876",
+      "src/modules/partner/partner.service-catalogue.ts": "4b442f9b22edd417f139141f1b9f33e6b63e6a36489d3909f93ac409816fda03",
+      "src/modules/partner/partner.service.ts": "173d23c8c78cbe19d424b1f18e95353b44a13b85c70af070a5e5888187e45788",
+      "src/modules/partner/partner.service.test.ts": "88f5ebd2b7dfe2b3943dbbee955b03e5895709cc11f3c454ce4dd7ea6b83ed8c",
+      "src/modules/partner/partner.types.ts": "eecd32d958a00cc977376d0d809b35cdcd0e5546a21e7ae9ccfaadba212c5e38",
+      "src/modules/partner/partner.validation.ts": "32d223d5fcb29e73b485950ff4e3d0128a17ffd8f79a52b874974c56e0abdc31"
+    }
+  },
+  "mobile": {
+    "head": "a75879b9bd8052c47409d060fc357fde3ef180b1",
+    "branch": "codex/mobile-m2-authentication",
+    "diffCheck": "PASS",
+    "scopedPatternSecretScan": "PASS",
+    "hashes": {
+      "src/components/partner/partner-application-workspace.tsx": "4c679210a537b2236fd136971ec36c686a2f7fa67a805cee31ea3b4727b1b97b",
+      "src/components/partner/partner-review-lock.rendered.test.js": "350861c79c51714037a6f7ca0f67190ba5d67da69c779c53a16d983a95e5e53a",
+      "src/features/partner/partnerApplicationApi.ts": "33278550df70601168689b2d151d556bdf5794e0d00fc51ab2b1478afb87bc09",
+      "src/features/partner/partnerConfiguration.ts": "118458487e01b0151f3ef6276f7a40707b5d056adc32ba331966513ce82a8bf0"
+    }
+  }
+}

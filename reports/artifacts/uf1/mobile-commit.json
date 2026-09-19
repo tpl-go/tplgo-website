@@ -1,0 +1,11 @@
+{
+  "head": "a75879b9bd8052c47409d060fc357fde3ef180b1",
+  "branch": "codex/mobile-m2-authentication",
+  "files": [
+    "src/components/partner/partner-application-workspace.tsx",
+    "src/components/partner/partner-review-lock.rendered.test.js",
+    "src/features/partner/partnerApplicationApi.ts",
+    "src/features/partner/partnerConfiguration.ts"
+  ],
+  "pushed": true
+}

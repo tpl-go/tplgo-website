@@ -1,0 +1,39 @@
+{
+  "head": "8db0b554118eebd0e3ea6b60a4b40c218a2aeffe",
+  "out": ".tmp/uf1-preview-8db0b554118e",
+  "testedSourceMatched": true,
+  "files": [
+    {
+      "path": "app/lib/partner/publishedRefresh.ts",
+      "sha256": "8f31e74649f2dbe9e56f3ea6b7ebee4a8fe19d96413187ddc6368594d5fd1802"
+    },
+    {
+      "path": "app/lib/partner/partnerApiClient.ts",
+      "sha256": "5ff1c7faef6bb02d0912b62590cf942f4017b9e5aa05d24ee9921b29a82e77a8"
+    },
+    {
+      "path": "app/partner-preview/PartnerApplicationWorkspaceClient.tsx",
+      "sha256": "d87f15e746a5fccaa586fa0c984030a5087c03dfeba869c4477805a02fe3acaa"
+    },
+    {
+      "path": "app/admin/partners/_components/usePartnerPublishedRead.ts",
+      "sha256": "81905b2bc65f34f737f9b7cd0490221f353a2c2a4bdd7630d674cc61e998982b"
+    },
+    {
+      "path": "app/admin/partners/_components/PartnerSummaryDashboard.tsx",
+      "sha256": "6a8d920c6b737ed96b9b8d1b95eaeee63191d4bc195a4468b698e7b0655a4bfa"
+    },
+    {
+      "path": "app/admin/partners/_components/PartnerServicesDashboard.tsx",
+      "sha256": "028e54eebdd2ec361222c127f603c683a2ab6fa114023852af509ac02d793776"
+    },
+    {
+      "path": "app/admin/partners/_components/PartnerPerformanceDashboard.tsx",
+      "sha256": "42647b28015b580aaeb5b316936d2cc080810df97ab23607a3b00c4086c080e3"
+    },
+    {
+      "path": "app/admin/partners/_components/PartnerRevenueDashboard.tsx",
+      "sha256": "b399004f60648b60129fa3cd656e51622a62b5d1930ae437f1e10467622520e7"
+    }
+  ]
+}

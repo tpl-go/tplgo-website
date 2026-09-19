@@ -1,0 +1,22 @@
+{
+  "head": "67f4a4dc16c83a582cd5cea8be9b7693d827d11e",
+  "branch": "d28e3c3a-qa2b-provider-partner-integration",
+  "files": [
+    "src/modules/admin/admin.routes.ts",
+    "src/modules/admin/partner-configuration-transaction.ts",
+    "src/modules/admin/partner-configuration-transaction.test.ts",
+    "src/modules/admin/partner-performance.ts",
+    "src/modules/admin/partner-revenue.ts",
+    "src/modules/admin/partner-service-catalogue.ts",
+    "src/modules/admin/partner-summary.ts",
+    "src/modules/admin/website-experience.ts",
+    "src/modules/partner/partner.configuration.ts",
+    "src/modules/partner/partner.routes.ts",
+    "src/modules/partner/partner.service-catalogue.ts",
+    "src/modules/partner/partner.service.ts",
+    "src/modules/partner/partner.service.test.ts",
+    "src/modules/partner/partner.types.ts",
+    "src/modules/partner/partner.validation.ts"
+  ],
+  "pushed": true
+}

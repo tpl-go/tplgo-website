@@ -1,0 +1,52 @@
+{
+  "environment": "staging",
+  "recoveryExecutionEnabled": false,
+  "fixture": "PARTNER_QA_FIXTURE",
+  "groups": {
+    "catalogue": {
+      "count": 1,
+      "sha256": "9f28eaf84dab3bfb1afe4e844c132fcfb962c4748b0d60118d6e7334793afc83",
+      "unchanged": true
+    },
+    "content": {
+      "count": 1,
+      "sha256": "9dcc055779debfa12c87914c01c305874dcde333d8b93e77d79743187c503851",
+      "unchanged": true
+    },
+    "submission": {
+      "count": 1,
+      "sha256": "e7f54833621f6d5c43cb73b3e980a2e754f0c8227f4709a068d9aa7d95645e8d",
+      "unchanged": true
+    },
+    "organization": {
+      "count": 1,
+      "sha256": "d2bf81cd53f34d4ff860670dde4d9a17466cb160b267649898cea1b781859fe5",
+      "unchanged": true
+    },
+    "requirements": {
+      "count": 9,
+      "sha256": "1893f239542064879844fa0123cb15450dd1ca60059d10a02f848c860b037b6f",
+      "unchanged": true
+    },
+    "documents": {
+      "count": 5,
+      "sha256": "5b3f8d491338241222835315d02b93ce1e8aaabb401b9ebfaa6ecd192e992204",
+      "unchanged": true
+    },
+    "links": {
+      "count": 2,
+      "sha256": "b7d6cb9d7935d7606daffedef388e8b7ec0d0693a06d8322d53b2861efc9bac5",
+      "unchanged": true
+    },
+    "agreement": {
+      "count": 1,
+      "sha256": "a454c494d20fd80d1dbc3a29959fb7d0b1fcd34e8a36ff367eb73de4d8317da1",
+      "unchanged": true
+    },
+    "unrelated_active": {
+      "count": 1,
+      "sha256": "8a5758a5c6cd33dfc53b401537b5034fb57df71fc00b7471c3e9e288545a9860",
+      "unchanged": true
+    }
+  }
+}

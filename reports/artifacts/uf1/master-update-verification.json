@@ -1,0 +1,24 @@
+{
+  "path": "C:/Users/Admin/tpl-api/reports/TPL_MASTER_REMAINING_WORK_LOG.md",
+  "heading": "## Partner Unified Foundation UF1 checkpoint — 2026-09-19",
+  "previousStatus": "UF0_AUDIT_PARTIAL_EVIDENCE_BASELINE_RECORDED",
+  "newStatus": "UF1_IMPLEMENTED_STAGING_DELIVERED_LIVE_CERTIFICATION_OPEN",
+  "headingCount": 1,
+  "checkpointCount": 1,
+  "newStatusCount": 1,
+  "exactMasterFileCount": 1,
+  "previousSha256": "275a0cb6d4b651fba5a1afaf5ebe8665128d9ce2d0ccdc9e90099df054d1546a",
+  "newSha256": "0e2e2379df41102449d458e924d8e225dbdc5c373389d956f027c3cc3cddff75",
+  "priorBodyPreserved": true,
+  "actualDiffContainsCheckpoint": true,
+  "diffCheck": "PASS",
+  "newCheckpointLines": 22,
+  "productionChanged": false,
+  "liveEvidence": [
+    "Operator: Mobile Submitted/status",
+    "ADB: submitted after foreground return",
+    "Operator: Admin Services configured names/no error",
+    "Operator: Website Submitted/saved preview"
+  ],
+  "remainingAction": "Detailed Admin same-fixture read and actual approved publication timing/recovery; UF2 not started"
+}

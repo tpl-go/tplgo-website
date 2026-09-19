@@ -1,0 +1,16 @@
+{
+  "environment": "staging",
+  "apiHealth": 200,
+  "configurationStatus": 200,
+  "cacheControl": "no-store",
+  "versions": {
+    "catalogue": 10,
+    "content": 0,
+    "policy": 1
+  },
+  "catalogueItems": 246,
+  "copyNodes": 0,
+  "expectedSource": "67f4a4dc16c83a582cd5cea8be9b7693d827d11e",
+  "revisionAuthority": "named staging release deployment receipt; not inferred from public health",
+  "productionAccess": false
+}
