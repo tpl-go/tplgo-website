@@ -1,6 +1,6 @@
 "use client";
 
-import { acceptsPublishedVersions, watchVisiblePublication, type PublishedVersions } from "../lib/partner/publishedRefresh";
+import { acceptsPublishedVersions, publishedContentVersion, watchVisiblePublication, type PublishedVersions } from "../lib/partner/publishedRefresh";
 import { fetchPartnerPublishedConfiguration } from "../lib/partner/partnerApiClient";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { partnerSubmittedDestination } from "../lib/partner/partnerSubmittedDestination";
@@ -785,7 +785,7 @@ export default function PartnerApplicationWorkspaceClient({
           status: "ready", version: catalogue.version, updatedAt: catalogue.updatedAt, domains: catalogue.domains, items: catalogue.items,
         });
         // Content and catalogue versions are independent. Do not accept mixed snapshots.
-        const contentVersion = content.ok ? Number(content.data.version?.split(":").at(-1)) : NaN;
+        const contentVersion = content.ok ? publishedContentVersion(content.data.version) : NaN;
         setConfigurationStale(!content.ok || contentVersion !== versions.content);
         if (!content.ok || contentVersion !== versions.content) return;
         const children = content.data.contexts?.partner_application?.applicationTree?.children;

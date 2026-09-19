@@ -1,5 +1,9 @@
 /** Refresh public configuration without rehydrating application forms. */
 export type PublishedVersions = { catalogue: number; content: number; policy: number };
+export function publishedContentVersion(value?: string): number {
+  const version = value?.split(":").at(-1);
+  return version === "default" ? 0 : Number(version);
+}
 export function acceptsPublishedVersions(previous: PublishedVersions | null, next: PublishedVersions): boolean {
   return ["catalogue", "content", "policy"].every((key) => {
     const field = key as keyof PublishedVersions;
