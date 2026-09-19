@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { AlertTriangle, CheckCircle2, FileText, Lock, MessageSquare, RefreshCcw, Search, ShieldCheck, type LucideIcon } from "lucide-react";
 import { adminApiRequest, type AdminApiResult } from "@/app/lib/admin/adminApiClient";
+import { partnerQueueReturn } from "../_components/partnerAdminRoutes";
 
 type ApplicationStatus = "SUBMITTED" | "UNDER_REVIEW" | "CHANGES_REQUESTED" | "RESUBMITTED" | "NOT_APPROVED" | "APPROVED";
 type StepKey = "account_contact" | "business_identity" | "business_location" | "services" | "verification_compliance" | "payout_tax" | "partner_agreement";
@@ -32,7 +33,7 @@ type QueueRow = {
   warnings: string[];
 };
 
-type QueueResponse = {
+export type QueueResponse = {
   rows: QueueRow[];
   counts: Record<string, number>;
   filters: Record<string, string>;
@@ -113,9 +114,11 @@ export default function AdminPartnerApplicationsClient({ initialSubmissionId }: 
   const [queue, setQueue] = useState<AdminApiResult<QueueResponse> | null>(null);
   const [detail, setDetail] = useState<AdminApiResult<DetailResponse> | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedId, setSelectedId] = useState(initialSubmissionId ?? searchParams.get("submission") ?? "");
+  const selectedId = initialSubmissionId ?? searchParams.get("submission") ?? "";
   const [notice, setNotice] = useState("");
   const [qaState, setQaState] = useState(createQaState);
+  const requestVersion = useRef(0);
+  const isDetail = Boolean(initialSubmissionId || searchParams.get("submission"));
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -126,11 +129,11 @@ export default function AdminPartnerApplicationsClient({ initialSubmissionId }: 
   }, [status, search, service, country, entityType, verification, payoutTax, agreement, reviewer]);
 
   const load = useCallback(async () => {
+    const version = ++requestVersion.current;
     setLoading(true);
+    setDetail(null);
+    setQueue(null);
     if (qa) {
-      const fixtures = qaState.queue;
-      const chosen = selectedId || fixtures.rows[0]?.submissionId || "";
-      setSelectedId(chosen);
       setLoading(false);
       return;
     }
@@ -140,36 +143,40 @@ export default function AdminPartnerApplicationsClient({ initialSubmissionId }: 
     if (service) params.set("service", service);
     if (country) params.set("country", country);
     if (entityType) params.set("entityType", entityType);
-    if (verification) params.set("verification", verification);
-    if (payoutTax) params.set("payoutTax", payoutTax);
-    if (agreement) params.set("agreement", agreement);
-    if (reviewer) params.set("reviewer", reviewer);
+    if (verification) params.set("verificationStatus", verification);
+    if (payoutTax) params.set("payoutTaxStatus", payoutTax);
+    if (agreement) params.set("agreementStatus", agreement);
+    if (reviewer) params.set("assignedReviewer", reviewer.trim().toUpperCase() === "UNASSIGNED" ? "UNASSIGNED" : reviewer);
     const queueResult = await adminApiRequest<QueueResponse>(`/api/v1/admin/partner-applications?${params.toString()}`);
+    if (version !== requestVersion.current) return;
     setQueue(queueResult);
-    const nextId = selectedId || (queueResult.ok ? queueResult.data.rows[0]?.submissionId ?? "" : "");
-    setSelectedId(nextId);
-    if (nextId) setDetail(await adminApiRequest<DetailResponse>(`/api/v1/admin/partner-applications/${encodeURIComponent(nextId)}`));
-    else setDetail(null);
+    if (selectedId) {
+      const response = await adminApiRequest<DetailResponse>(`/api/v1/admin/partner-applications/${encodeURIComponent(selectedId)}`);
+      if (version !== requestVersion.current) return;
+      setDetail(response);
+    }
     setLoading(false);
-  }, [agreement, country, entityType, payoutTax, qa, qaState, reviewer, search, selectedId, service, status, verification]);
+  }, [agreement, country, entityType, payoutTax, qa, reviewer, search, selectedId, service, status, verification]);
 
   useEffect(() => {
+    const counter = requestVersion;
     const timer = window.setTimeout(() => {
       void load();
     }, 0);
-    return () => window.clearTimeout(timer);
+    return () => { window.clearTimeout(timer); counter.current++; };
   }, [load]);
 
   const queueData = qa ? qaState.queue : queue?.ok ? queue.data : null;
   const rows = queueData ? filterQaRows(queueData.rows, { status, search, service, country, entityType, verification, payoutTax, agreement, reviewer }, qa) : [];
-  const detailData = qa ? qaState.details[selectedId || qaState.queue.rows[0].submissionId] : detail?.ok ? detail.data : null;
+  const detailData = qa && isDetail ? qaState.details[selectedId] : detail?.ok ? detail.data : null;
 
   return (
     <div className="space-y-5">
-      <section className="rounded border border-slate-200 bg-white p-5">
+      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">Review submitted Partner applications without activating organizations, services, payouts or Partner Desk access.</p>
+            <h2 className="text-lg font-semibold text-slate-950">{isDetail ? "Application review" : "Partner applications"}</h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">{isDetail ? "Review the submitted evidence, readiness and decision history in one place." : "Find an application, open its review dashboard and follow its progress."} Application approval does not activate services or payouts.</p>
             {qa ? <p className="mt-2 inline-flex rounded bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-700">QA preview only. No application record was changed.</p> : null}
           </div>
           <button type="button" onClick={load} className="inline-flex h-10 w-fit items-center gap-2 rounded bg-slate-950 px-4 text-sm font-semibold text-white">
@@ -178,7 +185,7 @@ export default function AdminPartnerApplicationsClient({ initialSubmissionId }: 
         </div>
       </section>
       {queue && !queue.ok ? <Notice text={queue.error.message} /> : null}
-      <Filters
+      {!isDetail ? <Filters
         status={status}
         search={search}
         service={service}
@@ -198,19 +205,17 @@ export default function AdminPartnerApplicationsClient({ initialSubmissionId }: 
         onAgreement={setAgreement}
         onReviewer={setReviewer}
         counts={queueData?.counts ?? {}}
-      />
-      <div className="grid gap-5 xl:grid-cols-[0.9fr_1.4fr]">
-        <Queue rows={rows} selectedId={selectedId} onSelect={(id) => { setSelectedId(id); setNotice(""); }} qa={qa} />
-        {detailData ? (
+      /> : null}
+      <div className="min-w-0 space-y-5">
+        {!isDetail ? (loading ? <Empty label="Loading application queue…" /> : queueData ? <ApplicationQueue rows={rows} selectedId={selectedId} qa={qa} query={searchParams.toString()} /> : null) : null}
+        {isDetail && detailData ? (
           <Detail key={detailData.submission.id} detail={detailData} assignedReviewer={queueData?.rows.find((row) => row.submissionId === detailData.submission.id)?.assignedReviewer} qa={qa} notice={notice} onNotice={setNotice} onReload={load} onQaAction={(action, input) => {
             const result = simulateQaAction(qaState, detailData.submission.id, action, input);
             setQaState(result.state);
             setNotice(result.notice);
             return result.state !== qaState;
           }} />
-        ) : (
-          <Empty label={loading ? "Loading application review detail." : "Select an application to review."} />
-        )}
+        ) : isDetail ? <Empty label={loading ? "Loading application review detail." : "Application review is unavailable. Refresh to try again."} /> : null}
       </div>
     </div>
   );
@@ -258,10 +263,10 @@ function Filters({
   counts: Record<string, number>;
 }) {
   return (
-    <section className="rounded border border-slate-200 bg-white p-4">
+    <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="mb-3 flex flex-wrap gap-2">
         {statuses.map((item) => (
-          <button key={item.value} type="button" onClick={() => onStatus(item.value)} className={`rounded px-3 py-1.5 text-xs font-semibold ${status === item.value ? "bg-slate-950 text-white" : "bg-slate-100 text-slate-700"}`}>
+          <button key={item.value} type="button" aria-pressed={status === item.value} onClick={() => onStatus(item.value)} className={`min-h-10 rounded-lg px-3 py-2 text-xs font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-500 ${status === item.value ? "bg-slate-950 text-white ring-1 ring-sky-400" : "bg-slate-100 text-slate-700"}`}>
             {item.label} {counts[item.value] ? `(${counts[item.value]})` : ""}
           </button>
         ))}
@@ -279,14 +284,14 @@ function Filters({
           <input value={service} onChange={(event) => onService(event.target.value)} className="mt-1 h-10 w-full rounded border border-slate-200 px-3 text-sm outline-none" placeholder="Hotel" />
         </label>
       </div>
-      <div className="mt-3 grid gap-3 md:grid-cols-3 xl:grid-cols-6">
+      <details className="mt-4 border-t border-slate-100 pt-3"><summary className="w-fit cursor-pointer rounded text-sm font-medium text-slate-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-500">More filters</summary><div className="mt-3 grid gap-3 md:grid-cols-3 xl:grid-cols-6">
         <FilterInput label="Country" value={country} onChange={onCountry} placeholder="India" />
         <FilterInput label="Entity type" value={entityType} onChange={onEntityType} placeholder="Private Limited" />
         <FilterInput label="Verification" value={verification} onChange={onVerification} placeholder="Under review" />
         <FilterInput label="Payout & Tax" value={payoutTax} onChange={onPayoutTax} placeholder="Submitted" />
         <FilterInput label="Agreement" value={agreement} onChange={onAgreement} placeholder="Completed" />
         <FilterInput label="Assigned reviewer" value={reviewer} onChange={onReviewer} placeholder="Unassigned" />
-      </div>
+      </div></details>
     </section>
   );
 }
@@ -300,38 +305,46 @@ function FilterInput({ label, value, onChange, placeholder }: { label: string; v
   );
 }
 
-function Queue({ rows, selectedId, onSelect, qa }: { rows: QueueRow[]; selectedId: string; onSelect: (id: string) => void; qa: boolean }) {
+export function ApplicationQueue({ rows, selectedId, qa, query = "" }: { rows: QueueRow[]; selectedId: string; qa: boolean; query?: string }) {
   if (rows.length === 0) return <Empty label="No Partner applications match these filters." />;
   return (
-    <section className="rounded border border-slate-200 bg-white">
+    <section aria-label="Application list" className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
       <div className="border-b border-slate-100 p-4">
         <h2 className="text-sm font-semibold text-slate-950">Review queue</h2>
       </div>
       <div className="divide-y divide-slate-100">
         {rows.map((row) => (
-          <button key={row.submissionId} type="button" onClick={() => onSelect(row.submissionId)} className={`block w-full p-4 text-left hover:bg-slate-50 ${selectedId === row.submissionId ? "bg-slate-50" : ""}`}>
-            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <Link key={row.submissionId} href={applicationDetailHref(row.submissionId, query, qa)} className={`block w-full p-5 text-left transition hover:bg-sky-50 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-sky-600 ${selectedId === row.submissionId ? "bg-sky-50" : ""}`}>
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
               <div className="min-w-0">
-                <p className="font-semibold text-slate-950">{row.organizationName}</p>
+                <p className="break-words text-base font-semibold text-slate-950">{row.organizationName}</p>
                 <p className="mt-1 text-xs text-slate-500">{row.contact} · {row.country} · {row.entityType}</p>
-                <p className="mt-2 text-sm text-slate-600">{row.selectedServices.join(", ") || "No selected services"}</p>
+                <div className="mt-2 flex flex-wrap gap-1.5">{row.selectedServices.length ? row.selectedServices.map((service) => <span key={service} className="rounded-full bg-sky-50 px-2.5 py-1 text-xs font-medium text-sky-800">{service}</span>) : <span className="text-xs text-slate-500">No selected services</span>}</div>
                 <p className="mt-1 text-xs text-slate-500">{row.submissionReference} · Revision {row.submissionRevision} · {formatDate(row.submittedAt)}</p>
               </div>
-              <div className="flex flex-wrap gap-2 md:justify-end">
+              <div className="flex max-w-full flex-wrap items-center gap-2 lg:max-w-80 lg:justify-end">
                 <Pill label={statusLabel(row.workflowStatus)} />
                 <Pill label={row.assignedReviewer ?? "Unassigned"} />
                 <Pill label="Open review" />
                 {qa ? <Pill label="QA" /> : null}
               </div>
             </div>
-          </button>
+          </Link>
         ))}
       </div>
     </section>
   );
 }
 
+export function applicationDetailHref(id: string, query: string, qa: boolean) {
+  const safeReturn = partnerQueueReturn("/admin/partners/applications", query);
+  const params = new URLSearchParams(safeReturn.split("?")[1] ?? "");
+  if (qa) params.set("qa", "1");
+  return `/admin/partners/applications/${encodeURIComponent(id)}${params.size ? `?${params}` : ""}`;
+}
+
 function Detail({ detail, assignedReviewer, qa, notice, onNotice, onReload, onQaAction }: { detail: DetailResponse; assignedReviewer?: string | null; qa: boolean; notice: string; onNotice: (value: string) => void; onReload: () => Promise<void> | void; onQaAction: (action: ReviewAction, input: ActionInput) => boolean }) {
+  const query = useSearchParams();
   const [message, setMessage] = useState(detail.messages.partnerVisible ?? "");
   const [privateNote, setPrivateNote] = useState("");
   const [reasonCategory, setReasonCategory] = useState("specialist_readiness");
@@ -380,17 +393,17 @@ function Detail({ detail, assignedReviewer, qa, notice, onNotice, onReload, onQa
     }
   };
   return (
-    <section className="space-y-4 rounded border border-slate-200 bg-white p-5">
+    <section className="space-y-5 rounded-xl border border-slate-200 bg-white p-5 text-slate-950 shadow-sm sm:p-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <Link href="/admin/partners/applications" className="text-xs font-semibold text-slate-500 hover:text-slate-950">Back to Partner Applications</Link>
+          <Link href={partnerQueueReturn("/admin/partners/applications", query.toString())} className="text-xs font-semibold text-slate-500 hover:text-slate-950">Back to Partner Applications</Link>
           <h2 className="mt-2 text-xl font-semibold text-slate-950">{detail.organization.name}</h2>
           <p className="mt-1 text-sm text-slate-500">{detail.submission.submissionKind === "RESUBMISSION" ? "Resubmission" : "Submission"} {detail.submission.submissionRevision} · {statusLabel(detail.submission.workflowStatus)}</p>
         </div>
         <Pill label={`Transition v${detail.submission.transitionVersion}`} />
       </div>
       {pending ? <ActionConfirmation action={pending} onCancel={() => setPending(null)} onConfirm={() => void doAction(pending)} /> : null}
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Info label="Assigned reviewer" value={assignedReviewer ?? "Unassigned"} />
         <Info label="Submitted" value={formatDate(detail.submission.submittedAt)} />
         <Info label="Contact" value={`${detail.contact.displayName} · ${detail.contact.email}`} />

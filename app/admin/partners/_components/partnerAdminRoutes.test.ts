@@ -16,7 +16,7 @@ test("Service Catalogue keeps Website Experience ownership", () => {
 test("both navigation surfaces can fail closed on missing permissions", () => {
   expect(visiblePartnerAdminNavigation([])).toEqual([]);
   expect(visiblePartnerAdminNavigation(["partner_application.read"]).map((item) => item.label)).toEqual(["Applications"]);
-  expect(visiblePartnerAdminNavigation(partnerAdminNavigation.map((item) => item.permission))).toHaveLength(8);
+  expect(visiblePartnerAdminNavigation(partnerAdminNavigation.map((item) => item.permission))).toHaveLength(9);
 });
 test("queue return preserves filters without record selectors or external destinations", () => {
   expect(partnerQueueReturn("/admin/partners/applications/record", "status=SUBMITTED&search=demo&submission=record&returnTo=https://example.test&token=discard")).toBe("/admin/partners/applications?status=SUBMITTED&search=demo");

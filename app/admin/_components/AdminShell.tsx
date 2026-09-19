@@ -245,11 +245,12 @@ export default function AdminShell({
             <p className={serviceCatalogueShell ? "border-l-2 border-orange-400 px-3 pb-2 text-[11px] font-semibold uppercase text-orange-300" : "border-l-2 border-emerald-500 px-3 pb-2 text-[11px] font-semibold uppercase text-emerald-700"}>Partners</p>
             {partnerNavItems.filter((item) => Boolean(session?.admin.permissions.includes(item.permission))).map((item) => {
               const Icon = item.icon;
-              const active = pathname === item.href || (item.href !== "/admin/partner-verification" && pathname.startsWith(item.href));
+              const active = pathname === item.href || (item.href !== "/admin/partners" && item.href !== "/admin/partner-verification" && pathname.startsWith(`${item.href}/`));
               return (
                 <Link
                   key={item.href}
                   href={item.href}
+                  aria-current={active ? "page" : undefined}
                   className={[
                     "flex h-10 items-center gap-3 rounded border-l-2 px-3 text-sm font-medium",
                     serviceCatalogueShell
@@ -397,11 +398,12 @@ export default function AdminShell({
               ...secondaryNavItems.filter(isAdminNavLinkItem).filter((item) => !missingPermission(item.permission)),
             ].map((item) => {
               const Icon = item.icon;
-              const active = pathname === item.href || (item.href !== "/admin/partner-verification" && pathname.startsWith(item.href));
+              const active = pathname === item.href || (item.href !== "/admin/partners" && item.href !== "/admin/partner-verification" && pathname.startsWith(`${item.href}/`));
               return (
                 <Link
                   key={item.href}
                   href={item.href}
+                  aria-current={active ? "page" : undefined}
                   className={[
                     "inline-flex h-10 shrink-0 items-center gap-2 rounded border px-3 text-sm font-medium",
                     serviceCatalogueShell

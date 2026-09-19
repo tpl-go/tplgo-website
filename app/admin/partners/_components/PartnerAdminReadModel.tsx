@@ -78,7 +78,7 @@ export function PartnerAdminReadModel({ mode }: { mode: PartnerAdminMode }) {
     <div className="space-y-5">
       <HeaderPanel onRefresh={loadQueue} loading={loading} />
       {result && !result.ok ? <Notice text={result.error.message} /> : null}
-      {mode === "overview" ? <Overview metrics={metrics} rows={filteredRows} /> : null}
+      {mode === "overview" && result?.ok && !loading ? <Overview metrics={metrics} rows={filteredRows} /> : null}
       {mode !== "overview" ? (
         <FilterPanel
           query={query}
@@ -90,7 +90,7 @@ export function PartnerAdminReadModel({ mode }: { mode: PartnerAdminMode }) {
         />
       ) : null}
       {mode === "applications" ? <Applications rows={filteredRows} intakes={intakes} loading={loading} /> : null}
-      {mode === "organizations" ? <Organizations rows={filteredRows} loading={loading} /> : null}
+      {mode === "organizations" ? <><p className="text-sm leading-6 text-slate-300">Organization records in the verification queue. Verification status does not confirm organization or service activation.</p>{loading ? <Empty label="Loading organization records…" /> : result?.ok ? <Organizations rows={filteredRows} loading={false} /> : null}</> : null}
       {mode === "services" ? <Services rows={serviceRows} loading={loading} /> : null}
       {mode === "documents" ? <Documents rows={documentRows} loading={loading} /> : null}
     </div>
@@ -190,45 +190,18 @@ function PartnerRegistrationIntakePanel({ rows, loading }: { rows: PartnerRegist
   );
 }
 
-function Organizations({ rows, loading }: { rows: PartnerQueueRow[]; loading: boolean }) {
+export function Organizations({ rows, loading }: { rows: PartnerQueueRow[]; loading: boolean }) {
   const queueQuery = useSearchParams().toString();
   if (rows.length === 0) {
     return <Empty label={loading ? "Loading Partner organizations." : "No Partner organizations are currently returned by the verification queue."} />;
   }
   return (
-    <div className="overflow-x-auto rounded border border-slate-200 bg-white">
-      <table className="min-w-[760px] w-full text-left text-sm">
-        <thead className="bg-slate-50 text-xs font-semibold uppercase text-slate-500">
-          <tr>
-            <th className="px-4 py-3">Organization</th>
-            <th className="px-4 py-3">Type</th>
-            <th className="px-4 py-3">Membership</th>
-            <th className="px-4 py-3">Services</th>
-            <th className="px-4 py-3">Verification</th>
-            <th className="px-4 py-3">Action</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-100">
-          {rows.map((row) => (
-            <tr key={row.organization.id}>
-              <td className="px-4 py-3">
-                <p className="font-semibold text-slate-950">{row.organization.legalName}</p>
-                <p className="mt-1 text-xs text-slate-500">{row.organization.brandName || "No brand name"}</p>
-              </td>
-              <td className="px-4 py-3 text-slate-600">{row.organization.organizationType}</td>
-              <td className="px-4 py-3 text-slate-600">TPL Identity owner/member linked</td>
-              <td className="px-4 py-3 text-slate-600">{row.selectedServices.map((item) => item.serviceLabel).join(", ") || "No services"}</td>
-              <td className="px-4 py-3"><StatusPill value={row.readiness.overallVerificationStatus} /></td>
-              <td className="px-4 py-3">
-                <Link className="inline-flex h-8 items-center gap-1 rounded bg-slate-950 px-3 text-xs font-semibold text-white" href={`/admin/partner-verification?${queueQuery}&from=organizations&organizationId=${encodeURIComponent(row.organization.id)}`}>
-                  Review <ChevronRight className="h-3.5 w-3.5" />
-                </Link>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <section aria-label="Organization records" className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      {rows.map((row) => <Link key={row.organization.id} href={`/admin/partner-verification?${queueQuery}&from=organizations&organizationId=${encodeURIComponent(row.organization.id)}`} className="grid gap-4 border-b border-slate-100 p-5 transition last:border-b-0 hover:bg-sky-50 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-sky-600 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+        <div className="min-w-0"><p className="break-words font-semibold text-slate-950">{row.organization.legalName}</p><p className="mt-1 text-xs text-slate-500">{[row.organization.brandName, row.organization.organizationType].filter(Boolean).join(" · ")}</p><div className="mt-3 flex flex-wrap gap-2">{row.selectedServices.map((item) => <span key={item.id} className="rounded-full bg-sky-50 px-2.5 py-1 text-xs text-sky-800">{item.serviceLabel}</span>)}</div></div>
+        <div className="flex flex-wrap items-center gap-3"><div><p className="mb-1 text-xs text-slate-500">Verification</p><StatusPill value={row.readiness.overallVerificationStatus} /></div><span className="inline-flex items-center gap-1 text-sm font-semibold text-slate-700">View record <ChevronRight aria-hidden="true" className="h-4 w-4" /></span></div>
+      </Link>)}
+    </section>
   );
 }
 

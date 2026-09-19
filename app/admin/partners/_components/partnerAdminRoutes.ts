@@ -1,8 +1,9 @@
 export const partnerAdminNavigation = [
   { href: "/admin/partners", label: "Overview", permission: "partner_verification.read" },
   { href: "/admin/partners/applications", label: "Applications", permission: "partner_application.read" },
+  { href: "/admin/partners/active", label: "Active Partners", permission: "partner_verification.read" },
   { href: "/admin/partner-verification", label: "Verification", permission: "partner_verification.read" },
-  { href: "/admin/partners/organizations", label: "Organizations", permission: "partner_verification.read" },
+  { href: "/admin/partners/organizations", label: "Organization Records", permission: "partner_verification.read" },
   { href: "/admin/website-experience/pages/partner/service-catalogue", label: "Service Catalogue", permission: "partner_service_catalogue.read" },
   { href: "/admin/partners/documents-compliance", label: "Documents & Compliance", permission: "partner_verification.read" },
   { href: "/admin/partners/payout-tax", label: "Payout & Tax", permission: "partner_payout_tax.read" },
