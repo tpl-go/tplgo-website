@@ -27,6 +27,6 @@
     "hermesExport": "PASS",
     "publicConfig": "PASS",
     "fullJest": "Not rerun; focused affected suites only",
-    "live": "Android bundle delivered; Login screen observed by masked ADB read. Secure operator login pending; submitted/correction flow not yet live-certified."
+    "live": "Operator confirmed secure Partner login and application-status visibility. Same two distinct organizations shown on Website/Mobile. Actual correction/resubmission remains OPEN."
   }
 }

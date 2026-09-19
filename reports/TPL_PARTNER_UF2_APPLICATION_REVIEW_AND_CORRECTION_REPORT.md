@@ -15,6 +15,19 @@ Sole master: `C:\Users\Admin\tpl-api\reports\TPL_MASTER_REMAINING_WORK_LOG.md`.
 - Actual fixture remains one SUBMITTED application. Nine preservation groups match the UF1 baseline. Catalogue published version 10, content 0, policy 1 remain unchanged. Recovery execution remains disabled.
 - `MOBILE_USER_PARITY=COMPLETE`; `PARTNER_MOBILE_PARITY=OPEN`; `PHASE_1_STEP_1=OPEN`.
 
+## Operator follow-up — Mobile login and organization choices
+
+The operator confirmed secure Partner login succeeded and reported both Website and Mobile show Under review and Active Partner choices. Opening the review choice shows application status; the other choice shows active status. This closes the limited operator-controlled Mobile login/status visibility gate, not correction/resubmission or full session certification.
+
+A fresh staging read-only query found **two distinct organization records linked to the fixture owner**, both with active membership and the same displayed legal name:
+
+- **PARTNER_QA_FIXTURE**: organization draft; exactly one submission, lifecycle **SUBMITTED**; not approved/activated.
+- **EXISTING_OTHER_ORGANIZATION**: organization active; zero application submissions. This is the pre-existing active organization protected by the UF1/UF2 preservation baseline, not a new approval of the QA application.
+
+Source inspection confirms the chooser uses separate canonical organization records. Mobile groups SUBMITTED/UNDER_REVIEW/RESUBMITTED under the customer label “Under review”; Website resolves the same canonical selection/status contract. The label does not prove an employee has started review. Same-name presentation explains the ambiguity; no same-record activation defect was established. No organization, membership, application, session or status was changed by this investigation. No cleanup, new fixture, code change or deployment.
+
+Masked evidence: `artifacts/uf2/organization-choice-read.json`. Continue the submitted QA application only; leave the separate active organization untouched. Reviewer mapping and retained case-action approvals still block the live ordered-review/correction cycle.
+
 ## Exact delivery
 
 | Surface | Source / delivery | Evidence |
@@ -58,7 +71,7 @@ Unsupported exceptional overrides, substitutes and conditional approval remain u
 
 The phone remained connected through existing wireless ADB. The operator reported Expo's scan/development launcher rather than a TPL application error. Metro had stopped. Its first restart bound IPv6 `::1`; IPv4 `127.0.0.1:8081` returned ECONNREFUSED, while `::1` returned `packager-status:running`. The existing ADB reverse route requires the IPv4 listener. Correcting Metro bind mode restored IPv4 HTTP 200; the existing Development Client was reopened and requested its JS bundle. No APK rebuild/reinstall, app-data clearing, session bypass or fixture mutation occurred.
 
-Metro completed the Android bundle (1,908 modules). ADB then detected the installed TPL package and normal Login screen, not a development launcher or configuration error. Secure operator-controlled Partner login is pending. Mobile visible submitted-state verification: **OPEN — AUTHENTICATION REQUIRED**. Connection recovery is not correction/resubmission certification.
+Metro completed the Android bundle (1,908 modules). ADB then detected the installed TPL package and normal Login screen, not a development launcher or configuration error. The operator subsequently confirmed secure Partner login and application-status visibility on both clients. Limited Mobile login/status visibility: **PASS — OPERATOR OBSERVED**. Connection recovery is not correction/resubmission certification.
 
 ## Migration, backup and isolation
 
@@ -82,7 +95,7 @@ First export scope is mapped to existing UF39; no duplicate reporting system/mas
 
 ## Exact remaining gates and next action
 
-1. Complete secure operator-controlled Partner login on the existing phone, then the read-only submitted/status observation. No OTP/contact is requested in chat.
+1. Mobile secure login/status visibility is operator-confirmed. Continue only the Under review choice belonging to the submitted QA application; leave the separate existing active organization untouched.
 2. Provide three distinct authorized staging reviewers with the approved employee → senior → next-senior mapping. No staff hierarchy/account is created automatically; current single eligible reviewer cannot certify separation of duties.
 3. Present the actual same-fixture action summary and obtain the retained action authorization before Start Review/Request Changes as applicable. Then perform Website → Mobile and Mobile → Website permitted brand/description correction, resubmit once with confirmation, and review the new revision from Level 1.
 4. Complete required specialist review prerequisites, L1/L2/final decision gates, safe exports and combined live regressions without activation or external sends. Final application approval still requires its separate confirmation.

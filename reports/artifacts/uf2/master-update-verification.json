@@ -10,12 +10,12 @@
   "newStatusCount": 1,
   "exactMasterFileCount": 1,
   "previousSha256": "c233fe383e06a27e5e7152ed0c2bf474ad146de83a129f45cece5bcaac5c6262",
-  "newSha256": "c233fe383e06a27e5e7152ed0c2bf474ad146de83a129f45cece5bcaac5c6262",
+  "newSha256": "a2764b7a0d92d8c013a210dbdd8c0424b3433d4472552acbe72f2d58cd7539fb",
   "outsideCheckpointPreserved": true,
   "preUF2HistoryHash": "0e2e2379df41102449d458e924d8e225dbdc5c373389d956f027c3cc3cddff75",
   "preUF2HistoryMatchesOriginal": true,
   "actualDiffContainsCheckpoint": true,
   "diffCheck": "PASS",
-  "actualMasterDiffSha256": "08461e9af8694d730a459d6c46cdee698969578173bc17e7b6adc5498ff59b7d",
+  "actualMasterDiffSha256": "166a6aa52b96b6fe670cf8595c39e8b2951e848647f675f86ead2dfe7d110fae",
   "productionChanged": false
 }
