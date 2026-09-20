@@ -1,5 +1,62 @@
 # TPL Partner UF2 — Application review and cross-client correction
 
+## Current checkpoint — 2026-09-20: isolated reviewer cycle verified
+
+Decision/evidence key: `UF2_TEST_ONLY_HIERARCHY_2026_09_20`.
+
+**ISOLATED REVIEW/CORRECTION INTEGRATION PASS. AUTHENTICATED STAGING CERTIFICATION OPEN.** This checkpoint supersedes the account-provisioning/password-delivery hold as the immediate engineering next action. It does not supersede the locked Partner plan or certify staging approval.
+
+The operator explicitly directed using **TEST_L1 → TEST_L2 → TEST_L3** in an isolated test database, not real employees or a permanent reporting hierarchy. The proposed Create reviewer UI is **not implemented**. No staging reviewer accounts, password setup links, invitations, OTPs, permissions or assignments were created/changed. The earlier limited assignment-scoped role design was approved as a design decision; permanent role provisioning and authenticated staging assignment remain a pre-release gate, not a blocker to isolated engineering checks.
+
+### Evidence boundaries and results
+
+| Layer | Newly executed result | What it proves / does not prove |
+|---|---|---|
+| Isolated backend + PostgreSQL | **6/6 PASS** | Real Admin password hashing/login, persisted sessions, actual HTTP route authorization, Partner service/repositories, transactions and database persistence. Fresh randomly named database on fixed `127.0.0.1:54339`, complete existing migration SQL, isolated prerequisite fixture. Not staging or provider certification. |
+| Ordered review | **PASS** | Three distinct authenticated actors; duplicate reviewer mapping rejected; L2 cannot start L1; L3 cannot skip levels; L1 cannot perform L2; L1 → L2 → L3 completes after resubmission. |
+| Correction/history | **PASS** | Request Changes at L2 after L1 completion; only requested description editable; legal-name/other-owner correction denied; two client sessions and actual Website/Mobile API clients exchange saved corrections. New immutable revision links old submission and restarts L1; old snapshot/hash and prior L1 decision retained; old revision cannot restart. |
+| Concurrency/retry | **PASS** | Overlapping identical level-completion/final-approval calls produce one decision event; competing stale corrections give exactly one success and one conflict. Repository reconstruction reads persisted state. |
+| Approval/activation | **PASS** | Final approval changes the application only. Organization, service scopes, payout/tax and agreement records remain equal to their pre-decision state; organization/scopes remain draft. No real financial movement or external notification. |
+| Website + Mobile API clients | **PASS — isolated transport integration** | Actual request builders, authorization header handling and response parsers call real isolated backend routes, then persisted values are read by the opposite client. Network dispatch is replaced only in the test harness; native storage/crypto/file-system imports use bounded test adapters. No fabricated application response. Not visible Website/native correction certification. |
+| Production-built Admin | **PASS — isolated rendered integration** | Existing build on loopback port 3158, actual list/detail/export components, three genuine isolated password sessions and real backend responses. Widths/heights **1365×1000**, **768×1024**, **390×844**; approved revision, unavailable Start Review and no horizontal overflow verified. No staging/browser session bypass added. |
+| Mobile workspace rendered tests | **15/15 PASS — API/session mocked** | Existing actual workspace component tests for correction permissions, review locks, submit destination and UF1 refresh/dirty-form behavior. Reused existing suite, not re-labelled as full-stack/native or staging evidence. |
+| CSV/XLSX | **PASS — isolated authenticated browser downloads** | Three actors downloaded exports containing explicit status/filter/sort/scope, header and exactly one matching approved application. Contact/bank values excluded; existing formula-injection test evidence reused. |
+| PDF/print | **PASS — isolated render** | Actual authenticated PDF download: two pages, repeated heading/page numbers. Print CSS output: one readable A4 page. All rendered pages inspected; no clipped content or private notes/contact/bank values. System print dialog/physical printer and authenticated staging downloads NOT RUN. |
+| Typecheck/lint | **PASS** | Backend `npm run typecheck`; ESLint for both new Website test scripts; test runner syntax check; scoped diff checks. Runtime source unchanged, so no rebuild/deployment/APK was necessary. |
+
+Test prerequisites intentionally reuse the existing service-suite synthetic specialist outcomes and published template. They do **not** prove real document review, contacts, provider checks, agreements, MFA or independent human approval. Test reviewers use the existing `ops_admin` (L1/L2) and `super_admin` (L3) role classes **only inside the disposable database**. This verifies ordered actor enforcement, **not** permanent least-privilege reviewer role certification. A single automation process controls all actors. Passwords are random, memory-only; Partner sessions are isolated repository-seeded fixtures authenticated by normal server middleware, not newly implemented login endpoints. No OTP is generated/sent. Test database teardown removes only the fresh local database; staging data is preserved.
+
+The complete native/Website screen-to-database correction journey remains OPEN. The installed Mobile API-target guard permits canonical staging identity authority and rejects loopback targets; it was not weakened or repointed. The existing Mobile rendered harness mocks API/session. The new client-contract harness exercises real API code without claiming native touch/keyboard/MFA/session-lifecycle coverage. The known in-app browser limitation was not retried; the already-supported production-build harness provided isolated Admin checks.
+
+### Scope, reproducibility and diagnostics
+
+Only test/support scripts and documentation changed:
+
+- Backend `src/modules/partner/partner.review-authenticated.pg.test.ts`, `partner.review-fixture.test-support.ts`, `scripts/qa-uf2-isolated-review.cjs`.
+- Website `scripts/uf2-isolated-admin-browser.mjs`, `scripts/uf2-isolated-client-contracts.mjs`.
+- Existing detailed report, masked evidence receipts, and the actual single master.
+
+Run from Backend with `node scripts/qa-uf2-isolated-review.cjs`. Optional `UF2_WEBSITE_TEST_ROOT` / `UF2_MOBILE_TEST_ROOT` point to the existing repositories; the rendered check requires their supported production-built Website server at loopback port 3158. The runner pins a randomly named disposable database to the existing local test cluster on port 54339, forces test/mock provider settings and bails after a failed sequential stage. No production/staging connection string is accepted as the test target.
+
+Initial harness issues were resolved without runtime changes: historical migration UTF-8 BOM handled in test-loader memory; the default verification-policy dependency bound to the same isolated database; session auth mode checked in its actual persisted contract; build tooling reused from existing backend dependencies; Fastify test callback types corrected. No historical migration file was edited. PostgreSQL emitted a non-fatal pg@9 forward-compatibility deprecation about overlapping client queries; current tests pass, and future driver-upgrade review remains separate. The existing loopback database/server was already running; no reset/reinstall loop occurred.
+
+Masked receipt: `artifacts/uf2/isolated-review-evidence.json`. Browser result/screenshots and synthetic private export files are kept locally under `.tmp/uf2/isolated-browser/`; they were not uploaded or published. Source hashes identify actual client files, including the Mobile working-tree baseline rather than a falsely clean release.
+
+### Staging preservation, accounting and remaining gates
+
+A fresh masked **read-only** staging inventory matched the prior immutable submission and organization digests. Same `PARTNER_QA_FIXTURE`: **SUBMITTED, transitionVersion 1**, assignment absent/version 0, no dedicated QA reviewer accounts, recovery execution disabled. No actual Start Review, Request Changes, resubmit, approval, activation, payout, upload, catalogue publication, app-data reset, new APK or production change. Separate existing active organization remains out of scope.
+
+No deployment in this continuation. Existing delivered Website source **25606679632bc43c36b9acbb0f7884f8a67a8f6a**, Preview **dpl_4avbsmrWxafbSdaEnHLWF3hRteFY**, Backend **36593a3a2e7ee0b7eeb3f6d3d2a2d793c4f0f6a3**, Mobile **09988baac40c0fdd5b75c16b540a14626ebd8160** remain the prior delivery references. Website local documentation HEAD at start **a8972018ebf9cb0a9f4fbc5cfbe29966dffc7cf1**. This continuation did not repoint aliases or perform a new runtime deployment audit.
+
+Fixed program remains **46 requirements / 213 units**. UF17, UF18, UF39 and UF40 gain isolated acceptance evidence; no denominator changes or arbitrary partial credit. Whole-program implemented/certified/remaining percentages remain **NOT YET MEASURABLE** pending the full numerator/unknown coverage. **MOBILE_USER_PARITY=COMPLETE; PARTNER_MOBILE_PARITY=OPEN; PHASE_1_STEP_1=OPEN.**
+
+Exact next action: retain these passing isolated tests; close the remaining actual Website/native correction-session UI gate using an approved isolated-client setup or the eventual secure staging reviewer setup. Before release, configure approved least-privilege reviewers and test assignment through supported authenticated controls, then perform the actual same-fixture correction cycle behind retained Start Review/Request Changes/resubmission authorization and separate final Approval confirmation. Authenticated staging exports/print and UF1 genuine approved-publication propagation timing remain OPEN. No real staff/contacts or permanent hierarchy are requested now. Do not start activation/post-approval workspace inside this continuation.
+
+Master previous/new status and actual diff verification are recorded in `artifacts/uf2/isolated-master-verification.json`; historical sections below are preserved.
+
+## Earlier UF2 delivery and operator evidence — retained history
+
+
 Recorded: 2026-09-19. **IMPLEMENTED AT THE BOUNDED SCOPE / STAGING DELIVERED / LIVE WORKFLOW CERTIFICATION OPEN**.
 
 Sole master: `C:\Users\Admin\tpl-api\reports\TPL_MASTER_REMAINING_WORK_LOG.md`.

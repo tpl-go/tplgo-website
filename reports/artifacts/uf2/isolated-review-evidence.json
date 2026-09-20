@@ -1,0 +1,145 @@
+{
+  "recordedAt": "2026-09-20T05:32:56.871Z",
+  "classification": "ISOLATED_INTEGRATION_NOT_STAGING_CERTIFICATION",
+  "testActors": [
+    "TEST_L1",
+    "TEST_L2",
+    "TEST_L3"
+  ],
+  "testOnlyHierarchy": true,
+  "backendTests": {
+    "passed": 6,
+    "total": 6,
+    "realPasswordAuthentication": true,
+    "realAuthorizationAndTransitions": true,
+    "realPostgreSQL": true,
+    "temporaryDatabaseRemoved": true
+  },
+  "clientContracts": {
+    "websiteToMobile": "PASS",
+    "mobileToWebsite": "PASS",
+    "actualRequestAndResponseCode": true,
+    "testOnlyTransport": true,
+    "nativePlatformAdapters": true
+  },
+  "adminRendered": [
+    {
+      "actor": "TEST_L1",
+      "width": 1365,
+      "height": 1000,
+      "result": "PASS",
+      "checks": [
+        "real isolated list and detail",
+        "approved revision visible",
+        "CSV and XLSX download",
+        "no horizontal overflow"
+      ],
+      "evidence": "production-built Admin + real authenticated routes + isolated PostgreSQL"
+    },
+    {
+      "actor": "TEST_L2",
+      "width": 768,
+      "height": 1024,
+      "result": "PASS",
+      "checks": [
+        "real isolated list and detail",
+        "approved revision visible",
+        "CSV and XLSX download",
+        "no horizontal overflow"
+      ],
+      "evidence": "production-built Admin + real authenticated routes + isolated PostgreSQL"
+    },
+    {
+      "actor": "TEST_L3",
+      "width": 390,
+      "height": 844,
+      "result": "PASS",
+      "checks": [
+        "real isolated list and detail",
+        "approved revision visible",
+        "CSV and XLSX download",
+        "no horizontal overflow"
+      ],
+      "evidence": "production-built Admin + real authenticated routes + isolated PostgreSQL"
+    }
+  ],
+  "mobileRendered": {
+    "passed": 15,
+    "total": 15,
+    "apiAndSessionMocks": true
+  },
+  "exports": {
+    "csv": "PASS",
+    "xlsx": "PASS",
+    "pdf": "PASS: two pages visually inspected",
+    "print": "PASS: one page print CSS PDF visually inspected",
+    "filtersAndScopePresent": true,
+    "contactBankAndPrivateNotesExcluded": true,
+    "physicalPrinterOrSystemDialog": "NOT RUN",
+    "authenticatedStagingDownloads": "NOT RUN"
+  },
+  "typecheck": "PASS",
+  "scriptLint": "PASS",
+  "productionSourceChanged": false,
+  "stagingDeployed": false,
+  "newApk": false,
+  "stagingFixture": {
+    "environment": "staging",
+    "canonicalFixturePinnedByPriorSubmissionAndOrganizationDigests": true,
+    "fixture": "PARTNER_QA_FIXTURE",
+    "workflow": "SUBMITTED",
+    "transitionVersion": 1,
+    "qaCandidates": [],
+    "requestedLabelsFound": 0,
+    "assignmentPresent": false,
+    "assignmentVersion": 0,
+    "recoveryExecutionEnabled": false,
+    "readOnly": true
+  },
+  "sources": [
+    {
+      "workspace": "Backend",
+      "path": "src/modules/partner/partner.review-authenticated.pg.test.ts",
+      "sha256": "6a91791ebde9f2cac4c0ee483cbf04541a7a1f548748cc4a1f1f177daa3dce1a"
+    },
+    {
+      "workspace": "Backend",
+      "path": "src/modules/partner/partner.review-fixture.test-support.ts",
+      "sha256": "56787224f7faa3bf057a195f094e3b8ecf59fa8753ececd3a2d0c8cd8e9a227c"
+    },
+    {
+      "workspace": "Backend",
+      "path": "scripts/qa-uf2-isolated-review.cjs",
+      "sha256": "0c758ce8d0917fb514f45f3bef39e8663a8c043d290e12c3030a8d923ca6cec2"
+    },
+    {
+      "workspace": "Website",
+      "path": "scripts/uf2-isolated-admin-browser.mjs",
+      "sha256": "93b255bf5fd529219a057ce3fa2bba94c20aa249dea79089d7d44b91fffc55d1"
+    },
+    {
+      "workspace": "Website",
+      "path": "scripts/uf2-isolated-client-contracts.mjs",
+      "sha256": "36391d8cdddb71df2f3f53c5069e1624afcddc97ede642a49469fe926adc5fbc"
+    },
+    {
+      "workspace": "Website",
+      "path": "app/lib/partner/partnerApiClient.ts",
+      "sha256": "32e23c109e7b2f0b9b9f50c94acc1d6ad93078ab7a314036459cfc02226b2133"
+    },
+    {
+      "workspace": "Mobile",
+      "path": "src/features/partner/partnerApplicationApi.ts",
+      "sha256": "711642ec8e2959c56105db6c2a79857d73ce7f797d113b164d3ac416ab283b77"
+    }
+  ],
+  "remaining": [
+    "permanent least-privilege role provisioning and approved actual assignment",
+    "authenticated staging correction/review/exports and retained action confirmations",
+    "full Website/native screen-to-database correction journey",
+    "UF1 approved live publication timing",
+    "broader program certification"
+  ],
+  "programDenominator": 213,
+  "completionPercent": "NOT YET MEASURABLE"
+}

@@ -1,0 +1,18 @@
+{
+  "path": "C:/Users/Admin/tpl-api/reports/TPL_MASTER_REMAINING_WORK_LOG.md",
+  "heading": "## Partner Unified Foundation UF2 checkpoint — 2026-09-19",
+  "previousStatus": "UF2_IMPLEMENTED_STAGING_DELIVERED_REVIEWER_MAPPING_AND_LIVE_CERTIFICATION_OPEN",
+  "newStatus": "UF2_ISOLATED_REVIEW_CYCLE_VERIFIED_STAGING_CERTIFICATION_OPEN",
+  "decision": "UF2_TEST_ONLY_HIERARCHY_2026_09_20",
+  "headingCount": 1,
+  "checkpointCount": 1,
+  "decisionCount": 1,
+  "newStatusCount": 1,
+  "masterFileCount": 1,
+  "beforeSha256": "a2764b7a0d92d8c013a210dbdd8c0424b3433d4472552acbe72f2d58cd7539fb",
+  "afterSha256": "2a5978e805a7e25136a6acf40b0cce106b6b6765c4f57cb742ac32614233227c",
+  "outsideCheckpointPreserved": true,
+  "actualDiffContainsCheckpoint": true,
+  "actualDiffSha256": "180f068d733a53f2c118ee5ddd50fc082a38ac1de49dd962c200b85458982183",
+  "diffCheck": "PASS"
+}
