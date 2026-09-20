@@ -313,15 +313,11 @@ export default function PartnerAccessPage() {
   }
 
   if (access?.outcome === "ACTIVE") {
-    return shell(
-      <PartnerHome key={access.organizationId!} organizationId={access.organizationId!} onBack={backFromDestination} />,
-    );
+    return <PartnerHome key={access.organizationId!} organizationId={access.organizationId!} onBack={backFromDestination} onLogout={()=>void resetSession("partner-login")} />;
   }
 
   if (access?.outcome === "SETUP_PENDING") {
-    return shell(
-      <PartnerHome key={access.organizationId!} organizationId={access.organizationId!} onBack={backFromDestination} />,
-    );
+    return <PartnerHome key={access.organizationId!} organizationId={access.organizationId!} onBack={backFromDestination} onLogout={()=>void resetSession("partner-login")} />;
   }
 
   if (access?.outcome === "RESTRICTED") {
