@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, CheckCircle2, Clock3, FileCheck2, Loader2, ShieldAlert } from "lucide-react";
+import { ArrowLeft, ArrowRight, FileCheck2, Loader2, ShieldAlert } from "lucide-react";
 import { useAuth } from "@/app/hooks/useAuth";
 import {
   PartnerAccessRequestError,
@@ -24,6 +24,7 @@ import {
 } from "@/app/lib/partner/partnerOperatorPresentation";
 import { visibleSubmissionReference } from "@/app/lib/partner/partnerStep8Review";
 import PartnerAccessShell from "./PartnerAccessShell";
+import PartnerHome from "@/app/components/partner/PartnerHome";
 import PartnerProfileChooser from "./PartnerProfileChooser";
 import PartnerRecovery from "./PartnerRecovery";
 import { partnerApplicationPreviewHref } from "../lib/partner/partnerSubmittedDestination";
@@ -313,13 +314,13 @@ export default function PartnerAccessPage() {
 
   if (access?.outcome === "ACTIVE") {
     return shell(
-      <ActiveHolding profile={selectedProfile} summary={statusSummary} summaryState={summaryState} onBack={backFromDestination} />,
+      <PartnerHome key={access.organizationId!} organizationId={access.organizationId!} onBack={backFromDestination} />,
     );
   }
 
   if (access?.outcome === "SETUP_PENDING") {
     return shell(
-      <SetupPending profile={selectedProfile} summary={statusSummary} summaryState={summaryState} onBack={backFromDestination} />,
+      <PartnerHome key={access.organizationId!} organizationId={access.organizationId!} onBack={backFromDestination} />,
     );
   }
 
@@ -363,46 +364,6 @@ function SubmittedStatus({ profile, summary, summaryState, onBack }: { profile: 
       <SummaryNotice state={summaryState} />
       {summaryState === "ready" && summary?.readiness.organizationId ? <Link href={partnerApplicationPreviewHref(summary.readiness.organizationId)} className={`${secondaryActionClass} mt-6`}>Preview application</Link> : null}
       <button type="button" onClick={onBack} className={`${backActionClass} mt-8`}><ArrowLeft aria-hidden="true" className="h-4 w-4" />Back</button>
-    </div>
-  );
-}
-
-function ActiveHolding({ profile, summary, summaryState, onBack }: { profile: PartnerProfile | null; summary: PartnerStatusSummary | null; summaryState: "idle" | "loading" | "ready" | "error"; onBack: () => void }) {
-  return (
-    <div className="mx-auto max-w-2xl">
-      <CheckCircle2 aria-hidden="true" className="h-11 w-11 text-emerald-300" />
-      <h1 className="mt-5 text-3xl font-black tracking-tight sm:text-4xl">Your Partner account is active</h1>
-      <p className="mt-3 text-lg font-black text-white">{partnerBusinessName(profile, summary)}</p>
-      <p className="mt-5 text-sm font-medium leading-6 text-slate-300">Your Partner Desk is being prepared for the next activation phase.</p>
-      <div className="mt-6 rounded-2xl border border-emerald-300/20 bg-emerald-300/10 p-5">
-        <p className="text-xs font-black uppercase tracking-[0.14em] text-emerald-200">Account status</p>
-        <p className="mt-2 text-lg font-black text-white">Active Partner account</p>
-      </div>
-      <SummaryNotice state={summaryState} />
-      <div className="mt-8 flex flex-wrap gap-3">
-        <button type="button" onClick={onBack} className={backActionClass}><ArrowLeft aria-hidden="true" className="h-4 w-4" />Back</button>
-        <Link href="/customer-support" className={secondaryActionClass}>Contact Partner Support</Link>
-      </div>
-    </div>
-  );
-}
-
-function SetupPending({ profile, summary, summaryState, onBack }: { profile: PartnerProfile | null; summary: PartnerStatusSummary | null; summaryState: "idle" | "loading" | "ready" | "error"; onBack: () => void }) {
-  return (
-    <div className="mx-auto max-w-2xl">
-      <Clock3 aria-hidden="true" className="h-11 w-11 text-orange-300" />
-      <h1 className="mt-5 text-3xl font-black tracking-tight sm:text-4xl">Account setup pending</h1>
-      <p className="mt-3 text-lg font-black text-white">{partnerBusinessName(profile, summary)}</p>
-      <p className="mt-5 text-sm font-medium leading-6 text-slate-300">Your application is approved. We will update this Partner account when the next setup phase is ready.</p>
-      <div className="mt-6 rounded-2xl border border-orange-300/20 bg-orange-300/10 p-5">
-        <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-200">Account status</p>
-        <p className="mt-2 text-lg font-black text-white">Account setup pending</p>
-      </div>
-      <SummaryNotice state={summaryState} />
-      <div className="mt-8 flex flex-wrap gap-3">
-        <button type="button" onClick={onBack} className={backActionClass}><ArrowLeft aria-hidden="true" className="h-4 w-4" />Back</button>
-        <Link href="/customer-support" className={secondaryActionClass}>Contact Partner Support</Link>
-      </div>
     </div>
   );
 }
