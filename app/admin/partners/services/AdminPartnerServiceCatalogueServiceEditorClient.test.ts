@@ -53,6 +53,13 @@ test("Service editor verifies draft persistence before showing next action", () 
   expect(editorSource).toContain("submitAdminPartnerServiceCatalogueApproval");
 });
 
+test("Service editor normalizes supported capability labels and rejects unknown metadata before save", () => {
+  expect(editorSource).toContain("canonicalCapabilities(form.capabilities, data.schema.capabilities)");
+  expect(editorSource).toContain("unsupportedCapabilities(form.capabilities, data.schema.capabilities)");
+  expect(editorSource).toContain('value.trim().toLowerCase().replace(/[\\s-]+/g, "_")');
+  expect(editorSource).toContain("Choose supported capabilities only");
+});
+
 test("Service editor uses item-scoped workflow actions and common queue deep links", () => {
   expect(editorSource).toContain("data.review?.itemCode === form.stableCode");
   expect(editorSource).toContain("Waiting for Review");

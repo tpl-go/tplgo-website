@@ -521,7 +521,7 @@ function buildServiceItem(form: FormState, data: AdminPartnerServiceCatalogueRes
     applicationSelectable: form.applicationSelectable,
     serviceApprovalRequired: form.serviceApprovalRequired,
     verificationProfileKey: form.verificationProfileKey.trim() || existing?.verificationProfileKey || "manual_review",
-    capabilities: splitList(form.capabilities),
+    capabilities: canonicalCapabilities(form.capabilities, data.schema.capabilities),
     aliases: splitList(form.aliases),
   };
 }
@@ -533,10 +533,26 @@ function validateForm(form: FormState, data: AdminPartnerServiceCatalogueRespons
   if (splitList(form.countries).some((country) => !/^[A-Z]{2}$/.test(country.toUpperCase()))) return "Use two-letter country codes.";
   if (!form.individualAllowed && !form.organizationAllowed) return "Allow at least one Partner eligibility type.";
   if (!splitList(form.capabilities).length) return "Add at least one enabled capability.";
+  const invalidCapabilities = unsupportedCapabilities(form.capabilities, data.schema.capabilities);
+  if (invalidCapabilities.length) return `Choose supported capabilities only: ${invalidCapabilities.join(", ")}.`;
   if (form.parentCode && !data.draft.items.some((item) => item.domain === form.domainId && item.stableCode === form.parentCode)) return "Choose an existing parent in this domain.";
   const generatedCode = `${form.domainId}-${slugify(form.name)}`;
   if (mode === "new" && data.draft.items.some((item) => item.stableCode === generatedCode)) return "A service with this name already exists in this domain.";
   return "";
+}
+
+function canonicalCapabilities(value: string, supported: string[]): string[] {
+  const byLabel = new Map(supported.map((capability) => [normalizeCapabilityLabel(capability), capability]));
+  return [...new Set(splitList(value).map((capability) => byLabel.get(normalizeCapabilityLabel(capability))).filter((capability): capability is string => Boolean(capability)))];
+}
+
+function unsupportedCapabilities(value: string, supported: string[]): string[] {
+  const allowed = new Set(supported.map(normalizeCapabilityLabel));
+  return splitList(value).filter((capability) => !allowed.has(normalizeCapabilityLabel(capability)));
+}
+
+function normalizeCapabilityLabel(value: string): string {
+  return value.trim().toLowerCase().replace(/[\s-]+/g, "_");
 }
 
 function emptyForm(domainId?: string, parentCode?: string): FormState {
