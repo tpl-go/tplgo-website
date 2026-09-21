@@ -1,0 +1,40 @@
+"use client";
+import {useEffect,useMemo,useRef,useState} from 'react';
+import type {PartnerSupply} from '@/app/lib/partner/partnerSupply';
+import styles from './PartnerCommandCenter.module.css';
+
+export type MediaDraft={serviceScopeId:string;supplyItemId?:string;category:string;caption:string;altText:string;isCover:boolean;sortOrder:number};
+export default function PartnerMediaEditor({data,admin,busy,onUpload,onYoutube,onUpdate,onArchive,onPreview,onDirtyChange}:{data:PartnerSupply;admin:boolean;busy:boolean;onUpload:(file:File,draft:MediaDraft)=>Promise<void>;onYoutube:(url:string,draft:MediaDraft)=>Promise<void>;onUpdate:(id:string,version:number,draft:MediaDraft)=>Promise<void>;onArchive:(id:string,version:number)=>Promise<void>;onPreview:(id:string)=>Promise<void>;onDirtyChange?:(dirty:boolean)=>void}){
+ const scopes=data.serviceScopes.filter(scope=>scope.mediaApplicable&&scope.ready),initialScope=scopes[0]?.id??'';
+ const [serviceScopeId,setServiceScopeId]=useState(initialScope),[target,setTarget]=useState<'property'|'room'>('property'),[supplyItemId,setSupplyItemId]=useState(''),[category,setCategory]=useState('exterior'),[caption,setCaption]=useState(''),[altText,setAltText]=useState(''),[isCover,setIsCover]=useState(false),[sortOrder,setSortOrder]=useState('0'),[videoUrl,setVideoUrl]=useState(''),[preview,setPreview]=useState(''),[selectedFile,setSelectedFile]=useState<File|null>(null);
+ const file=useRef<HTMLInputElement>(null),roomItems=useMemo(()=>data.items.filter(item=>item.serviceScopeId===serviceScopeId),[data.items,serviceScopeId]);
+ const dirty=Boolean(caption||altText||videoUrl||preview||target==='room'||isCover||sortOrder!=='0'||category!=='exterior');
+ useEffect(()=>onDirtyChange?.(dirty),[dirty,onDirtyChange]);
+ useEffect(()=>()=>{if(preview)URL.revokeObjectURL(preview);},[preview]);
+ const draft=():MediaDraft=>({serviceScopeId,supplyItemId:target==='room'?supplyItemId||undefined:undefined,category,caption:caption.trim(),altText:altText.trim(),isCover,sortOrder:Number(sortOrder)});
+ const invalid=!serviceScopeId||target==='room'&&!supplyItemId||!caption.trim()||!altText.trim()||!/^\d{1,5}$/.test(sortOrder)||Number(sortOrder)>10000;
+ function reset(){setCaption('');setAltText('');setIsCover(false);setSortOrder('0');setVideoUrl('');setPreview('');setSelectedFile(null);if(file.current)file.current.value='';onDirtyChange?.(false);}
+ return <section className={styles.panel} aria-label="Hotel media library">
+  <div className={styles.panelHead}><div><h2>Property &amp; room media</h2><p className={styles.muted}>Images and YouTube links stay private until the required review approves them.</p></div><span className={styles.muted}>{data.quota.activeMedia} of {data.quota.maxActiveMedia}</span></div>
+  {data.media.map(media=>{const room=media.supplyItemId?data.items.find(item=>item.id===media.supplyItemId):null;return <article key={media.id} className={styles.record}><div><strong>{media.label}</strong><small>{room?`Room · ${room.label}`:'Property'} · {media.mediaKind==='youtube'?'YouTube':media.category}</small></div><span>{media.isCover?'Cover · ':''}order {media.sortOrder}</span><span>{media.moderationStatus.replaceAll('_',' ')} · version {media.version}</span><div className={styles.tools}>{!admin&&media.mediaKind==='image'?<button type="button" onClick={()=>void onPreview(media.id)}>Preview</button>:null}{!admin&&data.canWriteMedia&&!media.isCover&&media.moderationStatus!=='rejected'?<button type="button" onClick={()=>void onUpdate(media.id,media.version,{serviceScopeId:media.serviceScopeId,supplyItemId:media.supplyItemId??undefined,category:media.category,caption:media.label,altText:media.altText,isCover:true,sortOrder:media.sortOrder})}>Set cover</button>:null}{!admin&&data.canWriteMedia?<button type="button" onClick={()=>void onArchive(media.id,media.version)}>Archive</button>:null}</div></article>;})}
+  {!data.media.length?<div className={styles.empty}>No property or room media has been added.</div>:null}
+  {!admin&&data.canWriteMedia&&scopes.length?<div className={styles.editor}>
+   <h3>Add media</h3>
+   <label><span>Service <b>Required</b></span><select value={serviceScopeId} onChange={event=>{setServiceScopeId(event.target.value);setSupplyItemId('');}}>{scopes.map(scope=><option key={scope.id} value={scope.id}>{scope.label}</option>)}</select></label>
+   <label><span>Gallery scope <b>Required</b></span><select value={target} onChange={event=>{const value=event.target.value as 'property'|'room';setTarget(value);setCategory(value==='property'?'exterior':'bedroom');}}><option value="property">Property gallery</option><option value="room">Room gallery</option></select></label>
+   {target==='room'?<label><span>Room / inventory item <b>Required</b></span><select value={supplyItemId} onChange={event=>setSupplyItemId(event.target.value)}><option value="">Choose a room</option>{roomItems.map(item=><option key={item.id} value={item.id}>{item.label}</option>)}</select></label>:null}
+   <label><span>Category <b>Required</b></span><select value={category} onChange={event=>setCategory(event.target.value)}>{(target==='property'?['exterior','lobby','reception','restaurant','common-area','gallery']:['bedroom','bathroom','room-view','gallery']).map(value=><option key={value} value={value}>{value.replaceAll('-',' ')}</option>)}</select></label>
+   <label><span>Caption <b>Required</b></span><input maxLength={120} value={caption} onChange={event=>setCaption(event.target.value)} placeholder="Synthetic Hotel Exterior — QA Only"/></label>
+   <label><span>Accessible description <b>Required</b></span><input maxLength={180} value={altText} onChange={event=>setAltText(event.target.value)} placeholder="Describe the image clearly"/></label>
+   <label><span>Display order</span><input inputMode="numeric" value={sortOrder} onChange={event=>setSortOrder(event.target.value.replace(/\D/g,'').slice(0,5))}/></label>
+   <label><span>Cover image</span><select value={isCover?'yes':'no'} onChange={event=>setIsCover(event.target.value==='yes')}><option value="no">Standard image</option><option value="yes">Use as this gallery cover</option></select></label>
+   <label><span>Image <b>JPEG, PNG or WebP</b></span><input ref={file} type="file" accept="image/jpeg,image/png,image/webp" disabled={busy} onChange={event=>{const selected=event.target.files?.[0]??null;if(!selected)return;if(preview)URL.revokeObjectURL(preview);setSelectedFile(selected);setPreview(URL.createObjectURL(selected));}}/></label>
+   {preview?<div className={styles.fieldHint}><strong>Selected image preview ready.</strong> The image is not saved until you choose Upload image.</div>:null}
+   <div className={styles.tools}><button className={styles.primaryAction} type="button" disabled={busy||invalid||!selectedFile} onClick={async()=>{if(selectedFile){await onUpload(selectedFile,draft());reset();}}}>{busy?'Uploading…':'Upload image'}</button><button type="button" disabled={!dirty||busy} onClick={reset}>Clear</button></div>
+   <h3>YouTube video</h3>
+   <label><span>YouTube link</span><input type="url" value={videoUrl} onChange={event=>setVideoUrl(event.target.value)} placeholder="https://www.youtube.com/watch?v=…"/></label>
+   <div className={styles.fieldHint}>Only one direct YouTube video link is accepted. Raw iframe or HTML is never stored.</div>
+   <div className={styles.tools}><button type="button" disabled={busy||invalid||!videoUrl.trim()} onClick={async()=>{await onYoutube(videoUrl,draft());reset();}}>Add YouTube link</button></div>
+  </div>:<div className={styles.empty}>{admin?'Admin view is read-only.':data.canWriteMedia?'Media is not enabled for an active selected service.':'Media access is read-only or unavailable for this account.'}</div>}
+ </section>;
+}
