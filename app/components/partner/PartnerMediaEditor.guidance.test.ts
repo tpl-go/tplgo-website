@@ -19,4 +19,10 @@ test("media library explains repeat uploads and least-privilege review truthfull
   expect(source).toContain('sandbox="allow-scripts allow-same-origin allow-presentation"');
   expect(source).toContain("media.mediaKind==='image'&&!media.isCover");
   expect(source).toContain("Remove invalid cover");
+  expect(source).toContain("Moderation mode:");
+  expect(source).toContain("No automated provider configured");
+  expect(source).toContain("Automatic approval:");
+  expect(source).toContain("Automatic rejection:");
+  expect(source).toContain("Final authority: Authorized Admin reviewer");
+  expect(source).toContain("Automated assessment:");
 });
