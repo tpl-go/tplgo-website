@@ -30,6 +30,9 @@ function AdminUsersView() {
   const [tokenResult, setTokenResult] = useState<AdminApiResult<AdminPasswordTokenResponse> | null>(null);
   const [activeUserId, setActiveUserId] = useState<string | null>(null);
   const [canResetPassword, setCanResetPassword] = useState(false);
+  const [canManageRoles, setCanManageRoles] = useState(false);
+  const [currentAdminEmail, setCurrentAdminEmail] = useState('');
+  const [roleResult, setRoleResult] = useState<AdminApiResult<AdminUser> | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -37,6 +40,8 @@ function AdminUsersView() {
       const session = readAdminSession();
       if (!active) return;
       setCanResetPassword(session?.admin.permissions.includes("admin.password.reset") ?? false);
+      setCanManageRoles(session?.admin.permissions.includes("admin.users.write") ?? false);
+      setCurrentAdminEmail(session?.admin.email ?? '');
       const result = await adminApiRequest<AdminUser[]>("/api/v1/admin/users");
       if (!active) return;
       setUsersResult(result.ok ? { ...result, data: normalizeAdminUsers(result.data, session?.admin) } : result);
@@ -66,6 +71,18 @@ function AdminUsersView() {
     setActiveUserId(null);
   }
 
+  async function toggleMediaReviewer(adminUser:AdminUser){
+    const adminUserId=getSetupTokenAdminUserId(adminUser);
+    if(!adminUserId)return;
+    const assigned=adminUser.roles.includes('partner_media_reviewer');
+    const nextRoles=assigned?adminUser.roles.filter(role=>role!=='partner_media_reviewer'):[...new Set([...adminUser.roles,'partner_media_reviewer'])];
+    if(!window.confirm(assigned?'Remove Partner media review access from this staging Admin?':'Assign Partner media review access to this staging Admin?'))return;
+    setActiveUserId(adminUserId);setRoleResult(null);
+    const result=await adminApiRequest<AdminUser>(`/api/v1/admin/users/${encodeURIComponent(adminUserId)}`,{method:'PATCH',body:{roles:nextRoles}});
+    setRoleResult(result);setActiveUserId(null);
+    if(result.ok)setUsersResult(current=>current?.ok?{...current,data:current.data.map(user=>getSetupTokenAdminUserId(user)===adminUserId?{...user,roles:result.data.roles,permissions:result.data.permissions}:user)}:current);
+  }
+
   const users = usersResult?.ok ? usersResult.data : [];
   const developmentToken = tokenResult?.ok ? tokenResult.data.token?.developmentToken : undefined;
 
@@ -90,6 +107,7 @@ function AdminUsersView() {
       {tokenResult && !tokenResult.ok ? (
         <Notice tone="warn" text={tokenResult.error.message} requestId={tokenResult.requestId} />
       ) : null}
+      {roleResult?.ok?<Notice tone="success" text={roleResult.data.roles.includes('partner_media_reviewer')?'Partner media review access assigned.':'Partner media review access removed.'} requestId={roleResult.requestId}/>:roleResult?<Notice tone="warn" text={roleResult.error.message} requestId={roleResult.requestId}/>:null}
       <div className="overflow-hidden rounded border border-slate-200 bg-white">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
@@ -119,7 +137,7 @@ function AdminUsersView() {
                       <td className="px-4 py-3 text-slate-700">{formatOptionalUserField(adminUser.fullName)}</td>
                       <td className="px-4 py-3 text-slate-700">{formatOptionalUserField(adminUser.status)}</td>
                       <td className="px-4 py-3 text-slate-700">{formatUserRoles(adminUser)}</td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3"><div className="flex flex-wrap gap-2">
                         {canResetPassword ? (
                           <button
                             type="button"
@@ -132,7 +150,8 @@ function AdminUsersView() {
                         ) : (
                           <span className="text-xs text-slate-500">Permission gated</span>
                         )}
-                      </td>
+                        {canManageRoles&&adminUser.email===currentAdminEmail?<button type="button" onClick={()=>void toggleMediaReviewer(adminUser)} disabled={creatingSetupToken} className="h-8 rounded border border-orange-300 bg-orange-50 px-3 text-xs font-medium text-orange-900 disabled:opacity-60">{adminUser.roles.includes('partner_media_reviewer')?'Remove media review':'Enable media review'}</button>:null}
+                      </div></td>
                     </tr>
                   );
                 })
