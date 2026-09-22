@@ -11,5 +11,6 @@ test("Website media upload uses the authenticated backend upload path before can
   expect(source).toContain("'Content-Type':selected.type");
   expect(source).toContain("/media/confirm");
   expect(source).toContain("storageReference:session.storageReference");
+  expect(source).toContain("Image saved privately as Pending TPL review.");
   expect(source).not.toContain("fetch(session.upload.url");
 });
