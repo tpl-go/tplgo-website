@@ -17,4 +17,6 @@ test("media library explains repeat uploads and least-privilege review truthfull
   expect(source).toContain("Preview YouTube video");
   expect(source).toContain("youtube-nocookie.com/embed/");
   expect(source).toContain('sandbox="allow-scripts allow-same-origin allow-presentation"');
+  expect(source).toContain("media.mediaKind==='image'&&!media.isCover");
+  expect(source).toContain("Remove invalid cover");
 });
