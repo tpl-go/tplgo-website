@@ -14,4 +14,7 @@ test("media library explains repeat uploads and least-privilege review truthfull
   expect(source).toContain("Add another image or video");
   expect(source).toContain("Image file · one per upload");
   expect(source).toContain("media slots remain");
+  expect(source).toContain("Preview YouTube video");
+  expect(source).toContain("youtube-nocookie.com/embed/");
+  expect(source).toContain('sandbox="allow-scripts allow-same-origin allow-presentation"');
 });
