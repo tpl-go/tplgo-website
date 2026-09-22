@@ -1,5 +1,45 @@
 # TPL Partner Desk M2.6 — Hotel Media Library
 
+## Continuation — 2026-09-22 — YouTube preview, approval and gallery closure
+
+**Checkpoint ID:** `PARTNER_DESK_M2_6_HOTEL_MEDIA_20260922_I`
+
+**Previous status:** `M2_6_HOTEL_YOUTUBE_SUBMITTED_ADMIN_REVIEW_PENDING`
+
+**Current status:** `M2_6_HOTEL_MEDIA_STAGING_END_TO_END_PASS`
+
+The operator approved the retained structured YouTube record through the normal staging Admin review confirmation and confirmed the current approved row in the bounded report/export surface. Native Mobile canonical refresh now shows `TPL Hotel Video - QA Only` as **approved · version 5**, property scope, display order 2 and not a gallery cover. A separate read-only staging reconciliation returned HTTP 200 from the approved-only customer projection and exactly two property entries (one image and one YouTube video) plus one room image; the YouTube entry is not a cover. The operator had already observed the approved video in the customer gallery. The raw submitted URL, iframe markup and private storage data are not retained in this report or projection.
+
+Two defects were closed before the final approval. First, pending YouTube records had no useful visual preview. Website/Admin now render a TPL-controlled click-to-load review card using the canonical video ID, `youtube-nocookie.com`, lazy loading, a restricted iframe sandbox and no stored iframe HTML. Mobile renders the same structured video/status card. Second, clients exposed **Set cover** for YouTube and the Backend accepted it. The resulting material edit correctly returned the first approved record to review, but left an invalid video-cover state. Website `0d4fc8a`, Mobile `0fd2f8e` and Backend `20af18f` now restrict covers to images; the server remains authoritative. The normal Mobile **Remove invalid cover** action corrected the retained record without SQL or history rewriting, moving it to pending version 4, and the operator approved that current revision to version 5.
+
+The immutable event sequence is `created` v1 → `approved` v2 → `updated` v3 → `updated` v4 → `approved` v5. It preserves the first decision and correction rather than rewriting history. Exactly three active canonical media rows remain: approved property image, approved room image and approved property YouTube record. Two earlier failed room attempts remain removed audit history and are not active duplicates. Property and room covers remain independent; only the room image is a room cover.
+
+Live parity is complete within M2.6 scope. Website/Admin provide a pre-approval thumbnail-style review card; Mobile refreshes media explicitly and on foreground; Mobile shows the final Approved state; the customer-safe staging Hotel gallery exposes the approved property image/video and linked room image only; and the operator confirmed readable bounded CSV/XLSX/PDF/Print output with the approved status. Pending/rejected/private media remains excluded. Existing least-privilege `partner_media.review` server checks, Partner self-review denial, read-only Admin denial, cross-tenant denial, safe YouTube normalization and moderation audit boundaries remain unchanged.
+
+Automated evidence is separate from live evidence. Backend TypeScript and production build passed. A fresh disposable PostgreSQL 17 run passed the focused media suite **7/7**, including image-only cover enforcement, version/conflict behavior and transaction/audit rollback coverage; the disposable cluster was stopped afterward. Website focused media guidance tests, scoped ESLint and the production Webpack build passed, and the exact Vercel Turbopack deployment completed successfully. Mobile focused Jest, TypeScript and scoped ESLint passed. The installed Development APK and app data were reused; only the Metro/JS bundle changed.
+
+Delivery is staging-only: Backend `20af18f0bdb40534c7fe22c3c1187da6eb0463b1` runs as `/home/tpladmin/tpl-api-releases/partner-m2.6-youtube-cover-20af18f` on `tpl-api-partner-staging`/4100; scoped archive SHA-256 is `8771fecb47ec7f30b7a5d1d3b94ab74b45a05809e07b2f00630db8724501c1d2`. Website `0d4fc8a442207f0b03f259f2b1c9895ee97bf2bc` is READY in deployment `dpl_DCwyPqnwEbYWbjoQx5gcRjwP5fyn` and assigned only to `staging.tplgo.com`. Mobile `0fd2f8e72ec1b0e79a30f118465d3c5076192732` is served through the existing Development Client. Final Website, staging API and untouched production API health each returned 200.
+
+No real Partner, submitted application, catalogue entry, inventory, availability, rate, booking, finance, settlement, payout, notification or production state changed. The retained synthetic fixture and three active media records remain available for combined certification. No new APK was built.
+
+M2.6 is closed at **`M2_6_HOTEL_MEDIA_STAGING_END_TO_END_PASS`**. This does not complete the whole Hotel family or Partner foundation. The fixed **46 requirements / 213 units** denominator is unchanged; no whole-program percentage is invented. `MOBILE_USER_PARITY=COMPLETE`, `PARTNER_MOBILE_PARITY=OPEN`, and `PHASE_1_STEP_1=OPEN` remain preserved. The next separate Hotel-only step may begin: **Hotel content, property/room amenities, policies and structured inclusions**. It was not started in this run.
+
+## Continuation — 2026-09-22 — approved YouTube submitted, Admin review pending
+
+**Checkpoint ID:** `PARTNER_DESK_M2_6_HOTEL_MEDIA_20260922_H`
+
+**Previous status:** `M2_6_HOTEL_IMAGE_MODERATION_GALLERY_PASS_YOUTUBE_LIVE_PENDING`
+
+**Current status:** `M2_6_HOTEL_YOUTUBE_SUBMITTED_ADMIN_REVIEW_PENDING`
+
+The operator supplied and authorized one safe single-video YouTube URL. Through the normal authenticated native Partner Media Library, the retained staging-only synthetic Hotel submitted exactly one property-scope structured YouTube record with the synthetic caption `TPL Hotel Video - QA Only`, a synthetic accessibility description and display order 2. The Mobile UI refreshed to show **Property · youtube · order 2**, **pending review · version 1**. The normal form reset confirms the submission completed; the raw URL/iframe/HTML was not retained in the report.
+
+The existing two approved images and their independent property/room cover states were not changed. No new image, organization, service, inventory, availability, rate, booking, finance or payout record was created. The existing Development APK and app data were preserved; Metro was reconnected to the already-running LAN server and the same authenticated synthetic organization context was retained. Production and unrelated Partner data remain untouched.
+
+Automated parser, allowlist, pending-publication gating and PostgreSQL structured-YouTube coverage remain the prior passing evidence. Live Admin approval, Partner Website/App Approved readback, approved-only gallery rendering and post-approval bounded export reconciliation remain pending. Exact next action: in staging Admin, open the retained synthetic Partner's Media Library and approve only `TPL Hotel Video - QA Only` once through the normal review confirmation.
+
+The fixed **46 requirements / 213 units** denominator is unchanged. No whole-program percentage is invented. `MOBILE_USER_PARITY=COMPLETE`, `PARTNER_MOBILE_PARITY=OPEN`, and `PHASE_1_STEP_1=OPEN` remain preserved.
+
 ## Continuation — 2026-09-22 — moderation and approved-gallery live closure
 
 **Checkpoint ID:** `PARTNER_DESK_M2_6_HOTEL_MEDIA_20260922_G`

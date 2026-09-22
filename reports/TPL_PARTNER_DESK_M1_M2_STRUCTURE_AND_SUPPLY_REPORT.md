@@ -1,5 +1,21 @@
 # Partner Desk M1/M2 — structure and supply/media delivery
 
+## M2.6 continuation — 2026-09-22 — M2_6_HOTEL_MEDIA_STAGING_END_TO_END_PASS
+
+Checkpoint `PARTNER_DESK_M2_6_HOTEL_MEDIA_20260922_I` closes the Hotel Media slice. The operator approved the corrected structured YouTube record through staging Admin and confirmed its Approved report/export state. Native Mobile refresh shows the property video as **approved · version 5**, display order 2 and non-cover. The approved-only staging projection returns one property image, the YouTube video and one linked room image; pending/private records remain excluded.
+
+The closure also fixes two usability/security defects: Website/Admin now provide a safe thumbnail-style click-to-load YouTube preview before approval, and Website/Mobile/Backend all prevent videos from becoming gallery covers. The retained invalid video-cover state was corrected through the normal Mobile action, audited as version 4, then reapproved as version 5. Backend `20af18f` is live only on staging 4100; Website `0d4fc8a` is READY in `dpl_DCwyPqnwEbYWbjoQx5gcRjwP5fyn` on `staging.tplgo.com`; Mobile `0fd2f8e` uses the existing APK/app data and Metro.
+
+Focused Website/Mobile checks and builds passed; fresh disposable-PostgreSQL media coverage passed 7/7. Operator live evidence covers Admin approval, Mobile Approved readback, customer gallery display and readable bounded CSV/XLSX/PDF/Print. Final Website, staging API and untouched production API health each returned 200. Production, real Partners and unrelated operational/financial state were not changed.
+
+M2.6 is complete, while the Partner foundation remains OPEN. Fixed 46 requirements / 213 units and `MOBILE_USER_PARITY=COMPLETE`, `PARTNER_MOBILE_PARITY=OPEN`, `PHASE_1_STEP_1=OPEN` remain preserved. The next separate Hotel-only batch is **Hotel content, property/room amenities, policies and structured inclusions**; it was not started.
+
+## M2.6 continuation — 2026-09-22 — M2_6_HOTEL_YOUTUBE_SUBMITTED_ADMIN_REVIEW_PENDING
+
+Checkpoint `PARTNER_DESK_M2_6_HOTEL_MEDIA_20260922_H` records the operator-authorized live YouTube submission. The normal authenticated native Partner Media Library added exactly one structured property-scope YouTube record for the retained staging-only synthetic Hotel. It is display order 2, `pending review`, version 1; raw iframe/HTML was not stored or exposed. The two existing approved images and property/room covers remain unchanged, the existing APK/app data were reused, and production/unrelated Partner data were untouched.
+
+M2.6 now waits only for the normal staging Admin approval of `TPL Hotel Video - QA Only`, followed by Website/App Approved readback, approved-only gallery rendering and bounded export reconciliation. Parser/allowlist/publication-gating and actual-PostgreSQL structured-video coverage remain passing automated evidence. Fixed 46 requirements / 213 units and `MOBILE_USER_PARITY=COMPLETE`, `PARTNER_MOBILE_PARITY=OPEN`, `PHASE_1_STEP_1=OPEN` remain preserved. The next Hotel content/amenities/policies slice has not started.
+
 ## M2.6 continuation — 2026-09-22 — M2_6_HOTEL_IMAGE_MODERATION_GALLERY_PASS_YOUTUBE_LIVE_PENDING
 
 Checkpoint `PARTNER_DESK_M2_6_HOTEL_MEDIA_20260922_G` advances the previous image-core status to **`M2_6_HOTEL_IMAGE_MODERATION_GALLERY_PASS_YOUTUBE_LIVE_PENDING`**. Backend `71f1abc` added the audited `partner_media.review` state machine, the two-permission `partner_media_reviewer` role, migration 0058 and an approved/active-only staging Hotel gallery projection. A live defect initially hid the controls because the existing `super_admin` role omitted the new permission; the tested two-line correction is `fb0d244`, now running as staging release `partner-m2.6-final-rbac-fb0d244`. No unrelated Admin permission or new account was added.
