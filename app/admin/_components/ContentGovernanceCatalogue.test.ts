@@ -36,9 +36,11 @@ test("uses a bounded searchable catalogue with safe exports and a bounded print 
 });
 
 test("renders catalogue counts with explicit high-contrast typography",()=>{
- expect(component).toContain('text-sm font-extrabold uppercase tracking-wide text-slate-700');
- expect(component).toContain('text-2xl font-black leading-tight text-[#071426]');
- expect(component).not.toContain('text-xs font-black uppercase tracking-wide text-slate-500');
+ expect(component).toContain('backgroundColor:"#071426"');
+ expect(component).toContain('borderColor:"#f59e0b"');
+ expect(component).toContain('text-base font-black uppercase tracking-wide');
+ expect(component).toContain('text-3xl font-black leading-none');
+ expect(component).toContain('color:"#ffffff",opacity:1');
 });
 
 test("labels the Jacuzzi proof as synthetic and avoids claiming a Hotel offers it",()=>{
