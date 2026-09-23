@@ -2,11 +2,21 @@
 
 Recorded: 2026-09-23
 
-Checkpoint: `TPL-PARTNER-M2.7A-G-20260923-01`
+Checkpoint: `TPL-PARTNER-M2.7A-G-20260923-06`
 
-Status: **`M2_7A_G_ADMIN_CONTENT_GOVERNANCE_DYNAMIC_CATALOGUE_STAGING_PARTIAL_DRAFT_EXCLUSION_PASS_CONTRAST_RECHECK_PENDING`**
+Status: **`M2_7A_G_ADMIN_CONTENT_GOVERNANCE_DYNAMIC_CATALOGUE_STAGING_PARTIAL_IN_REVIEW_APPROVAL_PENDING`**
 
 Previous status: `M2_7A_HOTEL_CONTENT_AND_AMENITIES_STAGING_END_TO_END_PASS`
+
+## Authenticated submit-for-review continuation — 2026-09-23
+
+Checkpoint: `TPL-PARTNER-M2.7A-G-20260923-06`
+
+The operator opened the retained `HOTEL_PROPERTY_JACUZZI_QA` draft in the normal staging Admin governance flow and selected **Submit for approval**. The UI reported that submission for approval review succeeded. Read-only canonical reconciliation confirms version 1 moved from `DRAFT` to `IN_REVIEW` and row version advanced from 1 to 2. No API, SQL or test-only shortcut performed the transition.
+
+Publication boundaries remain intact: the entity has no published version, the active published catalogue remains version 1, the QA amenity has zero active canonical rows, and the selectable baseline remains exactly 27 original amenities (15 PROPERTY / 12 ROOM). Staging and untouched production API health both return 200. Approval and publication have not occurred; Jacuzzi therefore remains absent from Partner Website, Mobile and customer Hotel projections.
+
+No source, deployment, Mobile bundle, APK or database schema changed in this continuation. Current delivery remains Backend `4bd6dc68f816bd4d26562f52dd0068ba9c30d4dd`, Website feature source `177929f` in READY deployment `dpl_9kHN7BWMcEv4V5NvPwqK3AxB3L67` on staging only, and Mobile `e6c18c099c54cc299d12748e0c41495da929fcdd` with the existing APK. The next governed action is one authorized approval through the existing review panel; publication remains a separate subsequent action.
 
 ## Draft-exclusion pass and second contrast correction — 2026-09-23
 
