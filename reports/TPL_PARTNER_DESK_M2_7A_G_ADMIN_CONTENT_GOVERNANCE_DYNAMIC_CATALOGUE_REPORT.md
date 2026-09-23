@@ -1,0 +1,167 @@
+# TPL Partner Desk M2.7A-G — Admin Content Governance and Dynamic Catalogue
+
+Recorded: 2026-09-23
+
+Checkpoint: `TPL-PARTNER-M2.7A-G-20260923-01`
+
+Status: **`M2_7A_G_ADMIN_CONTENT_GOVERNANCE_DYNAMIC_CATALOGUE_STAGING_PARTIAL_AUTHENTICATED_LIFECYCLE_PENDING`**
+
+Previous status: `M2_7A_HOTEL_CONTENT_AND_AMENITIES_STAGING_END_TO_END_PASS`
+
+## Outcome and evidence boundary
+
+The reusable Content Governance engine is implemented, tested, committed, pushed and deployed to staging. It adopts the existing Hotel amenity catalogue without changing its stable codes, meanings, scopes, labels or ordering. The Admin interface is delivered under **Website & Experience → Content & Attribute Catalogue** and provides bounded list/filter, draft editing, review, publication, lifecycle, impact, history and export controls.
+
+This checkpoint remains PARTIAL because the authenticated staging Admin Draft → Review → Approve → Publish flow has not yet been observed. The supported authenticated browser connection could not initialize after its single bounded recovery attempt. No product failure is inferred from that tooling/access limitation, and no API or database shortcut was used to manufacture live evidence. The bounded `HOTEL_PROPERTY_JACUZZI_QA` proof has therefore not been created. M2.7A remains PASS and its retained Hotel state remains unchanged.
+
+## Reused architecture and information boundaries
+
+The implementation reuses the established Admin authentication, RBAC, audit/event patterns, Website & Experience shell, canonical Hotel content tables, capability-family mapping, Partner catalogue reads, customer-safe projection and export utilities.
+
+The Admin information architecture now makes the authority boundary explicit:
+
+- **Pages** remains the editorial/SEO page-content workflow.
+- **Service Catalogue** remains the Domain/Service lifecycle and capability authority.
+- **Content & Attribute Catalogue** governs amenities and structured options.
+- **Review & Publishing** exposes the governed approval/publication queue inside the same engine.
+- **Version History** exposes immutable governed versions and event history.
+- Future Policy Templates, Inclusions and Exclusions are represented only as truthful `Not configured` capability boundaries. They are not active modules.
+
+An amenity cannot create or mutate a Service, and it is not stored as page JSON. Stable codes and server-side entity types drive behavior; clients do not switch on Hotel display names.
+
+## Canonical governance model
+
+Additive migration `0061_partner_content_governance` adds:
+
+- `partner.content_governance_catalogues`
+- `partner.content_governance_entities`
+- `partner.content_governance_versions`
+- `partner.content_governance_events`
+- `partner.content_governance_outbox`
+- governed lifecycle/version references on the existing `partner.amenity_catalogue`
+
+The model supports stable entity codes, versioned draft payloads, family/service applicability, strict PROPERTY/ROOM scope, category, value type/options, translation state, display order, icon reference, effective dates, lifecycle, actor provenance, optimistic versions and bounded usage counts. Published snapshots are immutable. A published stable code cannot be silently repurposed; later changes use a new governed version.
+
+The implemented lifecycle is:
+
+`DRAFT → IN_REVIEW → APPROVED → PUBLISHED`
+
+with bounded `CHANGES_REQUESTED`, `REJECTED`, new-version, `DEPRECATED` and `INACTIVE` paths. Approval alone does not expose the option. Publication atomically activates the intended version, updates the canonical amenity projection, increments the published catalogue version, appends audit/history and emits a deterministic scoped outbox event. Draft and approved-but-unpublished versions remain absent from Partner and customer projections.
+
+Deactivation is not deletion. Inactive entries cannot be newly selected, while historical approved selections remain resolvable through their retained published meaning. Admin sees bounded usage and impact before lifecycle changes. No all-Partner scan or hard delete is used.
+
+## RBAC and authorization
+
+The narrow permissions are:
+
+- `website_experience.catalogue.read`
+- `website_experience.catalogue.write`
+- `website_experience.catalogue.review`
+- `website_experience.catalogue.publish`
+
+Narrow editor, reviewer and publisher role mappings were added without creating an employee account. Partner membership, `partner_content.review`, `partner_media.review`, finance and settlement permissions do not grant catalogue authority. Server routes enforce the permission at every read/write/review/publish boundary; hidden controls are not the security boundary. Submitted drafts require reviewer separation under the existing policy, with the bounded staging super-admin exception requiring an explicit separation reason. Cross-tenant, Partner and unauthorized Admin mutation paths fail closed.
+
+## Existing 27-amenity adoption
+
+Migration adoption is idempotent and retains the M2.7A Hotel V1 baseline:
+
+| Measure | Before | After staging migration |
+|---|---:|---:|
+| Original Hotel amenities | 27 | 27 |
+| PROPERTY | 15 | 15 |
+| ROOM | 12 | 12 |
+| Governed published v1 snapshots | 0 | 27 |
+| Duplicate stable codes | 0 | 0 |
+| Approved Hotel content records | 2 | 2 |
+| Approved amenity selections | 22 | 22 |
+| Approved media | 3 | 3 |
+
+The 14 property and 8 room selections, Queen bed × 1, City view, property/room scopes and customer projection are unchanged. Inventory remains capacity 8/version 2; availability remains 5 of 8 for the retained dates/version 2; base rate remains INR 1,275/version 2. No content or media record returned to review.
+
+The active Hotel catalogue is version 1. Partner Website and Mobile now expose the same server-published `contentCatalogueVersion`; neither client owns a separate canonical list. New saves reject inactive options, while historical approved selections remain readable.
+
+## Admin UX and bounded QA proof
+
+The delivered Admin screen provides:
+
+- search plus family, service, scope, category and lifecycle filters;
+- deterministic bounded/keyset pagination;
+- original/current/published counts and active published version;
+- grouped, accessible draft editor and inline validation;
+- draft-versus-published state and immutable version/event history;
+- translation readiness, applicability, scope, value type/options and effective dates;
+- usage/impact summary before lifecycle changes;
+- stale/conflict handling, unsaved-change warning and explicit confirmations;
+- CSV, XLSX, PDF and bounded Print actions.
+
+The prepared normal-UI QA draft defaults are:
+
+- stable code `HOTEL_PROPERTY_JACUZZI_QA`;
+- label `Jacuzzi — QA catalogue option`;
+- Hotel/stay capability family and Hotel service applicability;
+- PROPERTY scope;
+- Wellness and recreation category;
+- BOOLEAN value type;
+- translation-ready state and display order 45;
+- explicit synthetic staging-only help text, with no price, `Free` claim or real-Hotel assertion.
+
+No QA row exists at this checkpoint. The live workflow will first save this as a draft. It must remain absent from Partner Website, Mobile and customer Hotel projections until separately submitted, reviewed, approved and published. Even after catalogue publication it only becomes an available Partner selector option; it cannot claim the retained Hotel offers a Jacuzzi unless a later Partner selection passes the existing Hotel content review/publication flow. The retained 14-property/8-room selection baseline will not be changed for this catalogue proof.
+
+## APIs, distribution and scale structure
+
+The permissioned Admin API provides bounded catalogue list/export, draft create/update, submit, review, publish and history routes. Publication uses an advisory lock, transaction, optimistic version, one-active-version constraint and idempotent scoped outbox event. Cache/version invalidation is limited to the affected catalogue/profile boundary; it does not flush all Partner data or scan all Partners.
+
+Queries use stable identifiers and indexed code/status/family/service/scope/version boundaries. Lists are bounded and keyset-ready. The model uses one engine for future governed entity types instead of per-service tables or client catalogues. This is structural readiness only; measured million-Partner load, queue, recovery and query-plan certification remains M7.
+
+## Verification
+
+Automated and database evidence:
+
+- Actual isolated PostgreSQL 17 governance tests: **6/6 PASS**.
+- Covered exact 27-row adoption, no scope/code drift, draft/approved-unpublished exclusion, publish visibility and version increment, unapproved-publish denial, concurrent same-version edit winner/stale loser, audit-failure rollback, immutable history, one scoped publication event, and safe governed deactivation with historical selection preservation.
+- Backend TypeScript and production build: **PASS**.
+- Website focused governance tests: **5/5 PASS**.
+- Website scoped ESLint: **PASS**.
+- Website clean Webpack production build: **PASS**, 244 routes.
+- Exact Vercel Git/Turbopack production build: **PASS**.
+- Mobile TypeScript: **PASS**.
+- Scoped secret-pattern and `git diff --check`: **PASS** for the delivered files.
+
+An initial local Turbopack worker timed out while reading an unrelated global stylesheet; the clean Webpack build and exact Vercel Git build both passed. The locking/history implementation was corrected before delivery to avoid unsafe joined-row locking and to return complete immutable version history.
+
+Observed staging evidence:
+
+- Migration 0061 applied only to `tpl-api-partner-staging`/4100.
+- Canonical post-migration counts remain 27/15/12, two approved content records, 22 selections and three approved media.
+- Staging API health 200 and untouched production API health 200.
+- Anonymous Admin governance request denied with 401.
+- Exact Website deployment is READY and assigned only to `staging.tplgo.com`.
+- Authenticated Admin draft/review/publish, Partner Website read, native Mobile read and governance export downloads are **PENDING**, not inferred from API/build evidence.
+
+## Backup, delivery and preservation
+
+Before migration, the protected staging backup was created at:
+
+`/home/tpladmin/backups/partner-m2.7ag-pre-0061-4bd6dc6.dump`
+
+SHA-256: `87ef808fc6daefbfebc9572cab160393a0cb3bb550befa82632312ebedfe6a3d`
+
+`pg_restore --list` reported 1,366 entries and passed readability inspection. The additive migration is backward compatible; rollback uses the prior application release while preserving governed history for forward repair rather than dropping tables.
+
+Delivered revisions:
+
+| Surface | Source / staging delivery |
+|---|---|
+| Backend | `4bd6dc68f816bd4d26562f52dd0068ba9c30d4dd`; release `/home/tpladmin/tpl-api-releases/partner-m2.7ag-governance-4bd6dc6`; archive SHA-256 `2d25375d5965be9c3813692e1fc5adfed44b99673cb6b87c563d0b0b87163ee0`; only staging 4100 switched. |
+| Website/Admin | `61d722fc3d6bb953d0c5f34bdd91871f160b094b`; READY deployment `dpl_J47CFFmco8pJwdv7agcyRcn5ifME`, URL `tplgo-website-7x0xunf8g-tplgo.vercel.app`, assigned only to `staging.tplgo.com`. |
+| Mobile | `e6c18c099c54cc299d12748e0c41495da929fcdd`; JS/Metro-compatible contract presentation; existing Development APK and app data retained. |
+
+Production port 4000, database, aliases, storage and configuration were not modified. No real Partner, submitted application, unrelated organization, published service, supply, media, booking, finance, settlement, payout or notification data changed. Unrelated dirty and untracked work remained excluded from scoped commits.
+
+## Current blocker and exact next action
+
+The only current gate is authenticated staging lifecycle observation. The operator should open **Admin → Website & Experience → Content & Attribute Catalogue**, verify published version 1 and the retained 27/15/12 counts, select **New amenity**, keep the prepared `HOTEL_PROPERTY_JACUZZI_QA` values, and click **Save draft** only. No review or publication action is required in that first step.
+
+After the draft is observed absent from Partner Website/Mobile, the same normal workflow can proceed through Submit for Review, authorized approval and publication, followed by Website/Mobile version parity, customer non-appearance without Partner selection and bounded export checks. Until those authenticated gates pass, M2.7B cannot start.
+
+The fixed denominator remains **46 requirements / 213 units**. No whole-program percentage is invented. `MOBILE_USER_PARITY=COMPLETE`, `PARTNER_MOBILE_PARITY=OPEN`, and `PHASE_1_STEP_1=OPEN` remain unchanged. M2.6, M2.6A and M2.7A completed statuses remain preserved.

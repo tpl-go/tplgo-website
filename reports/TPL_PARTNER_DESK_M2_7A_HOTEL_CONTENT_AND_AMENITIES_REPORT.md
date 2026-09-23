@@ -1,5 +1,13 @@
 # TPL Partner Desk M2.7A — Hotel Content and Property/Room Amenities
 
+## Governance addendum — 2026-09-23
+
+Checkpoint `TPL-PARTNER-M2.7A-G-20260923-01` adds a reusable Admin Content Governance engine without reopening this report's completed **`M2_7A_HOTEL_CONTENT_AND_AMENITIES_STAGING_END_TO_END_PASS`** result. The original Hotel V1 catalogue is now represented by 27 immutable governed PUBLISHED v1 snapshots (15 PROPERTY, 12 ROOM), with the same stable codes, labels, categories, scopes and order. Existing approved property/room content, 14/8 selections, customer projection, media and supply evidence remain unchanged.
+
+Website & Experience now separates Pages, Service Catalogue and Content & Attribute Catalogue. Drafts, review, approval, publication, history and deactivation are server-authorized; drafts and approved-but-unpublished options cannot reach Partner/customer projections, and inactive options cannot be selected anew while historical selections remain reproducible. Backend `4bd6dc6`, Website `61d722f` and Mobile `e6c18c0` are delivered to staging/existing Development Client compatibility. The detailed governance report is `reports/TPL_PARTNER_DESK_M2_7A_G_ADMIN_CONTENT_GOVERNANCE_DYNAMIC_CATALOGUE_REPORT.md`.
+
+Governance status is PARTIAL only for authenticated Admin lifecycle and Website/Mobile/export live observation. No Jacuzzi QA amenity exists yet. The next exact action is a normal staging Admin **Save draft only** for `HOTEL_PROPERTY_JACUZZI_QA`; M2.7B must wait for the complete governed publication/parity gate.
+
 Recorded: 2026-09-23
 
 Checkpoint: `PARTNER_DESK_M2_7A_HOTEL_CONTENT_AMENITIES_E2E_PASS_20260923`

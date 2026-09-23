@@ -1,5 +1,13 @@
 # Partner Desk M1/M2 — structure and supply/media delivery
 
+## M2.7A-G continuation — 2026-09-23 — governance staged; authenticated lifecycle pending
+
+Checkpoint `TPL-PARTNER-M2.7A-G-20260923-01` records **`M2_7A_G_ADMIN_CONTENT_GOVERNANCE_DYNAMIC_CATALOGUE_STAGING_PARTIAL_AUTHENTICATED_LIFECYCLE_PENDING`**. The reusable Content Governance engine, narrow Website & Experience catalogue RBAC, immutable versions, atomic publish/outbox path, safe deactivation and bounded Admin/export UI are implemented, tested and deployed. Website & Experience now separates Pages, Service Catalogue and Content & Attribute Catalogue; future policy/inclusion types remain truthful `Not configured` boundaries.
+
+Migration 0061 adopted the original Hotel V1 catalogue as 27 governed published snapshots without changing the 15 PROPERTY / 12 ROOM split, 14/8 approved selections, two approved content records, three approved media or supply state. Actual PostgreSQL tests passed 6/6; Backend type/build, Website tests 5/5/lint/build/Vercel build, Mobile typecheck and scoped hygiene checks passed. Delivery is Backend `4bd6dc6` on staging 4100, Website `61d722f` in READY deployment `dpl_J47CFFmco8pJwdv7agcyRcn5ifME` on `staging.tplgo.com`, and Mobile `e6c18c0` with the existing APK.
+
+Authenticated Admin lifecycle and cross-client live read remain pending because the supported authenticated browser connection could not initialize after one bounded retry. No QA amenity was created through a shortcut. Exact next action is to save the prepared `HOTEL_PROPERTY_JACUZZI_QA` as **Draft only** in staging Admin, verify it remains absent from Partner/customer projections, then complete normal review/publish and Website/Mobile/export parity. M2.7A remains PASS; M2.7B has not started. The fixed 46 requirements / 213 units and `MOBILE_USER_PARITY=COMPLETE`, `PARTNER_MOBILE_PARITY=OPEN`, `PHASE_1_STEP_1=OPEN` are preserved.
+
 ## M2.7A continuation — 2026-09-23 — Hotel content and amenities end-to-end pass
 
 Checkpoint `PARTNER_DESK_M2_7A_HOTEL_CONTENT_AMENITIES_E2E_PASS_20260923` advances the previous Hotel-family status to **`M2_7A_HOTEL_CONTENT_AND_AMENITIES_STAGING_END_TO_END_PASS`** while preserving both completed M2.6 statuses. The common versioned content foundation activates only `HOTEL_CONTENT_PROFILE_V1`; its standardized catalogue contains 27 amenities (15 PROPERTY, 12 ROOM) with stable codes and strict scope. Partner submissions require scoped supply authority, text remains pending until narrow `partner_content.review`, and only approved content enters the customer-safe Hotel projection.
