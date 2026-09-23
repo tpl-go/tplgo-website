@@ -1,5 +1,9 @@
 # Partner Desk M1/M2 — structure and supply/media delivery
 
+## M2.7A-G continuation — 2026-09-23 — customer exclusion pass; PDF repair staged
+
+Checkpoint `TPL-PARTNER-M2.7A-G-20260923-10` advances governance to **`M2_7A_G_ADMIN_CONTENT_GOVERNANCE_DYNAMIC_CATALOGUE_STAGING_PARTIAL_PDF_REPAIR_LIVE_RECHECK_PENDING`**. The customer staging Hotel page correctly excludes the published but unselected Jacuzzi QA option. CSV, XLSX and bounded Print are operator-confirmed readable. The PDF was overmeshed because each entry was rendered as one pipe-separated line. Backend `779f701` now produces a visually verified three-page landscape table with wrapped cells, repeated headers, page-safe rows and bounded footers. Focused test 1/1, typecheck/build/diff pass; staging release `/home/tpladmin/tpl-api-releases/partner-m2.7ag-pdf-779f701` is healthy on 4100 and production health remains 200. Only live PDF re-download/readability remains pending.
+
 ## M2.7A-G continuation — 2026-09-23 — Website/Mobile catalogue parity observed
 
 Checkpoint `TPL-PARTNER-M2.7A-G-20260923-09` advances governance to **`M2_7A_G_ADMIN_CONTENT_GOVERNANCE_DYNAMIC_CATALOGUE_STAGING_PARTIAL_CROSS_CLIENT_PASS_CUSTOMER_EXPORT_PENDING`**. The operator observed the published Jacuzzi QA option on both Partner Website and native Mobile Property amenity selectors, unselected on each. No Save or Partner content mutation occurred. Canonical catalogue remains version 2 with 28 options (16 PROPERTY / 12 ROOM). Customer non-appearance and bounded export/Print checks remain open; no source/deployment/APK change occurred.

@@ -2,11 +2,23 @@
 
 Recorded: 2026-09-23
 
-Checkpoint: `TPL-PARTNER-M2.7A-G-20260923-09`
+Checkpoint: `TPL-PARTNER-M2.7A-G-20260923-10`
 
-Status: **`M2_7A_G_ADMIN_CONTENT_GOVERNANCE_DYNAMIC_CATALOGUE_STAGING_PARTIAL_CROSS_CLIENT_PASS_CUSTOMER_EXPORT_PENDING`**
+Status: **`M2_7A_G_ADMIN_CONTENT_GOVERNANCE_DYNAMIC_CATALOGUE_STAGING_PARTIAL_PDF_REPAIR_LIVE_RECHECK_PENDING`**
 
 Previous status: `M2_7A_HOTEL_CONTENT_AND_AMENITIES_STAGING_END_TO_END_PASS`
+
+## Customer exclusion and PDF readability repair — 2026-09-23
+
+Checkpoint: `TPL-PARTNER-M2.7A-G-20260923-10`
+
+The operator refreshed the customer-facing staging Hotel detail and confirmed that Jacuzzi is not shown. This closes the critical catalogue-availability versus Hotel-selection boundary: the option is published for Partner selection, remains unselected, and does not automatically become a customer facility. The operator also confirmed the governed CSV, XLSX and bounded Print outputs are correct and readable.
+
+The downloaded PDF was not acceptable: all fields were compressed into pipe-separated lines, making the report appear overmeshed and difficult to understand. Backend `779f701` replaces that dense rendering with a three-page landscape report containing a repeated navy title/context header, explicit Amenity, Applicability, Classification, Lifecycle/Workflow and Version/Usage columns, wrapped labels and stable codes, alternating row backgrounds, page-safe breaks and a bounded footer. No exported field scope or authorization changed.
+
+Focused PDF pagination coverage passes 1/1, Backend typecheck and production build pass, and `git diff --check` passes. The generated 28-option QA report was visually rendered in the local Chrome PDF viewer: pages 1 and 3 and all page thumbnails show aligned columns, readable wrapping, consistent repeated headers, no overlap/clipping and page 1-of-3 through 3-of-3 footers. Exact archive SHA-256 is `ada869b15ead8ffb1267a8bf67b33fcfbb61a10939efc49427de3ad0da133757`.
+
+Staging-only Backend release is `/home/tpladmin/tpl-api-releases/partner-m2.7ag-pdf-779f701`, running as `tpl-api-partner-staging` on port 4100. Staging and untouched production health are 200; canonical catalogue remains version 2 with 28 published entries and one active QA option. Website, Mobile and APK did not change. The only remaining M2.7A-G live gate is operator re-download and readability confirmation for the repaired authenticated PDF.
 
 ## Partner Website and Mobile catalogue parity continuation — 2026-09-23
 
