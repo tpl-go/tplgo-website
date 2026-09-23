@@ -1,5 +1,11 @@
 # Partner Desk M1/M2 — structure and supply/media delivery
 
+## M2.7A-G continuation — 2026-09-23 — draft exclusion pass; second contrast correction staged
+
+Checkpoint `TPL-PARTNER-M2.7A-G-20260923-03` records **`M2_7A_G_ADMIN_CONTENT_GOVERNANCE_DYNAMIC_CATALOGUE_STAGING_PARTIAL_DRAFT_EXCLUSION_PASS_CONTRAST_RECHECK_PENDING`**. The operator confirmed Jacuzzi is absent in the requested read-only Partner selector check while canonical state remains one private draft, zero active QA amenity rows and published catalogue version 1. No Hotel amenity selection changed.
+
+The first white-card contrast adjustment appeared more faded live. Website `f07dd05` replaces it with explicit opaque navy/orange/white styling and large bold values. Tests 6/6, scoped lint/diff and a 244-route Webpack build pass; exact READY Preview `dpl_C7QqPR2uwHLCWM7dMCzaMUycBusZ` is assigned to staging only. Admin readability recheck is pending; Submit/Approve/Publish have not run.
+
 ## M2.7A-G continuation — 2026-09-23 — draft saved; count contrast repaired
 
 Checkpoint `TPL-PARTNER-M2.7A-G-20260923-02` advances governance to **`M2_7A_G_ADMIN_CONTENT_GOVERNANCE_DYNAMIC_CATALOGUE_STAGING_PARTIAL_DRAFT_SAVED_EXCLUSION_LIVE_PENDING`**. The operator saved `HOTEL_PROPERTY_JACUZZI_QA` through the normal staging Admin UI. Canonical readback shows DRAFT entity v1/row v1, no published entity version and zero active QA amenity rows. The selectable catalogue remains version 1 with the retained 27/15/12 counts; governed history is 27 published snapshots plus one private draft.

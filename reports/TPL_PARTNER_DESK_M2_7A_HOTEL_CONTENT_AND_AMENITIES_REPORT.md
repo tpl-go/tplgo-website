@@ -1,5 +1,9 @@
 # TPL Partner Desk M2.7A — Hotel Content and Property/Room Amenities
 
+## Governance selector-exclusion continuation — 2026-09-23
+
+Checkpoint `TPL-PARTNER-M2.7A-G-20260923-03` records the operator's read-only confirmation that Jacuzzi remains absent while its catalogue entity is a private draft. This preserves the original 27-option Hotel catalogue and all 14/8 approved selections. The second Admin metric-contrast correction is Website `f07dd05` / READY staging Preview `dpl_C7QqPR2uwHLCWM7dMCzaMUycBusZ`; it does not alter M2.7A data or customer projection.
+
 ## Governance draft continuation — 2026-09-23
 
 Checkpoint `TPL-PARTNER-M2.7A-G-20260923-02` preserves this report's completed M2.7A result. The normal staging Admin UI saved one private `HOTEL_PROPERTY_JACUZZI_QA` draft; canonical readback proves it is not published or active/selectable. Hotel catalogue version 1 and the original 27/15/12 options remain unchanged, as do the approved 14 property and 8 room selections and customer Hotel projection.

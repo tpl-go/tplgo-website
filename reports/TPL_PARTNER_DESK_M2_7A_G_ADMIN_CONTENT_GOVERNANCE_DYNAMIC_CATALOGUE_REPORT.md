@@ -4,9 +4,19 @@ Recorded: 2026-09-23
 
 Checkpoint: `TPL-PARTNER-M2.7A-G-20260923-01`
 
-Status: **`M2_7A_G_ADMIN_CONTENT_GOVERNANCE_DYNAMIC_CATALOGUE_STAGING_PARTIAL_DRAFT_SAVED_EXCLUSION_LIVE_PENDING`**
+Status: **`M2_7A_G_ADMIN_CONTENT_GOVERNANCE_DYNAMIC_CATALOGUE_STAGING_PARTIAL_DRAFT_EXCLUSION_PASS_CONTRAST_RECHECK_PENDING`**
 
 Previous status: `M2_7A_HOTEL_CONTENT_AND_AMENITIES_STAGING_END_TO_END_PASS`
+
+## Draft-exclusion pass and second contrast correction — 2026-09-23
+
+Checkpoint: `TPL-PARTNER-M2.7A-G-20260923-03`
+
+The operator completed the requested read-only selector check and reported that Jacuzzi is not present while the governance entry remains a private draft. This matches canonical state: catalogue version 1, zero active QA amenity rows and no Hotel selection mutation. Draft exclusion is therefore observed without claiming publication or customer offering.
+
+The first count-card contrast correction did not solve the live presentation and made the text appear more faded. The narrow second correction removes the white/light card treatment and uses explicit inline colors that are not dependent on theme utility resolution: solid navy `#071426`, two-pixel orange `#f59e0b` border, opaque orange 16px labels and opaque pure-white 30px bold values. Website source is `f07dd05`. Focused tests remain 6/6, scoped ESLint and `git diff --check` pass, and the clean 244-route Webpack build passes.
+
+The exact Vercel Git build for `f07dd05` passed and READY Preview `dpl_C7QqPR2uwHLCWM7dMCzaMUycBusZ` (`tplgo-website-41fc4b1wo-tplgo.vercel.app`) is assigned only to `staging.tplgo.com`. Backend, Mobile, APK and catalogue/database state did not change. The only immediate live gate is a refreshed Admin readability observation; review/approval/publication remain unrun.
 
 ## Draft-save and contrast continuation — 2026-09-23
 
