@@ -22,6 +22,8 @@ Focused native tests pass 3/3; TypeScript, scoped ESLint, diff hygiene and Andro
 
 This closes the second Admin review and native palette defect. Exact remaining M2.7B gates are approved customer Hotel policy/inclusion/exclusion readback plus bounded CSV/XLSX/PDF/Print equality/readability. M2.7B remains PARTIAL until those observed checks pass.
 
+The staging-only customer-safe Backend projection returned HTTP 200 and exposed Approved version 4 with the same two inclusions/two exclusions, while retaining approved-only content/media boundaries. A desktop/narrow automated page attempt reached the Vercel secure-login gate before the application route, so it is recorded as an access/tooling block rather than a product PASS or failure. Exact operator action: from the authenticated staging Admin/Partner surface open **Open customer staging preview**, confirm the Hotel Policies, What’s Included and What’s Not Included sections show those four values, then download the current bounded CSV/XLSX/PDF and open Print to confirm the same Approved version 4 record is readable.
+
 ## Mobile combined submission and stale-version recovery — 2026-09-23
 
 Checkpoint: `TPL-PARTNER-M2.7B-20260923-03`
