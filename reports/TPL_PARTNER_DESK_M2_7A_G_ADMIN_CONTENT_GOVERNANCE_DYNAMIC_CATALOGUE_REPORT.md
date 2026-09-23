@@ -4,15 +4,25 @@ Recorded: 2026-09-23
 
 Checkpoint: `TPL-PARTNER-M2.7A-G-20260923-01`
 
-Status: **`M2_7A_G_ADMIN_CONTENT_GOVERNANCE_DYNAMIC_CATALOGUE_STAGING_PARTIAL_AUTHENTICATED_LIFECYCLE_PENDING`**
+Status: **`M2_7A_G_ADMIN_CONTENT_GOVERNANCE_DYNAMIC_CATALOGUE_STAGING_PARTIAL_DRAFT_SAVED_EXCLUSION_LIVE_PENDING`**
 
 Previous status: `M2_7A_HOTEL_CONTENT_AND_AMENITIES_STAGING_END_TO_END_PASS`
+
+## Draft-save and contrast continuation — 2026-09-23
+
+Checkpoint: `TPL-PARTNER-M2.7A-G-20260923-02`
+
+The operator used the normal authenticated staging Admin UI and saved the prepared `HOTEL_PROPERTY_JACUZZI_QA` entry as a draft. Read-only canonical reconciliation confirms entity version 1, workflow `DRAFT`, row version 1, no published entity version and zero active canonical amenity rows for that stable code. The active catalogue remains version 1. Governed version totals are now 28 = 27 retained PUBLISHED snapshots + 1 private DRAFT; the canonical selectable Hotel catalogue remains exactly 27 options, 15 PROPERTY and 12 ROOM. Staging and untouched production API health returned 200.
+
+The operator also identified a genuine presentation defect: the four catalogue summary cards used small, low-contrast labels and values that appeared faded. Website commit `a160406` changes those cards to explicit high-contrast slate labels, larger bold navy values, a visible border and a clean white surface. Focused governance tests now pass 6/6, scoped ESLint passes, `git diff --check` passes and the 244-route Webpack production build passes. The first local Turbopack attempt produced no progress after its compile start and was boundedly stopped; the exact Vercel Git build for `a160406` passed in 22 seconds.
+
+The correction is deployed only to staging in READY Preview `dpl_8N4T9prSXosiZiYw657HFF5S9nyx` (`tplgo-website-2tdlrwd78-tplgo.vercel.app`), and `staging.tplgo.com` resolves to that exact deployment. No Backend/Mobile/native dependency or APK change was required. Exact live gates now pending are: operator confirmation that the refreshed summary counts are clearly readable, and read-only Website/Mobile confirmation that the private draft is absent from Partner selectors. Submit for Review, approval and publication have not occurred.
 
 ## Outcome and evidence boundary
 
 The reusable Content Governance engine is implemented, tested, committed, pushed and deployed to staging. It adopts the existing Hotel amenity catalogue without changing its stable codes, meanings, scopes, labels or ordering. The Admin interface is delivered under **Website & Experience → Content & Attribute Catalogue** and provides bounded list/filter, draft editing, review, publication, lifecycle, impact, history and export controls.
 
-This checkpoint remains PARTIAL because the authenticated staging Admin Draft → Review → Approve → Publish flow has not yet been observed. The supported authenticated browser connection could not initialize after its single bounded recovery attempt. No product failure is inferred from that tooling/access limitation, and no API or database shortcut was used to manufacture live evidence. The bounded `HOTEL_PROPERTY_JACUZZI_QA` proof has therefore not been created. M2.7A remains PASS and its retained Hotel state remains unchanged.
+This checkpoint remains PARTIAL because the authenticated staging Admin Review → Approve → Publish flow and cross-client catalogue visibility have not yet been observed. The initial draft creation has now passed through the normal Admin UI. No API or database shortcut was used to create or publish it. M2.7A remains PASS and its retained Hotel selections remain unchanged.
 
 ## Reused architecture and information boundaries
 
@@ -105,7 +115,7 @@ The prepared normal-UI QA draft defaults are:
 - translation-ready state and display order 45;
 - explicit synthetic staging-only help text, with no price, `Free` claim or real-Hotel assertion.
 
-No QA row exists at this checkpoint. The live workflow will first save this as a draft. It must remain absent from Partner Website, Mobile and customer Hotel projections until separately submitted, reviewed, approved and published. Even after catalogue publication it only becomes an available Partner selector option; it cannot claim the retained Hotel offers a Jacuzzi unless a later Partner selection passes the existing Hotel content review/publication flow. The retained 14-property/8-room selection baseline will not be changed for this catalogue proof.
+One governed private QA draft now exists; no active/selectable QA amenity row exists. It must remain absent from Partner Website, Mobile and customer Hotel projections until separately submitted, reviewed, approved and published. Even after catalogue publication it only becomes an available Partner selector option; it cannot claim the retained Hotel offers a Jacuzzi unless a later Partner selection passes the existing Hotel content review/publication flow. The retained 14-property/8-room selection baseline will not be changed for this catalogue proof.
 
 ## APIs, distribution and scale structure
 

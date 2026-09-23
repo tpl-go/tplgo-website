@@ -1,5 +1,13 @@
 # Partner Desk M1/M2 — structure and supply/media delivery
 
+## M2.7A-G continuation — 2026-09-23 — draft saved; count contrast repaired
+
+Checkpoint `TPL-PARTNER-M2.7A-G-20260923-02` advances governance to **`M2_7A_G_ADMIN_CONTENT_GOVERNANCE_DYNAMIC_CATALOGUE_STAGING_PARTIAL_DRAFT_SAVED_EXCLUSION_LIVE_PENDING`**. The operator saved `HOTEL_PROPERTY_JACUZZI_QA` through the normal staging Admin UI. Canonical readback shows DRAFT entity v1/row v1, no published entity version and zero active QA amenity rows. The selectable catalogue remains version 1 with the retained 27/15/12 counts; governed history is 27 published snapshots plus one private draft.
+
+The faded catalogue-summary typography was a real Website presentation defect. Commit `a160406` provides darker labels, larger bold values and visible white-card borders; focused tests pass 6/6, scoped lint and a 244-route Webpack build pass. Exact Vercel Git build Preview `dpl_8N4T9prSXosiZiYw657HFF5S9nyx` is READY and assigned only to `staging.tplgo.com`. Backend/Mobile code, APK, catalogue publication and existing Partner selections did not change.
+
+Next live gate: refresh Admin and confirm the four summary cards are readable, then verify read-only on Partner Website and native Mobile that Jacuzzi is absent while still private. Submit/review/approve/publish have not run. M2.7A remains PASS; M2.7B has not started.
+
 ## M2.7A-G continuation — 2026-09-23 — governance staged; authenticated lifecycle pending
 
 Checkpoint `TPL-PARTNER-M2.7A-G-20260923-01` records **`M2_7A_G_ADMIN_CONTENT_GOVERNANCE_DYNAMIC_CATALOGUE_STAGING_PARTIAL_AUTHENTICATED_LIFECYCLE_PENDING`**. The reusable Content Governance engine, narrow Website & Experience catalogue RBAC, immutable versions, atomic publish/outbox path, safe deactivation and bounded Admin/export UI are implemented, tested and deployed. Website & Experience now separates Pages, Service Catalogue and Content & Attribute Catalogue; future policy/inclusion types remain truthful `Not configured` boundaries.
