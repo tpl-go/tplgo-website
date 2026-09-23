@@ -21,6 +21,8 @@ test('Hotel content stays scoped, standardized and review-gated',()=>{
  expect(editor).not.toContain('dangerouslySetInnerHTML');
  expect(workspace).toContain("base+'/content'");
  expect(workspace).toContain("'/review'");
+ expect(workspace).toContain('Hotel content &amp; amenities');
+ expect(workspace).toContain('content.amenities.map');
  expect(command).toContain('mode="content"');
  expect(command).toContain("window.confirm('Log out of the Partner workspace?')");
  expect(command).toContain("window.confirm('Discard the unsaved changes?')");
