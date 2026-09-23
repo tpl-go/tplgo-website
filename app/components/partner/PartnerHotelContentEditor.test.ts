@@ -15,6 +15,9 @@ test('Hotel content stays scoped, standardized and review-gated',()=>{
  expect(editor).toContain('data.canReviewContent');
  expect(editor).toContain('beforeunload');
  expect(editor).toContain('type="submit"');
+ expect(editor).toContain('View submitted details');
+ expect(editor).toContain('Open customer staging preview');
+ expect(editor).toContain('Approve this exact submitted content');
  expect(editor).not.toContain('dangerouslySetInnerHTML');
  expect(workspace).toContain("base+'/content'");
  expect(workspace).toContain("'/review'");

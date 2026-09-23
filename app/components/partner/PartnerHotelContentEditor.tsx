@@ -56,6 +56,7 @@ export default function PartnerHotelContentEditor({data, admin, busy, save, revi
     if (!record) return;
     const reason = prompt(decision === "approve" ? "Enter a short approval reason." : "Explain what needs to change.");
     if (!reason) return;
+    if (!window.confirm(decision === "approve" ? "Approve this exact submitted content for the staging Hotel detail?" : "Return this exact submitted content for changes?")) return;
     try {await review(record.id, record.version, decision, reason); setMessage(decision === "approve" ? "Content approved for the staging Hotel detail." : "Content returned for changes.");}
     catch (error) {setMessage(error instanceof Error ? error.message : "The review decision could not be saved.");}
   }
@@ -72,6 +73,12 @@ export default function PartnerHotelContentEditor({data, admin, busy, save, revi
       {!admin && data.canWriteContent && !draft ? <button type="button" className={styles.primaryAction} onClick={start}>{record ? "Edit details" : "Add details"}</button> : null}
       {admin && record?.reviewStatus === "pending_review" && data.canReviewContent ? <div className={styles.contentReviewActions}><button type="button" disabled={busy} onClick={() => void decide("approve")}>Approve</button><button type="button" disabled={busy} onClick={() => void decide("reject")}>Needs changes</button></div> : null}
       {record?.reviewReason ? <p className={styles.contentReviewNote}>Review note: {record.reviewReason}</p> : null}
+      {record ? <details className={styles.contentReviewPreview} open={admin && record.reviewStatus === "pending_review"}>
+        <summary>{record.reviewStatus === "approved" ? "View approved details" : "View submitted details"}</summary>
+        <div><strong>Customer description</strong><p>{record.shortDescription}</p>{record.detailedDescription ? <p>{record.detailedDescription}</p> : <span>No additional description.</span>}</div>
+        <div><strong>Selected amenities ({record.amenities.length})</strong><ul>{record.amenities.map((selection) => {const amenity = catalogue.find((value) => value.code === selection.code); return <li key={selection.code}>{amenity?.label ?? selection.code}{selection.value ? ` · ${selection.value}` : ""}</li>;})}</ul></div>
+        <footer><span>{targetScope === "PROPERTY" ? "Property scope" : `Room scope · ${item?.label ?? "Selected room"}`} · version {record.version}</span>{record.reviewStatus === "approved" ? <a href={`/hotels/partner-media-preview?organizationId=${encodeURIComponent(data.organizationId)}&serviceScopeId=${encodeURIComponent(serviceScope.id)}`} target="_blank" rel="noreferrer">Open customer staging preview</a> : <span>Customer preview remains private until approval.</span>}</footer>
+      </details> : null}
     </section>
     {draft ? <form className={styles.contentEditor} onSubmit={(event) => void submit(event)}>
       <div className={styles.contentEditorHeading}><div><span className={styles.contentEyebrow}>EDITING</span><h3>{targetScope === "PROPERTY" ? "Property details" : item?.label}</h3></div><span>{draft.amenityCodes.length} selected</span></div>
