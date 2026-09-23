@@ -13,8 +13,12 @@ test('Hotel content stays scoped, standardized and review-gated',()=>{
  expect(editor).toContain('Save and send for review');
  expect(editor).toContain('Needs changes');
  expect(editor).toContain('data.canReviewContent');
+ expect(editor).toContain('beforeunload');
+ expect(editor).toContain('type="submit"');
  expect(editor).not.toContain('dangerouslySetInnerHTML');
  expect(workspace).toContain("base+'/content'");
  expect(workspace).toContain("'/review'");
  expect(command).toContain('mode="content"');
+ expect(command).toContain("window.confirm('Log out of the Partner workspace?')");
+ expect(command).toContain("window.confirm('Discard the unsaved changes?')");
 });

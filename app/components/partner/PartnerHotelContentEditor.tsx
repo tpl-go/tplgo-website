@@ -1,6 +1,6 @@
 "use client";
 
-import {useMemo, useState, type FormEvent} from "react";
+import {useEffect, useMemo, useState, type FormEvent} from "react";
 import type {PartnerSupply} from "@/app/lib/partner/partnerSupply";
 import styles from "./PartnerCommandCenter.module.css";
 
@@ -18,6 +18,16 @@ export default function PartnerHotelContentEditor({data, admin, busy, save, revi
   const targetScope = selected === "PROPERTY" ? "PROPERTY" : "ROOM";
   const catalogue = data.amenityCatalogue.filter((value) => value.profileCode === hotel?.profileCode && value.profileVersion === hotel?.profileVersion && value.scope === targetScope);
   const groups = Array.from(new Set(catalogue.map((value) => value.category)));
+
+  useEffect(() => {
+    const warn = (event: BeforeUnloadEvent) => {
+      if (!draft) return;
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [draft]);
 
   if (!hotel || !serviceScope) return <section className={styles.panel}><h2>Hotel content &amp; amenities</h2><div className={styles.empty}>Content and amenities are not configured for this service.</div></section>;
 
