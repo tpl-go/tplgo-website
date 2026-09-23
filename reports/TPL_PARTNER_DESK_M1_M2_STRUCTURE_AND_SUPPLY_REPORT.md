@@ -1,5 +1,9 @@
 # Partner Desk M1/M2 — structure and supply/media delivery
 
+## M2.7B continuation — 2026-09-23 — Website create and Mobile read pass; Admin review pending
+
+Checkpoint `TPL-PARTNER-M2.7B-20260923-02` advances M2.7B to **`M2_7B_HOTEL_POLICIES_INCLUSIONS_EXCLUSIONS_STAGING_PARTIAL_ADMIN_REVIEW_PENDING`**. The operator confirmed the repaired Website form is clean and received “Saved and sent for TPL content review.” Canonical state is one Website-origin pending record at version 1 with check-in 14:00, check-out 11:00, maximum guests 2 and zero optional selections. Native Mobile read the identical Hotel/profile/catalogue/status/version/time/selection summary through the existing APK; no Mobile Save occurred. Exact next gate is normal Admin content review, then the bounded Mobile inclusion/exclusion write and final parity/customer/export closure.
+
 ## M2.7B continuation — 2026-09-23 — capacity/status repair staged; Website Save recheck pending
 
 Checkpoint `TPL-PARTNER-M2.7B-20260923-01` starts the Hotel policy/inclusion/exclusion slice using the completed Content Governance engine. `HOTEL_POLICY_PROFILE_V1` and the governed 10 policy / 7 inclusion / 6 exclusion options are implemented across Backend, Website, Mobile, Admin review, approved-only customer projection and bounded exports. Actual PostgreSQL policy coverage passes 7/7; Backend type/build and Website policy tests 2/2, lint and 244-page Webpack build pass.

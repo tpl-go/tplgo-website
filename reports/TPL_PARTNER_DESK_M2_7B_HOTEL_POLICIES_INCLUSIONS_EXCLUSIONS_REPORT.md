@@ -6,7 +6,19 @@ Checkpoint: `TPL-PARTNER-M2.7B-20260923-01`
 
 Previous status: `M2_7A_G_ADMIN_CONTENT_GOVERNANCE_DYNAMIC_CATALOGUE_STAGING_END_TO_END_PASS`
 
-Current status: **`M2_7B_HOTEL_POLICIES_INCLUSIONS_EXCLUSIONS_STAGING_PARTIAL_WEBSITE_SAVE_RECHECK_PENDING`**
+Current status: **`M2_7B_HOTEL_POLICIES_INCLUSIONS_EXCLUSIONS_STAGING_PARTIAL_ADMIN_REVIEW_PENDING`**
+
+## Authenticated Website create and Mobile read parity — 2026-09-23
+
+Checkpoint: `TPL-PARTNER-M2.7B-20260923-02`
+
+Previous status: `M2_7B_HOTEL_POLICIES_INCLUSIONS_EXCLUSIONS_STAGING_PARTIAL_WEBSITE_SAVE_RECHECK_PENDING`
+
+The operator refreshed the corrected Website form, confirmed that it is clean/readable, and used the normal **Save and send for review** action. The UI returned “Saved and sent for TPL content review.” Canonical staging readback is one `pending_review` Hotel policy record, version 1, client surface `website`, check-in 14:00, check-out 11:00, maximum guests per room 2, and zero optional inclusion/exclusion selections. This is consistent with the controlled first flow and with the canonical capacity 8.
+
+The connected existing Development Client then read the same retained synthetic Hotel without a Mobile mutation. Native Services showed `HOTEL_POLICY_PROFILE_V1`, catalogue version 3, Check-in 14:00 / check-out 11:00, 0 included / 0 not included, `Pending Review`, version 1. Android Back returned from the editor to the same scoped synthetic Partner Command Center. Existing APK/app data and API target were preserved.
+
+The capacity/status and policy-form presentation defects are therefore live-closed. Exact next action is normal authorized Admin review of this one pending Hotel policy record. Mobile inclusion/exclusion edit, second review, customer projection and bounded export reconciliation remain open, so M2.7B is not yet PASS.
 
 ## Delivered boundary
 
