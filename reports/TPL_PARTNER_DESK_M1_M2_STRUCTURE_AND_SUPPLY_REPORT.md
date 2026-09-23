@@ -1,5 +1,11 @@
 # Partner Desk M1/M2 — structure and supply/media delivery
 
+## M2.7B continuation — 2026-09-23 — Mobile combined submission pass; review pending
+
+Checkpoint `TPL-PARTNER-M2.7B-20260923-03` advances M2.7B to **`M2_7B_HOTEL_POLICIES_INCLUSIONS_EXCLUSIONS_STAGING_PARTIAL_MOBILE_REVIEW_PENDING`**. Normal Admin review approved the first Website-origin record as version 2. A Mobile edit that still held version 1 was safely rejected with zero mutation, but its error was too generic. Mobile `2278dc2` adds stale-version recovery with preserved input, one clearly labelled combined submission for all policy/inclusion/exclusion sections, and the locked primary emerald/teal plus gold visual hierarchy. Focused Jest, TypeScript, ESLint, Hermes export and diff checks pass; existing APK/app data were reused.
+
+The normal native UI then submitted two inclusions (Room accommodation and Wi-Fi) plus two exclusions (Meals and Transport not included) together. Mobile showed the explicit success message; canonical staging readback is one `pending_review` version-3 record with Mobile provenance and exactly four selections (2/2). No supply, catalogue, real Partner or production data changed. Exact next gate is authorized Admin approval of version 3, then Website/Admin/customer and bounded CSV/XLSX/PDF/Print reconciliation. The fixed 46/213 denominator, `MOBILE_USER_PARITY=COMPLETE`, `PARTNER_MOBILE_PARITY=OPEN` and `PHASE_1_STEP_1=OPEN` remain preserved.
+
 ## M2.7B continuation — 2026-09-23 — Website create and Mobile read pass; Admin review pending
 
 Checkpoint `TPL-PARTNER-M2.7B-20260923-02` advances M2.7B to **`M2_7B_HOTEL_POLICIES_INCLUSIONS_EXCLUSIONS_STAGING_PARTIAL_ADMIN_REVIEW_PENDING`**. The operator confirmed the repaired Website form is clean and received “Saved and sent for TPL content review.” Canonical state is one Website-origin pending record at version 1 with check-in 14:00, check-out 11:00, maximum guests 2 and zero optional selections. Native Mobile read the identical Hotel/profile/catalogue/status/version/time/selection summary through the existing APK; no Mobile Save occurred. Exact next gate is normal Admin content review, then the bounded Mobile inclusion/exclusion write and final parity/customer/export closure.

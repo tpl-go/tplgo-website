@@ -6,7 +6,23 @@ Checkpoint: `TPL-PARTNER-M2.7B-20260923-01`
 
 Previous status: `M2_7A_G_ADMIN_CONTENT_GOVERNANCE_DYNAMIC_CATALOGUE_STAGING_END_TO_END_PASS`
 
-Current status: **`M2_7B_HOTEL_POLICIES_INCLUSIONS_EXCLUSIONS_STAGING_PARTIAL_ADMIN_REVIEW_PENDING`**
+Current status: **`M2_7B_HOTEL_POLICIES_INCLUSIONS_EXCLUSIONS_STAGING_PARTIAL_MOBILE_REVIEW_PENDING`**
+
+## Mobile combined submission and stale-version recovery — 2026-09-23
+
+Checkpoint: `TPL-PARTNER-M2.7B-20260923-03`
+
+Previous status: `M2_7B_HOTEL_POLICIES_INCLUSIONS_EXCLUSIONS_STAGING_PARTIAL_ADMIN_REVIEW_PENDING`
+
+The operator approved the Website-origin Hotel policy record through normal staging Admin review. Canonical state advanced from pending version 1 to approved version 2 without changing the controlled policy values. The first subsequent Mobile inclusion/exclusion attempt was correctly rejected because the editor still held version 1; the attempt created no mutation. The app had converted this optimistic-concurrency response into the generic message “Some information needs attention before continuing,” which hid the recoverable cause.
+
+Mobile commit `2278dc2` now preserves entered selections on `PARTNER_POLICY_STALE`, refreshes the canonical id/version, explains that TPL review created a newer version, and requires an explicit retry. It also makes the workflow unambiguous with one **Submit all sections for review** action and the note that Included and Not Included are saved together. The scoped editor now follows the locked primary emerald/teal and gold palette, with white surfaces, visible borders, 13–16px readable type and 46–50px touch controls; orange/blue remain supporting colors elsewhere in the established app.
+
+Focused Mobile Jest, TypeScript, scoped ESLint, Hermes Android export and `git diff --check` pass. No native dependency/configuration changed. The existing Development APK/app data were reused. Metro recovered on port 8081 after preserving the prior locked Expo diagnostic log; Android loaded the new bundle without a runtime exception.
+
+Through the normal native UI, the retained synthetic Hotel submitted exactly two governed inclusions (`Room accommodation`, `Wi-Fi included`) and two governed exclusions (`Meals not included`, `Transport not included`) as one combined review request. The app displayed “All Hotel policy sections were saved for TPL content review.” Canonical staging readback is `pending_review`, version 3, client surface `mobile`, four selections split 2/2. The previously approved customer projection is therefore safely withheld until this material Mobile edit receives normal Admin review.
+
+No inventory, availability, rate, media, catalogue, booking, finance, notification, real Partner or production record changed. Exact next gate is authorized Admin approval of version 3, followed by Website/Admin/customer readback and bounded CSV/XLSX/PDF/Print reconciliation. M2.7B remains PARTIAL.
 
 ## Authenticated Website create and Mobile read parity — 2026-09-23
 
@@ -40,13 +56,13 @@ The same live pass exposed overlapping labels/values, weak input borders and und
 - Website Hotel policy tests: **2/2 PASS**. Scoped TSX ESLint: PASS. Production Webpack build: PASS with 244 static pages.
 - Backend TypeScript and production build: PASS. Scoped secret/diff hygiene: PASS.
 - Repository-wide Website `tsc --noEmit` remains blocked by previously recorded unrelated Vitest declaration, implicit-any and pre-ES2020 test issues; the scoped tests, lint and production build are authoritative for this repair.
-- Mobile policy tests/type/lint/Hermes evidence from the implementation checkpoint remains valid; this repair changed no Mobile source or native dependency.
+- Mobile policy focused Jest, TypeScript, scoped ESLint, Hermes Android export and diff hygiene pass for `2278dc2`; no native dependency changed.
 
 ## Delivery and preservation
 
 Backend commits are `7fb0ff4`, `890d6da` and repair `88402a6`; the active immutable staging release is `/home/tpladmin/tpl-api-releases/partner-m2.7b-capacity-88402a6` on `tpl-api-partner-staging`/4100. Release archive SHA-256 is `be848ddf50b0b607fad841f6cabb26e8e82b47a6322e2d8dd7d15a79519fb6fc`. Staging health is 200.
 
-Website commits are `0dbebaf` and repair `501ffd6`; READY Preview `dpl_2MgPsbqtd2wGAyrnM6Fmzt8s2zFo` (`tplgo-website-5egrfk7ay-tplgo.vercel.app`) is assigned only to `staging.tplgo.com`. Mobile source is `0e9b720`; the existing Development APK/app data and Metro delivery remain in use. No new APK was required.
+Website commits are `0dbebaf` and repair `501ffd6`; READY Preview `dpl_2MgPsbqtd2wGAyrnM6Fmzt8s2zFo` (`tplgo-website-5egrfk7ay-tplgo.vercel.app`) is assigned only to `staging.tplgo.com`. Mobile source is `2278dc2`; the existing Development APK/app data and Metro delivery remain in use. No new APK was required.
 
 Protected pre-migration staging backup is `/home/tpladmin/backups/partner-m2.7b-pre-0062-7fb0ff4.dump`, SHA-256 `7c80f803da3c572f6a0dc6f3d59f806826e6dd2060bbc1e8d8cb6e957a4d4c6e`; `pg_restore --list` returned 1,398 entries. Migration 0062 applied only to the staging Partner database. Production PID remained `972721`; production health remained 200. No real Partner, submitted application, unrelated organization, supply/media row, booking, finance, payout, notification or production record changed.
 
