@@ -2,11 +2,19 @@
 
 Recorded: 2026-09-23
 
-Checkpoint: `TPL-PARTNER-M2.7A-G-20260923-07`
+Checkpoint: `TPL-PARTNER-M2.7A-G-20260923-08`
 
-Status: **`M2_7A_G_ADMIN_CONTENT_GOVERNANCE_DYNAMIC_CATALOGUE_STAGING_PARTIAL_APPROVED_PUBLICATION_PENDING`**
+Status: **`M2_7A_G_ADMIN_CONTENT_GOVERNANCE_DYNAMIC_CATALOGUE_STAGING_PARTIAL_PUBLISHED_CROSS_CLIENT_LIVE_PENDING`**
 
 Previous status: `M2_7A_HOTEL_CONTENT_AND_AMENITIES_STAGING_END_TO_END_PASS`
+
+## Authenticated publication continuation — 2026-09-23
+
+Checkpoint: `TPL-PARTNER-M2.7A-G-20260923-08`
+
+The authorized staging publisher selected **Publish approved version** for `HOTEL_PROPERTY_JACUZZI_QA` through the normal governance UI. The UI confirmed that Partner clients can now read the catalogue option. Canonical readback confirms active published catalogue version 2, 28 governed PUBLISHED versions, one active QA amenity row, and the current selectable split of 16 PROPERTY / 12 ROOM. The retained original baseline remains separately identified as 27 entries (15 PROPERTY / 12 ROOM); no original stable code, scope or meaning was replaced.
+
+Publication makes the standardized option available for Partner selection; it does not assert that the retained synthetic Hotel offers Jacuzzi and does not itself alter approved Hotel selections or customer content. Staging and untouched production API health remain 200. Source, deployment, Mobile bundle and APK are unchanged. Remaining live gates are Website/Mobile catalogue-version and option parity, explicit unselected state, customer non-appearance, and bounded export/readability checks.
 
 ## Authenticated approval continuation — 2026-09-23
 
