@@ -1,5 +1,9 @@
 # Partner Desk M1/M2 — structure and supply/media delivery
 
+## M2.7A-G continuation — 2026-09-23 — Website/Mobile catalogue parity observed
+
+Checkpoint `TPL-PARTNER-M2.7A-G-20260923-09` advances governance to **`M2_7A_G_ADMIN_CONTENT_GOVERNANCE_DYNAMIC_CATALOGUE_STAGING_PARTIAL_CROSS_CLIENT_PASS_CUSTOMER_EXPORT_PENDING`**. The operator observed the published Jacuzzi QA option on both Partner Website and native Mobile Property amenity selectors, unselected on each. No Save or Partner content mutation occurred. Canonical catalogue remains version 2 with 28 options (16 PROPERTY / 12 ROOM). Customer non-appearance and bounded export/Print checks remain open; no source/deployment/APK change occurred.
+
 ## M2.7A-G continuation — 2026-09-23 — governed QA amenity published
 
 Checkpoint `TPL-PARTNER-M2.7A-G-20260923-08` advances governance to **`M2_7A_G_ADMIN_CONTENT_GOVERNANCE_DYNAMIC_CATALOGUE_STAGING_PARTIAL_PUBLISHED_CROSS_CLIENT_LIVE_PENDING`**. The approved Jacuzzi QA entry was explicitly published through the normal Admin UI. Canonical catalogue version is now 2 with 28 published governed entries and 28 active options: 16 PROPERTY / 12 ROOM. The original 27/15/12 baseline remains preserved and separately reported. Publication only exposes an available catalogue option; it does not select the amenity for the Hotel or add it to customer content. Cross-client read and customer non-appearance remain the next observed gates; no code/deployment/APK change occurred.

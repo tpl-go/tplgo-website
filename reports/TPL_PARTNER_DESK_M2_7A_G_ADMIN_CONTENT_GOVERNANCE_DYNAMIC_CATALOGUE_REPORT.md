@@ -2,11 +2,19 @@
 
 Recorded: 2026-09-23
 
-Checkpoint: `TPL-PARTNER-M2.7A-G-20260923-08`
+Checkpoint: `TPL-PARTNER-M2.7A-G-20260923-09`
 
-Status: **`M2_7A_G_ADMIN_CONTENT_GOVERNANCE_DYNAMIC_CATALOGUE_STAGING_PARTIAL_PUBLISHED_CROSS_CLIENT_LIVE_PENDING`**
+Status: **`M2_7A_G_ADMIN_CONTENT_GOVERNANCE_DYNAMIC_CATALOGUE_STAGING_PARTIAL_CROSS_CLIENT_PASS_CUSTOMER_EXPORT_PENDING`**
 
 Previous status: `M2_7A_HOTEL_CONTENT_AND_AMENITIES_STAGING_END_TO_END_PASS`
+
+## Partner Website and Mobile catalogue parity continuation — 2026-09-23
+
+Checkpoint: `TPL-PARTNER-M2.7A-G-20260923-09`
+
+After publication, the operator refreshed the retained synthetic Hotel on both staging Partner Website and the existing native Mobile app. Both surfaces displayed **Jacuzzi — QA catalogue option** in the Property amenity selector and both showed it unselected. No Save or content submission occurred. This is observed cross-client proof that both clients consume the canonical published catalogue rather than separate hardcoded option lists.
+
+Canonical readback remains published catalogue version 2 with 28 PUBLISHED governed entries, one active QA amenity row and 16 PROPERTY / 12 ROOM options. Staging and untouched production health remain 200. Existing approved Hotel selection and customer projection were not mutated by this read-only check. Remaining live gates are explicit customer-page non-appearance and bounded CSV/XLSX/PDF/Print reconciliation.
 
 ## Authenticated publication continuation — 2026-09-23
 

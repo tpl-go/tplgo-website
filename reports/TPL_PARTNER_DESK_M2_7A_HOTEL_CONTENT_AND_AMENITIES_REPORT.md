@@ -1,5 +1,9 @@
 # TPL Partner Desk M2.7A — Hotel Content and Property/Room Amenities
 
+## M2.7A-G cross-client catalogue addendum — 2026-09-23
+
+Checkpoint `TPL-PARTNER-M2.7A-G-20260923-09` records observed staging parity after governed publication: Partner Website and native Mobile both display the Jacuzzi QA option in the Property selector and both show it unselected. The read-only check did not alter the completed M2.7A Hotel selection baseline. Customer-page exclusion and governance export/Print evidence remain pending.
+
 ## M2.7A-G publication addendum — 2026-09-23
 
 Checkpoint `TPL-PARTNER-M2.7A-G-20260923-08` records explicit staging publication of the separately identified `HOTEL_PROPERTY_JACUZZI_QA` governance proof. The active catalogue advances to version 2 and exposes 28 options (16 PROPERTY / 12 ROOM), while the retained original M2.7A catalogue remains 27/15/12. Publication does not alter the completed Hotel content baseline: the approved 14 property and eight room selections remain the only recorded Hotel selections until a separately authorized Partner edit and content review occurs. Customer non-appearance and Website/Mobile catalogue parity remain live gates.
