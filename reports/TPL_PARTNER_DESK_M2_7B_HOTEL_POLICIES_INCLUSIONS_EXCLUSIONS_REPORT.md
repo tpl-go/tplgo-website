@@ -2,11 +2,25 @@
 
 Recorded: 2026-09-23
 
-Checkpoint: `TPL-PARTNER-M2.7B-20260923-01`
+Checkpoint: `TPL-PARTNER-M2.7B-20260924-05`
 
-Previous status: `M2_7A_G_ADMIN_CONTENT_GOVERNANCE_DYNAMIC_CATALOGUE_STAGING_END_TO_END_PASS`
+Previous status: `M2_7B_HOTEL_POLICIES_INCLUSIONS_EXCLUSIONS_STAGING_PARTIAL_CUSTOMER_EXPORT_LIVE_PENDING`
 
-Current status: **`M2_7B_HOTEL_POLICIES_INCLUSIONS_EXCLUSIONS_STAGING_PARTIAL_CUSTOMER_EXPORT_LIVE_PENDING`**
+Current status: **`M2_7B_HOTEL_POLICIES_INCLUSIONS_EXCLUSIONS_STAGING_END_TO_END_PASS`**
+
+## Final authenticated customer/export closure — 2026-09-24
+
+The operator confirmed that the approved Hotel Policies, What’s Included and What’s Not Included content is correct in the authenticated staging customer preview. The operator also confirmed that the bounded CSV, XLSX, PDF and Print outputs are correct and readable. Canonical state remains Approved version 4 with Mobile provenance, two governed inclusions (`Room accommodation`, `Wi-Fi included`) and two governed exclusions (`Meals not included`, `Transport not included`). Publishing an Admin template remains separate from selecting it for a Hotel, Hotel content review and customer publication.
+
+The operator accepted the current policy form presentation as the Website-aligned baseline. Its grouped sections, visible fields/borders, readable typography, responsive spacing and plain-language flow are retained for subsequent Hotel policy work. The native Partner service workspace remains consistently emerald/teal with gold accents and white surfaces; Website and Admin styling remain unchanged.
+
+Website creation, Mobile read/edit, Admin review, approved-only customer projection, audit/history and all bounded export formats now reconcile to the same canonical record. Actual isolated-PostgreSQL coverage remains 7/7, including optimistic concurrency, duplicate prevention, authorization and tenant denial, and audit rollback. The earlier capacity-status mismatch, overlapping Website controls, generic Mobile stale message and inconsistent native service palette were repaired and retested.
+
+No source, deployment, database record or APK changed after these final read-only confirmations. Runtime delivery remains Backend `88402a6` in `/home/tpladmin/tpl-api-releases/partner-m2.7b-capacity-88402a6`, Website `501ffd6` in READY deployment `dpl_2MgPsbqtd2wGAyrnM6Fmzt8s2zFo`, and Mobile `eb2689e` through the existing Development APK/Metro. Production and unrelated data remain untouched.
+
+This closes M2.7B only. The roadmap’s next Hotel-family operational gap is the separately bounded **M3 Hotel booking operations and lifecycle** vertical slice, including authorized Booking destination behavior and canonical transaction handling. It is not started here. Taxes, commission, markup, final payable pricing, payments, settlements and other capability families remain outside this closure.
+
+The fixed denominator remains **46 requirements / 213 units**. The canonical register still lacks a reproducible unit-by-unit status mapping, so `PARTNER_PROGRESS_PERCENTAGE_NOT_YET_AUDITABLE`; no percentage is invented. `MOBILE_USER_PARITY=COMPLETE`, `PARTNER_MOBILE_PARITY=OPEN` and `PHASE_1_STEP_1=OPEN` remain preserved.
 
 ## Mobile approval readback and unified service palette — 2026-09-24
 

@@ -1,5 +1,13 @@
 # Partner Desk M1/M2 — structure and supply/media delivery
 
+## M2.7B continuation — 2026-09-24 — end-to-end staging pass
+
+Checkpoint `TPL-PARTNER-M2.7B-20260924-05` advances M2.7B from `M2_7B_HOTEL_POLICIES_INCLUSIONS_EXCLUSIONS_STAGING_PARTIAL_CUSTOMER_EXPORT_LIVE_PENDING` to **`M2_7B_HOTEL_POLICIES_INCLUSIONS_EXCLUSIONS_STAGING_END_TO_END_PASS`**. The operator confirmed the approved Hotel Policies, What’s Included and What’s Not Included customer preview is correct and the bounded CSV/XLSX/PDF/Print outputs are correct/readable. Approved version 4 remains canonical with two inclusions and two exclusions; template publication, Hotel selection, review and customer publication remain distinct.
+
+The current Website-aligned policy form style is accepted and retained: grouped sections, clear borders, readable type, responsive spacing and plain-language actions. The native Partner service workspace remains emerald/teal with gold accents and white cards. No source/deployment/APK/data change followed the final read-only confirmation; production and unrelated data remain untouched. Actual PostgreSQL policy coverage remains 7/7, and the existing Website/Mobile/Admin/customer/audit/export parity evidence now closes the slice.
+
+Completed M2.6/M2.6A/M2.7A/M2.7A-G statuses remain preserved. The fixed **46 requirements / 213 units** denominator, `PARTNER_PROGRESS_PERCENTAGE_NOT_YET_AUDITABLE`, `MOBILE_USER_PARITY=COMPLETE`, `PARTNER_MOBILE_PARITY=OPEN` and `PHASE_1_STEP_1=OPEN` remain unchanged. The next separate Hotel-family operational gap is **M3 Hotel booking operations and lifecycle**; it was not started.
+
 ## M2.7B continuation — 2026-09-24 — Mobile approval and native palette pass; customer/export pending
 
 Checkpoint `TPL-PARTNER-M2.7B-20260924-04` advances M2.7B to **`M2_7B_HOTEL_POLICIES_INCLUSIONS_EXCLUSIONS_STAGING_PARTIAL_CUSTOMER_EXPORT_LIVE_PENDING`**. The operator approved the Mobile-origin Hotel policy submission. Canonical state is Approved version 4 with Mobile provenance and exactly 2 governed inclusions plus 2 exclusions. Mobile `eb2689e` unifies the native Hotel Content, Policies, Inventory, Availability, Rates and Media service surfaces on emerald/teal primary, gold accents and white cards while retaining the approved navy Command Center header; Website/Admin colors were not changed. Focused tests pass 3/3, TypeScript/ESLint/diff/Hermes pass, existing APK/app data were reused, and ADB visual observation shows the updated Hotel Content & Amenities card without orange active styling or runtime error. Exact remaining gates are customer approved readback and bounded CSV/XLSX/PDF/Print equality/readability.
