@@ -1,5 +1,13 @@
 # Partner Desk M1/M2 — structure and supply/media delivery
 
+## M2.7B continuation — 2026-09-23 — capacity/status repair staged; Website Save recheck pending
+
+Checkpoint `TPL-PARTNER-M2.7B-20260923-01` starts the Hotel policy/inclusion/exclusion slice using the completed Content Governance engine. `HOTEL_POLICY_PROFILE_V1` and the governed 10 policy / 7 inclusion / 6 exclusion options are implemented across Backend, Website, Mobile, Admin review, approved-only customer projection and bounded exports. Actual PostgreSQL policy coverage passes 7/7; Backend type/build and Website policy tests 2/2, lint and 244-page Webpack build pass.
+
+The first authenticated Website Save exposed a real status mismatch: the retained capacity-8 room is `draft` under the established inventory lifecycle, while the new policy query accepted only `active`. Backend `88402a6` now accepts configurable `draft`/`active` inventory and still excludes `inactive`; it runs as immutable staging release `/home/tpladmin/tpl-api-releases/partner-m2.7b-capacity-88402a6`. Website `501ffd6` fixes overlapping controls, weak borders and undersized form typography in READY Preview `dpl_2MgPsbqtd2wGAyrnM6Fmzt8s2zFo` on `staging.tplgo.com`. Mobile `0e9b720` and the existing APK are unchanged. Production PID `972721` and health remain unchanged.
+
+Current status is **`M2_7B_HOTEL_POLICIES_INCLUSIONS_EXCLUSIONS_STAGING_PARTIAL_WEBSITE_SAVE_RECHECK_PENDING`**. The failed request created zero policy records. Exact next action is one normal authenticated Website Save retry, followed by Mobile/Admin parity, review, Mobile inclusion/exclusion edit, approved customer projection and export reconciliation. Completed M2.6/M2.6A/M2.7A/M2.7A-G statuses, 46/213, `MOBILE_USER_PARITY=COMPLETE`, `PARTNER_MOBILE_PARITY=OPEN` and `PHASE_1_STEP_1=OPEN` remain preserved.
+
 ## M2.7A-G continuation — 2026-09-23 — Admin content governance end-to-end pass
 
 Checkpoint `TPL-PARTNER-M2.7A-G-20260923-11` advances the slice to **`M2_7A_G_ADMIN_CONTENT_GOVERNANCE_DYNAMIC_CATALOGUE_STAGING_END_TO_END_PASS`**. The operator confirmed the repaired authenticated PDF is clear, closing the final export gate. The complete Draft → Review → Approve → Publish lifecycle, Website/Mobile catalogue parity, unselected state, customer non-appearance, CSV/XLSX/PDF/Print and canonical version 2 state are now observed. Original 27/15/12 Hotel amenities remain preserved; the separately identified QA publication makes the current catalogue 28/16/12 without changing Hotel selections. Backend runtime `779f701`, Website feature `177929f`, Mobile `e6c18c0`; existing APK retained. M2.7B can begin separately and was not started.
