@@ -1,5 +1,23 @@
 # TPL Partner Desk M2.6A — Common Media Moderation Automation Foundation
 
+## Authenticated live closure — 2026-09-23
+
+Checkpoint ID: `PARTNER_DESK_M2_6A_AUTHENTICATED_LIVE_CLOSURE_20260923_B`
+
+Previous status: `M2_6A_MEDIA_MODERATION_AUTOMATION_FOUNDATION_STAGING_PARTIAL_AUTHENTICATED_LIVE_PENDING`.
+
+Current status: **`M2_6A_MEDIA_MODERATION_AUTOMATION_FOUNDATION_STAGING_READY_MANUAL_MODE`**.
+
+The operator opened the existing authenticated staging Admin session at Partners → All Partners → retained synthetic Partner → Media Library and observed **Moderation mode: MANUAL** with **No automated provider configured**. This authenticated observation agrees with the server-authoritative `HOTEL_MEDIA_POLICY_V1` version 1 policy: provider `NONE`, human review required, automatic approval Off and automatic rejection Off. No fabricated risk score, confidence, AI result or assessment is present.
+
+The existing Development Client and app data were reused after wireless ADB reconnect; no APK, reinstall, storage clear or API-target change occurred. Read-only native observation showed the retained synthetic organization and all three media in the canonical Partner Media Library: property image approved/version 3/non-cover, property YouTube approved/version 5/non-cover, and room image approved/version 3/room cover. Mobile exposed no provider, risk or assessment internals. Refresh retained three active records without a duplicate or mutation. Android Back returned from Media Library to the same scoped Partner Command Center. Home/background then foreground restoration returned to `com.tplgo.mobile/.MainActivity` with the same synthetic organization and `3 of 100 active` media state.
+
+Final read-only staging reconciliation returned exactly one active `HOTEL_MEDIA_POLICY_V1` policy in MANUAL/NONE mode, human review required and both auto-eligibility flags false; assessment/risk/confidence counts were `0/0/0`; approved/pending counts were `3/0`. The exact active rows remain property image v3/non-cover, property YouTube v5/non-cover and linked room image v3/cover. The approved-only property/room/video composition is unchanged. Staging port 4100 and untouched production port 4000 health both returned HTTP 200.
+
+No product defect was found and no code, deployment, database/media state, policy, permission or APK changed during closure. Backend remains source `4016795d6407c2cb9fa7e7283b2c0fb70f419932` on staging release `partner-m2.6a-manual-4016795`; Website/Admin remains source `402851ebfad60ec6221b7aa88a4c4dfe04b6cf95` in READY deployment `dpl_C9tdnSGbw1jaC5gmJw73GkAs2b5Q`; Mobile remains `0fd2f8e72ec1b0e79a30f118465d3c5076192732`. Documentation-only commits are recorded separately and require no staging deployment.
+
+Completed M2.6 remains `M2_6_HOTEL_MEDIA_STAGING_END_TO_END_PASS`. The fixed **46 requirements / 213 units** denominator and `MOBILE_USER_PARITY=COMPLETE`, `PARTNER_MOBILE_PARITY=OPEN`, `PHASE_1_STEP_1=OPEN` remain unchanged. The next separate Hotel-only step is **Hotel content, property/room amenities, policies and structured inclusions**; it may begin as a new bounded batch and was not started here.
+
 Recorded: 2026-09-23
 
 Checkpoint ID: `PARTNER_DESK_M2_6A_MEDIA_AUTOMATION_20260923_A`

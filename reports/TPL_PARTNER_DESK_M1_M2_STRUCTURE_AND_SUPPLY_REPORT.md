@@ -1,5 +1,13 @@
 # Partner Desk M1/M2 — structure and supply/media delivery
 
+## M2.6A authenticated live closure — 2026-09-23 — manual-mode foundation ready
+
+Checkpoint `PARTNER_DESK_M2_6A_AUTHENTICATED_LIVE_CLOSURE_20260923_B` advances the prior authenticated-live-pending status to **`M2_6A_MEDIA_MODERATION_AUTOMATION_FOUNDATION_STAGING_READY_MANUAL_MODE`**. In the existing authenticated staging Admin Media Library, the operator observed `Moderation mode: MANUAL` and `No automated provider configured`. Canonical policy readback remains `HOTEL_MEDIA_POLICY_V1` version 1, provider NONE, human review required and both automatic decisions Off; assessment/risk/confidence counts remain zero.
+
+The connected existing Development Client showed all three retained media unchanged: approved property image v3/non-cover, approved property YouTube v5/non-cover and approved room image v3/room cover. Refresh preserved three active rows, Android Back returned to the same scoped Partner Command Center, and background/foreground restored the same synthetic organization and media state. No internal provider/risk/assessment information was exposed on Mobile. Final canonical counts are three approved, zero pending; staging and untouched production API health both returned 200.
+
+No defect, source change, deployment, database/media mutation or new APK was required. Existing Backend/Website/Mobile revisions remain `4016795` / `402851e` / `0fd2f8e`; completed M2.6 remains PASS. The fixed 46 requirements / 213 units and `MOBILE_USER_PARITY=COMPLETE`, `PARTNER_MOBILE_PARITY=OPEN`, `PHASE_1_STEP_1=OPEN` are preserved. The next separate Hotel-only content/amenities/policies/inclusions step was not started.
+
 ## M2.6A continuation — 2026-09-23 — common moderation automation foundation staged; authenticated live check pending
 
 Checkpoint `PARTNER_DESK_M2_6A_MEDIA_AUTOMATION_20260923_A` preserves `M2_6_HOTEL_MEDIA_STAGING_END_TO_END_PASS` and adds one provider-neutral, versioned moderation foundation. Only `HOTEL_MEDIA_POLICY_V1` is active. Runtime is explicitly MANUAL/NONE, automatic approval/rejection are Off, and the existing `partner_media.review` human decision remains authoritative. Unknown families fail safely to MANUAL. No AI/provider API, SDK, credential, cost, automatic publication or other family policy was added.
