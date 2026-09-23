@@ -1,5 +1,15 @@
 # Partner Desk M1/M2 — structure and supply/media delivery
 
+## M2.7A continuation — 2026-09-23 — Hotel content and amenities end-to-end pass
+
+Checkpoint `PARTNER_DESK_M2_7A_HOTEL_CONTENT_AMENITIES_E2E_PASS_20260923` advances the previous Hotel-family status to **`M2_7A_HOTEL_CONTENT_AND_AMENITIES_STAGING_END_TO_END_PASS`** while preserving both completed M2.6 statuses. The common versioned content foundation activates only `HOTEL_CONTENT_PROFILE_V1`; its standardized catalogue contains 27 amenities (15 PROPERTY, 12 ROOM) with stable codes and strict scope. Partner submissions require scoped supply authority, text remains pending until narrow `partner_content.review`, and only approved content enters the customer-safe Hotel projection.
+
+Live staging parity passed. Website submitted the retained synthetic Hotel property description with 14 property amenities; Mobile read the same pending version; Admin showed the exact submission before approval; and the approved version appeared on the staging Hotel page. Mobile submitted the existing room description, structured Queen-bed/City-view values and eight room amenities; Website/Admin read the identical room-scoped record; normal Admin approval produced version 2; and the approved room content appeared only under `Synthetic Deluxe Room — QA Only`. Android Back and background/foreground scope restoration passed. Final canonical evidence is two approved records, 22 selections, four immutable revisions and four events.
+
+The operator confirmed the bounded CSV, XLSX, PDF and corrected content-aware Print outputs are readable and correct. Actual PostgreSQL content coverage passed 7/7 and combined Backend RBAC/export/database coverage passed 14/14, including stale/concurrent writes, rollback and tenant/scope denials. Website focused tests/lint/build, Mobile focused tests/type/lint/Hermes export and Backend type/build passed. Delivery is Backend `021977a` on staging 4100, Website runtime `c0fe85e` in READY deployment `dpl_AV58iLYvRAJe53jPG9ke6AWBBnkh` on `staging.tplgo.com`, and Mobile `9d0b5d5` through the existing APK/Metro. Production and unrelated data remained untouched.
+
+The fixed **46 requirements / 213 units** denominator is unchanged; no whole-program percentage is invented. `MOBILE_USER_PARITY=COMPLETE`, `PARTNER_MOBILE_PARITY=OPEN`, and `PHASE_1_STEP_1=OPEN` remain preserved. The next separate Hotel-only batch is **M2.7B — Hotel Policies and Structured Inclusions/Exclusions**; it was not started.
+
 ## M2.6A authenticated live closure — 2026-09-23 — manual-mode foundation ready
 
 Checkpoint `PARTNER_DESK_M2_6A_AUTHENTICATED_LIVE_CLOSURE_20260923_B` advances the prior authenticated-live-pending status to **`M2_6A_MEDIA_MODERATION_AUTOMATION_FOUNDATION_STAGING_READY_MANUAL_MODE`**. In the existing authenticated staging Admin Media Library, the operator observed `Moderation mode: MANUAL` and `No automated provider configured`. Canonical policy readback remains `HOTEL_MEDIA_POLICY_V1` version 1, provider NONE, human review required and both automatic decisions Off; assessment/risk/confidence counts remain zero.
