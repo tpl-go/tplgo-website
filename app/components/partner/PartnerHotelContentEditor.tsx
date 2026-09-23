@@ -62,7 +62,7 @@ export default function PartnerHotelContentEditor({data, admin, busy, save, revi
   }
 
   return <section className={`${styles.panel} ${styles.contentPanel}`} aria-label="Hotel content and amenities">
-    <div className={styles.panelHead}><div><h2>Hotel content &amp; amenities</h2><p className={styles.muted}>Add clear Hotel and room details using the approved amenity list.</p></div><button type="button" onClick={() => void refresh()} disabled={busy}>Refresh</button></div>
+    <div className={styles.panelHead}><div><h2>Hotel content &amp; amenities</h2><p className={styles.muted}>Add clear Hotel and room details using the approved amenity list · published catalogue v{data.contentCatalogueVersion}.</p></div><button type="button" onClick={() => void refresh()} disabled={busy}>Refresh</button></div>
     <nav className={styles.contentScopeNav} aria-label="Hotel content scope">
       <button type="button" aria-current={selected === "PROPERTY" ? "page" : undefined} onClick={() => choose("PROPERTY")}><span>Property details</span><small>Hotel description and shared amenities</small></button>
       {data.items.filter((value) => value.serviceScopeId === serviceScope.id).map((value) => <button type="button" key={value.id} aria-current={selected === value.id ? "page" : undefined} onClick={() => choose(value.id)}><span>Room details · {value.label}</span><small>Room description and room amenities</small></button>)}

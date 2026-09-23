@@ -312,9 +312,10 @@ export function AdminWebsiteExperienceLanding({ view = "root" }: { view?: Landin
         <div className="mb-3">
           <h3 className="text-lg font-black text-cyan-100">Content areas</h3>
         </div>
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           <CompactNavLink icon={MonitorCog} title="Global Experience" detail="Login and registration content" href="/admin/website-experience/global" />
           <CompactNavLink icon={LayoutTemplate} title="Pages" detail="Page-specific website content" href="/admin/website-experience/pages" />
+          <CompactNavLink icon={Tags} title="Content & Attribute Catalogue" detail="Amenities and structured options" href="/admin/website-experience/content-catalogue" />
         </div>
       </section>
     </div>

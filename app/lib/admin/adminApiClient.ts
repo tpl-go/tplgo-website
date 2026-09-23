@@ -32,6 +32,31 @@ export type AdminApiResult<TData> =
       requestId: string;
     };
 
+export type ContentGovernanceItem = {
+  id: string; stableCode: string; entityType: string; entityVersion: number; rowVersion: number; workflowState: string;
+  label: string; helpText: string | null; translationKey: string; translationReady: boolean; category: string;
+  capabilityFamilyCode: string; serviceCodes: string[]; scopes: string[]; valueType: string; allowedValues: string[];
+  displayOrder: number; iconKey: string | null; lifecycle: "ACTIVE" | "DEPRECATED" | "INACTIVE";
+  customerVisible: boolean; reportingEligible: boolean; effectiveFrom: string | null; effectiveTo: string | null;
+  reviewNote: string | null; currentPublishedVersion: number | null; currentDraftVersion: number | null; usageCount: number;
+  createdAt: string; updatedAt: string; submittedAt: string | null; reviewedAt: string | null; publishedAt: string | null;
+};
+
+export type ContentGovernanceResponse = {
+  contractVersion: 1;
+  catalogue: { code: string; capabilityFamilyCode: string; serviceCodes: string[]; publishedVersion: number; status: string; updatedAt: string; retainedOriginalCounts: { total: number; property: number; room: number }; currentCounts: { total: number; property: number; room: number } };
+  items: ContentGovernanceItem[];
+  page: { limit: number; nextAfter: string | null };
+  permissions: { canRead: boolean; canWrite: boolean; canReview: boolean; canPublish: boolean };
+  futureEntityTypes: Array<{type:string;status:string}>;
+};
+
+export type ContentGovernanceHistory = {
+  stableCode: string;
+  versions: ContentGovernanceItem[];
+  events: Array<{ entityVersion: number; action: string; metadata: Record<string,unknown>; at: string }>;
+};
+
 export type AdminSession = {
   admin: AdminUser;
   session: {
@@ -2882,6 +2907,8 @@ export async function uploadAdminAgreementTemplateDocument(input: { file: File }
       status: 0,
       requestId,
     };
+
+
   }
 }
 
@@ -3515,6 +3542,36 @@ function failure(requestId: string, status: number, error: AdminApiError): Admin
     status,
     requestId,
   };
+}
+
+export function getContentGovernanceCatalogue(filters: Record<string,string> = {}): Promise<AdminApiResult<ContentGovernanceResponse>> {
+  const query = new URLSearchParams(filters);
+  return adminApiRequest<ContentGovernanceResponse>(`/api/v1/admin/content-governance/catalogue${query.size ? `?${query}` : ""}`);
+}
+
+export function saveContentGovernanceDraft(stableCode: string, body: Record<string,unknown>, existing = false): Promise<AdminApiResult<ContentGovernanceItem>> {
+  return adminApiRequest<ContentGovernanceItem>(existing ? `/api/v1/admin/content-governance/catalogue/drafts/${encodeURIComponent(stableCode)}` : "/api/v1/admin/content-governance/catalogue/drafts", { method: existing ? "PUT" : "POST", body: existing ? body : {...body,stableCode} });
+}
+
+export function submitContentGovernanceDraft(stableCode:string,expectedRowVersion:number):Promise<AdminApiResult<ContentGovernanceItem>>{
+  return adminApiRequest<ContentGovernanceItem>(`/api/v1/admin/content-governance/catalogue/${encodeURIComponent(stableCode)}/submit`,{method:"POST",body:{expectedRowVersion}});
+}
+
+export function reviewContentGovernanceDraft(stableCode:string,input:{expectedRowVersion:number;decision:"approve"|"reject";note:string;separationReason?:string}):Promise<AdminApiResult<ContentGovernanceItem>>{
+  return adminApiRequest<ContentGovernanceItem>(`/api/v1/admin/content-governance/catalogue/${encodeURIComponent(stableCode)}/review`,{method:"POST",body:input});
+}
+
+export function publishContentGovernanceDraft(stableCode:string,expectedRowVersion:number):Promise<AdminApiResult<ContentGovernanceItem>>{
+  return adminApiRequest<ContentGovernanceItem>(`/api/v1/admin/content-governance/catalogue/${encodeURIComponent(stableCode)}/publish`,{method:"POST",body:{expectedRowVersion}});
+}
+
+export function getContentGovernanceHistory(stableCode:string):Promise<AdminApiResult<ContentGovernanceHistory>>{
+  return adminApiRequest<ContentGovernanceHistory>(`/api/v1/admin/content-governance/catalogue/${encodeURIComponent(stableCode)}/history`);
+}
+
+export async function downloadContentGovernanceExport(format:"csv"|"xlsx"|"pdf"):Promise<{ok:true}|{ok:false;message:string}>{
+  const token=readAdminSession()?.session.token;if(!token)return {ok:false,message:"Admin session is unavailable."};
+  try{const response=await fetch(`${API_BASE_URL}/api/v1/admin/content-governance/catalogue/export?format=${format}`,{headers:{Authorization:`Bearer ${token}`}});if(!response.ok)return {ok:false,message:"The private catalogue export could not be prepared."};const blob=await response.blob(),url=URL.createObjectURL(blob),link=document.createElement("a");link.href=url;link.download=`content-attribute-catalogue.${format}`;document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url);return {ok:true};}catch{return {ok:false,message:"The private catalogue export could not be downloaded."};}
 }
 
 
