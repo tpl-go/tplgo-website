@@ -28,6 +28,16 @@ test("exposes the guarded draft review publish lifecycle and immutable history",
  expect(component).toContain("window.confirm");
 });
 
+test("keeps saved drafts visible and reopens the detail-first approval flow",()=>{
+ expect(component).toContain('aria-label="Saved drafts"');
+ expect(component).toContain("Continue catalogue work");
+ expect(component).toContain("Draft → Review → Approve → Publish");
+ expect(component).toContain("Open draft");
+ expect(component).toContain('getContentGovernanceCatalogue({status:"DRAFT",limit:"20"})');
+ expect(component).toContain("setEditing(false)");
+ expect(component).toContain("Submit for approval");
+});
+
 test("uses a bounded searchable catalogue with safe exports and a bounded print surface",()=>{
  for(const label of ["Capability family","Service","Scope","Category","Workflow state","Next page","CSV","XLSX","PDF","Print"])expect(component).toContain(label);
  expect(component).toContain('id="content-governance-print"');
