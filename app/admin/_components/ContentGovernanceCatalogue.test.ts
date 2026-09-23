@@ -35,6 +35,12 @@ test("uses a bounded searchable catalogue with safe exports and a bounded print 
  expect(client).toContain("content-attribute-catalogue.${format}");
 });
 
+test("renders catalogue counts with explicit high-contrast typography",()=>{
+ expect(component).toContain('text-sm font-extrabold uppercase tracking-wide text-slate-700');
+ expect(component).toContain('text-2xl font-black leading-tight text-[#071426]');
+ expect(component).not.toContain('text-xs font-black uppercase tracking-wide text-slate-500');
+});
+
 test("labels the Jacuzzi proof as synthetic and avoids claiming a Hotel offers it",()=>{
  expect(component).toContain("HOTEL_PROPERTY_JACUZZI_QA");
  expect(component).toContain("Synthetic staging-only catalogue option");
