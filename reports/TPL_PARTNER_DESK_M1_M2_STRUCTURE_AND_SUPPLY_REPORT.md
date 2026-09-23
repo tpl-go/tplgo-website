@@ -1,5 +1,15 @@
 # Partner Desk M1/M2 — structure and supply/media delivery
 
+## M2.6A continuation — 2026-09-23 — common moderation automation foundation staged; authenticated live check pending
+
+Checkpoint `PARTNER_DESK_M2_6A_MEDIA_AUTOMATION_20260923_A` preserves `M2_6_HOTEL_MEDIA_STAGING_END_TO_END_PASS` and adds one provider-neutral, versioned moderation foundation. Only `HOTEL_MEDIA_POLICY_V1` is active. Runtime is explicitly MANUAL/NONE, automatic approval/rejection are Off, and the existing `partner_media.review` human decision remains authoritative. Unknown families fail safely to MANUAL. No AI/provider API, SDK, credential, cost, automatic publication or other family policy was added.
+
+Actual PostgreSQL verification passed 12/12, scoped regression evidence passed, Backend TypeScript/build passed, Website test/lint/Webpack build passed, and the clean Vercel Git build is READY. Backend `4016795` runs only as staging release `partner-m2.6a-manual-4016795`; Website/Admin `402851e` is Vercel deployment `dpl_C9tdnSGbw1jaC5gmJw73GkAs2b5Q` on `staging.tplgo.com`; Mobile stays `0fd2f8e` with no new APK. Protected backup/checksum/readability passed before additive migration 0059. Staging and untouched production API health are 200.
+
+Read-only staging reconciliation shows the Hotel V1 policy as MANUAL/NONE/human-required, zero fabricated assessment rows, and the existing three approved media unchanged. The approved-only projection still contains property image + property YouTube + room image. Authenticated Admin visual verification remains pending because the supported browser connection failed and the new headless session reached Vercel secure login; native readback remains pending because ADB has no connected device. Status is **`M2_6A_MEDIA_MODERATION_AUTOMATION_FOUNDATION_STAGING_PARTIAL_AUTHENTICATED_LIVE_PENDING`**, while completed M2.6 remains PASS.
+
+The fixed 46 requirements / 213 units and `MOBILE_USER_PARITY=COMPLETE`, `PARTNER_MOBILE_PARITY=OPEN`, `PHASE_1_STEP_1=OPEN` are preserved. Exact next action is a strictly read-only operator confirmation of the Admin MANUAL/Hotel-V1/NONE/auto-Off panel and the existing three Approved media in Mobile. The Hotel content/amenities/policies slice has not started.
+
 ## M2.6 continuation — 2026-09-22 — M2_6_HOTEL_MEDIA_STAGING_END_TO_END_PASS
 
 Checkpoint `PARTNER_DESK_M2_6_HOTEL_MEDIA_20260922_I` closes the Hotel Media slice. The operator approved the corrected structured YouTube record through staging Admin and confirmed its Approved report/export state. Native Mobile refresh shows the property video as **approved · version 5**, display order 2 and non-cover. The approved-only staging projection returns one property image, the YouTube video and one linked room image; pending/private records remain excluded.
