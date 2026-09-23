@@ -1,5 +1,9 @@
 # Partner Desk M1/M2 — structure and supply/media delivery
 
+## M2.7A-G continuation — 2026-09-23 — readable metric typography compacted
+
+Checkpoint `TPL-PARTNER-M2.7A-G-20260923-04` records operator acceptance of the corrected contrast and a remaining oversized-font observation. Website `d27d3eb` keeps the explicit navy/orange/white contrast and reduces metric labels/values to 14px/24px. Tests 6/6, lint/diff and the 244-route Webpack build pass; exact READY Preview `dpl_6hi9JXKX3UGLJuFCwF1EVMcwhwEy` is on staging only. Governance data remains unchanged and Submit for review has not run.
+
 ## M2.7A-G continuation — 2026-09-23 — draft exclusion pass; second contrast correction staged
 
 Checkpoint `TPL-PARTNER-M2.7A-G-20260923-03` records **`M2_7A_G_ADMIN_CONTENT_GOVERNANCE_DYNAMIC_CATALOGUE_STAGING_PARTIAL_DRAFT_EXCLUSION_PASS_CONTRAST_RECHECK_PENDING`**. The operator confirmed Jacuzzi is absent in the requested read-only Partner selector check while canonical state remains one private draft, zero active QA amenity rows and published catalogue version 1. No Hotel amenity selection changed.

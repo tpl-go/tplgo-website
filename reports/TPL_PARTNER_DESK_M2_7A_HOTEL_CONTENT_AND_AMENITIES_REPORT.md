@@ -1,5 +1,9 @@
 # TPL Partner Desk M2.7A — Hotel Content and Property/Room Amenities
 
+## Governance metric typography continuation — 2026-09-23
+
+Checkpoint `TPL-PARTNER-M2.7A-G-20260923-04` records the compact 14px/24px Admin metric typography in Website `d27d3eb` / READY staging Preview `dpl_6hi9JXKX3UGLJuFCwF1EVMcwhwEy`. It changes presentation only; the private Jacuzzi draft, original Hotel catalogue and approved Partner selections remain unchanged.
+
 ## Governance selector-exclusion continuation — 2026-09-23
 
 Checkpoint `TPL-PARTNER-M2.7A-G-20260923-03` records the operator's read-only confirmation that Jacuzzi remains absent while its catalogue entity is a private draft. This preserves the original 27-option Hotel catalogue and all 14/8 approved selections. The second Admin metric-contrast correction is Website `f07dd05` / READY staging Preview `dpl_C7QqPR2uwHLCWM7dMCzaMUycBusZ`; it does not alter M2.7A data or customer projection.

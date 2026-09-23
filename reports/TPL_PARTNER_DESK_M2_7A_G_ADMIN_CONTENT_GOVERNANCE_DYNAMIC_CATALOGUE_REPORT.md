@@ -18,6 +18,10 @@ The first count-card contrast correction did not solve the live presentation and
 
 The exact Vercel Git build for `f07dd05` passed and READY Preview `dpl_C7QqPR2uwHLCWM7dMCzaMUycBusZ` (`tplgo-website-41fc4b1wo-tplgo.vercel.app`) is assigned only to `staging.tplgo.com`. Backend, Mobile, APK and catalogue/database state did not change. The only immediate live gate is a refreshed Admin readability observation; review/approval/publication remain unrun.
 
+### Compact typography continuation
+
+Checkpoint `TPL-PARTNER-M2.7A-G-20260923-04` records that the operator accepted the contrast/readability but found the metric typography oversized. Website `d27d3eb` retains the opaque navy/orange/white treatment while reducing labels from 16px to 14px and values from 30px to 24px. Focused tests remain 6/6, scoped lint/diff and the 244-route Webpack build pass. Exact READY Preview `dpl_6hi9JXKX3UGLJuFCwF1EVMcwhwEy` is assigned only to staging. No governance or Partner data changed; compact-size live recheck remains pending.
+
 ## Draft-save and contrast continuation — 2026-09-23
 
 Checkpoint: `TPL-PARTNER-M2.7A-G-20260923-02`
