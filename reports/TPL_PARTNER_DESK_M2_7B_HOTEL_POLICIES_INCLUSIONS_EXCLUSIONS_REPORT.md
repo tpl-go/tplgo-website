@@ -6,7 +6,21 @@ Checkpoint: `TPL-PARTNER-M2.7B-20260923-01`
 
 Previous status: `M2_7A_G_ADMIN_CONTENT_GOVERNANCE_DYNAMIC_CATALOGUE_STAGING_END_TO_END_PASS`
 
-Current status: **`M2_7B_HOTEL_POLICIES_INCLUSIONS_EXCLUSIONS_STAGING_PARTIAL_MOBILE_REVIEW_PENDING`**
+Current status: **`M2_7B_HOTEL_POLICIES_INCLUSIONS_EXCLUSIONS_STAGING_PARTIAL_CUSTOMER_EXPORT_LIVE_PENDING`**
+
+## Mobile approval readback and unified service palette — 2026-09-24
+
+Checkpoint: `TPL-PARTNER-M2.7B-20260924-04`
+
+Previous status: `M2_7B_HOTEL_POLICIES_INCLUSIONS_EXCLUSIONS_STAGING_PARTIAL_MOBILE_REVIEW_PENDING`
+
+The operator approved the Mobile-origin submission through normal Admin review and received “Hotel policies approved for the staging customer detail.” Canonical readback is `approved`, version 4, client surface `mobile`, with exactly four governed selections: two inclusions and two exclusions. The approved configuration retains the controlled check-in/check-out and guest-policy values. Template publication and Hotel-specific selection/review remain separate.
+
+At the operator's direction, only the native Partner app service workspace was visually unified. Mobile `eb2689e` applies the established emerald/teal primary and gold accent tokens consistently to Hotel Content & Amenities, Hotel Policies, Inventory, Availability, Rates and Media actions/cards/inputs. White surfaces remain primary; supporting blue/orange elsewhere in the established app is not expanded. The approved navy Command Center header and Website/Admin presentation remain unchanged.
+
+Focused native tests pass 3/3; TypeScript, scoped ESLint, diff hygiene and Android Hermes export pass (1,756 modules; 4.8 MB bundle). React component review found no new hook, state, accessibility or bundle regression. The existing APK and app data were reused. ADB live observation on the retained synthetic Partner showed the updated Hotel Content & Amenities card with emerald heading/selected tab, gold border/accent, readable typography and no orange active styling or runtime error.
+
+This closes the second Admin review and native palette defect. Exact remaining M2.7B gates are approved customer Hotel policy/inclusion/exclusion readback plus bounded CSV/XLSX/PDF/Print equality/readability. M2.7B remains PARTIAL until those observed checks pass.
 
 ## Mobile combined submission and stale-version recovery — 2026-09-23
 

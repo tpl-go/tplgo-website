@@ -12,7 +12,7 @@ Previous status: `M2_7A_HOTEL_CONTENT_AND_AMENITIES_STAGING_END_TO_END_PASS`
 
 The PASS checkpoint above is authoritative. Checkpoints `TPL-PARTNER-M2.7A-G-20260923-01` through `-10`, including every PARTIAL, pending, blocker and next-action statement inside those checkpoint sections, are **Historical/Superseded**. They remain below as genuine chronological evidence and must not be read as current blockers. M2.7B reuses the completed governance engine; it does not reopen M2.7A-G.
 
-M2.7B checkpoints `TPL-PARTNER-M2.7B-20260923-01` through `-03` reuse this engine for governed Hotel policy templates, inclusions and exclusions. The current version-3 Mobile submission review/customer/export closure is an M2.7B gate only; this completed M2.7A-G status and its retained catalogue evidence remain unchanged.
+M2.7B checkpoints through `TPL-PARTNER-M2.7B-20260924-04` reuse this engine for governed Hotel policy templates, inclusions and exclusions. The approved version-4 customer/export closure is an M2.7B gate only; this completed M2.7A-G status and its retained catalogue evidence remain unchanged.
 
 ## End-to-end staging closure — 2026-09-23
 

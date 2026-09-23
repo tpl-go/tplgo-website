@@ -1,5 +1,9 @@
 # Partner Desk M1/M2 — structure and supply/media delivery
 
+## M2.7B continuation — 2026-09-24 — Mobile approval and native palette pass; customer/export pending
+
+Checkpoint `TPL-PARTNER-M2.7B-20260924-04` advances M2.7B to **`M2_7B_HOTEL_POLICIES_INCLUSIONS_EXCLUSIONS_STAGING_PARTIAL_CUSTOMER_EXPORT_LIVE_PENDING`**. The operator approved the Mobile-origin Hotel policy submission. Canonical state is Approved version 4 with Mobile provenance and exactly 2 governed inclusions plus 2 exclusions. Mobile `eb2689e` unifies the native Hotel Content, Policies, Inventory, Availability, Rates and Media service surfaces on emerald/teal primary, gold accents and white cards while retaining the approved navy Command Center header; Website/Admin colors were not changed. Focused tests pass 3/3, TypeScript/ESLint/diff/Hermes pass, existing APK/app data were reused, and ADB visual observation shows the updated Hotel Content & Amenities card without orange active styling or runtime error. Exact remaining gates are customer approved readback and bounded CSV/XLSX/PDF/Print equality/readability.
+
 ## M2.7B continuation — 2026-09-23 — Mobile combined submission pass; review pending
 
 Checkpoint `TPL-PARTNER-M2.7B-20260923-03` advances M2.7B to **`M2_7B_HOTEL_POLICIES_INCLUSIONS_EXCLUSIONS_STAGING_PARTIAL_MOBILE_REVIEW_PENDING`**. Normal Admin review approved the first Website-origin record as version 2. A Mobile edit that still held version 1 was safely rejected with zero mutation, but its error was too generic. Mobile `2278dc2` adds stale-version recovery with preserved input, one clearly labelled combined submission for all policy/inclusion/exclusion sections, and the locked primary emerald/teal plus gold visual hierarchy. Focused Jest, TypeScript, ESLint, Hermes export and diff checks pass; existing APK/app data were reused.
