@@ -2,11 +2,19 @@
 
 Recorded: 2026-09-23
 
-Checkpoint: `TPL-PARTNER-M2.7A-G-20260923-06`
+Checkpoint: `TPL-PARTNER-M2.7A-G-20260923-07`
 
-Status: **`M2_7A_G_ADMIN_CONTENT_GOVERNANCE_DYNAMIC_CATALOGUE_STAGING_PARTIAL_IN_REVIEW_APPROVAL_PENDING`**
+Status: **`M2_7A_G_ADMIN_CONTENT_GOVERNANCE_DYNAMIC_CATALOGUE_STAGING_PARTIAL_APPROVED_PUBLICATION_PENDING`**
 
 Previous status: `M2_7A_HOTEL_CONTENT_AND_AMENITIES_STAGING_END_TO_END_PASS`
+
+## Authenticated approval continuation — 2026-09-23
+
+Checkpoint: `TPL-PARTNER-M2.7A-G-20260923-07`
+
+The authorized staging Admin approved `HOTEL_PROPERTY_JACUZZI_QA` through the normal review panel. The UI explicitly confirmed that the item is approved but still not published. Canonical readback agrees: workflow `APPROVED`, entity version 1, row version 3, no published entity version, published catalogue version 1 and zero active QA amenity rows.
+
+This live observation proves that review approval does not implicitly publish catalogue content. The original selectable catalogue remains 27 amenities (15 PROPERTY / 12 ROOM), so the approved-but-unpublished Jacuzzi option remains absent from Partner Website, native Mobile and customer Hotel projections. Staging and untouched production API health remain 200. No source, deployment, Mobile bundle, APK or schema changed. The exact next governed action is one explicit **Publish approved version** action followed by canonical and cross-client reconciliation.
 
 ## Authenticated submit-for-review continuation — 2026-09-23
 

@@ -1,5 +1,9 @@
 # Partner Desk M1/M2 — structure and supply/media delivery
 
+## M2.7A-G continuation — 2026-09-23 — QA amenity approved; publication remains separate
+
+Checkpoint `TPL-PARTNER-M2.7A-G-20260923-07` advances governance to **`M2_7A_G_ADMIN_CONTENT_GOVERNANCE_DYNAMIC_CATALOGUE_STAGING_PARTIAL_APPROVED_PUBLICATION_PENDING`**. The operator approved the in-review Jacuzzi QA entry through the normal Admin review panel and received the expected “approved, still not published” confirmation. Canonical state is `APPROVED`, entity v1/row v3, published entity none, catalogue version 1 and zero active QA amenity rows. The original 27/15/12 selectable catalogue and existing Hotel selections remain unchanged. No code/deployment/APK change occurred; explicit publication and cross-client verification are next.
+
 ## M2.7A-G continuation — 2026-09-23 — QA amenity submitted for review
 
 Checkpoint `TPL-PARTNER-M2.7A-G-20260923-06` advances governance to **`M2_7A_G_ADMIN_CONTENT_GOVERNANCE_DYNAMIC_CATALOGUE_STAGING_PARTIAL_IN_REVIEW_APPROVAL_PENDING`**. The operator used the normal Admin UI to submit `HOTEL_PROPERTY_JACUZZI_QA` for approval review. Canonical readback is `IN_REVIEW`, entity version 1, row version 2, no published entity version, active catalogue version 1 and zero active QA amenity rows. The retained selectable catalogue remains 27/15/12, so Partner/customer surfaces are unchanged. No source, deployment or APK change was required. Exact next action is authorized Admin approval; Publish remains a separate later step.
