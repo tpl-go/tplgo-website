@@ -1,5 +1,9 @@
 # TPL Partner Desk M2.7A — Hotel Content and Property/Room Amenities
 
+## M2.7A-G final governance addendum — 2026-09-23
+
+Checkpoint `TPL-PARTNER-M2.7A-G-20260923-11` records **`M2_7A_G_ADMIN_CONTENT_GOVERNANCE_DYNAMIC_CATALOGUE_STAGING_END_TO_END_PASS`**. The governed Jacuzzi QA option completed Draft → Review → Approve → Publish through normal Admin controls, appeared unselected on both Partner clients, remained absent from customer Hotel content, and is represented correctly in readable CSV/XLSX/PDF/Print. The original 27-option M2.7A baseline and its 14 property/eight room selections remain unchanged. This addendum does not reopen or alter the completed M2.7A status.
+
 ## M2.7A-G customer/export addendum — 2026-09-23
 
 Checkpoint `TPL-PARTNER-M2.7A-G-20260923-10` records that the published Jacuzzi catalogue option remains absent from the customer staging Hotel page while unselected. Existing M2.7A Hotel content and selections are unchanged. Governance CSV, XLSX and bounded Print are readable. The dense PDF layout defect was repaired in Backend `779f701` and staged as a paginated table; authenticated live PDF readability confirmation remains the only open M2.7A-G gate.

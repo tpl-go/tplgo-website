@@ -2,11 +2,25 @@
 
 Recorded: 2026-09-23
 
-Checkpoint: `TPL-PARTNER-M2.7A-G-20260923-10`
+Checkpoint: `TPL-PARTNER-M2.7A-G-20260923-11`
 
-Status: **`M2_7A_G_ADMIN_CONTENT_GOVERNANCE_DYNAMIC_CATALOGUE_STAGING_PARTIAL_PDF_REPAIR_LIVE_RECHECK_PENDING`**
+Status: **`M2_7A_G_ADMIN_CONTENT_GOVERNANCE_DYNAMIC_CATALOGUE_STAGING_END_TO_END_PASS`**
 
 Previous status: `M2_7A_HOTEL_CONTENT_AND_AMENITIES_STAGING_END_TO_END_PASS`
+
+## End-to-end staging closure — 2026-09-23
+
+Checkpoint: `TPL-PARTNER-M2.7A-G-20260923-11`
+
+The operator re-downloaded the repaired authenticated governance PDF and confirmed that it is now clear and readable. This closes the final M2.7A-G live gate and advances the slice to **`M2_7A_G_ADMIN_CONTENT_GOVERNANCE_DYNAMIC_CATALOGUE_STAGING_END_TO_END_PASS`**.
+
+The complete authenticated lifecycle is observed through normal staging UI: draft save, private-draft exclusion, submit for review, explicit approval without publication, explicit publication, Website/Mobile dynamic catalogue read, unselected state on both Partner clients, and customer Hotel non-appearance. The separately identified QA proof is `HOTEL_PROPERTY_JACUZZI_QA`; current catalogue version 2 contains 28 published options (16 PROPERTY / 12 ROOM), while the retained original baseline remains 27 (15 PROPERTY / 12 ROOM). Publishing the option did not claim that the Hotel offers it.
+
+Governance CSV, XLSX, repaired PDF and bounded Print are operator-confirmed readable. Actual PostgreSQL governance tests remain 6/6, including optimistic-concurrency winner/stale loser, publication rollback, immutable history, safe deactivation and deterministic scoped outbox behavior. Focused PDF pagination passes 1/1; Backend typecheck/build and scoped diff checks pass. Narrow catalogue read/write/review/publish RBAC remains separate from Partner, media, content, finance and lifecycle authority.
+
+Final staging delivery is Backend runtime source `779f701` in `/home/tpladmin/tpl-api-releases/partner-m2.7ag-pdf-779f701`; Website feature source `177929f` in READY deployment `dpl_9kHN7BWMcEv4V5NvPwqK3AxB3L67` assigned only to `staging.tplgo.com`; Mobile `e6c18c099c54cc299d12748e0c41495da929fcdd` uses the existing Development APK. No new APK was required. Staging and untouched production health are 200. M2.7A, M2.6 and M2.6A completed statuses remain preserved.
+
+The next separate Hotel-only step, **M2.7B — Hotel Policies and Structured Inclusions/Exclusions**, can begin using this governance engine. It was not started here. Taxes, commission, markup, discounts, final pricing, bookings and other capability families remain outside this closure.
 
 ## Customer exclusion and PDF readability repair — 2026-09-23
 
