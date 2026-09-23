@@ -1,5 +1,9 @@
 # Partner Desk M1/M2 — structure and supply/media delivery
 
+## M2.7A-G continuation — 2026-09-23 — saved-draft continuation deployed
+
+Checkpoint `TPL-PARTNER-M2.7A-G-20260923-05` adds a filter-independent Saved drafts section on the same governance screen. Clicking **Open draft** now opens the existing detail-first Draft → Review → Approve → Publish flow with Edit draft and Submit for approval actions, rather than jumping directly into the editor. Website `177929f`, focused tests 7/7, lint/diff and 244-route build pass; exact READY Preview `dpl_9kHN7BWMcEv4V5NvPwqK3AxB3L67` is on staging only. The draft lifecycle/data is unchanged pending operator observation.
+
 ## M2.7A-G continuation — 2026-09-23 — readable metric typography compacted
 
 Checkpoint `TPL-PARTNER-M2.7A-G-20260923-04` records operator acceptance of the corrected contrast and a remaining oversized-font observation. Website `d27d3eb` keeps the explicit navy/orange/white contrast and reduces metric labels/values to 14px/24px. Tests 6/6, lint/diff and the 244-route Webpack build pass; exact READY Preview `dpl_6hi9JXKX3UGLJuFCwF1EVMcwhwEy` is on staging only. Governance data remains unchanged and Submit for review has not run.

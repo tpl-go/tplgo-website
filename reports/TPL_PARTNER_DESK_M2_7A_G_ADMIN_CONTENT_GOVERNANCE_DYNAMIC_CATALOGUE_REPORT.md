@@ -22,6 +22,12 @@ The exact Vercel Git build for `f07dd05` passed and READY Preview `dpl_C7QqPR2uw
 
 Checkpoint `TPL-PARTNER-M2.7A-G-20260923-04` records that the operator accepted the contrast/readability but found the metric typography oversized. Website `d27d3eb` retains the opaque navy/orange/white treatment while reducing labels from 16px to 14px and values from 30px to 24px. Focused tests remain 6/6, scoped lint/diff and the 244-route Webpack build pass. Exact READY Preview `dpl_6hi9JXKX3UGLJuFCwF1EVMcwhwEy` is assigned only to staging. No governance or Partner data changed; compact-size live recheck remains pending.
 
+### Saved-draft workflow continuation
+
+Checkpoint `TPL-PARTNER-M2.7A-G-20260923-05` adds the requested same-screen continuation. Website `177929f` loads up to 20 private DRAFT items independently from catalogue search/filter state, presents them in a dedicated **Saved drafts** section and opens a selected draft in the existing detail-first workflow. The panel shows the Draft → Review → Approve → Publish sequence and exposes **Edit draft** plus **Submit for approval** according to existing server permissions. It reuses the same canonical entity and endpoints; no second workflow or data copy was added.
+
+Focused governance tests pass 7/7, scoped lint/diff and the 244-route Webpack build pass. Exact Vercel Git build is READY in `dpl_9kHN7BWMcEv4V5NvPwqK3AxB3L67`, assigned only to staging. The retained QA draft remains DRAFT; this UI delivery did not submit, approve or publish it. Operator live recheck is pending.
+
 ## Draft-save and contrast continuation — 2026-09-23
 
 Checkpoint: `TPL-PARTNER-M2.7A-G-20260923-02`
