@@ -1,4 +1,11 @@
 # Partner Desk M1/M2 — structure and supply/media delivery
+## HOTEL-M3B one-by-one synthetic booking reset — 2026-09-24
+
+Checkpoint **TPL-PARTNER-HOTEL-M3B-20260924-ONE-BY-ONE-RESET-08** preserves **HOTEL_M3B_MODIFICATION_CANCELLATION_ORCHESTRATION_STAGING_PARTIAL_AUTHENTICATED_LIVE_FLOW_PENDING**. At the operator's request, a guarded staging-only service control removed exactly the four synthetic HOTEL-M3 fixtures, their fixture request graph and fixture-only internal outbox rows, restored four still-allocated units from 1/8 to 5/8, retained immutable cleanup provenance, and returned a no-op on replay. No direct SQL business mutation was used.
+
+Only `TPL-QA-HOTEL-M3B-MOD-001` was reprovisioned: `CONFIRMED`/version 1, one `ALLOCATED` room, `TEST_NO_PAYMENT`, zero requests, leaving availability 4/8/version 6. Cancellation and withdrawal fixtures are absent. Backend `bd21463` is pushed and runs only on staging 4100 from `/home/tpladmin/tpl-api-releases/partner-hotel-m3b-reset-bd21463e99ed48baf37c115da826af54a0b94948`; backup SHA-256 is `cd8510079531afc944e15d684edf13053a41e5f62b2a981506b83bcc440aaa29` with 1,490 restore-list entries. Actual PostgreSQL/guard tests pass 12/12, exports 4/4, type/build/diff/secret checks pass. Runtime flags are absent, external delivery remains zero, production/unrelated records are untouched, and both APIs are healthy.
+
+Exact next action: the operator refreshes Partner Website Bookings, confirms the single modification booking, and submits only its bounded modification request. Cancellation and withdrawal follow separately after modification reconciliation. Completed M2.6–M2.7B-G statuses, fixed **46 requirements / 213 units**, `PARTNER_PROGRESS_PERCENTAGE_NOT_YET_AUDITABLE`, `MOBILE_USER_PARITY=COMPLETE`, `PARTNER_MOBILE_PARITY=OPEN` and `PHASE_1_STEP_1=OPEN` remain preserved; HOTEL-M3C is not started.
 ## HOTEL-M3B continuation — 2026-09-24 — close control live-confirmed
 
 Checkpoint **TPL-PARTNER-HOTEL-M3B-20260924-FORM-CLOSE-LIVE-07** records the operator's authenticated confirmation that **Close request form** collapses correctly. HOTEL-M3B remains **HOTEL_M3B_MODIFICATION_CANCELLATION_ORCHESTRATION_STAGING_PARTIAL_AUTHENTICATED_LIVE_FLOW_PENDING** until modification/cancellation lifecycle parity completes. No data or production mutation occurred in this visual check.
@@ -21,6 +28,7 @@ Website **6c68d03** and Mobile **7784a46** now explain that every row is a separ
 Website 4/4/lint/244-page build and Mobile 1/1/type/lint/Hermes pass. READY Preview **dpl_Dgaa3CKAXQAwtJ4KGSnRaueQhycf** is assigned only to staging.tplgo.com; existing APK/Metro is reused, health is 200 and no Backend/data/production mutation occurred. Exact next action is an authenticated read-only confirmation of this hierarchy.
 
 All completed M2.6–M2.7B-G and HOTEL-M3A statuses, fixed **46 requirements / 213 units**, PARTNER_PROGRESS_PERCENTAGE_NOT_YET_AUDITABLE, MOBILE_USER_PARITY=COMPLETE, PARTNER_MOBILE_PARITY=OPEN and PHASE_1_STEP_1=OPEN remain preserved. HOTEL-M3C is not started.
+
 ## HOTEL-M3B continuation — 2026-09-24 — booking/request actions separated; authenticated visual check pending
 
 Checkpoint **TPL-PARTNER-HOTEL-M3B-20260924-ACTION-SEPARATION-04** preserves **HOTEL_M3B_MODIFICATION_CANCELLATION_ORCHESTRATION_STAGING_PARTIAL_AUTHENTICATED_LIVE_FLOW_PENDING**. Operator feedback showed the guided flow still mixed the one-time M3A original-booking acknowledgement with M3B review of a later change request, and Website buttons used the native emerald treatment.
@@ -38,6 +46,7 @@ Checkpoint **TPL-PARTNER-HOTEL-M3B-20260924-GUIDED-FLOW-03** preserves **HOTEL_M
 Website scoped lint/build (244 pages) and Mobile type/lint/focused Jest/Hermes pass. READY Preview **dpl_8Wmp8sG2broqWo4YxZMhh7SFt97N** is assigned only to `staging.tplgo.com`; existing APK/Metro is reused. Staging and production Website health are 200; Backend/data/finance/provider behavior and production remain unchanged. Exact next action is a read-only authenticated check of the new open-request card before the normal request withdrawal gate.
 
 All completed M2.6–M2.7B-G and HOTEL-M3A statuses, fixed **46 requirements / 213 units**, `PARTNER_PROGRESS_PERCENTAGE_NOT_YET_AUDITABLE`, `MOBILE_USER_PARITY=COMPLETE`, `PARTNER_MOBILE_PARITY=OPEN` and `PHASE_1_STEP_1=OPEN` remain preserved. HOTEL-M3C is not started.
+
 ## HOTEL-M3B continuation — 2026-09-24 — open-request guard deployed; authenticated recheck pending
 
 Checkpoint **TPL-PARTNER-HOTEL-M3B-20260924-OPEN-REQUEST-GUARD-02** preserves **HOTEL_M3B_MODIFICATION_CANCELLATION_ORCHESTRATION_STAGING_PARTIAL_AUTHENTICATED_LIVE_FLOW_PENDING**. Canonical request TPL-MOD-D9853CDA is SUBMITTED version 1 while its booking correctly remains CONFIRMED version 1 and financially unchanged. A live defect left duplicate Submit enabled because clients used membership canSubmit; Backend d9da3cb now supplies per-booking OPEN_REQUEST_EXISTS eligibility, Website df81142 and Mobile 56ad638 disable duplicate submission, and the older HOTEL-M3A acknowledgement is explicitly labelled as a confirmed-booking stay-lifecycle action.

@@ -1,4 +1,20 @@
 # TPL Partner Desk — HOTEL-M3B Modification and Cancellation Request Orchestration
+## One-by-one synthetic booking reset — 2026-09-24
+
+**Checkpoint:** `TPL-PARTNER-HOTEL-M3B-20260924-ONE-BY-ONE-RESET-08`
+**Previous/current status:** `HOTEL_M3B_MODIFICATION_CANCELLATION_ORCHESTRATION_STAGING_PARTIAL_AUTHENTICATED_LIVE_FLOW_PENDING`
+
+The operator explicitly authorized deletion of the four confusing staging-only synthetic booking fixtures and requested that HOTEL-M3B be exercised one scenario at a time. The exact removed references were `TPL-QA-HOTEL-M3A-001`, `TPL-QA-HOTEL-M3B-MOD-001`, `TPL-QA-HOTEL-M3B-CAN-001` and `TPL-QA-HOTEL-M3B-WD-001`. A supported control was added instead of using ad-hoc SQL. It requires `TPL_ENVIRONMENT=staging`, port 4100, a process-local explicit cleanup flag, a non-production process mode, exact fixture keys, synthetic organization/source markers, a transaction and advisory lock. Missing guards fail closed. Cleanup retains immutable provenance in `ops.audit_events`, removes only fixture-owned internal outbox rows, restores only still-allocated capacity, and has no payment, provider or external-notification path.
+
+Before cleanup, canonical readback showed all four exact bookings and four `ALLOCATED` rows, one submitted modification request and availability 1 of 8. Protected backup `/home/tpladmin/backups/tpl-partner-hotel-m3-reset-pre-20260924T172833Z.dump`, SHA-256 `cd8510079531afc944e15d684edf13053a41e5f62b2a981506b83bcc440aaa29`, passed `pg_restore --list` with 1,490 entries. Cleanup deleted exactly four bookings and one request, restored four allocated units to 5 of 8, and its immediate replay returned a no-op. Cleanup audit records `deletedBookings=4` and `restoredAllocation=4`.
+
+Only the modification scenario was then provisioned through the guarded service contract. Canonical post-check shows exactly one retained fixture: `TPL-QA-HOTEL-M3B-MOD-001`, `CONFIRMED`, version 1, `ALLOCATED` quantity 1, `TEST_NO_PAYMENT`, zero requests; availability is 4 of 8/version 6. Cancellation and withdrawal fixtures do not exist. External-delivery-true outbox count is zero. Both cleanup and provisioning flags are absent from the running PM2 environment.
+
+Backend source `bd21463e99ed48baf37c115da826af54a0b94948` was committed and pushed. It runs only on `tpl-api-partner-staging`/4100 from `/home/tpladmin/tpl-api-releases/partner-hotel-m3b-reset-bd21463e99ed48baf37c115da826af54a0b94948`; archive SHA-256 is `0b43798181c31119ee93ad32669641c65013224a91b3d9468c3380dc1f2d4f08`. No migration, Website source, Mobile source or APK changed. Actual isolated PostgreSQL plus fail-closed guard coverage passes 12/12; focused exports pass 4/4; TypeScript and production build pass; scoped diff and secret checks pass. The PostgreSQL suite caught and corrected an invalid aggregate `FOR UPDATE` clause before deployment. Staging and production API health are 200; production PID/process/database/aliases/data and unrelated staging records remain untouched.
+
+**Exact next action:** refresh Partner Website → Bookings and confirm only `TPL-QA-HOTEL-M3B-MOD-001` is visible. Open its optional change-request form and submit the bounded modification for check-in `2026-10-02`, check-out `2026-10-03`, adults `3`, children `0`, reason **Date change**. Do not acknowledge the stay lifecycle or approve the request in the same step. Cancellation and withdrawal will be provisioned separately only after the modification flow is reconciled.
+
+Completed M2.6–M2.7B-G and HOTEL-M3A historical evidence remains preserved. Fixed **46 requirements / 213 units**, `PARTNER_PROGRESS_PERCENTAGE_NOT_YET_AUDITABLE`, `MOBILE_USER_PARITY=COMPLETE`, `PARTNER_MOBILE_PARITY=OPEN` and `PHASE_1_STEP_1=OPEN` remain unchanged. HOTEL-M3C is not started.
 ## Authenticated close-control confirmation — 2026-09-24
 
 **Checkpoint:** TPL-PARTNER-HOTEL-M3B-20260924-FORM-CLOSE-LIVE-07
