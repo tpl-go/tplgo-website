@@ -1,4 +1,12 @@
 # Partner Desk M1/M2 — structure and supply/media delivery
+## HOTEL-M3B continuation — 2026-09-24 — explicit request-form close deployed
+
+Checkpoint **TPL-PARTNER-HOTEL-M3B-20260924-FORM-CLOSE-06** preserves **HOTEL_M3B_MODIFICATION_CANCELLATION_ORCHESTRATION_STAGING_PARTIAL_AUTHENTICATED_LIVE_FLOW_PENDING**. Website **6603c65** adds an explicit **Close request form** action to the optional modification/cancellation composer; it collapses without creating or changing any request. Customer-origin requests still require Hotel operational review followed by Admin final approval; Hotel-origin requests go to Admin and cannot be self-approved.
+
+Focused contracts 4/4, scoped lint/diff and the 244-page Webpack build pass. READY Preview **dpl_AkyejkGbmVpTWJMn2yxjiX34utWc** is assigned only to staging.tplgo.com; both staging and production Website health are 200. Backend, Mobile/APK, booking/allocation/finance data and production are unchanged. Exact next action is one authenticated visual close-control check.
+
+All completed M2.6–M2.7B-G and HOTEL-M3A statuses, fixed **46 requirements / 213 units**, PARTNER_PROGRESS_PERCENTAGE_NOT_YET_AUDITABLE, MOBILE_USER_PARITY=COMPLETE, PARTNER_MOBILE_PARITY=OPEN and PHASE_1_STEP_1=OPEN remain preserved. HOTEL-M3C is not started.
+
 
 ## HOTEL-M3B continuation — 2026-09-24 — per-booking next action deployed; authenticated check pending
 

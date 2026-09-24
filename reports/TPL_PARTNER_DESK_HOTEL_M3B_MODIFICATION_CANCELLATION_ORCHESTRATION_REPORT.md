@@ -1,4 +1,17 @@
 # TPL Partner Desk — HOTEL-M3B Modification and Cancellation Request Orchestration
+## Request-form close and authority clarification — 2026-09-24
+
+**Checkpoint:** TPL-PARTNER-HOTEL-M3B-20260924-FORM-CLOSE-06
+**Status:** HOTEL_M3B_MODIFICATION_CANCELLATION_ORCHESTRATION_STAGING_PARTIAL_AUTHENTICATED_LIVE_FLOW_PENDING
+
+Authenticated operator review accepted the per-booking presentation and identified one remaining usability defect: after opening optional modification/cancellation creation, Website had no explicit close action. Website **6603c65** adds **Close request form**, keeps the form collapsed by default, and resets it closed when another booking is selected. The control is presentation-only and performs no request, booking, allocation or financial mutation.
+
+The existing canonical authority was rechecked. Customer-origin requests are submitted to the Hotel for operational acknowledgement/recommendation and then require authorized Admin final approval. Hotel/Partner may also originate a modification or cancellation request directly; it proceeds to Admin review and the Hotel cannot final-approve its own request. The confirmed booking changes only after Admin approval applies successfully. Payment/refund/provider execution remains outside HOTEL-M3B.
+
+Verification: Website request/booking contracts 4/4, scoped ESLint, `git diff --check`, and Webpack production build with 244/244 pages pass. The default Turbopack attempt timed out in the unrelated `globals.css` PostCSS worker; Vercel's clean Turbopack build passed 243/243 routes. READY Preview **dpl_AkyejkGbmVpTWJMn2yxjiX34utWc** is assigned only to `staging.tplgo.com`; staging and production Website health are HTTP 200. Backend, Mobile, APK, database and production state are unchanged.
+
+**Exact next action:** refresh the authenticated Partner Website, open the optional request form and confirm **Close request form** collapses it without submitting or changing the selected booking. Full HOTEL-M3B PASS still requires the remaining authenticated modification/cancellation lifecycle evidence.
+
 
 ## Per-booking next-action hierarchy — 2026-09-24
 
