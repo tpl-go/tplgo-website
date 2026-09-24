@@ -1,5 +1,21 @@
 # TPL Partner Desk — HOTEL-M3B Modification and Cancellation Request Orchestration
 
+## Open-request eligibility correction — 2026-09-24
+
+**Checkpoint:** TPL-PARTNER-HOTEL-M3B-20260924-OPEN-REQUEST-GUARD-02
+**Previous/current status:** HOTEL_M3B_MODIFICATION_CANCELLATION_ORCHESTRATION_STAGING_PARTIAL_AUTHENTICATED_LIVE_FLOW_PENDING
+
+The first authenticated Partner submission created canonical request **TPL-MOD-D9853CDA** in SUBMITTED version 1 for TPL-QA-HOTEL-M3B-MOD-001. The booking correctly remains CONFIRMED version 1, allocated and TEST_NO_PAYMENT. The request recorded the current dates/guest counts and Date Change as a non-guaranteed special request; it has not been acknowledged, decided or applied.
+
+Live observation exposed a presentation/read-contract defect: the API enforced one open request transactionally, but Partner Website and Mobile used the membership-level canSubmit grant as booking eligibility, leaving **Submit request for review** enabled. Backend **d9da3cb** now returns bounded server-authoritative eligibility per visible booking and reports OPEN_REQUEST_EXISTS while a Draft/Submitted/Under Review request exists. Website **df81142** and Mobile **56ad638** consume that result, disable duplicate submission and explain that the open request must be resolved or withdrawn first. The older HOTEL-M3A action is now labelled **Acknowledge confirmed booking · stay lifecycle** so it cannot be confused with **Acknowledge request**; confirmed booking state remains intentionally unchanged before approval.
+
+Fresh verification: actual isolated PostgreSQL HOTEL-M3B suite 8/8 (including the open-request snapshot assertion), Backend export 2/2, Backend type/build, Website request contract 2/2 plus scoped ESLint and 244-page production Webpack build, and Mobile 2 suites/3 tests, TypeScript, scoped ESLint and Android Hermes export. git diff --check and scoped secret checks passed. A broad Website TypeScript run still reports the repository’s pre-existing Vitest shim/test-declaration and ES-target issues; it is not represented as a new M3B failure or as a broad typecheck pass.
+
+Delivery is Backend d9da3cb in immutable staging release /home/tpladmin/tpl-api-releases/partner-hotel-m3b-d9da3cb-r2, archive SHA-256 2ca0d3040e52f204951c7c9164e6694019dc42259eeead40caf38d01cdabe2ed; Website df81142 in READY Preview dpl_HzSd6FB4dFScpcobtHqZBHhfPqJK assigned only to staging.tplgo.com; Mobile 56ad638 through the existing Development APK/Metro. Staging and production Website/API final health are 200. The fixture flag is absent; production remains untouched.
+
+**Exact next action:** refresh the staging Partner Website on TPL-QA-HOTEL-M3B-MOD-001 and confirm **Submit request for review** is disabled with **Resolve or withdraw the open request first.** Do not click the separate stay-lifecycle acknowledgement. After that confirmation, withdraw TPL-MOD-D9853CDA through the normal request action so it becomes the required no-mutation withdrawal proof, then submit the intended bounded modification as a separate operator step.
+
+
 **Checkpoint:** `TPL-PARTNER-HOTEL-M3B-20260924-LIVE-GATE-01`
 **Date:** 2026-09-24 (Asia/Calcutta)
 **Batch:** `PARTNER_DESK_HOTEL_M3B_MODIFICATION_CANCELLATION_ORCHESTRATION`

@@ -1,5 +1,12 @@
 # Partner Desk M1/M2 — structure and supply/media delivery
 
+## HOTEL-M3B continuation — 2026-09-24 — open-request guard deployed; authenticated recheck pending
+
+Checkpoint **TPL-PARTNER-HOTEL-M3B-20260924-OPEN-REQUEST-GUARD-02** preserves **HOTEL_M3B_MODIFICATION_CANCELLATION_ORCHESTRATION_STAGING_PARTIAL_AUTHENTICATED_LIVE_FLOW_PENDING**. Canonical request TPL-MOD-D9853CDA is SUBMITTED version 1 while its booking correctly remains CONFIRMED version 1 and financially unchanged. A live defect left duplicate Submit enabled because clients used membership canSubmit; Backend d9da3cb now supplies per-booking OPEN_REQUEST_EXISTS eligibility, Website df81142 and Mobile 56ad638 disable duplicate submission, and the older HOTEL-M3A acknowledgement is explicitly labelled as a confirmed-booking stay-lifecycle action.
+
+Actual PostgreSQL remains 8/8 with the new eligibility assertion; Backend export 2/2/type/build, Website focused 2/2/lint/244-page build and Mobile 2 suites/3 tests/type/lint/Hermes pass. Runtime is Backend release /home/tpladmin/tpl-api-releases/partner-hotel-m3b-d9da3cb-r2 on 4100 only and READY Website deployment dpl_HzSd6FB4dFScpcobtHqZBHhfPqJK on staging.tplgo.com; existing APK retained. Final staging/production health is 200 and production remains untouched. Exact next action is a read-only refresh confirming the disabled Submit/explanation before normal withdrawal of the unintended request.
+
+
 ## HOTEL-M3B continuation — 2026-09-24 — implementation/database/staging pass; authenticated live flow pending
 
 Checkpoint `TPL-PARTNER-HOTEL-M3B-20260924-LIVE-GATE-01` records **`HOTEL_M3B_MODIFICATION_CANCELLATION_ORCHESTRATION_STAGING_PARTIAL_AUTHENTICATED_LIVE_FLOW_PENDING`**. The canonical booking aggregate now supports separate modification/cancellation requests with Draft → Submitted → Under Review → final decision states, server eligibility, maker-checker authority, atomic allocation application/release, optimistic versions, idempotency, immutable snapshots, audit and internal-only outbox events. Payment/refund/provider/external-notification execution remains outside scope.
