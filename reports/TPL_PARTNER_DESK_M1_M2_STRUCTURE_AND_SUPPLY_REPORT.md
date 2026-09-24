@@ -1,5 +1,15 @@
 # Partner Desk M1/M2 — structure and supply/media delivery
 
+## HOTEL-M3B continuation — 2026-09-24 — implementation/database/staging pass; authenticated live flow pending
+
+Checkpoint `TPL-PARTNER-HOTEL-M3B-20260924-LIVE-GATE-01` records **`HOTEL_M3B_MODIFICATION_CANCELLATION_ORCHESTRATION_STAGING_PARTIAL_AUTHENTICATED_LIVE_FLOW_PENDING`**. The canonical booking aggregate now supports separate modification/cancellation requests with Draft → Submitted → Under Review → final decision states, server eligibility, maker-checker authority, atomic allocation application/release, optimistic versions, idempotency, immutable snapshots, audit and internal-only outbox events. Payment/refund/provider/external-notification execution remains outside scope.
+
+Actual PostgreSQL coverage passes 8/8 and export coverage 2/2. Website focused tests pass 4/4; Mobile passes 3 focused tests plus TypeScript/lint/Hermes. Backend `96501f0` runs in `/home/tpladmin/tpl-api-releases/partner-hotel-m3b-96501f0`, Website `3ae6f95` is READY deployment `dpl_Fu69KqkZnGjmfWBfcpbFzcCG1otG` on staging only, and Mobile `d6c540b` reuses the Development APK/Metro. The restore-readable backup is `/home/tpladmin/backups/tpl-partner-hotel-m3b-pre-0064-20260924T122357Z.dump`, SHA-256 `42698a2f72d8fdec8ad8b60b1d8b89da01c25f3f8ac2f5059717b5dc13098747`.
+
+Three guarded fictional bookings were created exactly once. Availability moved from 4/version 3 to 1/version 4 through three allocations; all retain `TEST_NO_PAYMENT`, zero requests currently exist, and M3A remains `CHECKED_OUT` version 5. Staging and production API/Website health remain 200; production is untouched. Exact next action is the normal Website modification request for `TPL-QA-HOTEL-M3B-MOD-001`; no live or PDF PASS is claimed before authenticated parity.
+
+All completed M2.6–M2.7B-G and HOTEL-M3A statuses, fixed **46 requirements / 213 units**, `PARTNER_PROGRESS_PERCENTAGE_NOT_YET_AUDITABLE`, `MOBILE_USER_PARITY=COMPLETE`, `PARTNER_MOBILE_PARITY=OPEN` and `PHASE_1_STEP_1=OPEN` remain preserved. HOTEL-M3C is not started.
+
 ## HOTEL-M3A continuation — 2026-09-24 — booking inbox and stay lifecycle pass
 
 Checkpoint `TPL-PARTNER-HOTEL-M3A-20260924-E2E-PASS-01` records **`HOTEL_M3A_BOOKING_INBOX_STAY_LIFECYCLE_STAGING_END_TO_END_PASS`**. One guarded synthetic booking, `TPL-QA-HOTEL-M3A-001`, used the retained staging Hotel and `Synthetic Deluxe Room — QA Only`. The canonical lifecycle completed `CONFIRMED → PARTNER_ACKNOWLEDGED → READY_FOR_CHECK_IN → CHECKED_IN → CHECKED_OUT`: Website acknowledged and checked in; native Mobile marked ready and checked out; Website, Mobile, Admin and customer detail reconciled to version 5 and the same five-event timeline.
