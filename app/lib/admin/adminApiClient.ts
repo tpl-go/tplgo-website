@@ -45,6 +45,7 @@ export type ContentGovernanceItem = {
 export type ContentGovernanceResponse = {
   contractVersion: 1;
   catalogue: { code: string; capabilityFamilyCode: string; serviceCodes: string[]; publishedVersion: number; status: string; updatedAt: string; retainedOriginalCounts: { total: number; property: number; room: number }; currentCounts: { total: number; property: number; room: number } };
+  entityTypeCounts: Record<string,{ total:number; published:number; draft:number; inReview:number; approved:number }>;
   items: ContentGovernanceItem[];
   page: { limit: number; nextAfter: string | null };
   permissions: { canRead: boolean; canWrite: boolean; canReview: boolean; canPublish: boolean };

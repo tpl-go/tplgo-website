@@ -34,6 +34,12 @@ test("keeps saved drafts visible and reopens the detail-first approval flow",()=
  expect(component).toContain("Draft → Review → Approve → Publish");
  expect(component).toContain("Open draft");
  expect(component).toContain('getContentGovernanceCatalogue({status:"DRAFT",limit:"20"})');
+ expect(component).toContain('Policy Templates');
+ expect(component).toContain('Inclusions');
+ expect(component).toContain('Exclusions');
+ expect(component).toContain('entityTypeCounts');
+ expect(component).toContain('window.history.replaceState');
+ expect(component).toContain('New Boolean or Enum Hotel catalogue options');
  expect(component).toContain("setEditing(false)");
  expect(component).toContain("Submit for approval");
 });

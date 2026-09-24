@@ -18,7 +18,12 @@ test('Hotel policy flow is structured, review-gated and uses the canonical Partn
  expect(workspace).toContain("'/review'");
  expect(contract).toContain('policyCatalogueVersion');
  expect(contract).toContain('PartnerHotelPolicyConfiguration');
+ expect(contract).toContain('helpText?:string|null');
+ expect(editor).toContain('Additional Published Policies');
+ expect(editor).toContain('policyValues');
+ expect(editor).toContain('Published options remain unselected');
  expect(preview).toContain('approved_policy_only');
+ expect(preview).toContain('record.additionalPolicies?.length');
  expect(preview).toContain('Hotel policies awaiting approval');
 });
 
