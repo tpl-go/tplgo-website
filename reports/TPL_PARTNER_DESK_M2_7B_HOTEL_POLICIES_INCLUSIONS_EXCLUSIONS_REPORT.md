@@ -1,5 +1,14 @@
 # TPL Partner Desk M2.7B — Hotel Policies and Structured Inclusions/Exclusions
 
+## M2.7B-G governance addendum — 2026-09-24
+
+Checkpoint `TPL-PARTNER-M2.7B-G-20260924-01` closes the separate visible canonical governance gap with **`M2_7B_G_ADMIN_POLICY_INCLUSION_EXCLUSION_GOVERNANCE_STAGING_END_TO_END_PASS`**. M2.7B remains **`M2_7B_HOTEL_POLICIES_INCLUSIONS_EXCLUSIONS_STAGING_END_TO_END_PASS`**; prior M2.7B evidence proved Hotel-specific configuration/review/customer projection but did not prove visible Admin Policy Template/Inclusion/Exclusion catalogue management.
+
+The common M2.7A-G engine now exposes first-class Policy Templates, Inclusions and Exclusions under Website & Experience → Content & Attribute Catalogue. Original 10/7/6 entries retain their meaning and publication state. The separately identified QA lifecycle proofs bring active published counts to 11/8/7, each at usage 0. Operator-observed normal publishing, Website/Mobile unselected parity, customer non-appearance and readable CSV/XLSX/PDF/Print pass. Canonical Hotel state stays Approved version 4 with two inclusions, two exclusions and zero configured QA policies.
+
+Actual PostgreSQL coverage passes 17/17. Current source/runtime evidence is Backend `1bd0b5c`, Website `6a60c36` in READY deployment `dpl_3c9fLrXfQvVE33h6wA82R5M18CJq`, and Mobile `59a2587` with the existing APK. Production remains untouched. Full evidence: `TPL_PARTNER_DESK_M2_7B_G_ADMIN_POLICY_GOVERNANCE_REPORT.md`.
+
+
 Recorded: 2026-09-23
 
 Checkpoint: `TPL-PARTNER-M2.7B-20260924-05`

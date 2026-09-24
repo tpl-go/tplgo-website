@@ -1,5 +1,10 @@
 # TPL Partner Desk M2.7A-G — Admin Content Governance and Dynamic Catalogue
 
+## M2.7B-G reuse reference — 2026-09-24
+
+Checkpoint `TPL-PARTNER-M2.7B-G-20260924-01` reuses this completed Content Governance engine for visible Policy Template, Inclusion and Exclusion administration. It does not revise M2.7A-G evidence or its PASS. The original governed amenity baseline, Jacuzzi QA proof, Hotel selections and customer projection remain unchanged. Detailed evidence is in `TPL_PARTNER_DESK_M2_7B_G_ADMIN_POLICY_GOVERNANCE_REPORT.md`.
+
+
 Recorded: 2026-09-23
 
 Checkpoint: `TPL-PARTNER-M2.7A-G-20260923-11`

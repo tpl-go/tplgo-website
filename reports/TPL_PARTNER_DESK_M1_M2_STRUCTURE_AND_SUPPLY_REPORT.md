@@ -1,5 +1,14 @@
 # Partner Desk M1/M2 — structure and supply/media delivery
 
+## M2.7B-G continuation — 2026-09-24 — Admin policy/inclusion/exclusion governance pass
+
+Checkpoint `TPL-PARTNER-M2.7B-G-20260924-01` adds **`M2_7B_G_ADMIN_POLICY_INCLUSION_EXCLUSION_GOVERNANCE_STAGING_END_TO_END_PASS`** while preserving the completed M2.7B status. Website & Experience → Content & Attribute Catalogue now visibly governs Policy Templates, Inclusions and Exclusions through the shared Draft → Review → Approve → Publish lifecycle. The retained 10/7/6 catalogue is unchanged in meaning; three separate unselected QA proofs make active published counts 11/8/7 at zero usage.
+
+Operator live checks pass for the **New policy** action, Website/Mobile canonical option parity, customer non-appearance and readable CSV/XLSX/PDF/Print. Canonical Hotel Approved version 4 remains at two inclusions, two exclusions and zero additional QA policies. PostgreSQL 17/17 and focused Website/Mobile checks pass. Backend `1bd0b5c`, Website `6a60c36` / `dpl_3c9fLrXfQvVE33h6wA82R5M18CJq`, Mobile `59a2587`; existing APK reused. Production and unrelated data are unchanged.
+
+The fixed **46 requirements / 213 units**, `PARTNER_PROGRESS_PERCENTAGE_NOT_YET_AUDITABLE`, `MOBILE_USER_PARITY=COMPLETE`, `PARTNER_MOBILE_PARITY=OPEN` and `PHASE_1_STEP_1=OPEN` remain preserved. Next separate Hotel step is M3 Hotel Booking Operations and Lifecycle; it was not started.
+
+
 ## M2.7B continuation — 2026-09-24 — end-to-end staging pass
 
 Checkpoint `TPL-PARTNER-M2.7B-20260924-05` advances M2.7B from `M2_7B_HOTEL_POLICIES_INCLUSIONS_EXCLUSIONS_STAGING_PARTIAL_CUSTOMER_EXPORT_LIVE_PENDING` to **`M2_7B_HOTEL_POLICIES_INCLUSIONS_EXCLUSIONS_STAGING_END_TO_END_PASS`**. The operator confirmed the approved Hotel Policies, What’s Included and What’s Not Included customer preview is correct and the bounded CSV/XLSX/PDF/Print outputs are correct/readable. Approved version 4 remains canonical with two inclusions and two exclusions; template publication, Hotel selection, review and customer publication remain distinct.
