@@ -1,5 +1,19 @@
 # TPL Partner Desk — HOTEL-M3B Modification and Cancellation Request Orchestration
 
+## Guided request-flow presentation correction — 2026-09-24
+
+**Checkpoint:** TPL-PARTNER-HOTEL-M3B-20260924-GUIDED-FLOW-03
+**Status:** HOTEL_M3B_MODIFICATION_CANCELLATION_ORCHESTRATION_STAGING_PARTIAL_AUTHENTICATED_LIVE_FLOW_PENDING
+
+The authenticated Partner screen correctly blocked a duplicate submission, but booking state, stay-lifecycle acknowledgement, request form, request state and history had equal visual priority. The operator could not quickly tell what happened, what remained unchanged or which action came next.
+
+Website revision **6b72e4b** and Mobile revision **4456512** add one guided flow. When an open request exists, the new-request form is hidden. A four-step tracker shows Prepare → Submitted → Admin review → Booking updated; a dedicated open-request card shows the request reference/state, confirms that the canonical booking is unchanged, states the exact next action, and exposes only eligible Acknowledge-request and Withdraw-request controls. The M3A action is isolated in a separate **Stay lifecycle** panel. Request history and both immutable timelines are secondary reference content instead of competing primary actions. Mobile uses the approved emerald/gold/white palette and the same information order. The existing server eligibility, optimistic version and one-open-request guard remain authoritative.
+
+The existing Partner withdraw endpoint is now available from Website and Mobile with confirmation, current request version and deterministic surface/version idempotency key. Withdrawing closes only the request; it does not change the confirmed booking or allocation. No Backend, schema, finance, payment, refund, provider or external-notification behavior changed.
+
+Verification: Website scoped ESLint has 0 errors (one pre-existing form-reset hook dependency warning), `git diff --check` passes, and the production Webpack build compiled and generated 244/244 pages. Mobile TypeScript, scoped ESLint, focused Jest 1/1 and Android Hermes export pass; bundle `_expo/static/js/android/entry-cd2310b1089594087bde46e550972636.hbc` was produced. Scoped secret checks found no credential material. Website Preview **dpl_8Wmp8sG2broqWo4YxZMhh7SFt97N** is READY and assigned only to `staging.tplgo.com`; final staging and production Website health are 200. The existing Development APK/app data is reused through Metro.
+
+**Exact next action:** refresh the selected staging Partner booking and confirm the open-request card clearly shows **Confirmed booking is unchanged**, request **TPL-MOD-D9853CDA / SUBMITTED**, and **What to do next**, with no duplicate new-request form. Do not click the separate stay-lifecycle acknowledgement. After that read-only confirmation, withdraw the unintended request through **Withdraw this request** as the separate authenticated mutation gate.
 ## Open-request eligibility correction — 2026-09-24
 
 **Checkpoint:** TPL-PARTNER-HOTEL-M3B-20260924-OPEN-REQUEST-GUARD-02

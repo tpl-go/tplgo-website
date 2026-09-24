@@ -1,5 +1,12 @@
 # Partner Desk M1/M2 — structure and supply/media delivery
 
+## HOTEL-M3B continuation — 2026-09-24 — guided request flow deployed; authenticated visual recheck pending
+
+Checkpoint **TPL-PARTNER-HOTEL-M3B-20260924-GUIDED-FLOW-03** preserves **HOTEL_M3B_MODIFICATION_CANCELLATION_ORCHESTRATION_STAGING_PARTIAL_AUTHENTICATED_LIVE_FLOW_PENDING**. A live usability defect mixed confirmed-booking state, M3A stay acknowledgement, M3B request status/form/actions and history. Website **6b72e4b** and Mobile **4456512** now show a four-step request tracker, one open-request summary with explicit unchanged-booking and next-action text, separate request Acknowledge/Withdraw controls, a separate Stay lifecycle panel, and secondary history/timelines. An open request hides the new-request form completely.
+
+Website scoped lint/build (244 pages) and Mobile type/lint/focused Jest/Hermes pass. READY Preview **dpl_8Wmp8sG2broqWo4YxZMhh7SFt97N** is assigned only to `staging.tplgo.com`; existing APK/Metro is reused. Staging and production Website health are 200; Backend/data/finance/provider behavior and production remain unchanged. Exact next action is a read-only authenticated check of the new open-request card before the normal request withdrawal gate.
+
+All completed M2.6–M2.7B-G and HOTEL-M3A statuses, fixed **46 requirements / 213 units**, `PARTNER_PROGRESS_PERCENTAGE_NOT_YET_AUDITABLE`, `MOBILE_USER_PARITY=COMPLETE`, `PARTNER_MOBILE_PARITY=OPEN` and `PHASE_1_STEP_1=OPEN` remain preserved. HOTEL-M3C is not started.
 ## HOTEL-M3B continuation — 2026-09-24 — open-request guard deployed; authenticated recheck pending
 
 Checkpoint **TPL-PARTNER-HOTEL-M3B-20260924-OPEN-REQUEST-GUARD-02** preserves **HOTEL_M3B_MODIFICATION_CANCELLATION_ORCHESTRATION_STAGING_PARTIAL_AUTHENTICATED_LIVE_FLOW_PENDING**. Canonical request TPL-MOD-D9853CDA is SUBMITTED version 1 while its booking correctly remains CONFIRMED version 1 and financially unchanged. A live defect left duplicate Submit enabled because clients used membership canSubmit; Backend d9da3cb now supplies per-booking OPEN_REQUEST_EXISTS eligibility, Website df81142 and Mobile 56ad638 disable duplicate submission, and the older HOTEL-M3A acknowledgement is explicitly labelled as a confirmed-booking stay-lifecycle action.
