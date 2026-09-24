@@ -1,5 +1,15 @@
 # Partner Desk M1/M2 — structure and supply/media delivery
 
+## HOTEL-M3B continuation — 2026-09-24 — booking/request actions separated; authenticated visual check pending
+
+Checkpoint **TPL-PARTNER-HOTEL-M3B-20260924-ACTION-SEPARATION-04** preserves **HOTEL_M3B_MODIFICATION_CANCELLATION_ORCHESTRATION_STAGING_PARTIAL_AUTHENTICATED_LIVE_FLOW_PENDING**. Operator feedback showed the guided flow still mixed the one-time M3A original-booking acknowledgement with M3B review of a later change request, and Website buttons used the native emerald treatment.
+
+Website **a2f0f15** now uses orange primary actions and visibly separates **Original booking receipt / Stay lifecycle** from **Change request**. The open request shows confirmed versus requested values directly, states that the booking is unchanged, and labels Partner review as sending the request/review to TPL Admin; only Admin approval applies it. Mobile **bdcec57** preserves the approved emerald/gold palette with matching semantics.
+
+Website contracts 4/4, lint and 244-page Webpack build pass. Mobile contract 1/1, type/lint and Android Hermes export pass. READY Preview **dpl_5SHP7qpjr6m8iaEHonbbp184gHNf** is assigned only to staging.tplgo.com; existing APK/Metro is reused and staging/production Website health is 200. No Backend, schema, data, allocation, finance, provider or production mutation occurred. Exact next action is one authenticated read-only check of the separated actions and comparison before any normal workflow mutation.
+
+All completed M2.6–M2.7B-G and HOTEL-M3A statuses, fixed **46 requirements / 213 units**, PARTNER_PROGRESS_PERCENTAGE_NOT_YET_AUDITABLE, MOBILE_USER_PARITY=COMPLETE, PARTNER_MOBILE_PARITY=OPEN and PHASE_1_STEP_1=OPEN remain preserved. HOTEL-M3C is not started.
+
 ## HOTEL-M3B continuation — 2026-09-24 — guided request flow deployed; authenticated visual recheck pending
 
 Checkpoint **TPL-PARTNER-HOTEL-M3B-20260924-GUIDED-FLOW-03** preserves **HOTEL_M3B_MODIFICATION_CANCELLATION_ORCHESTRATION_STAGING_PARTIAL_AUTHENTICATED_LIVE_FLOW_PENDING**. A live usability defect mixed confirmed-booking state, M3A stay acknowledgement, M3B request status/form/actions and history. Website **6b72e4b** and Mobile **4456512** now show a four-step request tracker, one open-request summary with explicit unchanged-booking and next-action text, separate request Acknowledge/Withdraw controls, a separate Stay lifecycle panel, and secondary history/timelines. An open request hides the new-request form completely.

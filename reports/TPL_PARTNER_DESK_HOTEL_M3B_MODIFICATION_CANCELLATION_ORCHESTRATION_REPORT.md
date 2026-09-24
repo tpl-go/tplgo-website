@@ -1,5 +1,21 @@
 # TPL Partner Desk — HOTEL-M3B Modification and Cancellation Request Orchestration
 
+## Booking receipt and change-request action separation — 2026-09-24
+
+**Checkpoint:** TPL-PARTNER-HOTEL-M3B-20260924-ACTION-SEPARATION-04
+**Status:** HOTEL_M3B_MODIFICATION_CANCELLATION_ORCHESTRATION_STAGING_PARTIAL_AUTHENTICATED_LIVE_FLOW_PENDING
+
+Authenticated operator feedback confirmed the guided card was improved, but two independent actions were still visually ambiguous: M3A acknowledgement of the original confirmed booking and M3B Partner review of a later modification/cancellation request. Website also incorrectly reused the native emerald primary-button treatment; the established Website action color is orange.
+
+Website revision **a2f0f15** now labels the first stream **Original booking receipt / Stay lifecycle** and the second **Change request**. A confirmed booking shows a one-time acknowledgement as pending; after the canonical status advances it is labelled completed and is not presented as another acknowledgement. The open request card displays Current confirmed booking and Requested change side by side, explains that nothing has changed, and uses **Send my request to TPL Admin review** for Partner-origin requests or **Send Partner review to TPL Admin** for customer-origin requests. Final application remains an authorized Admin decision. Website primary actions are orange; native Mobile revision **bdcec57** retains the approved emerald/gold/white palette while using the same action semantics.
+
+No Backend contract or data changed. SUBMITTED to UNDER_REVIEW remains Partner review only, while booking acknowledgement remains the separate M3A transition. The retained request/booking are not mutated by this presentation deployment.
+
+Verification: Website request contracts pass 4/4, scoped ESLint has zero errors with one pre-existing hook warning, Webpack production build passes 244/244 pages, scoped diff and secret checks pass. Mobile request contract passes 1/1; TypeScript and scoped lint pass; Android Hermes/public-config export produced _expo/static/js/android/entry-19481ea603dd06e966127910466b5aa2.hbc. Existing Development APK/app data and Metro are reused. Website Preview **dpl_5SHP7qpjr6m8iaEHonbbp184gHNf** is READY and assigned only to staging.tplgo.com; staging and production Website health are HTTP 200. Backend, schema, booking/allocation, payment/refund/provider behavior and production are untouched.
+
+**Exact next action:** refresh the authenticated Partner Website booking and confirm orange actions, the separate Booking receipt and Change request cards, and the visible Current confirmed booking versus Requested change comparison. Do not click either action during this read-only check. After confirmation, acknowledge the original booking once only if its card remains Pending, then treat the change request separately.
+ TPL Partner Desk — HOTEL-M3B Modification and Cancellation Request Orchestration
+
 ## Guided request-flow presentation correction — 2026-09-24
 
 **Checkpoint:** TPL-PARTNER-HOTEL-M3B-20260924-GUIDED-FLOW-03
