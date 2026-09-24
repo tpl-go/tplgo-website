@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import HotelConfirmationStayCard from "@/app/components/confirmation/hotel/HotelConfirmationStayCard";
 import HotelConfirmationGuestCard from "@/app/components/confirmation/hotel/HotelConfirmationGuestCard";
 import HotelConfirmationFareCard from "@/app/components/confirmation/hotel/HotelConfirmationFareCard";
+import HotelBookingRequestPanel from "@/app/components/account/HotelBookingRequestPanel";
 
 import {
   BOOKING_UPDATED_EVENT,
@@ -292,6 +293,8 @@ export default function HotelBookingDetailPage() {
             travellers={guestList}
             contactDetails={contactDetails}
           />
+
+          <HotelBookingRequestPanel bookingId={booking.id} stayStart={checkIn} stayEnd={checkOut} adults={adults} childGuests={children} guestName={stayLifecycle?.hotel ? "Synthetic M3B Guest — QA Only" : (leadGuest?.name || "Guest")} />
 
           <HotelConfirmationFareCard
             bookingId={booking.id}
