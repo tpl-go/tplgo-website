@@ -5,6 +5,7 @@ import {Activity,ArrowRight,Bell,Building2,ChevronDown,ChevronRight,CircleHelp,F
 import type {CommandAction,CommandFilters,CommandSection,PartnerCommand} from '@/app/lib/partner/partnerCommand';
 import {partnerApplicationPreviewHref} from '@/app/lib/partner/partnerSubmittedDestination';
 import PartnerSupplyWorkspace from './PartnerSupplyWorkspace';
+import PartnerHotelBookingWorkspace from './PartnerHotelBookingWorkspace';
 import styles from './PartnerCommandCenter.module.css';
 
 type Props={data:PartnerCommand;admin?:boolean;busy?:boolean;onNavigate:(section:CommandSection)=>void;onFilters:(filters:CommandFilters)=>void;onBack?:()=>void;onLogout?:()=>void;onRefresh:()=>void;onExport:(format:'pdf'|'csv'|'xlsx')=>void};
@@ -40,7 +41,8 @@ export default function PartnerCommandCenterView({data,admin=false,busy=false,on
   {section==='support'?panel('Partner Support',<Link className={styles.button} href="/customer-support">Contact support</Link>):null}
   {section==='inventory'||section==='rates'?<PartnerSupplyWorkspace organizationId={workspace.organization.id} admin={admin} mode="inventory" onDirtyChange={setSupplyDirty}/>:null}
   {section==='media'?<PartnerSupplyWorkspace organizationId={workspace.organization.id} admin={admin} mode="media"/>:null}
-  {!['home','business','services','inventory','rates','media','compliance','reports','activity','finance','settlements','support'].includes(section)?panel(nav.find(n=>n.id===section)?.label??'Partner workspace',<div className={styles.empty}>{section==='care'&&data.careSummary?`${data.careSummary.count} open care cases in the selected creation-date range. ${data.careSummary.finalBillsPending??0} final bills await review. Detailed case operations require separately authorized workflows.`:<><strong>{data.section.message??'This workspace is awaiting its operational connection.'}</strong>{data.section.nextAction?<span className={styles.nextAction}>{data.section.nextAction}</span>:null}</>}</div>):null}
+  {section==='bookings'?<PartnerHotelBookingWorkspace organizationId={workspace.organization.id} admin={admin}/>:null}
+  {!['home','business','services','inventory','rates','media','bookings','compliance','reports','activity','finance','settlements','support'].includes(section)?panel(nav.find(n=>n.id===section)?.label??'Partner workspace',<div className={styles.empty}>{section==='care'&&data.careSummary?`${data.careSummary.count} open care cases in the selected creation-date range. ${data.careSummary.finalBillsPending??0} final bills await review. Detailed case operations require separately authorized workflows.`:<><strong>{data.section.message??'This workspace is awaiting its operational connection.'}</strong>{data.section.nextAction?<span className={styles.nextAction}>{data.section.nextAction}</span>:null}</>}</div>):null}
   {admin&&data.configurationIssues.length?<div className={styles.empty} style={{marginTop:16}}>Some configured capabilities are not supported. Review the published service configuration before enabling operations.</div>:null}
   </div></div>
  </div>;

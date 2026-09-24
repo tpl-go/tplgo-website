@@ -12,8 +12,10 @@ import {
   type BookingItem,
 } from "@/app/lib/booking/bookingStorage";
 import { getBackendFirstBookingPayload } from "@/app/lib/api/bookingApi";
+import { tplApiRequest } from "@/app/lib/api/tplApiClient";
 
 type ConfirmationPayload = any;
+type CustomerHotelStay={bookingRef:string;hotel:string;room:string;stayStart:string;stayEnd:string;nights:number;rooms:number;guests:{adults:number;children:number};status:string;paymentStatus:string;updatedAt:string};
 
 function resolveHotelName(payload: any) {
   const hotel = payload?.hotel || {};
@@ -49,6 +51,7 @@ export default function HotelBookingDetailPage() {
   const [booking, setBooking] = useState<BookingItem | null>(null);
   const [payload, setPayload] = useState<ConfirmationPayload | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [stayLifecycle,setStayLifecycle]=useState<CustomerHotelStay|null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -62,6 +65,8 @@ export default function HotelBookingDetailPage() {
 
       setBooking(result.booking);
       setPayload(result.payload);
+      const stay=await tplApiRequest<CustomerHotelStay>(`/api/v1/bookings/${encodeURIComponent(bookingId)}/hotel-stay`);
+      if(!cancelled)setStayLifecycle(stay.ok?stay.data:null);
       setRefreshKey((prev) => prev + 1);
     };
 
@@ -115,10 +120,10 @@ export default function HotelBookingDetailPage() {
     );
   }, [payload?.roomType, selectedVariant]);
 
-  const checkIn = payload?.checkInDate || searchMeta?.checkIn || booking?.travelDate || "";
-  const checkOut = payload?.checkOutDate || searchMeta?.checkOut || "";
-  const nights = Number(payload?.nights || 1);
-  const rooms = Number(payload?.rooms || searchMeta?.rooms || 1);
+  const checkIn = stayLifecycle?.stayStart || payload?.checkInDate || searchMeta?.checkIn || booking?.travelDate || "";
+  const checkOut = stayLifecycle?.stayEnd || payload?.checkOutDate || searchMeta?.checkOut || "";
+  const nights = Number(stayLifecycle?.nights || payload?.nights || 1);
+  const rooms = Number(stayLifecycle?.rooms || payload?.rooms || searchMeta?.rooms || 1);
 
   const adults = Number(
     searchMeta?.adults || payload?.adults || guestList.length || 1
@@ -252,13 +257,13 @@ export default function HotelBookingDetailPage() {
             </div>
 
             <div className="grid grid-cols-1 gap-3 p-4 md:grid-cols-2 md:gap-4 md:p-5 xl:grid-cols-4">
-              <InfoCard label="Booking Status" value={capitalize(booking.status)} />
-              <InfoCard label="Payment Status" value="Paid" />
+              <InfoCard label="Stay Status" value={capitalize((stayLifecycle?.status || booking.status).replaceAll("_", " "))} />
+              <InfoCard label="Payment Status" value={(stayLifecycle?.paymentStatus || payload?.paymentStatus || booking.paymentStatus || "Not available").replaceAll("_", " ")} />
               <InfoCard label="Booked On" value={formatDateTime(bookedAt)} />
               <InfoCard label="Check-in Date" value={formatDateOnly(checkIn)} />
-              <InfoCard label="Hotel" value={hotelName} />
+              <InfoCard label="Hotel" value={stayLifecycle?.hotel || hotelName} />
               <InfoCard label="City" value={city} />
-              <InfoCard label="Room Type" value={roomName} />
+              <InfoCard label="Room Type" value={stayLifecycle?.room || roomName} />
               <InfoCard label="Guests" value={booking.travellers || `${guestList.length || 1} Guest`} />
             </div>
 
