@@ -40,6 +40,9 @@ test("keeps saved drafts visible and reopens the detail-first approval flow",()=
  expect(component).toContain('entityTypeCounts');
  expect(component).toContain('window.history.replaceState');
  expect(component).toContain('New Boolean or Enum Hotel catalogue options');
+ expect(component).toContain('POLICY_TEMPLATE:"New policy"');
+ expect(component).toContain('INCLUSION:"New inclusion"');
+ expect(component).toContain('EXCLUSION:"New exclusion"');
  expect(component).toContain("setEditing(false)");
  expect(component).toContain("Submit for approval");
 });
