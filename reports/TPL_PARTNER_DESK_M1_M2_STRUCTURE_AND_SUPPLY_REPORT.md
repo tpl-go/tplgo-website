@@ -1,5 +1,14 @@
 # Partner Desk M1/M2 — structure and supply/media delivery
 
+## HOTEL-M3B continuation — 2026-09-24 — per-booking next action deployed; authenticated check pending
+
+Checkpoint **TPL-PARTNER-HOTEL-M3B-20260924-ACTION-HIERARCHY-05** preserves **HOTEL_M3B_MODIFICATION_CANCELLATION_ORCHESTRATION_STAGING_PARTIAL_AUTHENTICATED_LIVE_FLOW_PENDING**. The four synthetic bookings were being read as process steps because stay actions and optional request creation were simultaneously prominent.
+
+Website **6c68d03** and Mobile **7784a46** now explain that every row is a separate booking, show one canonical-status-based recommended stay step, and keep modification/cancellation in a collapsed optional disclosure unless an open request exists. CONFIRMED means acknowledge once; PARTNER_ACKNOWLEDGED means no immediate action and Ready only when preparation is complete; terminal bookings expose no action. Website remains orange; Mobile remains emerald/gold.
+
+Website 4/4/lint/244-page build and Mobile 1/1/type/lint/Hermes pass. READY Preview **dpl_Dgaa3CKAXQAwtJ4KGSnRaueQhycf** is assigned only to staging.tplgo.com; existing APK/Metro is reused, health is 200 and no Backend/data/production mutation occurred. Exact next action is an authenticated read-only confirmation of this hierarchy.
+
+All completed M2.6–M2.7B-G and HOTEL-M3A statuses, fixed **46 requirements / 213 units**, PARTNER_PROGRESS_PERCENTAGE_NOT_YET_AUDITABLE, MOBILE_USER_PARITY=COMPLETE, PARTNER_MOBILE_PARITY=OPEN and PHASE_1_STEP_1=OPEN remain preserved. HOTEL-M3C is not started.
 ## HOTEL-M3B continuation — 2026-09-24 — booking/request actions separated; authenticated visual check pending
 
 Checkpoint **TPL-PARTNER-HOTEL-M3B-20260924-ACTION-SEPARATION-04** preserves **HOTEL_M3B_MODIFICATION_CANCELLATION_ORCHESTRATION_STAGING_PARTIAL_AUTHENTICATED_LIVE_FLOW_PENDING**. Operator feedback showed the guided flow still mixed the one-time M3A original-booking acknowledgement with M3B review of a later change request, and Website buttons used the native emerald treatment.

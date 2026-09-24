@@ -1,5 +1,20 @@
 # TPL Partner Desk — HOTEL-M3B Modification and Cancellation Request Orchestration
 
+## Per-booking next-action hierarchy — 2026-09-24
+
+**Checkpoint:** TPL-PARTNER-HOTEL-M3B-20260924-ACTION-HIERARCHY-05
+**Status:** HOTEL_M3B_MODIFICATION_CANCELLATION_ORCHESTRATION_STAGING_PARTIAL_AUTHENTICATED_LIVE_FLOW_PENDING
+
+The operator identified the remaining usability cause precisely: the four staging rows looked like four stages of one process, while each row is a separate synthetic booking. Eligible stay actions and an always-open optional modification form further made every enabled control appear immediately due.
+
+Website **6c68d03** and Mobile **7784a46** now state that each row is a separate booking and show one status-derived **Recommended next stay step**. CONFIRMED requires a one-time original-booking acknowledgement; PARTNER_ACKNOWLEDGED requires no immediate action and exposes Ready only for actual room/guest preparation; READY_FOR_CHECK_IN waits for guest arrival; CHECKED_IN waits for actual stay completion; terminal states expose no further stay action. The modification/cancellation composer is now a collapsed optional request disclosure and auto-opens only when an active request exists. It explicitly says it is separate from acknowledgement/check-in.
+
+No fixture-name or service-name switch was added; guidance derives from the canonical stay status. The four synthetic bookings and their current canonical states were not mutated. Website actions remain orange. Native Mobile retains emerald/gold/white.
+
+Verification: Website request contracts 4/4, scoped lint zero errors with one pre-existing warning, and Webpack build 244/244 pages pass. Mobile request contract 1/1, TypeScript, scoped lint and Android Hermes/public-config export pass; bundle entry-08bc09af30438e5c39e978bfe81c9bf3.hbc was produced. Preview **dpl_Dgaa3CKAXQAwtJ4KGSnRaueQhycf** is READY and assigned only to staging.tplgo.com. Existing Development APK/app data and Metro are reused. Staging and production Website health are HTTP 200. Backend, schema, booking/allocation, finance, provider and production state are unchanged.
+
+**Exact next action:** refresh the authenticated Partner Bookings screen and confirm each row says it is separate, each selected booking shows one recommended next stay step, and the optional modification/cancellation form is collapsed unless that booking has an open request. Do not click a stay or request action during this read-only check.
+
 ## Booking receipt and change-request action separation — 2026-09-24
 
 **Checkpoint:** TPL-PARTNER-HOTEL-M3B-20260924-ACTION-SEPARATION-04
