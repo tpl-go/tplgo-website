@@ -1,5 +1,13 @@
 # Partner Desk M1/M2 — structure and supply/media delivery
 
+## HOTEL-M3A continuation — 2026-09-24 — booking inbox and stay lifecycle pass
+
+Checkpoint `TPL-PARTNER-HOTEL-M3A-20260924-E2E-PASS-01` records **`HOTEL_M3A_BOOKING_INBOX_STAY_LIFECYCLE_STAGING_END_TO_END_PASS`**. One guarded synthetic booking, `TPL-QA-HOTEL-M3A-001`, used the retained staging Hotel and `Synthetic Deluxe Room — QA Only`. The canonical lifecycle completed `CONFIRMED → PARTNER_ACKNOWLEDGED → READY_FOR_CHECK_IN → CHECKED_IN → CHECKED_OUT`: Website acknowledged and checked in; native Mobile marked ready and checked out; Website, Mobile, Admin and customer detail reconciled to version 5 and the same five-event timeline.
+
+Booking creation committed exactly one allocation, moving availability from 5 of 8/version 2 to 4 of 8/version 3. Replays and stay transitions did not allocate again. Actual PostgreSQL coverage passed 6/6 for booking/allocation/audit rollback, idempotency, one-winner stale concurrency, lifecycle legality, RBAC and tenant isolation. Payment remained `TEST_NO_PAYMENT`; five outbox events had zero external delivery. CSV/XLSX and bounded Print matched the source. The initially overmeshed PDF was rebuilt as a clear one-page fact/timeline report, deployed in Backend `03c1bfc`, and the operator confirmed it is readable. The same clear, bounded, non-overlapping PDF style is the accepted standard for future Partner reports.
+
+Delivery is Backend `03c1bfc` in `/home/tpladmin/tpl-api-releases/partner-hotel-m3a-03c1bfc`, Website `e043bf8` in READY deployment `dpl_3qxkbN4mMWWQnCr14zHF8E1ftFMZ` on `staging.tplgo.com`, and Mobile `9e89f09` through the existing Development APK/Metro. Production stayed healthy and untouched. All completed M2.6 through M2.7B-G statuses, the fixed **46 requirements / 213 units**, `PARTNER_PROGRESS_PERCENTAGE_NOT_YET_AUDITABLE`, `MOBILE_USER_PARITY=COMPLETE`, `PARTNER_MOBILE_PARITY=OPEN` and `PHASE_1_STEP_1=OPEN` remain preserved. The next separate Hotel step is **HOTEL-M3B booking modification and cancellation request orchestration**; it was not started.
+
 ## M2.7B-G continuation — 2026-09-24 — Admin policy/inclusion/exclusion governance pass
 
 Checkpoint `TPL-PARTNER-M2.7B-G-20260924-01` adds **`M2_7B_G_ADMIN_POLICY_INCLUSION_EXCLUSION_GOVERNANCE_STAGING_END_TO_END_PASS`** while preserving the completed M2.7B status. Website & Experience → Content & Attribute Catalogue now visibly governs Policy Templates, Inclusions and Exclusions through the shared Draft → Review → Approve → Publish lifecycle. The retained 10/7/6 catalogue is unchanged in meaning; three separate unselected QA proofs make active published counts 11/8/7 at zero usage.
