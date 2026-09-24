@@ -1,4 +1,13 @@
 # TPL Partner Desk — HOTEL-M3B Modification and Cancellation Request Orchestration
+## Authenticated close-control confirmation — 2026-09-24
+
+**Checkpoint:** TPL-PARTNER-HOTEL-M3B-20260924-FORM-CLOSE-LIVE-07
+**Status:** HOTEL_M3B_MODIFICATION_CANCELLATION_ORCHESTRATION_STAGING_PARTIAL_AUTHENTICATED_LIVE_FLOW_PENDING
+
+The operator authenticated to staging and confirmed the optional modification/cancellation form now closes correctly. This closes the narrow Website presentation gate for revision **6603c65** / deployment **dpl_AkyejkGbmVpTWJMn2yxjiX34utWc**. No request, booking, allocation, payment/refund, provider or production record changed during this read-only control check.
+
+**Exact next action:** on Partner Website select `TPL-QA-HOTEL-M3B-MOD-001`, open the optional form, submit a Modification request for check-in `2026-10-02`, check-out `2026-10-03`, adults `3`, children `0`, reason **Date change**, then report only the success message and visible request state. Do not approve it or perform any payment action.
+
 ## Request-form close and authority clarification — 2026-09-24
 
 **Checkpoint:** TPL-PARTNER-HOTEL-M3B-20260924-FORM-CLOSE-06

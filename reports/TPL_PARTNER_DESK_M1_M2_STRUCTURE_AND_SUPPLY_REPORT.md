@@ -1,4 +1,8 @@
 # Partner Desk M1/M2 — structure and supply/media delivery
+## HOTEL-M3B continuation — 2026-09-24 — close control live-confirmed
+
+Checkpoint **TPL-PARTNER-HOTEL-M3B-20260924-FORM-CLOSE-LIVE-07** records the operator's authenticated confirmation that **Close request form** collapses correctly. HOTEL-M3B remains **HOTEL_M3B_MODIFICATION_CANCELLATION_ORCHESTRATION_STAGING_PARTIAL_AUTHENTICATED_LIVE_FLOW_PENDING** until modification/cancellation lifecycle parity completes. No data or production mutation occurred in this visual check.
+
 ## HOTEL-M3B continuation — 2026-09-24 — explicit request-form close deployed
 
 Checkpoint **TPL-PARTNER-HOTEL-M3B-20260924-FORM-CLOSE-06** preserves **HOTEL_M3B_MODIFICATION_CANCELLATION_ORCHESTRATION_STAGING_PARTIAL_AUTHENTICATED_LIVE_FLOW_PENDING**. Website **6603c65** adds an explicit **Close request form** action to the optional modification/cancellation composer; it collapses without creating or changing any request. Customer-origin requests still require Hotel operational review followed by Admin final approval; Hotel-origin requests go to Admin and cannot be self-approved.
