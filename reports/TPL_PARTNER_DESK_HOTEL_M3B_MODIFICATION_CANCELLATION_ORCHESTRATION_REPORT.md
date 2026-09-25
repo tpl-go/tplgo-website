@@ -1,4 +1,22 @@
 # TPL Partner Desk — HOTEL-M3B Modification and Cancellation Request Orchestration
+## Single-booking drill-down and revised-booking acknowledgement — 2026-09-25
+
+**Checkpoint:** `TPL-PARTNER-HOTEL-M3B-20260925-SINGLE-BOOKING-DRILLDOWN-09`
+**Previous/current status:** `HOTEL_M3B_MODIFICATION_CANCELLATION_ORCHESTRATION_STAGING_PARTIAL_AUTHENTICATED_LIVE_FLOW_PENDING`
+
+Operator direction is now implemented as one canonical row per booking and one selected-booking drill-down containing the stay lifecycle, modification/cancellation request, comparison, next action and request history. A Partner-created change request cannot advance to Admin review while the current confirmed booking receipt is unacknowledged. The same server rule applies to Website, Mobile and direct API calls. While a request remains Draft, Submitted or Under Review, acknowledgement is the only permitted stay action; Ready/Check-in/Check-out are suppressed until the request is resolved.
+
+Admin-approved modification now atomically applies the requested booking/allocation change and returns that same booking to `CONFIRMED`, clears earlier acknowledgement/readiness timestamps and requires **Acknowledge revised booking**. Admin-approved cancellation remains terminal `CANCELLED` and never asks for acknowledgement. The clients distinguish **Acknowledge original booking once** from **Acknowledge revised booking** without fixture-name or service-name logic. Website retains orange actions; native Mobile retains emerald/gold/white.
+
+Actual isolated PostgreSQL evidence passes 15/15: operations 6/6 and request orchestration 9/9, covering premature review denial, original acknowledgement, open-request stay-action blocking, atomic modification application, revised acknowledgement, terminal cancellation, idempotency, optimistic concurrency, rollback, RBAC and tenant isolation. Backend TypeScript/build, Website focused 4/4/lint/244-page build and Mobile focused 3/3/type/lint/Hermes export pass. No native dependency changed, so the existing Development APK is retained.
+
+Delivery is Backend `f8d0e8d99edf4ddb2f437fec59f404ddb67acc35` in immutable release `/home/tpladmin/tpl-api-releases/partner-hotel-m3b-drilldown-f8d0e8d99edf4ddb2f437fec59f404ddb67acc35` on `tpl-api-partner-staging`/4100 only; archive SHA-256 `9120a85310eec8e71b2afd376fbbdd567cdd3c6d1da20cb8f1d432a9b759812d`. Website `90dbb81d317f371ac69da667a81d3bf508f1e607` is READY deployment `dpl_5RPWFkmweaXeyyBNDPSXX8ov4ZmD` assigned only to `staging.tplgo.com`. Mobile `ac53811f033e29fd51cefcd494d41d92634cd3bc` is delivered through the existing Development Client/Metro; no APK reinstall or data clear occurred.
+
+Fresh protected backup `/home/tpladmin/backups/tpl-partner-hotel-m3b-drilldown-pre-20260925T021532Z.dump`, SHA-256 `953ccbd20031ac901cbbba32ec1c0d909c3556bd1b62d6fbfc44c1f2e8de6319`, passed `pg_restore --list` with 1,475 entries. Post-deploy canonical readback shows exactly one booking, `TPL-QA-HOTEL-M3B-MOD-001`, still `CONFIRMED` version 1, unacknowledged and allocated once; exactly one open request, `TPL-MOD-F1658BA6`, remains `SUBMITTED` version 1; availability remains 4/8 version 6. The request was submitted before this acknowledgement-first correction and is preserved rather than recreated. No booking/request/allocation/payment mutation occurred during deployment. Staging and production API health are 200, the production PM2 process is unchanged, provider/external delivery remains zero and HOTEL-M3C is not started.
+
+**Exact next action:** on staging Partner Website open Bookings → `TPL-QA-HOTEL-M3B-MOD-001` and click only **Acknowledge original booking once**. Do not send the request to Admin in the same step. After canonical readback, the request review action will be the next separate gate.
+
+Completed M2.6–M2.7B-G and HOTEL-M3A evidence, fixed **46 requirements / 213 units**, `PARTNER_PROGRESS_PERCENTAGE_NOT_YET_AUDITABLE`, `MOBILE_USER_PARITY=COMPLETE`, `PARTNER_MOBILE_PARITY=OPEN` and `PHASE_1_STEP_1=OPEN` remain preserved.
 ## One-by-one synthetic booking reset — 2026-09-24
 
 **Checkpoint:** `TPL-PARTNER-HOTEL-M3B-20260924-ONE-BY-ONE-RESET-08`
