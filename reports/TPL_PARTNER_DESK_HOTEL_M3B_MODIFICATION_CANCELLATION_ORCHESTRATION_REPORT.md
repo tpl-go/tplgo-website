@@ -1,3 +1,16 @@
+## HOTEL-M3B Admin request/booking state separation — 2026-09-25
+
+**Checkpoint:** `TPL-PARTNER-HOTEL-M3B-ADMIN-STATE-SEPARATION-20260925-09`
+
+**Status remains:** `HOTEL_M3B_MODIFICATION_CANCELLATION_AUTOMATION_READY_STAGING_PARTIAL_CORRECTED_LIVE_FLOWS_PENDING`
+
+Authenticated Admin feedback showed that raw `SUBMITTED` request state and `PARTNER_ACKNOWLEDGED` booking state appeared together and implied the wrong workflow order. These states are valid but belong to separate aggregates: `SUBMITTED` means TPL received the customer request; `PARTNER_ACKNOWLEDGED` means the Hotel had previously acknowledged the original booking receipt. It does not mean the new request was reviewed.
+
+Website/Admin `9e5bb3f` replaces raw workflow labels with explicit stages: **Customer request received**, **Automatically routed · Hotel response pending** (or overdue/Admin monitoring), and **Original booking receipt acknowledged — separate from this request**. The request card explains that the Admin final decision remains locked until Hotel response. The final decision controls remain server-gated and absent while the request is Submitted. Backend workflow, routing, booking/request state and data are unchanged.
+
+Focused contracts pass 10/10, scoped ESLint and diff checks pass. READY Preview `dpl_9zX8ctuNcjuCwHhjEG6ySDnEURBe` is assigned only to staging; staging and production APIs return 200. No production, finance, allocation, provider or external-delivery change occurred.
+
+**Exact next action:** refresh Admin → synthetic Partner → Bookings → select `TPL-MOD-830F5568`. Confirm the queue/card reads **Customer request received** and **Hotel response pending/overdue**, while booking detail explicitly labels the earlier receipt acknowledgement as separate. Confirm Approve/Reject is unavailable. Do not mutate the request yet.
 ## HOTEL-M3B immediate Admin intake visibility — 2026-09-25
 
 **Checkpoint:** `TPL-PARTNER-HOTEL-M3B-ADMIN-INTAKE-VISIBILITY-20260925-08`
