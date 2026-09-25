@@ -64,3 +64,7 @@ describe('HOTEL-M3B request contract',()=>{
   expect(panel).not.toContain("busy?'Working…'");
  });
 });
+
+describe('HOTEL-M3B approved modification presentation',()=>{
+ it('shows one bounded updated marker and binds detail cards to canonical stay values',()=>{const list=readFileSync(resolve(process.cwd(),'app/components/account/bookings/sections/UpcomingJourneySection.tsx'),'utf8'),details=readFileSync(resolve(process.cwd(),'app/account/bookings/hotel/[bookingId]/page.tsx'),'utf8'),bookings=readFileSync(resolve(process.cwd(),'app/components/account/bookings/BookingsDetails.tsx'),'utf8');expect(list).toContain('Updated booking');expect(bookings).toContain('/api/v1/bookings/hotel-modification-summaries');expect(details).toContain('The current stay details below are authoritative.');expect(details).toContain('hotelName={displayedHotelName}');expect(details).toContain('roomName={displayedRoomName}');expect(details).toContain('stayLifecycle?.guests.adults');});
+});

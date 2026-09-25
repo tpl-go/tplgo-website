@@ -12,6 +12,7 @@ import { cancelBackendBooking } from "@/app/lib/api/manageBookingApi";
 import { shareBooking } from "@/app/lib/booking/bookingActionHelpers";
 import { printBookingDocument } from "@/app/lib/booking/print/bookingPrintDispatcher";
 import { getBookingServiceConfig } from "@/app/lib/booking/bookingServiceConfig";
+import type { HotelBookingModificationSummary } from "@/app/lib/partner/partnerHotelBookingRequests";
 
 import CancelBookingModal from "@/app/components/account/bookings/CancelBookingModal";
 import {
@@ -84,12 +85,14 @@ function isDomesticFlightBooking(booking: BookingItem) {
 type UpcomingJourneySectionProps = {
   bookings: BookingItem[];
   serverAuthoritative?: boolean;
+  hotelModificationSummaries?: Record<string, HotelBookingModificationSummary>;
   onRefresh?: () => void;
 };
 
 export default function UpcomingJourneySection({
   bookings,
   serverAuthoritative = false,
+  hotelModificationSummaries = {},
   onRefresh,
 }: UpcomingJourneySectionProps) {
   const [cancelTarget, setCancelTarget] = useState<BookingItem | null>(null);
@@ -194,6 +197,7 @@ export default function UpcomingJourneySection({
             const isVisa = booking.type === "visa";
             const showDigiYatra = isDomesticFlightBooking(booking);
             const isSmartPlanner = booking.type === "smart-planner";
+            const modification = booking.type === "hotel" ? [booking.id, booking.bookingId, booking.backendBookingId, booking.backendBookingRef].map(value=>value?hotelModificationSummaries[value]:undefined).find(Boolean) : undefined;
 
             return (
               <div
@@ -211,6 +215,12 @@ export default function UpcomingJourneySection({
                         <span className={getBookingStatusClass(booking)}>
                           {getBookingStatusLabel(booking)}
                         </span>
+
+                        {modification ? (
+                          <span className="rounded-full border border-orange-200 bg-orange-50 px-2.5 py-1 text-[10px] font-semibold text-orange-700 md:px-3 md:text-[11px]" title={`Approved request ${modification.requestRef}`}>
+                            Updated booking
+                          </span>
+                        ) : null}
 
                         {showDigiYatra ? (
                           <span className="rounded-full border border-orange-200 bg-orange-50 px-2.5 py-1 text-[10px] font-semibold text-orange-700 md:px-3 md:text-[11px]">

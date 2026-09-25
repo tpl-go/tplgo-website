@@ -16,7 +16,7 @@ import { getBackendFirstBookingPayload } from "@/app/lib/api/bookingApi";
 import { tplApiRequest } from "@/app/lib/api/tplApiClient";
 
 type ConfirmationPayload = any;
-type CustomerHotelStay={bookingRef:string;hotel:string;room:string;stayStart:string;stayEnd:string;nights:number;rooms:number;guests:{adults:number;children:number};status:string;paymentStatus:string;updatedAt:string};
+type CustomerHotelStay={bookingRef:string;hotel:string;room:string;stayStart:string;stayEnd:string;nights:number;rooms:number;guests:{adults:number;children:number};status:string;paymentStatus:string;updatedAt:string;acknowledgementKind:'ORIGINAL'|'REVISED'|null;timeline:Array<{eventType:string;at:string;summary:Record<string,unknown>}>};
 
 function resolveHotelName(payload: any) {
   const hotel = payload?.hotel || {};
@@ -127,10 +127,13 @@ export default function HotelBookingDetailPage() {
   const rooms = Number(stayLifecycle?.rooms || payload?.rooms || searchMeta?.rooms || 1);
 
   const adults = Number(
-    searchMeta?.adults || payload?.adults || guestList.length || 1
+    stayLifecycle?.guests.adults ?? searchMeta?.adults ?? payload?.adults ?? (guestList.length || 1)
   );
 
-  const children = Number(searchMeta?.children || payload?.children || 0);
+  const children = Number(stayLifecycle?.guests.children ?? searchMeta?.children ?? payload?.children ?? 0);
+  const displayedHotelName=stayLifecycle?.hotel||hotelName;
+  const displayedRoomName=stayLifecycle?.room||roomName;
+  const modificationEvent=stayLifecycle?.timeline?.find(event=>event.eventType==="hotel.booking.modification.applied");
 
   const contactDetails = useMemo(() => {
     return {
@@ -241,6 +244,7 @@ export default function HotelBookingDetailPage() {
 
       <div className="max-w-7xl mx-auto px-3 py-4 md:px-4 md:py-6">
         <div className="w-full flex flex-col gap-4">
+          {modificationEvent?<div className="rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-[13px] font-semibold text-orange-800"><strong>Updated booking</strong> · TPL approved and applied the requested change. The current stay details below are authoritative.</div>:null}
           <div className="overflow-hidden rounded-[18px] border border-[#d9e2ec] bg-white shadow-[0_8px_24px_rgba(15,23,42,0.05)] md:rounded-[24px]">
             <div className="min-h-[60px] border-b border-[#e5e7eb] bg-[linear-gradient(180deg,#f8fbff_0%,#ffffff_100%)] flex flex-col items-start justify-center gap-3 px-4 py-3 md:flex-row md:items-center md:justify-between md:px-5 md:py-0">
               <h2 className="m-0 text-[18px] font-black text-[#111827]">
@@ -270,13 +274,13 @@ export default function HotelBookingDetailPage() {
 
             <div className="px-4 pb-4 md:px-5 md:pb-5">
               <div className="rounded-2xl border border-[#e2e8f0] bg-[#f8fafc] px-4 py-4 text-[15px] font-bold text-[#0f172a]">
-                {hotelName} • {city}
+                {displayedHotelName} • {city}
               </div>
             </div>
           </div>
 
           <HotelConfirmationStayCard
-            hotelName={hotelName}
+            hotelName={displayedHotelName}
             city={city}
             address={address}
             checkIn={checkIn}
@@ -284,7 +288,7 @@ export default function HotelBookingDetailPage() {
             rooms={rooms}
             adults={adults}
             children={children}
-            roomName={roomName}
+            roomName={displayedRoomName}
             specialRequest={payload?.specialRequest || ""}
           />
 

@@ -14,6 +14,8 @@ import {
   type BookingItem,
 } from "@/app/lib/booking/bookingStorage";
 import { getBackendFirstBookings } from "@/app/lib/api/bookingApi";
+import { tplApiRequest } from "@/app/lib/api/tplApiClient";
+import { validHotelBookingModificationSummarySnapshot, type HotelBookingModificationSummary, type HotelBookingModificationSummarySnapshot } from "@/app/lib/partner/partnerHotelBookingRequests";
 
 type BookingsDetailsProps = {
   activeSection: BookingSectionKey;
@@ -25,6 +27,7 @@ export default function BookingsDetails({
   const { authError, isAuthLoading, isAuthenticated, openLoginModal, user } = useAuth();
 
   const [bookings, setBookings] = useState<BookingItem[]>([]);
+  const [hotelModificationSummaries, setHotelModificationSummaries] = useState<Record<string, HotelBookingModificationSummary>>({});
   const [status, setStatus] = useState<"idle" | "loading" | "error">("loading");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -45,11 +48,15 @@ export default function BookingsDetails({
 
       if (!silent) setStatus("loading");
       setErrorMessage(null);
-      const result = await getBackendFirstBookings(undefined, {
-        allowLocalFallback: false,
-      });
+      const [result, modificationResult] = await Promise.all([
+        getBackendFirstBookings(undefined, { allowLocalFallback: false }),
+        tplApiRequest<HotelBookingModificationSummarySnapshot>("/api/v1/bookings/hotel-modification-summaries"),
+      ]);
       if (cancelled || request !== sequence) return;
       setBookings(result.bookings);
+      if (modificationResult.ok && validHotelBookingModificationSummarySnapshot(modificationResult.data)) {
+        setHotelModificationSummaries(Object.fromEntries(modificationResult.data.items.flatMap(item=>[[item.bookingId,item],[item.bookingRef,item]])));
+      } else if (!silent) setHotelModificationSummaries({});
       if (result.source === "backend") {
         setStatus("idle");
       } else if (!silent) {
@@ -114,6 +121,7 @@ export default function BookingsDetails({
       <UpcomingJourneySection
         bookings={upcoming}
         serverAuthoritative
+        hotelModificationSummaries={hotelModificationSummaries}
         onRefresh={() => window.dispatchEvent(new Event(BOOKING_UPDATED_EVENT))}
       />
     </>
