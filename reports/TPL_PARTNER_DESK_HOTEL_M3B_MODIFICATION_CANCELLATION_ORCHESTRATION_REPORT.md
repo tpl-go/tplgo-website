@@ -1,3 +1,20 @@
+## HOTEL-M3B distinct Manage/Cancel presentation and Mobile drill-down — 2026-09-25
+
+**Checkpoint:** `TPL-PARTNER-HOTEL-M3B-DISTINCT-ACTIONS-DRILLDOWN-20260925-06`
+
+**Previous/current status:** `HOTEL_M3B_MODIFICATION_CANCELLATION_AUTOMATION_READY_STAGING_PARTIAL_CORRECTED_LIVE_FLOWS_PENDING`
+
+The operator confirmed the preceding Website backend lookup repair: Manage Booking no longer returned **Hotel booking not found**. The next authenticated observation exposed presentation ambiguity: Manage Booking and Cancel Booking opened the same mixed shell/history, while native Mobile rendered the selected request composer below the complete booking list. With several bookings, the active booking and required action were not sufficiently isolated.
+
+Website `cb2da4598a7391dd856e60dbbaa60d0463afe8d8` now uses distinct customer routes and presentations. **Manage Booking** remains `/hotels/manage` and exposes modification-only copy, fields, history and submission. **Cancel Booking** opens the dedicated `/hotels/cancel` route and exposes cancellation-only copy, reason/history and submission. Both surfaces show the same three-stage authority order—customer request, Hotel response, TPL final decision—while retaining the accepted orange Website design. The canonical request API and TPL-final authority are unchanged.
+
+Mobile `d00e61c` replaces the below-list inline forms with a focused selected-booking drill-down. The booking list is hidden while View Detail, Manage Booking or Cancel Booking is open; the selected booking reference, Hotel and current stay remain visible. Manage and Cancel show separate labels, fields, histories and submit actions. **Back to My Bookings** and Android hardware Back restore the booking list. The established emerald/teal, gold and white native palette is preserved.
+
+Automated evidence: Website HOTEL-M3B contracts pass 9/9, changed reusable UI/routes pass scoped ESLint, and the Webpack production build compiles and generates 245/245 pages including `/hotels/cancel`. The legacy manage page retains its pre-existing `any`/effect lint debt and was validated by focused contracts plus the production build; no new lint waiver was added. Mobile booking/API suites pass 21/21, TypeScript, scoped ESLint and diff checks pass. Website Preview `dpl_89UsXqv6tEyXZNH8qTX7kKjd3ytY` is READY and assigned only to `staging.tplgo.com`; existing Development APK/Metro is reused. Staging and production Website/API health are 200.
+
+No Backend, schema, canonical booking/request/allocation, payment, refund, settlement, provider, external-delivery or production mutation occurred. Authenticated visual verification of the new presentation remains pending. **Exact next action:** Customer Website My Booking → Upcoming; open **Manage Booking** and confirm it shows only the modification flow, then return and open **Cancel Booking** and confirm it shows only the cancellation flow. Do not submit either request. Mobile dedicated drill-down is the following read-only gate. Separate cancellation, withdrawal/rejection and export live gates still prevent full HOTEL-M3B PASS. HOTEL-M3C is not started.
+
+Preserved: completed M2.6–M2.7B-G and HOTEL-M3A statuses; fixed **46 requirements / 213 units**; `PARTNER_PROGRESS_PERCENTAGE_NOT_YET_AUDITABLE`; `MOBILE_USER_PARITY=COMPLETE`; `PARTNER_MOBILE_PARITY=OPEN`; `PHASE_1_STEP_1=OPEN`.
 ## HOTEL-M3B My Booking backend lookup and Mobile action parity — 2026-09-25
 
 **Checkpoint:** `TPL-PARTNER-HOTEL-M3B-MY-BOOKING-ACTION-RECOVERY-20260925-05`

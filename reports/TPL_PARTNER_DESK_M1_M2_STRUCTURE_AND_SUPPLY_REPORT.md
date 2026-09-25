@@ -1,3 +1,10 @@
+## Partner Desk HOTEL-M3B distinct Manage/Cancel and Mobile drill-down — 2026-09-25
+
+Checkpoint `TPL-PARTNER-HOTEL-M3B-DISTINCT-ACTIONS-DRILLDOWN-20260925-06` preserves **`HOTEL_M3B_MODIFICATION_CANCELLATION_AUTOMATION_READY_STAGING_PARTIAL_CORRECTED_LIVE_FLOWS_PENDING`**. The prior Website lookup repair was operator-confirmed. Website `cb2da45` now separates modification at `/hotels/manage` from cancellation at `/hotels/cancel`, with action-specific copy, fields, history and three-stage authority guidance. Mobile `d00e61c` opens View Detail, Manage and Cancel as focused selected-booking drill-downs instead of rendering them below a potentially long booking list; explicit and Android Back return to My Bookings.
+
+Website focused 9/9, changed reusable UI lint and 245-page Webpack build pass; Mobile focused booking/API suites pass 21/21 with TypeScript, scoped lint and diff checks. READY Preview `dpl_89UsXqv6tEyXZNH8qTX7kKjd3ytY` is assigned only to staging; existing APK/Metro is reused. Staging/production Website and API health are 200. Backend/data/allocation/finance/provider/external delivery and production are unchanged. Authenticated distinct-flow Website and Mobile drill-down observations remain pending; full cancellation/withdrawal/rejection/export gates remain open and HOTEL-M3C is not started.
+
+Fixed `46 requirements / 213 units`, `PARTNER_PROGRESS_PERCENTAGE_NOT_YET_AUDITABLE`, `MOBILE_USER_PARITY=COMPLETE`, `PARTNER_MOBILE_PARITY=OPEN` and `PHASE_1_STEP_1=OPEN` remain preserved.
 ## Partner Desk HOTEL-M3B My Booking backend lookup and Mobile action parity — 2026-09-25
 
 Checkpoint ID: `TPL-PARTNER-HOTEL-M3B-MY-BOOKING-ACTION-RECOVERY-20260925-05`. Status remains **`HOTEL_M3B_MODIFICATION_CANCELLATION_AUTOMATION_READY_STAGING_PARTIAL_CORRECTED_LIVE_FLOWS_PENDING`**.
