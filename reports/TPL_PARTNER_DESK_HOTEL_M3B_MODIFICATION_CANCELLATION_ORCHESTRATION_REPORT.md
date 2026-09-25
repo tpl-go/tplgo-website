@@ -1,4 +1,16 @@
 # TPL Partner Desk — HOTEL-M3B Modification and Cancellation Request Orchestration
+## Customer-only Website/Mobile presentation pass — 2026-09-25
+
+**Checkpoint:** `TPL-PARTNER-HOTEL-M3B-20260925-CUSTOMER-ONLY-PRESENTATION-PASS-16`
+**Previous status:** `HOTEL_M3B_MODIFICATION_CANCELLATION_ORCHESTRATION_STAGING_PARTIAL_MOBILE_UPDATED_RECHECK_PENDING`
+**New status:** `HOTEL_M3B_MODIFICATION_CANCELLATION_ORCHESTRATION_STAGING_PARTIAL_CUSTOMER_CANCELLATION_WITHDRAWAL_LIVE_PENDING`
+
+The operator confirmed the connected native Mobile app now shows the terminal approved request correctly: Customer sent, Hotel review, Admin decision and Updated are complete, and the approved summary is current. The earlier authenticated Website customer-only presentation also passed. Partner Website and Mobile expose no request Submit or Withdraw authority; the Hotel retains read/review only.
+
+This closes the Mobile refresh/progress presentation defect at source `baff777252a5a3cdd358876623e2d9a50922d936` without a new APK. Existing Backend and Website releases, canonical booking/request/allocation data, payment state, external delivery and production remain unchanged. HOTEL-M3B is not marked full PASS because separate customer-origin cancellation and withdrawn/rejected live scenarios plus their final cross-surface/export reconciliation remain outstanding.
+
+**Exact next bounded HOTEL-M3B step:** prepare one separate guarded cancellation fixture, then create its request only from customer My Booking and progress it Hotel review → Admin decision. Keep the Partner request composer unavailable. Do not start HOTEL-M3C.
+
 ## Mobile final Updated-step completion repair — 2026-09-25
 
 **Checkpoint:** `TPL-PARTNER-HOTEL-M3B-20260925-MOBILE-UPDATED-COMPLETION-15`

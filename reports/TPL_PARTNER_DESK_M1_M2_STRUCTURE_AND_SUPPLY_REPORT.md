@@ -1,4 +1,8 @@
 # Partner Desk M1/M2 — structure and supply/media delivery
+## HOTEL-M3B continuation — 2026-09-25 — customer-only presentation pass
+
+Checkpoint **TPL-PARTNER-HOTEL-M3B-20260925-CUSTOMER-ONLY-PRESENTATION-PASS-16** advances the current status to **HOTEL_M3B_MODIFICATION_CANCELLATION_ORCHESTRATION_STAGING_PARTIAL_CUSTOMER_CANCELLATION_WITHDRAWAL_LIVE_PENDING**. The operator confirmed Mobile now shows the approved terminal request with all four stages, including Updated, completed; Website customer-only presentation had already passed. Partner request Submit/Withdraw remains absent and server-denied. Mobile `baff777` uses the existing APK/Metro. No Backend, Website, canonical data, finance/provider/external-delivery or production mutation occurred. Full M3B PASS remains gated by the separate customer-origin cancellation and withdrawn/rejected live scenarios and final parity/export reconciliation; HOTEL-M3C is not started.
+
 ## HOTEL-M3B continuation — 2026-09-25 — Mobile Updated step completion
 
 Checkpoint **TPL-PARTNER-HOTEL-M3B-20260925-MOBILE-UPDATED-COMPLETION-15** preserves **HOTEL_M3B_MODIFICATION_CANCELLATION_ORCHESTRATION_STAGING_PARTIAL_MOBILE_UPDATED_RECHECK_PENDING**. Operator observation proved request progress correct through Admin decision but the fourth Updated step was rendered current rather than complete. Mobile `baff777` now marks all four stages complete for terminal `APPROVED`, with emerald completed labels. Focused 3/3, TypeScript, lint and diff pass; existing APK/Metro is reused and all Backend/Website/data/production boundaries remain unchanged. Exact remaining gate is one Mobile visual refresh confirming Updated is completed.
