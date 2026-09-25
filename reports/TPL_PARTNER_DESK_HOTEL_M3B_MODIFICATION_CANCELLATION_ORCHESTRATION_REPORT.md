@@ -1,3 +1,15 @@
+## HOTEL-M3B rejected-cancellation intake and automatic routing — 2026-09-25
+
+**Checkpoint:** `TPL-PARTNER-HOTEL-M3B-REJECTION-INTAKE-ROUTING-20260925-15`
+
+**Status remains:** `HOTEL_M3B_MODIFICATION_CANCELLATION_AUTOMATION_READY_STAGING_PARTIAL_CORRECTED_LIVE_FLOWS_PENDING`
+
+The owning customer submitted cancellation request `TPL-CAN-50E650A8` once from My Booking for guarded fixture `TPL-QA-HOTEL-M3B-WD-001`. Canonical readback proves `SUBMITTED`, routing `ROUTED`, version 1, requester `CUSTOMER`, routed timestamp present and no Hotel response yet. This is a new cancellation request after the earlier modification request was safely withdrawn; the historical withdrawn request remains immutable.
+
+Before the Hotel response, the booking remains `CONFIRMED` version 1, its allocation remains `ALLOCATED` quantity 1, and payment remains `TEST_NO_PAYMENT`. Request history has five events, two reminder/escalation jobs remain pending for the open request, outbox count is four with zero external delivery, and staging/production API health is 200. No cancellation, allocation release, payment/refund/Wallet/provider/external-notification or production mutation occurred.
+
+**Exact next action:** authenticated staging Admin opens Website & Experience/Partner booking request intake for `TPL-CAN-50E650A8` and confirms read-only that **Customer request received** and **TPL System sent · Hotel response pending** are visible while the final TPL decision remains locked. Do not approve/reject. The Partner booking acknowledgement and Hotel No response follow as separate gates.
+
 ## HOTEL-M3B cancellation and withdrawal live reconciliation — 2026-09-25
 
 **Checkpoint:** `TPL-PARTNER-HOTEL-M3B-CANCELLATION-WITHDRAWAL-20260925-14`

@@ -1,3 +1,7 @@
+## HOTEL-M3B rejected-cancellation intake and automatic routing — 2026-09-25
+
+Checkpoint `TPL-PARTNER-HOTEL-M3B-REJECTION-INTAKE-ROUTING-20260925-15` preserves **`HOTEL_M3B_MODIFICATION_CANCELLATION_AUTOMATION_READY_STAGING_PARTIAL_CORRECTED_LIVE_FLOWS_PENDING`**. Customer request `TPL-CAN-50E650A8` was submitted once for `TPL-QA-HOTEL-M3B-WD-001` and is canonically `SUBMITTED/ROUTED` version 1 with requester `CUSTOMER`. Booking remains confirmed/version 1, one allocation remains active and payment remains `TEST_NO_PAYMENT`; zero external delivery occurred. Exact next action is a read-only Admin confirmation of immediate intake and automatic Hotel routing, with the final decision still locked.
+
 ## HOTEL-M3B cancellation and withdrawal live reconciliation — 2026-09-25
 
 Checkpoint `TPL-PARTNER-HOTEL-M3B-CANCELLATION-WITHDRAWAL-20260925-14` preserves **`HOTEL_M3B_MODIFICATION_CANCELLATION_AUTOMATION_READY_STAGING_PARTIAL_CORRECTED_LIVE_FLOWS_PENDING`**. Customer-origin cancellation `TPL-CAN-205A6801` completed automatic routing, Hotel recommendation and TPL-only final approval/application: booking `TPL-QA-HOTEL-M3B-CAN-001` is cancelled/version 3, its allocation released exactly once, payment remains `TEST_NO_PAYMENT`, and refund execution remains pending/outside scope.
