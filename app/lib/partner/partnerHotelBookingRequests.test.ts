@@ -33,6 +33,8 @@ describe('HOTEL-M3B request contract',()=>{
   expect(upcoming).toContain('&action=cancellation');
   expect(upcoming).toContain('handleCancelBooking(booking)');
   expect(manage).toContain('requestType={requestedType}');
+  expect(manage).toContain('getBackendFirstBookingPayload<Payload>');
+  expect(manage).toContain('booking?.dateRange?.end');
   expect(manage).toContain('? "CANCELLATION" : "MODIFICATION"');
   expect(panel).not.toContain('<Field label="Request type">');
   expect(panel).toContain('setInterval(()=>void load(true),5_000)');

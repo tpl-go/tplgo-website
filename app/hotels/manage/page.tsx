@@ -9,6 +9,7 @@ import {
   type BookingItem,
 } from "@/app/lib/booking/bookingStorage";
 import { getBookingPayload } from "@/app/lib/booking/bookingActionHelpers";
+import { getBackendFirstBookingPayload } from "@/app/lib/api/bookingApi";
 import {
   executeBackendSamePriceManage,
   prepareBackendManageRequest,
@@ -191,35 +192,49 @@ function HotelManagePageContent() {
   const [activeRoomVariant, setActiveRoomVariant] =
     useState<HotelRoomVariant | null>(null);
 
-  const loadBooking = () => {
+  const loadBooking = async () => {
     if (!bookingId) {
       setIsLoading(false);
       return;
     }
 
-    const all = getAllBookings();
+    setIsLoading(true);
+    const result = await getBackendFirstBookingPayload<Payload>(
+      bookingId,
+      "hotel"
+    );
     const found =
-      all.find((item) => item.id === bookingId && item.type === "hotel") ||
+      result.booking ||
+      getAllBookings().find(
+        (item) =>
+          item.type === "hotel" &&
+          [
+            item.id,
+            item.bookingId,
+            item.backendBookingId,
+            item.backendBookingRef,
+            item.legacyFrontendId,
+          ]
+            .filter(Boolean)
+            .includes(bookingId)
+      ) ||
       null;
+    const savedPayload =
+      result.payload ||
+      (found?.payloadStorageKey
+        ? getBookingPayload<Payload>(found.payloadStorageKey)
+        : null);
 
     setBooking(found);
-
-    if (found?.payloadStorageKey) {
-      const savedPayload = getBookingPayload<Payload>(found.payloadStorageKey);
-      setPayload(savedPayload ? { ...savedPayload } : null);
-      setGuests(normalizeGuests(savedPayload));
-      setContact(normalizeContact(savedPayload));
-      setSpecialRequest(savedPayload?.specialRequest || "");
-      setActiveRoomVariant(savedPayload?.selectedVariant || null);
-    } else {
-      setPayload(null);
-    }
-
+    setPayload(savedPayload ? { ...savedPayload } : found ? {} : null);
+    setGuests(normalizeGuests(savedPayload));
+    setContact(normalizeContact(savedPayload));
+    setSpecialRequest(savedPayload?.specialRequest || "");
+    setActiveRoomVariant(savedPayload?.selectedVariant || null);
     setIsLoading(false);
   };
-
   useEffect(() => {
-    loadBooking();
+    void loadBooking();
 
     window.addEventListener(BOOKING_UPDATED_EVENT, loadBooking);
     window.addEventListener("storage", loadBooking);
@@ -249,8 +264,16 @@ function HotelManagePageContent() {
     "Selected Room";
 
   const checkIn =
-    payload?.checkInDate || searchMeta?.checkIn || booking?.travelDate || "";
-  const checkOut = payload?.checkOutDate || searchMeta?.checkOut || "";
+    payload?.checkInDate ||
+    searchMeta?.checkIn ||
+    booking?.dateRange?.start ||
+    booking?.travelDate ||
+    "";
+  const checkOut =
+    payload?.checkOutDate ||
+    searchMeta?.checkOut ||
+    booking?.dateRange?.end ||
+    "";
 
   const nights = Number(payload?.nights || 1);
   const rooms = Number(payload?.rooms || searchMeta?.rooms || 1);
@@ -556,7 +579,10 @@ function HotelManagePageContent() {
           stayStart={checkIn}
           stayEnd={checkOut}
           adults={Number(
-            payload?.adults || searchMeta?.adults || Math.max(1, guests.length)
+            payload?.adults ||
+              searchMeta?.adults ||
+              booking.travellerCount ||
+              Math.max(1, guests.length)
           )}
           childGuests={Number(payload?.children || searchMeta?.children || 0)}
           guestName={getGuestName(guests[0] || {})}
