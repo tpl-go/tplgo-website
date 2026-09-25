@@ -22,6 +22,7 @@ type SidebarItem = {
 type Props = {
   activeTab: HotelManageTab;
   onTabChange: (tab: HotelManageTab) => void;
+  flow: "manage" | "cancel";
   bookingId: string;
   hotelName: string;
   city: string;
@@ -45,6 +46,7 @@ const sidebarItems: SidebarItem[] = [
 export default function HotelManageLayout({
   activeTab,
   onTabChange,
+  flow,
   bookingId,
   hotelName,
   city,
@@ -52,11 +54,22 @@ export default function HotelManageLayout({
   children,
 }: Props) {
   const router = useRouter();
+  const visibleSidebarItems = flow === "cancel"
+    ? sidebarItems.filter((item) => item.key === "summary" || item.key === "change-request").map((item) =>
+        item.key === "change-request"
+          ? { ...item, label: "Cancellation Request", desc: "Request cancellation for this booking" }
+          : item
+      )
+    : sidebarItems.map((item) =>
+        item.key === "change-request"
+          ? { ...item, label: "Modification Request", desc: "Request a booking change" }
+          : item
+      );
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#f8f9fb]">
       <div className="bg-[#f8f9fb] px-3 pt-3 lg:hidden">
-        <MobileInnerBack title="Hotel Manage" />
+        <MobileInnerBack title={flow === "cancel" ? "Cancel Booking" : "Manage Booking"} />
       </div>
 
       <div className="mx-auto w-full max-w-[1440px] px-3 py-4 md:px-6 md:py-5 lg:px-8 lg:py-6">
@@ -73,13 +86,15 @@ export default function HotelManageLayout({
           <div className="mt-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="min-w-0">
               <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#ff6b00]">
-                Manage Booking
+                {flow === "cancel" ? "Cancel Booking" : "Manage Booking"}
               </p>
               <h1 className="mt-1 text-[20px] font-bold leading-7 text-[#111827] md:text-2xl">
-                Modify Your Hotel Booking
+                {flow === "cancel" ? "Request Hotel Booking Cancellation" : "Manage Your Hotel Booking"}
               </h1>
               <p className="mt-1 text-[13px] leading-5 text-[#6b7280] md:text-sm">
-                Update guest details, contact details, request notes and review hotel booking.
+                {flow === "cancel"
+                  ? "Review the confirmed booking, then send a cancellation request to TPL. The booking remains active until final approval."
+                  : "Review this booking and request only the change you need. Cancellation is handled from its separate action."}
               </p>
             </div>
 
@@ -96,16 +111,16 @@ export default function HotelManageLayout({
             <div className="overflow-hidden rounded-[20px] border border-black/5 bg-white shadow-[0_10px_40px_rgba(0,0,0,0.04)] md:rounded-[28px]">
               <div className="border-b border-black/5 px-4 py-3 md:px-5 md:py-4">
                 <h2 className="text-base font-bold text-[#111827]">
-                  Booking Actions
+                  {flow === "cancel" ? "Cancellation" : "Manage Booking"}
                 </h2>
                 <p className="mt-1 text-sm text-[#6b7280]">
-                  Select what you want to manage.
+                  {flow === "cancel" ? "Review before sending the cancellation request." : "Select the booking detail you want to manage."}
                 </p>
               </div>
 
               <div className="p-3 lg:hidden">
                 <label className="mb-2 block text-[11px] font-black uppercase tracking-[0.16em] text-[#ff6b00]">
-                  Manage Action
+                  {flow === "cancel" ? "Cancellation Action" : "Manage Action"}
                 </label>
                 <select
                   value={activeTab}
@@ -115,7 +130,7 @@ export default function HotelManageLayout({
                   className="h-12 w-full rounded-2xl border border-[#ff6b00]/20 bg-[#fff7f2] px-4 text-sm font-bold text-[#111827] outline-none shadow-[0_8px_24px_rgba(255,107,0,0.08)]"
                   aria-label="Select booking action"
                 >
-                  {sidebarItems.map((item) => (
+                  {visibleSidebarItems.map((item) => (
                     <option key={item.key} value={item.key}>
                       {item.badge ? `${item.label} (${item.badge})` : item.label}
                     </option>
@@ -125,7 +140,7 @@ export default function HotelManageLayout({
 
               <nav className="hidden p-3 lg:block lg:overflow-visible">
                 <div className="space-y-2">
-                  {sidebarItems.map((item) => {
+                  {visibleSidebarItems.map((item) => {
                     const isActive = activeTab === item.key;
 
                     return (
@@ -181,7 +196,7 @@ export default function HotelManageLayout({
                     Important
                   </p>
                   <p className="mt-2 text-sm leading-6 text-[#4b5563]">
-                    Paid room upgrades and add-on settlement will be connected in the next step.
+                    {flow === "cancel" ? "Submitting a request does not cancel the booking immediately. TPL remains the final decision authority." : "Paid room upgrades and add-on settlement will be connected in the next step."}
                   </p>
                 </div>
               </div>

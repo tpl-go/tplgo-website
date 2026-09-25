@@ -118,7 +118,7 @@ export default function UpcomingJourneySection({
   const handleCancelBooking = (booking: BookingItem) => {
     if (booking.type === "hotel") {
       router.push(
-        `/hotels/manage?bookingId=${encodeURIComponent(
+        `/hotels/cancel?bookingId=${encodeURIComponent(
           booking.id
         )}&from=account&action=cancellation`
       );

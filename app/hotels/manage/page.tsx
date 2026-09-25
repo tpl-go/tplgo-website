@@ -521,6 +521,7 @@ function HotelManagePageContent() {
     <HotelManageLayout
       activeTab={activeTab}
       onTabChange={setActiveTab}
+      flow={requestedType === "CANCELLATION" ? "cancel" : "manage"}
       bookingId={booking.id}
       hotelName={hotelName}
       city={city}
