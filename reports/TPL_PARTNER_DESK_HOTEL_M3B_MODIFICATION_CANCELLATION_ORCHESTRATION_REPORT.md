@@ -1,4 +1,15 @@
 # TPL Partner Desk — HOTEL-M3B Modification and Cancellation Request Orchestration
+## Mobile final Updated-step completion repair — 2026-09-25
+
+**Checkpoint:** `TPL-PARTNER-HOTEL-M3B-20260925-MOBILE-UPDATED-COMPLETION-15`
+**Previous/current status:** `HOTEL_M3B_MODIFICATION_CANCELLATION_ORCHESTRATION_STAGING_PARTIAL_MOBILE_UPDATED_RECHECK_PENDING`
+
+Authenticated operator feedback showed that Mobile request progress was correct through **Admin decision**, while the fourth **Updated** step still looked unchanged. The request endpoint already returns `Cache-Control: private, no-store`; the remaining defect was the progress renderer: terminal `APPROVED` selected the fourth step as current rather than marking all four steps complete.
+
+Mobile `baff777252a5a3cdd358876623e2d9a50922d936` maps terminal `APPROVED` beyond the fourth index so Customer sent, Hotel review, Admin decision and Updated all render completed. Completed labels now use the established emerald emphasis. Focused Jest passes 3/3; TypeScript, scoped ESLint and diff checks pass. Existing APK/app data and Metro are reused; no Backend, Website, database, finance, provider, external-delivery or production change occurred.
+
+**Exact next action:** refresh the connected app once and confirm the fourth **Updated** step is also completed/emerald and the terminal summary remains **Latest customer request: APPROVED**. Do not perform another stay action. HOTEL-M3C is not started.
+
 ## Mobile approved-request status refresh repair — 2026-09-25
 
 **Checkpoint:** `TPL-PARTNER-HOTEL-M3B-20260925-MOBILE-REQUEST-STATUS-REFRESH-14`

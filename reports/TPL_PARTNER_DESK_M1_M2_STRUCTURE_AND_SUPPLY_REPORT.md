@@ -1,4 +1,8 @@
 # Partner Desk M1/M2 — structure and supply/media delivery
+## HOTEL-M3B continuation — 2026-09-25 — Mobile Updated step completion
+
+Checkpoint **TPL-PARTNER-HOTEL-M3B-20260925-MOBILE-UPDATED-COMPLETION-15** preserves **HOTEL_M3B_MODIFICATION_CANCELLATION_ORCHESTRATION_STAGING_PARTIAL_MOBILE_UPDATED_RECHECK_PENDING**. Operator observation proved request progress correct through Admin decision but the fourth Updated step was rendered current rather than complete. Mobile `baff777` now marks all four stages complete for terminal `APPROVED`, with emerald completed labels. Focused 3/3, TypeScript, lint and diff pass; existing APK/Metro is reused and all Backend/Website/data/production boundaries remain unchanged. Exact remaining gate is one Mobile visual refresh confirming Updated is completed.
+
 ## HOTEL-M3B continuation — 2026-09-25 — Mobile approved-request refresh repair
 
 Checkpoint **TPL-PARTNER-HOTEL-M3B-20260925-MOBILE-REQUEST-STATUS-REFRESH-14** records Website customer-only presentation PASS and preserves **HOTEL_M3B_MODIFICATION_CANCELLATION_ORCHESTRATION_STAGING_PARTIAL_MOBILE_STATUS_RECHECK_PENDING**. Mobile showed the updated booking after Admin approval but left the request panel at its earlier stage because the panel loaded once and did not map terminal `APPROVED` to **Updated**.
