@@ -1,4 +1,12 @@
 # Partner Desk M1/M2 — structure and supply/media delivery
+## HOTEL-M3B continuation — 2026-09-25 — customer-only request authority
+
+Checkpoint **TPL-PARTNER-HOTEL-M3B-20260925-CUSTOMER-ONLY-REQUEST-AUTHORITY-13** preserves **HOTEL_M3B_MODIFICATION_CANCELLATION_ORCHESTRATION_STAGING_PARTIAL_AUTHENTICATED_LIVE_FLOW_PENDING**. Only the owning customer may create, submit or withdraw a modification/cancellation request through My Booking. Hotel Partner authority is now limited to reading the incoming request and sending its operational review to Admin; direct Partner create/submit/withdraw calls fail with HTTP 403 `HOTEL_REQUEST_CUSTOMER_ONLY`. Partner Website and Mobile no longer expose those request controls.
+
+Actual PostgreSQL coverage passes 9/9 and affected Backend, Website and Mobile checks pass. Backend `e46336f` runs only on staging 4100; Website `189921f` is READY deployment `dpl_6yTBsFxMqmstQZ93decuEo8Y7tHg` on `staging.tplgo.com`; Mobile `f6b24e0` reuses the existing APK/Metro. Backup SHA-256 is `692bf1d959968552842a3283cdfd5fc65794dd4056845d7150121b7b244395cf` with 1,475 restore-list entries. Production remains healthy and unchanged; finance/provider/external delivery remain zero.
+
+The earlier Partner-origin approved request remains immutable historical evidence. Canonical current state remains `PARTNER_ACKNOWLEDGED`/v4, approved request v3, one allocation and availability 4/8/v6. Exact remaining gate is an authenticated read-only Website/Mobile confirmation that only the customer-only notice is shown and no Partner Submit/Withdraw action exists. Program flags remain preserved and HOTEL-M3C is not started.
+
 ## HOTEL-M3B continuation — 2026-09-25 — revised booking acknowledged
 
 Checkpoint **TPL-PARTNER-HOTEL-M3B-20260925-REVISED-ACKNOWLEDGED-12** preserves **HOTEL_M3B_MODIFICATION_CANCELLATION_ORCHESTRATION_STAGING_PARTIAL_AUTHENTICATED_LIVE_FLOW_PENDING**. The operator acknowledged the revised booking once. Canonical state is now `PARTNER_ACKNOWLEDGED`/v4; the request remains `APPROVED`/v3, allocation stays once and availability remains 4/8/v6.

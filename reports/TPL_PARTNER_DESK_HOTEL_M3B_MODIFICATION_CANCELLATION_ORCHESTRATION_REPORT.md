@@ -1,4 +1,23 @@
 # TPL Partner Desk — HOTEL-M3B Modification and Cancellation Request Orchestration
+## Customer-only modification/cancellation request authority — 2026-09-25
+
+**Checkpoint:** `TPL-PARTNER-HOTEL-M3B-20260925-CUSTOMER-ONLY-REQUEST-AUTHORITY-13`
+**Previous/current status:** `HOTEL_M3B_MODIFICATION_CANCELLATION_ORCHESTRATION_STAGING_PARTIAL_AUTHENTICATED_LIVE_FLOW_PENDING`
+
+Operator direction is now enforced as a server-authoritative boundary: only the owning customer may create, submit or withdraw a Hotel modification/cancellation request through My Booking. The Hotel Partner may read an incoming customer request and send its operational review to TPL Admin; Admin remains the final decision authority. Partner Website and native Mobile no longer expose request creation or withdrawal controls. Direct Partner create, submit and withdraw routes return HTTP 403 `HOTEL_REQUEST_CUSTOMER_ONLY`, even if legacy staging metadata still contains the old submit grant.
+
+The retained approved request `TPL-MOD-F1658BA6` is immutable pre-policy history and remains labelled with its historical requester provenance; it was not recreated, deleted or rewritten. Canonical readback remains booking `TPL-QA-HOTEL-M3B-MOD-001` at `PARTNER_ACKNOWLEDGED` version 4, request `APPROVED` version 3, one allocated room and availability 4/8/version 6. The duplicate acknowledgement guard remains canonical: this booking version exposes Ready for check-in, not Acknowledge.
+
+Actual isolated PostgreSQL request-orchestration tests pass 9/9, including customer ownership, Partner create/submit/withdraw denial, Hotel review, maker-checker decision, optimistic concurrency, idempotency, audit rollback, allocation safety, unchanged payment and internal-only outbox. Backend export tests pass 2/2, TypeScript/build/diff/secret checks pass. Website focused contracts pass 7/7, scoped ESLint, 244-page production build and diff pass. Mobile focused tests pass 2/2, TypeScript, scoped ESLint, Hermes/public-config and diff checks pass. Repository-wide Website `tsc --noEmit` remains affected by pre-existing test-declaration/BigInt target errors outside this scoped change; the production build compiles the changed surface.
+
+Backend source commits are `12619782c2600e80e96ff0915ab6cf3659c5238d` and final tightening `e46336f9d9dfac7f46fff87fd95891bb48d4627c`. Staging release `/home/tpladmin/tpl-api-releases/partner-hotel-m3b-drilldown-e46336f9d9dfac7f46fff87fd95891bb48d4627c`, archive SHA-256 `8e068257c258f365849a5f2663a51f26d74a77c46b402845dbadc72b663fb4d8`, runs only as `tpl-api-partner-staging` on port 4100. Website `189921f` is READY deployment `dpl_6yTBsFxMqmstQZ93decuEo8Y7tHg` assigned only to `staging.tplgo.com`. Mobile `f6b24e0` uses the existing Development APK and Metro; no rebuild, reinstall or app-data clear occurred.
+
+Fresh protected staging backup `/home/tpladmin/backups/tpl-partner-hotel-m3b-drilldown-pre-20260925T034844Z.dump`, SHA-256 `692bf1d959968552842a3283cdfd5fc65794dd4056845d7150121b7b244395cf`, passed `pg_restore --list` with 1,475 entries. A deployment-helper compatibility defect reported a false post-switch failure because programmatic PM2 did not support `call('save')`; the staging helper was narrowed to the PM2 CLI save path and the final deployment completed cleanly. Staging and production APIs return 200, the production PID remains unchanged, and no payment, refund, settlement, provider or external notification action occurred.
+
+Authenticated Website and Mobile presentation remains the only open gate. The in-app browser could not initialize in this environment and local ADB is unavailable, so no visual PASS is inferred from API/source evidence. **Exact next action:** on staging Partner Website and the connected Mobile app, open `TPL-QA-HOTEL-M3B-MOD-001` → Modification & cancellation and confirm that it says no customer request is open/customer must use My Booking, with no Partner Submit modification, Submit cancellation or Withdraw action. Do not click a stay action during this read-only check. HOTEL-M3C is not started.
+
+Completed M2.6–M2.7B-G and HOTEL-M3A statuses, fixed **46 requirements / 213 units**, `PARTNER_PROGRESS_PERCENTAGE_NOT_YET_AUDITABLE`, `MOBILE_USER_PARITY=COMPLETE`, `PARTNER_MOBILE_PARITY=OPEN` and `PHASE_1_STEP_1=OPEN` remain preserved.
+
 ## Revised-booking acknowledgement completed — 2026-09-25
 
 **Checkpoint:** `TPL-PARTNER-HOTEL-M3B-20260925-REVISED-ACKNOWLEDGED-12`
