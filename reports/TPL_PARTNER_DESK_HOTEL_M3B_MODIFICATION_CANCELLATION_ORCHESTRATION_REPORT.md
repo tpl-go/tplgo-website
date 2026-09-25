@@ -1,4 +1,20 @@
 # TPL Partner Desk — HOTEL-M3B Modification and Cancellation Request Orchestration
+## Admin inline decision control — 2026-09-25
+
+**Checkpoint:** `TPL-PARTNER-HOTEL-M3B-20260925-ADMIN-INLINE-DECISION-10`
+**Previous/current status:** `HOTEL_M3B_MODIFICATION_CANCELLATION_ORCHESTRATION_STAGING_PARTIAL_AUTHENTICATED_LIVE_FLOW_PENDING`
+
+Authenticated Partner actions completed the original-booking acknowledgement and advanced request `TPL-MOD-F1658BA6` to `UNDER_REVIEW` version 2. The operator then found that Admin **Approve & apply** did not perform a decision. Backend access evidence contained no decision POST, locating the defect in the Admin interaction before the API boundary: the reason field was detached from the request card and the final action depended on a browser-native confirmation.
+
+Website `2cb7113e1db5398e9e16cafa5bfb2df10980eda4` replaces that path with a per-request decision box and an explicit two-step inline confirmation. Admin enters the bounded reason, chooses Approve or Reject, reviews the exact action, and then uses **Confirm approve & apply** or **Confirm reject**. Buttons have explicit non-submit semantics; the final confirmation remains disabled until the reason is valid, and fields clear only after a successful server response. Backend authorization, optimistic versioning, idempotency, allocation and audit behavior are unchanged.
+
+Focused request contracts pass 5/5, scoped ESLint has zero errors with one pre-existing hook warning, `git diff --check` passes, and the clean Webpack build exits 0 after generating 244/244 pages. Repository-wide standalone `tsc --noEmit` remains blocked by pre-existing Vitest declaration and lower-target BigInt errors outside this change; the production build compiled the changed component successfully. READY Preview `dpl_9hASsLsMaTFT1k9F8G59mkcufnaQ` is assigned only to `staging.tplgo.com`. Backend and Mobile revisions remain `f8d0e8d99edf4ddb2f437fec59f404ddb67acc35` and `ac53811f033e29fd51cefcd494d41d92634cd3bc`; the existing APK/Metro is reused.
+
+Post-deploy canonical readback remains one `PARTNER_ACKNOWLEDGED` booking/version 2, one `UNDER_REVIEW` request/version 2, one allocation and availability 4/8/version 6. No decision, booking, allocation, finance, provider or external-delivery mutation occurred during diagnosis/deployment. Staging and production APIs return 200; production remains untouched.
+
+**Exact next action:** refresh Admin → retained synthetic Partner → Bookings → `TPL-QA-HOTEL-M3B-MOD-001`; on request `TPL-MOD-F1658BA6`, enter `Synthetic QA modification verified`, choose **Approve & apply**, then click **Confirm approve & apply**. Do not acknowledge the revised booking in the same step. HOTEL-M3C is not started.
+
+Completed statuses and fixed **46 requirements / 213 units**, `PARTNER_PROGRESS_PERCENTAGE_NOT_YET_AUDITABLE`, `MOBILE_USER_PARITY=COMPLETE`, `PARTNER_MOBILE_PARITY=OPEN` and `PHASE_1_STEP_1=OPEN` remain preserved.
 ## Single-booking drill-down and revised-booking acknowledgement — 2026-09-25
 
 **Checkpoint:** `TPL-PARTNER-HOTEL-M3B-20260925-SINGLE-BOOKING-DRILLDOWN-09`

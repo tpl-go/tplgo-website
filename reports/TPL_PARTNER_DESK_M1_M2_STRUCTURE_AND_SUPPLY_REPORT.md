@@ -25,6 +25,11 @@ Focused contracts 4/4, scoped lint/diff and the 244-page Webpack build pass. REA
 
 All completed M2.6–M2.7B-G and HOTEL-M3A statuses, fixed **46 requirements / 213 units**, PARTNER_PROGRESS_PERCENTAGE_NOT_YET_AUDITABLE, MOBILE_USER_PARITY=COMPLETE, PARTNER_MOBILE_PARITY=OPEN and PHASE_1_STEP_1=OPEN remain preserved. HOTEL-M3C is not started.
 
+## HOTEL-M3B continuation — 2026-09-25 — Admin inline decision control
+
+Checkpoint **TPL-PARTNER-HOTEL-M3B-20260925-ADMIN-INLINE-DECISION-10** preserves **HOTEL_M3B_MODIFICATION_CANCELLATION_ORCHESTRATION_STAGING_PARTIAL_AUTHENTICATED_LIVE_FLOW_PENDING**. Partner acknowledgement and review submission succeeded, leaving the same booking `PARTNER_ACKNOWLEDGED`/v2 and request `UNDER_REVIEW`/v2. Admin **Approve & apply** emitted no Backend request because the old detached reason plus browser-native confirmation path failed before the API boundary.
+
+Website `2cb7113` provides a per-request reason and explicit inline two-step confirmation. Focused contracts pass 5/5, scoped lint/diff pass and Webpack production build generates 244/244 pages. READY deployment `dpl_9hASsLsMaTFT1k9F8G59mkcufnaQ` is on `staging.tplgo.com` only. Backend/Mobile/APK/data are unchanged; availability remains 4/8/version 6 and both staging/production APIs are 200. Exact next action is the one Admin **Confirm approve & apply** step, followed by canonical readback before revised-booking acknowledgement. Completed statuses/program flags remain preserved and HOTEL-M3C is not started.
 
 ## HOTEL-M3B continuation — 2026-09-24 — per-booking next action deployed; authenticated check pending
 
