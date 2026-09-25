@@ -1,3 +1,20 @@
+## HOTEL-M3B My Booking backend lookup and Mobile action parity — 2026-09-25
+
+**Checkpoint:** `TPL-PARTNER-HOTEL-M3B-MY-BOOKING-ACTION-RECOVERY-20260925-05`
+
+**Previous/current status:** `HOTEL_M3B_MODIFICATION_CANCELLATION_AUTOMATION_READY_STAGING_PARTIAL_CORRECTED_LIVE_FLOWS_PENDING`
+
+Authenticated feedback exposed two narrow customer-surface gaps. Website **Manage Booking** and **Cancel Booking** opened the correct routes but resolved the selected booking only from browser-local compatibility storage, so the backend-authoritative synthetic booking produced **Hotel booking not found**. Native Mobile still exposed only **View Booking Detail** and lacked the accepted five booking-card actions.
+
+Website `7a13561d97f6003ad8e7b271fbb7e09e51a31050` now resolves the selected Hotel booking from the authenticated canonical Backend before using the local compatibility fallback. The Manage route uses canonical stay dates and traveller count, and it renders the modification or cancellation request composer even when no legacy rich checkout payload exists. The accepted My Booking information architecture is unchanged: **Download Voucher**, **Share Voucher**, **View Booking Detail**, **Manage Booking** and **Cancel Booking** remain row-level actions; View Booking Detail remains facts/history only.
+
+Mobile `3d7610d` adds the same five actions to Upcoming Hotel booking cards. **Manage Booking** opens only the modification request flow, **Cancel Booking** opens only the cancellation request flow, and **View Booking Detail** remains read-only facts/history. Both request flows use the canonical customer HOTEL-M3B endpoints, server eligibility, duplicate/open-request guards, five-second status refresh and customer withdrawal only where the Backend allows it. The native palette remains emerald/teal with gold accents. No native dependency or configuration changed; the connected Development APK and Metro are reused.
+
+Focused Website tests pass 9/9, scoped ESLint and the 244/244-page production build pass. Focused Mobile suites pass 21/21, with TypeScript, scoped ESLint and diff checks passing. Website Preview `dpl_22FjaKNUsb5cbyWCXdMhxUTKCHfN` is READY and assigned only to `staging.tplgo.com`; staging and production Website/API health are 200. Backend source/release and canonical booking/request/allocation data were not changed by this repair. Production, payment/refund execution, settlement, provider calls and external delivery remain untouched/zero.
+
+Authenticated visual verification of this new delivery remains pending; automated checks are not recorded as UI observation. **Exact next action:** on Customer Website My Booking → Upcoming, open the retained Hotel row and confirm **Manage Booking** opens the modification form and **Cancel Booking** opens the cancellation form without **Hotel booking not found**; do not submit either request. The connected Mobile five-action readback follows as the next read-only check. Separate cancellation, withdrawal/rejection and final export live gates still prevent full HOTEL-M3B PASS. HOTEL-M3C is not started.
+
+Preserved: all completed M2.6–M2.7B-G and HOTEL-M3A statuses; fixed **46 requirements / 213 units**; `PARTNER_PROGRESS_PERCENTAGE_NOT_YET_AUDITABLE`; `MOBILE_USER_PARITY=COMPLETE`; `PARTNER_MOBILE_PARITY=OPEN`; `PHASE_1_STEP_1=OPEN`.
 ## HOTEL-M3B canonical My Booking lifecycle projection — 2026-09-25
 
 Checkpoint ID: `TPL-PARTNER-HOTEL-M3B-MY-BOOKING-CANONICAL-PROJECTION-20260925-04`

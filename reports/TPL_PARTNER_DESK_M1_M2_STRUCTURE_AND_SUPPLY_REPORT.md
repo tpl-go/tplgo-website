@@ -1,3 +1,12 @@
+## Partner Desk HOTEL-M3B My Booking backend lookup and Mobile action parity — 2026-09-25
+
+Checkpoint ID: `TPL-PARTNER-HOTEL-M3B-MY-BOOKING-ACTION-RECOVERY-20260925-05`. Status remains **`HOTEL_M3B_MODIFICATION_CANCELLATION_AUTOMATION_READY_STAGING_PARTIAL_CORRECTED_LIVE_FLOWS_PENDING`**.
+
+Website **Manage Booking**/**Cancel Booking** incorrectly depended on browser-local booking storage and returned **Hotel booking not found** for a canonical Backend fixture; Mobile exposed only View Booking Detail. Website `7a13561` now loads the authenticated Backend booking first and keeps the accepted five row actions with View Detail read-only. Mobile `3d7610d` adds Download Voucher, Share Voucher, View Booking Detail, Manage Booking and Cancel Booking, with separate customer modification/cancellation request flows and no immediate cancellation.
+
+Website focused 9/9, lint and 244-page build pass; Mobile focused 21/21, TypeScript, scoped lint and diff pass. READY Preview `dpl_22FjaKNUsb5cbyWCXdMhxUTKCHfN` is assigned only to staging. Existing APK/Metro is reused. Backend/data/allocation/finance/provider/external delivery and production are unchanged; staging and production Website/API health are 200. Exact next action is authenticated read-only Website route verification, followed by Mobile five-action verification. Full corrected HOTEL-M3B live/export gates remain pending; HOTEL-M3C is not started.
+
+Fixed `46 requirements / 213 units`, `PARTNER_PROGRESS_PERCENTAGE_NOT_YET_AUDITABLE`, `MOBILE_USER_PARITY=COMPLETE`, `PARTNER_MOBILE_PARITY=OPEN` and `PHASE_1_STEP_1=OPEN` remain preserved.
 ## HOTEL-M3B continuation — 2026-09-25 — canonical My Booking lifecycle projection
 
 Checkpoint `TPL-PARTNER-HOTEL-M3B-MY-BOOKING-CANONICAL-PROJECTION-20260925-04` preserves **`HOTEL_M3B_MODIFICATION_CANCELLATION_AUTOMATION_READY_STAGING_PARTIAL_CORRECTED_LIVE_FLOWS_PENDING`**. Backend `9093ea2`, Website `4eb8c9f` and Mobile `8a8d215` make the canonical booking the customer My Booking source after TPL final decisions. An approved modification updates the same Upcoming booking and View Detail history; an approved cancellation moves the same booking to Cancelled and exposes a truthful Refund Status of Financial review required/Review pending without claiming INR 0 or refund completion. The existing five row actions remain Download Voucher, Share Voucher, View Detail, Manage Booking and Cancel Booking; modification/cancellation forms stay in their respective actions and View Detail stays read-only.
