@@ -1,3 +1,21 @@
+## HOTEL-M3B cancellation and withdrawal live reconciliation — 2026-09-25
+
+**Checkpoint:** `TPL-PARTNER-HOTEL-M3B-CANCELLATION-WITHDRAWAL-20260925-14`
+
+**Status remains:** `HOTEL_M3B_MODIFICATION_CANCELLATION_AUTOMATION_READY_STAGING_PARTIAL_CORRECTED_LIVE_FLOWS_PENDING`
+
+The corrected customer-origin cancellation flow completed for booking `TPL-QA-HOTEL-M3B-CAN-001` and request `TPL-CAN-205A6801`: TPL intake automatically routed the request, the Hotel returned its bounded recommendation, authorized TPL Admin approved/applied the final cancellation, and Customer/Partner/Admin readback showed the canonical terminal state. The booking is `CANCELLED` version 3, its one allocation is `RELEASED` exactly once, the request is `APPROVED`/routing `COMPLETED` version 3, payment remains `TEST_NO_PAYMENT`, and the financial boundary is `REFUND_REVIEW_REQUIRED`. No refund, Wallet credit, settlement, provider call or external notification was executed.
+
+The customer then submitted modification request `TPL-MOD-2AEE29A5` on guarded fixture `TPL-QA-HOTEL-M3B-WD-001` and withdrew it before any Hotel response or TPL decision. Read-only PostgreSQL reconciliation proves request/routing `WITHDRAWN` version 2, booking `CONFIRMED` version 1, one active allocation quantity 1, payment `TEST_NO_PAYMENT`, zero pending request jobs and zero externally delivered outbox events. This is the required live withdrawal/no-booking-mutation proof. Staging and untouched production API health returned 200.
+
+Operator product direction is recorded without widening this batch: once real provider/automation and finance authorities exist, simple validated corrections may complete quickly; date/room/guest changes should show only canonical feasible options and an authoritative re-quote; an increase may require additional payment and an eligible decrease/cancellation may later feed the governed TPL Wallet refund path. Withdrawal remains available only before final application, principally for accidental requests, delayed Hotel/provider response, abandoned payment or exception handling. M3B still executes no payment/refund/Wallet/provider action.
+
+Cancellation stamps are being standardized across Customer, Partner and Admin as a right-aligned emerald circle with white `CANCELLED / TPL APPLIED` text. Deployed source `217f075` supplies the current card presentation. Local verified commits `26c7f9b` and `7cc5ae0` improve detail sizing and unify the color treatment; focused tests pass 12/12, scoped lint and diff checks pass. These local commits are deliberately held for the next meaningful Website batch to conserve Vercel credits; no deployment or APK change occurred for this documentation checkpoint.
+
+Full HOTEL-M3B PASS remains gated by one rejected customer request with no booking/allocation mutation, controlled timeout/escalation observation and final Website/Mobile/Admin/Partner plus CSV/XLSX/PDF/Print reconciliation. **Exact next action:** Customer Website → My Booking → Upcoming → `TPL-QA-HOTEL-M3B-WD-001` → **Cancel Booking**; submit one bounded fictional cancellation request once. Do not let the Hotel respond in the same step.
+
+Preserved: completed M2.6–M2.7B-G and HOTEL-M3A statuses; fixed **46 requirements / 213 units**; `PARTNER_PROGRESS_PERCENTAGE_NOT_YET_AUDITABLE`; `MOBILE_USER_PARITY=COMPLETE`; `PARTNER_MOBILE_PARITY=OPEN`; `PHASE_1_STEP_1=OPEN`. HOTEL-M3C is not started.
+
 ## HOTEL-M3B Partner modified-booking marker and revised acknowledgement — 2026-09-25
 
 **Checkpoint:** `TPL-PARTNER-HOTEL-M3B-PARTNER-MODIFIED-MARKER-20260925-13`
