@@ -1,3 +1,16 @@
+## HOTEL-M3B customer Manage Booking placement and single-action state — 2026-09-25
+
+Checkpoint ID: `TPL-PARTNER-HOTEL-M3B-CUSTOMER-MANAGE-ROUTING-20260925-02`
+
+Current status remains **`HOTEL_M3B_MODIFICATION_CANCELLATION_AUTOMATION_READY_STAGING_PARTIAL_CORRECTED_LIVE_FLOWS_PENDING`**.
+
+Authenticated customer feedback identified two narrow presentation defects after the corrected customer-origin submission: the five-second status poll reused the mutation busy state, so the button repeatedly showed **Working** while the retained success notice still showed **Request submitted**; and the modification/cancellation composer appeared inside My Booking **View Details** instead of the established **Manage Booking** flow.
+
+Website `c20056748a9ca0dc5038a2f8a4ce722883dce9fd` separates initial/background loading from submit/withdraw mutation state. Silent polling no longer changes the action button, an open request suppresses the second composer/submit action, and submission success is shown once. My Booking View Details is now read-only request status/history with an orange **Open Manage Booking** action. The composer and eligible withdraw control are located under Manage Booking → **Change / Cancel Request**. The already-submitted customer request was neither recreated nor mutated.
+
+Focused request contracts pass 5/5, scoped lint for the changed reusable component/layout/test passes, scoped secret and diff checks pass, and the production Webpack build compiles and generates 244/244 pages. Repository-wide standalone TypeScript remains affected only by the recorded pre-existing Vitest declaration/lower-target BigInt errors; the production build validates the changed routes. READY Preview `dpl_HfGqrUFx66NAZoYbkPxzUS3CW6Fa` is assigned only to `staging.tplgo.com`. Staging and production Websites return HTTP 200; production alias/code/data are untouched. Backend `9297fc3`, Mobile `1103877`, database, allocation, payment/refund/provider/external delivery and APK are unchanged.
+
+Authenticated visual confirmation remains pending. Exact next action: refresh the existing submitted booking, confirm **View Details** shows only request status/history plus **Open Manage Booking**, then open Manage Booking → **Change / Cancel Request** and confirm the submitted request appears once without periodic **Working** flashes or a second submit action. Do not submit again. HOTEL-M3C is not started.
 ## HOTEL-M3B corrected routing automation checkpoint — 2026-09-25
 
 Checkpoint ID: `TPL-PARTNER-HOTEL-M3B-AUTOMATION-READY-20260925-01`
