@@ -1,3 +1,15 @@
+## HOTEL-M3B final rejected cancellation with no mutation — 2026-09-25
+
+**Checkpoint:** `TPL-PARTNER-HOTEL-M3B-REJECTION-FINAL-NO-MUTATION-20260925-19`
+
+**Status remains:** `HOTEL_M3B_MODIFICATION_CANCELLATION_AUTOMATION_READY_STAGING_PARTIAL_CORRECTED_LIVE_FLOWS_PENDING`
+
+Authorized TPL Admin completed the final rejection for customer cancellation request `TPL-CAN-50E650A8` after the Hotel’s `RECOMMEND_REJECT`. Canonical PostgreSQL readback proves request `REJECTED`, routing `COMPLETED`, version 3 with routed and partner-response timestamps retained. TPL, not the Hotel, made the terminal decision.
+
+The same booking `TPL-QA-HOTEL-M3B-WD-001` remains `PARTNER_ACKNOWLEDGED` version 2; exactly one allocation remains active quantity 1; canonical availability remains 3/version 8; payment remains `TEST_NO_PAYMENT`. The request timeline has eight committed events, pending jobs are zero, outbox count is seven with zero external delivery, and staging/production API health is 200. No booking cancellation, allocation release, availability change, payment/refund/Wallet/provider/external-notification or production mutation occurred. This closes the mandatory rejected-request no-mutation gate.
+
+Remaining full-PASS gates are the controlled timeout → reminder → escalation live observation, the single batched Website deployment, full M3B regression and final Customer/Partner/Mobile/Admin/CSV/XLSX/PDF/Print reconciliation. HOTEL-M3C remains unstarted.
+
 ## HOTEL-M3B bounded Hotel No recommendation — 2026-09-25
 
 **Checkpoint:** `TPL-PARTNER-HOTEL-M3B-REJECTION-HOTEL-NO-20260925-18`

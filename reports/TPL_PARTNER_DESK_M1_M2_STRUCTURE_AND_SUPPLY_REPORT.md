@@ -1,3 +1,7 @@
+## HOTEL-M3B final rejected cancellation with no mutation — 2026-09-25
+
+Checkpoint `TPL-PARTNER-HOTEL-M3B-REJECTION-FINAL-NO-MUTATION-20260925-19` records authorized TPL rejection of `TPL-CAN-50E650A8`. Request is `REJECTED/COMPLETED` version 3; booking remains `PARTNER_ACKNOWLEDGED` version 2, one allocation remains active, availability remains 3/version 8 and payment remains `TEST_NO_PAYMENT`. Pending jobs and external delivery are zero. Rejection caused no canonical booking/allocation/availability/financial mutation. Timeout/escalation, one batched Website deployment, full regression and final cross-surface/export reconciliation remain.
+
 ## HOTEL-M3B bounded Hotel No recommendation — 2026-09-25
 
 Checkpoint `TPL-PARTNER-HOTEL-M3B-REJECTION-HOTEL-NO-20260925-18` records request `TPL-CAN-50E650A8` as `UNDER_REVIEW/RESPONDED` version 2 with canonical `RECOMMEND_REJECT`. Booking/allocation/payment remain unchanged, pending jobs are zero and external delivery is zero. Exact next action is the authorized TPL Admin final Reject with a bounded synthetic reason; Approve & apply must not be used.
