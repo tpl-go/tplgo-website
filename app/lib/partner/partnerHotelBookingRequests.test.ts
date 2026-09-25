@@ -16,8 +16,13 @@ describe('HOTEL-M3B request contract',()=>{
   expect(source).toContain('Customer requests appear here before the Hotel responds.');
   expect(source).toContain('onClick={()=>setSelected(item.bookingId)}');
   expect(source).toContain("if(item.state==='SUBMITTED')return'Customer request received'");
-  expect(source).toContain("return item.routingStatus==='ESCALATED'?'Hotel response overdue · Admin monitoring':'Automatically routed · Hotel response pending'");
-  expect(source).toContain('The original booking acknowledgement is separate');
+  expect(source).toContain("return item.routingStatus==='ESCALATED'?'TPL System sent · Hotel response overdue · Admin monitoring':'TPL System sent · Hotel response pending'");
+  expect(source).toContain('TPL received and automatically sent this customer request to the Hotel.');
+  expect(source).toContain('Customer → TPL');
+  expect(source).toContain('TPL System → Hotel');
+  expect(source).toContain('Hotel → TPL');
+  expect(source).toContain('TPL → Customer');
+  expect(source).toContain('Final Admin decision remains locked until Hotel response.');
   expect(source).toContain("'Original booking receipt acknowledged'");
   expect(source).not.toContain('Visible to TPL · ${item.customerStatus}');
  });
