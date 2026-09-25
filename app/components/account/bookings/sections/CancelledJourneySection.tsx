@@ -44,7 +44,7 @@ export default function CancelledJourneySection({
                     </div>
                     <span
                       aria-label="Cancellation approved and applied by TPL"
-                      className="inline-flex h-[72px] w-[72px] shrink-0 -rotate-6 flex-col items-center justify-center overflow-hidden rounded-full border-2 border-red-500 bg-red-50 px-1 text-center font-extrabold uppercase leading-none text-red-700 shadow-sm"
+                      className="inline-flex h-[72px] w-[72px] shrink-0 -rotate-6 flex-col items-center justify-center overflow-hidden rounded-full border-2 border-[#087b67] bg-[#087b67] px-1 text-center font-extrabold uppercase leading-none text-white shadow-[0_3px_8px_rgba(8,123,103,0.22)]"
                     >
                       <span className="whitespace-nowrap text-[9px] tracking-[0.03em]">Cancelled</span>
                       <span className="mt-1 whitespace-nowrap text-[7px] tracking-[0.02em]">TPL applied</span>

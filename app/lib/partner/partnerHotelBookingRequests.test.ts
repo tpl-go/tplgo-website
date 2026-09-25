@@ -31,6 +31,7 @@ describe('HOTEL-M3B request contract',()=>{
   const detail=readFileSync(resolve(process.cwd(),'app/account/bookings/hotel/[bookingId]/page.tsx'),'utf8');
   const cancelled=readFileSync(resolve(process.cwd(),'app/components/account/bookings/sections/CancelledJourneySection.tsx'),'utf8');
   const refunds=readFileSync(resolve(process.cwd(),'app/components/account/bookings/sections/RefundStatusSection.tsx'),'utf8');
+  const styles=readFileSync(resolve(process.cwd(),'app/components/partner/PartnerCommandCenter.module.css'),'utf8');
   expect(bookings).toContain('window.setInterval(refreshBookings, 5000)');
   expect(bookings).toContain('window.addEventListener("focus", refreshBookings)');
   expect(detail).toContain('mode="status"');
@@ -40,6 +41,8 @@ describe('HOTEL-M3B request contract',()=>{
   const workspace=readFileSync(resolve(process.cwd(),'app/components/partner/PartnerHotelBookingWorkspace.tsx'),'utf8');
   expect(workspace.match(/Cancellation approved and applied by TPL/g)?.length).toBe(2);
   expect(workspace).toContain('cancelledBookingStampDetail');
+  expect(styles).toContain('background:#087b67;color:#fff!important');
+  expect(cancelled).toContain('bg-[#087b67]');
   expect(cancelled).toContain('financialReviewRequired');
   expect(refunds).toContain('REFUND_REVIEW_REQUIRED');
  });
