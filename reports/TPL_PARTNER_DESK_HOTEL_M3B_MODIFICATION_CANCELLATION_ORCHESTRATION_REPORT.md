@@ -1,3 +1,14 @@
+## HOTEL-M3B My Booking card action routing — 2026-09-25
+
+Checkpoint ID: `TPL-PARTNER-HOTEL-M3B-CARD-ACTION-ROUTING-20260925-03`
+
+Current status remains **`HOTEL_M3B_MODIFICATION_CANCELLATION_AUTOMATION_READY_STAGING_PARTIAL_CORRECTED_LIVE_FLOWS_PENDING`**. This checkpoint supersedes only the preceding proposal to expose **Open Manage Booking** inside View Details; its polling/duplicate-action correction remains valid.
+
+The authoritative customer entry points are the existing actions beside each My Booking row. **View Detail** now contains request status/history only and no Manage action. **Manage Booking** opens the fixed Modification request flow. **Cancel Booking** opens the fixed Cancellation request flow. Hotel cancellation no longer invokes the legacy immediate-cancel/refund-estimate modal; other service types retain their existing behavior. The request-type selector is removed so each card action has one unambiguous purpose. TPL remains final authority and the confirmed booking is unchanged until the request is approved and applied.
+
+Website `a63d1dca5b642c048d9afdde7525657c024d161d` passes the focused routing/request contract 5/5, scoped changed-component lint, diff/secret checks and the 244-page production build. READY deployment `dpl_mCjW5V1VcQvC8kmp8Y3QNYurT22s` is assigned only to `staging.tplgo.com`. No request was resubmitted; Backend, Mobile, APK, booking/request/allocation data, payment/refund/provider delivery and production are unchanged.
+
+Authenticated read-only routing confirmation remains pending. Exact next action: refresh My Booking for the existing Hotel row; confirm View Detail has no Manage button, Manage Booking opens Modification request, and Cancel Booking opens Cancellation request. Do not submit either request during this routing check. HOTEL-M3C is not started.
 ## HOTEL-M3B customer Manage Booking placement and single-action state — 2026-09-25
 
 Checkpoint ID: `TPL-PARTNER-HOTEL-M3B-CUSTOMER-MANAGE-ROUTING-20260925-02`
