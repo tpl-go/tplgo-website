@@ -1,3 +1,18 @@
+## HOTEL-M3B cross-type open-request clarity — 2026-09-25
+
+**Checkpoint:** `TPL-PARTNER-HOTEL-M3B-CROSS-TYPE-REQUEST-CLARITY-20260925-07`
+
+**Previous/current status:** `HOTEL_M3B_MODIFICATION_CANCELLATION_AUTOMATION_READY_STAGING_PARTIAL_CORRECTED_LIVE_FLOWS_PENDING`
+
+The operator confirmed the distinct Website Manage Booking and Cancel Booking presentation, then found one remaining ambiguity: while a modification request was open, Cancel Booking correctly blocked a conflicting request but used a generic **open request** message. Because cancellation history is intentionally type-filtered, the wording could make the existing modification appear to be a cancellation.
+
+Website `b9e169b` and Mobile `6e5e5e7` retain the canonical one-open-conflicting-request guard and now name the actual open request type, public reference and customer status. When the opposite flow is opened, the message explains that the new request is blocked to prevent conflicting changes and points to **Manage Booking** or **Cancel Booking** for the matching request. Same-type history remains in its own flow; opposite-type details are not rendered as current-flow history, and the misleading empty-state line is suppressed while a conflict exists. No Backend, booking, request, allocation or financial data changed.
+
+Focused evidence passes: Website request contracts 9/9 plus scoped ESLint and diff check; Mobile request tests 2/2 plus TypeScript, scoped ESLint and diff check. READY Preview `dpl_FBPriXdTArqyjR5q3RSJ7WHwsqva` is assigned only to `staging.tplgo.com`; staging and production Website/API health are 200. Mobile reuses the existing Development APK and healthy Metro; no native dependency/configuration changed. Production, payment/refund/settlement, provider calls and external delivery remain untouched.
+
+Authenticated confirmation is still required before this narrow observation is closed. **Exact next action:** Customer Website → My Booking → Upcoming → **Cancel Booking** on the booking with the open modification. Confirm the notice explicitly identifies a modification request with its reference/status, explains why cancellation is blocked, and does not show modification details as cancellation. Do not submit another request. Full corrected cancellation, withdrawal/rejection and export live gates remain pending; HOTEL-M3C is not started.
+
+Preserved: all completed M2.6–M2.7B-G and HOTEL-M3A statuses; fixed **46 requirements / 213 units**; `PARTNER_PROGRESS_PERCENTAGE_NOT_YET_AUDITABLE`; `MOBILE_USER_PARITY=COMPLETE`; `PARTNER_MOBILE_PARITY=OPEN`; `PHASE_1_STEP_1=OPEN`.
 ## Partner Desk HOTEL-M3B distinct Manage/Cancel and Mobile drill-down — 2026-09-25
 
 Checkpoint `TPL-PARTNER-HOTEL-M3B-DISTINCT-ACTIONS-DRILLDOWN-20260925-06` preserves **`HOTEL_M3B_MODIFICATION_CANCELLATION_AUTOMATION_READY_STAGING_PARTIAL_CORRECTED_LIVE_FLOWS_PENDING`**. The prior Website lookup repair was operator-confirmed. Website `cb2da45` now separates modification at `/hotels/manage` from cancellation at `/hotels/cancel`, with action-specific copy, fields, history and three-stage authority guidance. Mobile `d00e61c` opens View Detail, Manage and Cancel as focused selected-booking drill-downs instead of rendering them below a potentially long booking list; explicit and Android Back return to My Bookings.
