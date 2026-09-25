@@ -1,3 +1,6 @@
+## HOTEL-M3B corrected routing automation continuation — 2026-09-25
+
+Checkpoint `TPL-PARTNER-HOTEL-M3B-AUTOMATION-READY-20260925-01` is **PARTIAL pending authenticated corrected live flows**. Backend `9297fc3`, Website `a7ca440` and Mobile `1103877` implement Customer -> TPL intake/Admin visibility -> automatic Hotel routing -> Hotel Yes/No recommendation -> TPL-only final decision -> customer result. Actual PostgreSQL is 10/10; retry/DLQ/SLA escalation, allocation atomicity, RBAC and guarded cleanup preview pass. Backend release `partner-hotel-m3b-automation-9297fc3-r2` and Website READY `dpl_CQkzPQHUKJiS8SpU56VDT9uGCdP2` are staging-only; existing APK/Metro is reused. Fresh backup SHA-256 `451b91b7daf00da22273f2281684b371e1a4bea2099e09b48f11a508d7b6b5b1` is restore-readable with 1,475 entries. Old Partner-origin synthetic request evidence is preserved as pre-policy history. Corrected live modification/cancellation/withdrawal/rejection/timeout and export parity remain pending; HOTEL-M3C is not started.
 # Partner Desk M1/M2 — structure and supply/media delivery
 ## HOTEL-M3B continuation — 2026-09-25 — customer-only presentation pass
 

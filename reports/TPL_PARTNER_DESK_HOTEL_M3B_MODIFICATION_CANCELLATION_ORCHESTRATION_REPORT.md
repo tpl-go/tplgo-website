@@ -1,3 +1,24 @@
+## HOTEL-M3B corrected routing automation checkpoint — 2026-09-25
+
+Checkpoint ID: `TPL-PARTNER-HOTEL-M3B-AUTOMATION-READY-20260925-01`
+
+Previous status: `HOTEL_M3B_MODIFICATION_CANCELLATION_ORCHESTRATION_STAGING_PARTIAL_CUSTOMER_CANCELLATION_WITHDRAWAL_LIVE_PENDING`
+
+Current status: **`HOTEL_M3B_MODIFICATION_CANCELLATION_AUTOMATION_READY_STAGING_PARTIAL_CORRECTED_LIVE_FLOWS_PENDING`**
+
+This narrow delta preserves the accepted M3B screens and enforces the corrected authority order: Customer submission -> TPL eligibility/intake and immediate Admin visibility -> automatic Hotel routing -> bounded Hotel Yes/No recommendation -> TPL-only final decision/application -> customer status. Partner create/withdraw/final-decision routes remain denied. Historical request `TPL-MOD-F1658BA6`, whose requester type is PARTNER, is retained as **pre-policy historical QA evidence** and was not rewritten.
+
+Backend commit `9297fc39622183a22188f3a8b72f6e3a6de31f28` adds migration `0065`, correlation/routing timestamps, a durable idempotent job table, retry/backoff, dead-letter state, reminder/SLA escalation, manual/assisted/auto guard seams, provider `NONE`, auto decision Off, safe polling-driven queue advancement, TPL-final decision enforcement, customer status mapping and guarded cleanup preview. Existing 0063/0064 schemas were verified by exact table/index/RLS/file-hash parity before their previously missing migration-journal entries were reconciled atomically; 0065 then applied. Runtime is `/home/tpladmin/tpl-api-releases/partner-hotel-m3b-automation-9297fc3-r2` on staging port 4100 only. Archive SHA-256 is `bae896c32988458c7534fbc9b0691a24f4c7fb075224cbb1f0199fe4dfa39d13`.
+
+Protected backup `/home/tpladmin/backups/partner-hotel-m3b-automation-9297fc3-r2-pre-0065.dump` has SHA-256 `451b91b7daf00da22273f2281684b371e1a4bea2099e09b48f11a508d7b6b5b1`; `pg_restore --list` returned 1,475 entries. Staging and production Website/API health are 200. Production PID/restarts and production data/configuration/aliases remain unchanged.
+
+Website commit `a7ca44041e440eb02de3b22a96e457f91d6f257e` is READY deployment `dpl_CQkzPQHUKJiS8SpU56VDT9uGCdP2`, assigned only to `staging.tplgo.com`. Mobile commit `1103877` uses the connected existing Development APK and Metro 8081; no native dependency/configuration or APK change occurred. Website styling remains the accepted orange treatment; Mobile retains emerald/gold.
+
+Automated evidence is separate from live evidence: actual isolated PostgreSQL passes 10/10, including immediate routing under five seconds, Admin-visible committed state, concurrent final decision, exactly-once allocation/release, rollback, retry, duplicate-event prevention, reminder/escalation, dead-letter and cleanup guards. Backend export passes 2/2, typecheck/build/diff/secret checks pass; Website focused tests pass 7/7 with scoped lint and 244-page Webpack build; Mobile focused tests pass 3/3 with TypeScript/scoped lint/Hermes-public-config unchanged. External provider, SMS, WhatsApp, email, CRM, payment, refund and settlement execution remain zero/off.
+
+Guarded fixture service created only the missing fictional `TPL-QA-HOTEL-M3B-CAN-001` and `TPL-QA-HOTEL-M3B-WD-001`; retained `TPL-QA-HOTEL-M3B-MOD-001` was not recreated. Availability is now 2/8, version 7, reflecting exactly the two new allocations. Cleanup remains preview-only by default, refuses production/non-synthetic data and requires a fresh verified backup plus explicit execute flag. Final cleanup was not run.
+
+Authenticated corrected live flows, measured cross-surface propagation, customer withdrawal, rejection, timeout/escalation observation and post-flow CSV/XLSX/PDF/Print reconciliation remain pending. Exact next action: Customer Website -> My Booking -> `TPL-QA-HOTEL-M3B-MOD-001` -> submit one bounded modification request. Do not use Partner Desk to create it and do not approve it yet.
 # TPL Partner Desk — HOTEL-M3B Modification and Cancellation Request Orchestration
 ## Customer-only Website/Mobile presentation pass — 2026-09-25
 
