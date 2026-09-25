@@ -15,7 +15,11 @@ describe('HOTEL-M3B request contract',()=>{
   expect(source).toContain("requests?.requests.filter(r=>['DRAFT','SUBMITTED','UNDER_REVIEW'].includes(r.state))");
   expect(source).toContain('Customer requests appear here before the Hotel responds.');
   expect(source).toContain('onClick={()=>setSelected(item.bookingId)}');
-  expect(source).toContain('Visible to TPL · ${item.customerStatus}');
+  expect(source).toContain("if(item.state==='SUBMITTED')return'Customer request received'");
+  expect(source).toContain("return item.routingStatus==='ESCALATED'?'Hotel response overdue · Admin monitoring':'Automatically routed · Hotel response pending'");
+  expect(source).toContain('The original booking acknowledgement is separate');
+  expect(source).toContain("'Original booking receipt acknowledged'");
+  expect(source).not.toContain('Visible to TPL · ${item.customerStatus}');
  });
  it('keeps one canonical account booking across modification and cancellation projections',()=>{
   const bookings=readFileSync(resolve(process.cwd(),'app/components/account/bookings/BookingsDetails.tsx'),'utf8');
