@@ -39,6 +39,7 @@ describe('HOTEL-M3B request contract',()=>{
   expect(cancelled).toContain('Refund review pending');
   const workspace=readFileSync(resolve(process.cwd(),'app/components/partner/PartnerHotelBookingWorkspace.tsx'),'utf8');
   expect(workspace.match(/Cancellation approved and applied by TPL/g)?.length).toBe(2);
+  expect(workspace).toContain('cancelledBookingStampDetail');
   expect(cancelled).toContain('financialReviewRequired');
   expect(refunds).toContain('REFUND_REVIEW_REQUIRED');
  });
