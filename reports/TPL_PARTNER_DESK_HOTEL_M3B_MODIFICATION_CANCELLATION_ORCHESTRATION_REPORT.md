@@ -1,3 +1,18 @@
+## HOTEL-M3B immediate Admin intake visibility — 2026-09-25
+
+**Checkpoint:** `TPL-PARTNER-HOTEL-M3B-ADMIN-INTAKE-VISIBILITY-20260925-08`
+
+**Previous/current status:** `HOTEL_M3B_MODIFICATION_CANCELLATION_AUTOMATION_READY_STAGING_PARTIAL_CORRECTED_LIVE_FLOWS_PENDING`
+
+Authenticated feedback showed that customer request `TPL-MOD-830F5568` was present in the canonical Backend but not visibly discoverable in Admin; Admin continued to show the previously selected booking/request. The exact cause was presentation filtering: Request history was scoped only to the currently selected booking, with no organization-level open-request intake queue. Backend intake/routing was intact and no request was recreated.
+
+Website/Admin `3874875` adds a bounded **TPL Intake · Immediate Admin Visibility** queue above the booking drill-down. It lists every authorized open `DRAFT`, `SUBMITTED` or `UNDER_REVIEW` request with request reference, booking reference, request type, internal/routing status and the current authority step. Selecting a queue row opens that canonical booking and its scoped detail/history. Customer requests are visible before Hotel response, automatic routing remains server-owned, and only TPL Admin can make the final decision after the required Hotel response.
+
+Focused Website contracts pass 10/10, scoped ESLint and diff checks pass. READY Preview `dpl_B4VYQmML4hVh3Xxqg5x34g6684H2` is assigned only to `staging.tplgo.com`; staging/production APIs return 200 and production code/data remain untouched. Backend, schema, request state, allocation, payment/refund/settlement, provider and external delivery were not changed.
+
+Live Admin readback remains required. **Exact next action:** refresh Admin → selected synthetic Partner → Bookings. In **Open modification & cancellation requests**, confirm `TPL-MOD-830F5568` is visible as a Modification request for `TPL-QA-HOTEL-M3B-MOD-001`, with `SUBMITTED / ESCALATED` and Hotel response pending. Select it to confirm its canonical detail. Do not approve/reject or mutate it yet.
+
+Preserved: completed M2.6–M2.7B-G and HOTEL-M3A statuses; fixed **46 requirements / 213 units**; `PARTNER_PROGRESS_PERCENTAGE_NOT_YET_AUDITABLE`; `MOBILE_USER_PARITY=COMPLETE`; `PARTNER_MOBILE_PARITY=OPEN`; `PHASE_1_STEP_1=OPEN`. HOTEL-M3C is not started.
 ## HOTEL-M3B cross-type open-request clarity — 2026-09-25
 
 **Checkpoint:** `TPL-PARTNER-HOTEL-M3B-CROSS-TYPE-REQUEST-CLARITY-20260925-07`
