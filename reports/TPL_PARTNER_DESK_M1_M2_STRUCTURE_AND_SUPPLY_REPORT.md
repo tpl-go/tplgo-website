@@ -1,4 +1,9 @@
 # Partner Desk M1/M2 — structure and supply/media delivery
+## HOTEL-M3B continuation — 2026-09-25 — modification approved and applied
+
+Checkpoint **TPL-PARTNER-HOTEL-M3B-20260925-MODIFICATION-APPLIED-11** preserves **HOTEL_M3B_MODIFICATION_CANCELLATION_ORCHESTRATION_STAGING_PARTIAL_AUTHENTICATED_LIVE_FLOW_PENDING**. The operator completed the repaired Admin decision flow. Canonical PostgreSQL readback shows request `TPL-MOD-F1658BA6` `APPROVED`/v3 and the same booking `CONFIRMED`/v3, with revised acknowledgement pending.
+
+The booking/allocation now consistently use 2026-10-02 through 2026-10-03, one room, one adult and zero children. Allocation remains exactly once, availability remains 4/8/v6, payment remains `TEST_NO_PAYMENT`, and external delivery is zero. The immutable timeline records the Admin application at v3. Source/deployment/APK are unchanged from Website `2cb7113` / `dpl_9hASsLsMaTFT1k9F8G59mkcufnaQ`, Backend `f8d0e8d`, Mobile `ac53811`. Exact next action is **Acknowledge revised booking** only, followed by canonical readback. Completed statuses/program flags remain preserved and HOTEL-M3C is not started.
 ## HOTEL-M3B continuation — 2026-09-25 — one booking row and one lifecycle drill-down
 
 Checkpoint **TPL-PARTNER-HOTEL-M3B-20260925-SINGLE-BOOKING-DRILLDOWN-09** preserves **HOTEL_M3B_MODIFICATION_CANCELLATION_ORCHESTRATION_STAGING_PARTIAL_AUTHENTICATED_LIVE_FLOW_PENDING**. Backend `f8d0e8d`, Website `90dbb81` and Mobile `ac53811` implement one row per canonical booking, with stay lifecycle and modification/cancellation workflow in one drill-down. Server authorization now requires acknowledgement of the current confirmed booking version before a Partner request can advance to Admin review, blocks Ready/Check-in/Check-out while an open request exists, and requires a new acknowledgement of the same booking after an approved modification. Approved cancellation remains terminal.

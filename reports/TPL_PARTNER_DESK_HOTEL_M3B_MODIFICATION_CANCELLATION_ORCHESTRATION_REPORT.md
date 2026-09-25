@@ -1,4 +1,20 @@
 # TPL Partner Desk — HOTEL-M3B Modification and Cancellation Request Orchestration
+## Live modification approval and atomic application — 2026-09-25
+
+**Checkpoint:** `TPL-PARTNER-HOTEL-M3B-20260925-MODIFICATION-APPLIED-11`
+**Previous/current status:** `HOTEL_M3B_MODIFICATION_CANCELLATION_ORCHESTRATION_STAGING_PARTIAL_AUTHENTICATED_LIVE_FLOW_PENDING`
+
+The operator completed the repaired Admin **Approve & apply → Confirm approve & apply** flow for request `TPL-MOD-F1658BA6`. Read-only canonical PostgreSQL reconciliation proves the request is `APPROVED` version 3 and the same booking `TPL-QA-HOTEL-M3B-MOD-001` is `CONFIRMED` version 3 with revised acknowledgement pending.
+
+The approved change was applied once: check-in changed from 2026-10-01 to 2026-10-02, check-out remains 2026-10-03, adults changed from 2 to 1, children remain 0, and the fictional guest label is unchanged. The allocation is still one `ALLOCATED` room and now carries 2026-10-02 through 2026-10-03. Availability remains 4 of 8/version 6 because the allocation stayed inside the same canonical availability record. Payment disclosure remains `TEST_NO_PAYMENT`; financial impact is `PRICE_REVIEW_REQUIRED`, with no amount, payment, refund or settlement applied.
+
+The immutable stay timeline now contains received v1, Partner acknowledgement v2 and Admin modification application v3 in order. The request contains the bounded decision reason and applied snapshot, and four related internal outbox rows exist with zero external-delivery rows. Staging and production APIs remain 200. Production, providers, real notifications and unrelated data remain untouched.
+
+Delivery remains Backend `f8d0e8d99edf4ddb2f437fec59f404ddb67acc35`, Website functional fix `2cb7113e1db5398e9e16cafa5bfb2df10980eda4` in READY deployment `dpl_9hASsLsMaTFT1k9F8G59mkcufnaQ`, and Mobile `ac53811f033e29fd51cefcd494d41d92634cd3bc` through the existing APK/Metro. No new code or deployment followed the live decision.
+
+**Exact next action:** on Partner Website refresh booking `TPL-QA-HOTEL-M3B-MOD-001`, verify the revised dates and one adult, then click only **Acknowledge revised booking**. Do not mark Ready for check-in in the same step. HOTEL-M3C is not started.
+
+Completed statuses and fixed **46 requirements / 213 units**, `PARTNER_PROGRESS_PERCENTAGE_NOT_YET_AUDITABLE`, `MOBILE_USER_PARITY=COMPLETE`, `PARTNER_MOBILE_PARITY=OPEN` and `PHASE_1_STEP_1=OPEN` remain preserved.
 ## Admin inline decision control — 2026-09-25
 
 **Checkpoint:** `TPL-PARTNER-HOTEL-M3B-20260925-ADMIN-INLINE-DECISION-10`
