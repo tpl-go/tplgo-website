@@ -81,6 +81,7 @@ export type BookingItem = {
     backendCancellationId?: string;
     backendCancellationStatus?: string;
     supplierCancellationExecuted?: boolean;
+    financialReviewRequired?: boolean;
   };
 
   refund?: {

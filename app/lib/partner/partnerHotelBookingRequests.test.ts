@@ -9,6 +9,18 @@ describe('HOTEL-M3B request contract',()=>{
  it('creates readable before/after labels',()=>expect(requestChangeSummary({stayStart:'2026-10-02',adults:3})).toEqual(['Check-in: 2026-10-02','Adults: 3']));
  it('keeps Admin decisions as an explicit inline two-step action',()=>{const source=readFileSync(resolve(process.cwd(),'app/components/partner/PartnerHotelBookingWorkspace.tsx'),'utf8');expect(source).toContain('Confirm approve & apply');expect(source).toContain("disabled={busy||decisionReason.trim().length<3}");expect(source).toContain('type="button"');});
  it('keeps customer submission and Hotel recommendation boundaries',()=>{const source=readFileSync(resolve(process.cwd(),'app/components/partner/PartnerHotelBookingWorkspace.tsx'),'utf8');expect(source).toContain('Only the booking customer can request a modification or cancellation from My Booking.');expect(source).toContain('Yes · Hotel can support request');expect(source).toContain('No · Hotel cannot support request');expect(source).toContain('TPL remains the final decision authority');expect(source).not.toContain('Submit modification request');expect(source).not.toContain('Submit cancellation request');expect(source).not.toContain('Withdraw my request');});
+ it('keeps one canonical account booking across modification and cancellation projections',()=>{
+  const bookings=readFileSync(resolve(process.cwd(),'app/components/account/bookings/BookingsDetails.tsx'),'utf8');
+  const detail=readFileSync(resolve(process.cwd(),'app/account/bookings/hotel/[bookingId]/page.tsx'),'utf8');
+  const cancelled=readFileSync(resolve(process.cwd(),'app/components/account/bookings/sections/CancelledJourneySection.tsx'),'utf8');
+  const refunds=readFileSync(resolve(process.cwd(),'app/components/account/bookings/sections/RefundStatusSection.tsx'),'utf8');
+  expect(bookings).toContain('window.setInterval(refreshBookings, 5000)');
+  expect(bookings).toContain('window.addEventListener("focus", refreshBookings)');
+  expect(detail).toContain('mode="status"');
+  expect(cancelled).toContain('Financial review required');
+  expect(cancelled).toContain('financialReviewRequired');
+  expect(refunds).toContain('REFUND_REVIEW_REQUIRED');
+ });
  it('routes card-level Manage and Cancel actions to distinct Hotel request flows',()=>{
   const panel=readFileSync(resolve(process.cwd(),'app/components/account/HotelBookingRequestPanel.tsx'),'utf8');
   const detail=readFileSync(resolve(process.cwd(),'app/account/bookings/hotel/[bookingId]/page.tsx'),'utf8');

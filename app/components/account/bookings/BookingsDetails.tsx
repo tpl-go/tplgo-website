@@ -32,7 +32,7 @@ export default function BookingsDetails({
     let cancelled = false;
     let sequence = 0;
 
-    const loadBookings = async () => {
+    const loadBookings = async (silent = false) => {
       const request = ++sequence;
       if (isAuthLoading) return;
 
@@ -43,7 +43,7 @@ export default function BookingsDetails({
         return;
       }
 
-      setStatus("loading");
+      if (!silent) setStatus("loading");
       setErrorMessage(null);
       const result = await getBackendFirstBookings(undefined, {
         allowLocalFallback: false,
@@ -52,21 +52,32 @@ export default function BookingsDetails({
       setBookings(result.bookings);
       if (result.source === "backend") {
         setStatus("idle");
-      } else {
+      } else if (!silent) {
         setStatus("error");
         setErrorMessage(result.error?.message || "We could not load your account bookings. Please retry.");
       }
     };
 
+    const refreshBookings = () => { void loadBookings(true); };
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") refreshBookings();
+    };
+
     void loadBookings();
 
-    window.addEventListener(BOOKING_UPDATED_EVENT, loadBookings);
-    window.addEventListener("storage", loadBookings);
+    const refreshTimer = window.setInterval(refreshBookings, 5000);
+    window.addEventListener(BOOKING_UPDATED_EVENT, refreshBookings);
+    window.addEventListener("storage", refreshBookings);
+    window.addEventListener("focus", refreshBookings);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
 
     return () => {
       cancelled = true;
-      window.removeEventListener(BOOKING_UPDATED_EVENT, loadBookings);
-      window.removeEventListener("storage", loadBookings);
+      window.clearInterval(refreshTimer);
+      window.removeEventListener(BOOKING_UPDATED_EVENT, refreshBookings);
+      window.removeEventListener("storage", refreshBookings);
+      window.removeEventListener("focus", refreshBookings);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
     };
   }, [authError, isAuthLoading, isAuthenticated, user?.id]);
 

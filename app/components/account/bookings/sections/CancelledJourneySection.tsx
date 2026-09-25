@@ -70,30 +70,37 @@ export default function CancelledJourneySection({
                     Refund Amount
                   </p>
                   <p className="mt-1 text-[21px] font-semibold text-slate-900 md:text-[22px]">
-                    {formatPrice(booking.refund?.amount || 0)}
+                    {booking.refund?.backendRefundStatus === "REFUND_REVIEW_REQUIRED" ? "Financial review required" : formatPrice(booking.refund?.amount || 0)}
                   </p>
 
                   <p className="mt-3 text-[12px] font-medium text-slate-500">
                     Refund Status
                   </p>
                   <p className="mt-1 text-[14px] font-semibold capitalize text-[#0b5fff]">
-                    {booking.refund?.status || "Not Available"}
+                    {booking.refund?.backendRefundStatus === "REFUND_REVIEW_REQUIRED" ? "Review pending" : booking.refund?.status || "Not Available"}
                   </p>
 
-                  <div className="mt-4 grid gap-2 text-[12px] text-slate-600">
-                    <div className="flex items-center justify-between gap-3">
-                      <span>Cancellation Charge</span>
-                      <span className="shrink-0 font-semibold text-slate-900">
-                        {formatPrice(booking.cancelMeta?.cancellationCharge || 0)}
-                      </span>
+                  {booking.cancelMeta?.financialReviewRequired ? (
+                    <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-[12px] font-semibold leading-5 text-amber-800">
+                      Refund amount and charges have not been calculated. TPL financial review is pending.
                     </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <span>Refundable</span>
-                      <span className="shrink-0 font-semibold text-green-700">
-                        {formatPrice(booking.cancelMeta?.refundableAmount || 0)}
-                      </span>
+                  ) : (
+                    <div className="mt-4 grid gap-2 text-[12px] text-slate-600">
+                      <div className="flex items-center justify-between gap-3">
+                        <span>Cancellation Charge</span>
+                        <span className="shrink-0 font-semibold text-slate-900">
+                          {formatPrice(booking.cancelMeta?.cancellationCharge || 0)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <span>Refundable</span>
+                        <span className="shrink-0 font-semibold text-green-700">
+                          {formatPrice(booking.cancelMeta?.refundableAmount || 0)}
+                        </span>
+                      </div>
                     </div>
-                  </div>
+                  )}
+
                 </div>
               </div>
             </div>

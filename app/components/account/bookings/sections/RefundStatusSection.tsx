@@ -53,14 +53,14 @@ export default function RefundStatusSection({
                     Refund Amount
                   </p>
                   <p className="mt-1 text-[21px] font-semibold text-slate-900 md:text-[22px]">
-                    {formatPrice(item.refund?.amount || 0)}
+                    {item.refund?.backendRefundStatus === "REFUND_REVIEW_REQUIRED" ? "Financial review required" : formatPrice(item.refund?.amount || 0)}
                   </p>
 
                   <p className="mt-3 text-[12px] font-medium text-slate-500">
                     Current Status
                   </p>
                   <p className="mt-1 text-[14px] font-semibold capitalize text-[#0b5fff]">
-                    {item.refund?.status || "Not Available"}
+                    {item.refund?.backendRefundStatus === "REFUND_REVIEW_REQUIRED" ? "Review pending" : item.refund?.status || "Not Available"}
                   </p>
 
                   {item.refund?.completedAt ? (
