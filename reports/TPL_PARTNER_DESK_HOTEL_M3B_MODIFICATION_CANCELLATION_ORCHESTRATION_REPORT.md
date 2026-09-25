@@ -1,3 +1,20 @@
+## HOTEL-M3B canonical My Booking lifecycle projection — 2026-09-25
+
+Checkpoint ID: `TPL-PARTNER-HOTEL-M3B-MY-BOOKING-CANONICAL-PROJECTION-20260925-04`
+
+Previous/current status: **`HOTEL_M3B_MODIFICATION_CANCELLATION_AUTOMATION_READY_STAGING_PARTIAL_CORRECTED_LIVE_FLOWS_PENDING`**.
+
+Operator direction is now frozen around the existing customer My Booking information architecture. An active Hotel booking appears once under **Upcoming** with the five existing row actions: **Download Voucher**, **Share Voucher**, **View Detail**, **Manage Booking** and **Cancel Booking**. View Detail is read-only booking facts plus immutable request/lifecycle history. Manage Booking owns only the modification-request composer. Cancel Booking owns only the cancellation-request composer. A final approved modification updates the same canonical booking identity and retains it under Upcoming with revised room/date/guest facts; it does not create a second booking card. A final approved cancellation removes the same booking from Upcoming, places it under Cancelled, and exposes a separate truthful Refund Status. Because HOTEL-M3B executes no refund, that status is **Financial review required/Review pending**, never a fabricated zero refund or completed refund.
+
+The exact defect was a stale `compat_booking_item` account projection after TPL final application. Backend `9093ea24d56a9c4530587958b5889d51af81298b` now overlays canonical booking status, stay dates, travellers, lead guest, cancellation and refund-review metadata when serving My Booking. The final modification transaction also keeps the compatibility snapshot aligned; the cancellation transaction records cancelled account placement and non-financial refund-review state atomically. Website `4eb8c9f` silently refreshes My Booking every five seconds and on focus/visibility/account refresh, preserves the five card actions, keeps View Detail read-only, and renders cancellation/refund review without a misleading INR 0. Mobile `8a8d215` applies the same foreground/five-second canonical readback and safe refund-review presentation through the existing Development Client; no native dependency, APK reinstall or app-data clear is required.
+
+Actual isolated PostgreSQL request-orchestration evidence passes 10/10, including canonical modified-booking projection, cancellation and exactly-once allocation release, concurrent/idempotent decisions, maker-checker/ownership/tenant denial, rollback on injected failure, timeout/reminder/escalation/dead-letter behavior, zero external delivery and unchanged payment state. Website focused tests pass 9/9, scoped ESLint, diff check and the 244-page Webpack production build pass. Mobile focused account API tests pass 19/19 with TypeScript, scoped ESLint and diff checks. Backend TypeScript/build/diff checks pass. No migration or staging data mutation was required for this projection correction, so the existing protected automation checkpoint backup remains applicable.
+
+Staging delivery is Backend release `/home/tpladmin/tpl-api-releases/partner-hotel-m3b-projection-9093ea24d56a9c4530587958b5889d51af81298b` on `tpl-api-partner-staging`/4100 only, archive SHA-256 `94aa05128e773fd814eb487cfa70d93c26e1d07d2469f08bfa684e081bec3fc6`. Website READY deployment `dpl_4KXS1WH5G77hbtRqVYtFTsFWsnGb` is assigned only to `staging.tplgo.com`. Staging API/Website and production API/Website return 200; production process, data, aliases and storage remain untouched. Payment, refund execution, settlement, provider calls and external notifications remain zero/off.
+
+Authenticated visual readback could not be performed by the agent because the supported browser connection failed during setup; no UI PASS is inferred from automated or API evidence. The existing corrected modification must be checked read-only in Upcoming/View Detail, and a separate customer-origin cancellation still must complete TPL intake, automatic Hotel routing, Hotel recommendation and TPL final decision before Cancelled/Refund Status, withdrawal/rejection and final CSV/XLSX/PDF/Print parity can be certified. **Exact next action:** refresh Customer My Booking → Upcoming and confirm the revised booking appears once with the five card actions, revised details and history; do not submit another request. HOTEL-M3C is not started.
+
+Completed M2.6–M2.7B-G and HOTEL-M3A statuses, fixed **46 requirements / 213 units**, `PARTNER_PROGRESS_PERCENTAGE_NOT_YET_AUDITABLE`, `MOBILE_USER_PARITY=COMPLETE`, `PARTNER_MOBILE_PARITY=OPEN` and `PHASE_1_STEP_1=OPEN` remain preserved.
 ## HOTEL-M3B My Booking card action routing — 2026-09-25
 
 Checkpoint ID: `TPL-PARTNER-HOTEL-M3B-CARD-ACTION-ROUTING-20260925-03`
@@ -181,6 +198,7 @@ Backend source `bd21463e99ed48baf37c115da826af54a0b94948` was committed and push
 **Exact next action:** refresh Partner Website → Bookings and confirm only `TPL-QA-HOTEL-M3B-MOD-001` is visible. Open its optional change-request form and submit the bounded modification for check-in `2026-10-02`, check-out `2026-10-03`, adults `3`, children `0`, reason **Date change**. Do not acknowledge the stay lifecycle or approve the request in the same step. Cancellation and withdrawal will be provisioned separately only after the modification flow is reconciled.
 
 Completed M2.6–M2.7B-G and HOTEL-M3A historical evidence remains preserved. Fixed **46 requirements / 213 units**, `PARTNER_PROGRESS_PERCENTAGE_NOT_YET_AUDITABLE`, `MOBILE_USER_PARITY=COMPLETE`, `PARTNER_MOBILE_PARITY=OPEN` and `PHASE_1_STEP_1=OPEN` remain unchanged. HOTEL-M3C is not started.
+
 ## Authenticated close-control confirmation — 2026-09-24
 
 **Checkpoint:** TPL-PARTNER-HOTEL-M3B-20260924-FORM-CLOSE-LIVE-07
