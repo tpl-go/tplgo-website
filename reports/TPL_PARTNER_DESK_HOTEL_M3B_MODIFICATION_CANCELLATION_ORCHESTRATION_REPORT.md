@@ -1,3 +1,13 @@
+## HOTEL-M3B authenticated authority-flow observation — 2026-09-25
+
+**Checkpoint:** `TPL-PARTNER-HOTEL-M3B-AUTHORITY-FLOW-LIVE-20260925-11`
+
+**Status remains:** `HOTEL_M3B_MODIFICATION_CANCELLATION_AUTOMATION_READY_STAGING_PARTIAL_CORRECTED_LIVE_FLOWS_PENDING`
+
+The operator authenticated to staging Admin and confirmed the four-stage authority flow is visible and correct for the retained customer request: Customer → TPL and TPL System → Hotel are complete; Hotel → TPL is the current waiting stage; TPL → Customer remains waiting/locked. This is observed UI evidence, separate from automated coverage. No decision or data mutation was performed during the check.
+
+**Exact next action:** Partner Website → Command Center → Bookings → `TPL-QA-HOTEL-M3B-MOD-001` → open `TPL-MOD-830F5568`; enter a short synthetic operational reason and submit **Yes · Hotel can support request** once. This is a Hotel recommendation only. Do not acknowledge the original booking again and do not attempt a final Partner decision.
+
 ## HOTEL-M3B TPL-to-Hotel authority flow visibility — 2026-09-25
 
 **Checkpoint:** `TPL-PARTNER-HOTEL-M3B-AUTHORITY-FLOW-VISIBILITY-20260925-10`

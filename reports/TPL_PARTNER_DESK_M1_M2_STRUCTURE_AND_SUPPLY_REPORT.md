@@ -1,3 +1,7 @@
+## HOTEL-M3B authenticated authority-flow observation — 2026-09-25
+
+Checkpoint `TPL-PARTNER-HOTEL-M3B-AUTHORITY-FLOW-LIVE-20260925-11` records authenticated Admin confirmation that all four authority stages are visible: TPL intake and automatic Hotel routing are complete, Hotel response is current, and TPL final decision/customer update remains locked. The read-only observation changed no canonical data. Status remains **`HOTEL_M3B_MODIFICATION_CANCELLATION_AUTOMATION_READY_STAGING_PARTIAL_CORRECTED_LIVE_FLOWS_PENDING`**. Exact next action is one normal Hotel Yes recommendation for `TPL-MOD-830F5568`; Partner cannot make the final decision.
+
 ## HOTEL-M3B TPL-to-Hotel authority flow visibility — 2026-09-25
 
 Checkpoint `TPL-PARTNER-HOTEL-M3B-AUTHORITY-FLOW-VISIBILITY-20260925-10` preserves **`HOTEL_M3B_MODIFICATION_CANCELLATION_AUTOMATION_READY_STAGING_PARTIAL_CORRECTED_LIVE_FLOWS_PENDING`**. The accepted order is now explicit in Admin: **Customer → TPL intake → automatic TPL System routing to Hotel → Hotel Yes/No → TPL final decision → customer update**. Partner response is operational confirmation only and cannot apply the booking change.
