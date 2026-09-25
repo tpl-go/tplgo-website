@@ -10,7 +10,7 @@ Website/Admin `9e5bb3f` replaces raw workflow labels with explicit stages: **Cus
 
 Focused contracts pass 10/10, scoped ESLint and diff checks pass. READY Preview `dpl_9zX8ctuNcjuCwHhjEG6ySDnEURBe` is assigned only to staging; staging and production APIs return 200. No production, finance, allocation, provider or external-delivery change occurred.
 
-**Exact next action:** refresh Admin → synthetic Partner → Bookings → select `TPL-MOD-830F5568`. Confirm the queue/card reads **Customer request received** and **Hotel response pending/overdue**, while booking detail explicitly labels the earlier receipt acknowledgement as separate. Confirm Approve/Reject is unavailable. Do not mutate the request yet.
+Authenticated Admin confirmation passed: `TPL-MOD-830F5568` is visible as **Customer request received**, and Approve/Reject is correctly unavailable before Hotel response. This proves immediate TPL visibility without giving Admin a premature final-decision action; the earlier original-booking acknowledgement remains a separate lifecycle fact. **Exact next action:** Partner Website → Command Center → Bookings → `TPL-QA-HOTEL-M3B-MOD-001` → open customer request `TPL-MOD-830F5568`; enter a short synthetic operational reason and submit **Yes · Hotel can support request** once. Do not acknowledge the original booking again and do not perform an Admin decision yet.
 ## HOTEL-M3B immediate Admin intake visibility — 2026-09-25
 
 **Checkpoint:** `TPL-PARTNER-HOTEL-M3B-ADMIN-INTAKE-VISIBILITY-20260925-08`
