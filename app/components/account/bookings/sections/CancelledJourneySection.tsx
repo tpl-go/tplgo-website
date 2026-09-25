@@ -35,9 +35,18 @@ export default function CancelledJourneySection({
                     <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-semibold uppercase text-slate-700 md:px-3 md:text-[11px]">
                       {booking.type}
                     </span>
-                    <span className="rounded-full bg-red-50 px-2.5 py-1 text-[10px] font-semibold text-red-700 md:px-3 md:text-[11px]">
-                      Cancelled
+                    <span
+                      aria-label="Cancellation approved and applied by TPL"
+                      className="inline-flex h-16 w-16 -rotate-6 flex-col items-center justify-center rounded-full border-2 border-red-500 bg-red-50 text-center font-extrabold uppercase leading-3 text-red-700 shadow-sm"
+                    >
+                      <span className="text-[10px] tracking-[0.08em]">Cancelled</span>
+                      <span className="mt-0.5 text-[8px] tracking-[0.04em]">TPL applied</span>
                     </span>
+                    {booking.refund?.backendRefundStatus === "REFUND_REVIEW_REQUIRED" ? (
+                      <span className="rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-[10px] font-bold text-amber-800 md:px-3 md:text-[11px]">
+                        Refund review pending
+                      </span>
+                    ) : null}
                   </div>
 
                   <h3 className="mt-3 break-words text-[16px] font-semibold leading-6 text-slate-900 md:text-[17px]">

@@ -35,6 +35,8 @@ describe('HOTEL-M3B request contract',()=>{
   expect(bookings).toContain('window.addEventListener("focus", refreshBookings)');
   expect(detail).toContain('mode="status"');
   expect(cancelled).toContain('Financial review required');
+  expect(cancelled).toContain('Cancellation approved and applied by TPL');
+  expect(cancelled).toContain('Refund review pending');
   expect(cancelled).toContain('financialReviewRequired');
   expect(refunds).toContain('REFUND_REVIEW_REQUIRED');
  });
