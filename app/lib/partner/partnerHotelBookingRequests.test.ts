@@ -41,6 +41,9 @@ describe('HOTEL-M3B request contract',()=>{
   expect(panel).not.toContain('<Field label="Request type">');
   expect(panel).toContain('setInterval(()=>void load(true),5_000)');
   expect(panel).toContain('Submit ${flowName.toLowerCase()} request');
+  expect(panel).toContain('openRequest?.requestType===form.type');
+  expect(panel).toContain('View the open request from ${openRequestName==="modification"?"Manage Booking":"Cancel Booking"}');
+  expect(panel).toContain('!initialLoading&&!openRequest&&!visibleRequests?.length');
   expect(panel).not.toContain("busy?'Working…'");
  });
 });
