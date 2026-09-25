@@ -26,6 +26,7 @@ import HotelManageContactDetails, {
   type HotelManageContact,
 } from "@/app/components/manage/hotel/HotelManageContactDetails";
 import HotelManageSpecialRequest from "@/app/components/manage/hotel/HotelManageSpecialRequest";
+import HotelBookingRequestPanel from "@/app/components/account/HotelBookingRequestPanel";
 import HotelManageRoomAddons, {
   type HotelRoomQuote,
   type HotelRoomVariant,
@@ -536,6 +537,20 @@ function HotelManagePageContent() {
           value={specialRequest}
           onChange={setSpecialRequest}
           onSave={handleSaveSpecialRequest}
+        />
+      )}
+
+      {activeTab === "change-request" && (
+        <HotelBookingRequestPanel
+          mode="manage"
+          bookingId={booking.id}
+          stayStart={checkIn}
+          stayEnd={checkOut}
+          adults={Number(
+            payload?.adults || searchMeta?.adults || Math.max(1, guests.length)
+          )}
+          childGuests={Number(payload?.children || searchMeta?.children || 0)}
+          guestName={getGuestName(guests[0] || {})}
         />
       )}
 

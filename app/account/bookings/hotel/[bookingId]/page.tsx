@@ -294,7 +294,19 @@ export default function HotelBookingDetailPage() {
             contactDetails={contactDetails}
           />
 
-          <HotelBookingRequestPanel bookingId={booking.id} stayStart={checkIn} stayEnd={checkOut} adults={adults} childGuests={children} guestName={stayLifecycle?.hotel ? "Synthetic M3B Guest — QA Only" : (leadGuest?.name || "Guest")} />
+          <HotelBookingRequestPanel
+            mode="status"
+            bookingId={booking.id}
+            stayStart={checkIn}
+            stayEnd={checkOut}
+            adults={adults}
+            childGuests={children}
+            guestName={
+              stayLifecycle?.hotel
+                ? "Synthetic M3B Guest — QA Only"
+                : leadGuest?.name || "Guest"
+            }
+          />
 
           <HotelConfirmationFareCard
             bookingId={booking.id}

@@ -9,6 +9,7 @@ export type HotelManageTab =
   | "guest-details"
   | "contact-details"
   | "special-request"
+  | "change-request"
   | "room-addons";
 
 type SidebarItem = {
@@ -33,6 +34,11 @@ const sidebarItems: SidebarItem[] = [
   { key: "guest-details", label: "Guest Details", desc: "Update guest information" },
   { key: "contact-details", label: "Contact Details", desc: "Update email and phone" },
   { key: "special-request", label: "Special Request", desc: "Update hotel notes" },
+  {
+    key: "change-request",
+    label: "Change / Cancel Request",
+    desc: "Request a booking change",
+  },
   { key: "room-addons", label: "Room / Add-ons", desc: "Paid changes next", badge: "Paid" },
 ];
 
