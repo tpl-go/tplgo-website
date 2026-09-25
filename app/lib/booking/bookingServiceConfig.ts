@@ -29,7 +29,7 @@ export const bookingServiceConfig: Record<BookingType, BookingServiceConfig> = {
     shareLabel: "Share Voucher",
     detailPath: (bookingId) => `/account/bookings/hotel/${bookingId}`,
     managePath: (bookingId) =>
-      `/hotels/manage?bookingId=${encodeURIComponent(bookingId)}&from=account`,
+      `/hotels/manage?bookingId=${encodeURIComponent(bookingId)}&from=account&action=modification`,
   },
 
   homestay: {

@@ -168,8 +168,15 @@ function buildFareSummary(payload: Payload | null, booking: BookingItem | null) 
 function HotelManagePageContent() {
   const searchParams = useSearchParams();
   const bookingId = searchParams.get("bookingId") || "";
+  const requestAction = searchParams.get("action");
+  const requestedType: "MODIFICATION" | "CANCELLATION" =
+    requestAction === "cancellation" ? "CANCELLATION" : "MODIFICATION";
 
-  const [activeTab, setActiveTab] = useState<HotelManageTab>("summary");
+  const [activeTab, setActiveTab] = useState<HotelManageTab>(
+    requestAction === "modification" || requestAction === "cancellation"
+      ? "change-request"
+      : "summary"
+  );
   const [booking, setBooking] = useState<BookingItem | null>(null);
   const [payload, setPayload] = useState<Payload | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -542,7 +549,9 @@ function HotelManagePageContent() {
 
       {activeTab === "change-request" && (
         <HotelBookingRequestPanel
+          key={requestedType}
           mode="manage"
+          requestType={requestedType}
           bookingId={booking.id}
           stayStart={checkIn}
           stayEnd={checkOut}

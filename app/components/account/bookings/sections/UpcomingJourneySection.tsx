@@ -115,6 +115,18 @@ export default function UpcomingJourneySection({
     router.push(config.managePath(booking.id));
   };
 
+  const handleCancelBooking = (booking: BookingItem) => {
+    if (booking.type === "hotel") {
+      router.push(
+        `/hotels/manage?bookingId=${encodeURIComponent(
+          booking.id
+        )}&from=account&action=cancellation`
+      );
+      return;
+    }
+
+    setCancelTarget(booking);
+  };
   const handleVisaStatusCheck = (booking: BookingItem) => {
     router.push(`/visa/status?bookingId=${encodeURIComponent(booking.id)}&from=account`);
   };
@@ -316,7 +328,7 @@ export default function UpcomingJourneySection({
                     {!isVisa && (
                       <ActionButton
                         label="Cancel Booking"
-                        onClick={() => setCancelTarget(booking)}
+                        onClick={() => handleCancelBooking(booking)}
                         variant="danger"
                       />
                     )}
