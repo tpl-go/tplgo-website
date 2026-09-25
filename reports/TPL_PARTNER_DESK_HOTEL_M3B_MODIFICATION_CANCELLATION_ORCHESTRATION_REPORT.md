@@ -1,3 +1,21 @@
+## HOTEL-M3B approved modification customer parity — 2026-09-25
+
+**Checkpoint:** `TPL-PARTNER-HOTEL-M3B-MODIFICATION-APPROVED-CUSTOMER-PARITY-20260925-12`
+
+**Status remains:** `HOTEL_M3B_MODIFICATION_CANCELLATION_AUTOMATION_READY_STAGING_PARTIAL_CORRECTED_LIVE_FLOWS_PENDING`
+
+The authenticated corrected modification flow has now completed through all four authorities for booking `TPL-QA-HOTEL-M3B-MOD-001` and request `TPL-MOD-830F5568`: the customer submitted the request, TPL intake automatically routed it to the Hotel, the Hotel returned **Yes / Recommend approve**, and authorized TPL Admin approved and applied the change. The customer observed **Approved**. The Hotel recommendation did not apply the booking change; TPL remained the final authority.
+
+The operator also confirmed the customer presentation repair live. The existing Upcoming booking card now shows a small **Updated booking** marker without creating a second booking, and View Detail presents the canonical revised stay/guest facts consistently in both its summary and lower detail sections. Read-only canonical reconciliation returned request `APPROVED`, routing `COMPLETED`, Hotel recommendation `RECOMMEND_APPROVE`, request version 3, booking version 5, stay 2026-10-01 through 2026-10-03, three guests, allocation `ALLOCATED`, and exactly one active allocation. Payment disclosure remains `TEST_NO_PAYMENT`; no payment, refund, settlement, provider or external-delivery action occurred.
+
+Backend `7b974fcf68298ac7710da01d4023df87fbd3c3df` is deployed only to `tpl-api-partner-staging`/4100 at `/home/tpladmin/tpl-api-releases/s8e71-7b974fcf68298ac7710da01d4023df87fbd3c3df`; archive SHA-256 is `44e72554c61108ba99d54d3da3a669b0320f3a424b1f1883c662132a5681c9b0`. Website `e5b9204` is READY deployment `dpl_HYqqAmPZLJwToifwpb39a4S8MwSV`, assigned only to `staging.tplgo.com`. Mobile source/APK did not change for this presentation delta.
+
+Focused Website contracts pass 11/11; Backend and Website TypeScript and production builds pass; the Website build generated 245/245 pages; scoped diff checks pass. Anonymous access to the new bounded customer summary endpoint is denied with 401. The pre-existing Hotel-detail file still reports its existing four scoped ESLint errors and four hook warnings; this delta added no new lint category. A fresh local PostgreSQL rerun was unavailable because the isolated harness at `127.0.0.1:54339` was not running, so this read-only projection delta is not claimed as new PostgreSQL certification; earlier transactional M3B evidence remains separately recorded. Staging Website/API and read-only production API health return 200, and production remains untouched.
+
+Full HOTEL-M3B PASS remains gated by the separate customer-origin cancellation, withdrawal/rejection no-mutation, timeout/escalation and final export/live reconciliation flows. **Exact next action:** Partner Website → Command Center → Bookings → `TPL-QA-HOTEL-M3B-MOD-001` → click **Acknowledge revised booking** once. After it completes, the acknowledgement must stay complete and **Ready for check-in** must be the next operational action.
+
+Preserved: completed M2.6–M2.7B-G and HOTEL-M3A statuses; fixed **46 requirements / 213 units**; `PARTNER_PROGRESS_PERCENTAGE_NOT_YET_AUDITABLE`; `MOBILE_USER_PARITY=COMPLETE`; `PARTNER_MOBILE_PARITY=OPEN`; `PHASE_1_STEP_1=OPEN`. HOTEL-M3C is not started.
+
 ## HOTEL-M3B authenticated authority-flow observation — 2026-09-25
 
 **Checkpoint:** `TPL-PARTNER-HOTEL-M3B-AUTHORITY-FLOW-LIVE-20260925-11`
