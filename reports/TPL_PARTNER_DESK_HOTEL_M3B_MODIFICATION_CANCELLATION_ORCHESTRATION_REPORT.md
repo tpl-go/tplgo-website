@@ -1,3 +1,15 @@
+## HOTEL-M3B rejection booking acknowledgement and purpose clarity — 2026-09-25
+
+**Checkpoint:** `TPL-PARTNER-HOTEL-M3B-REJECTION-ACK-PURPOSE-20260925-17`
+
+**Status remains:** `HOTEL_M3B_MODIFICATION_CANCELLATION_AUTOMATION_READY_STAGING_PARTIAL_CORRECTED_LIVE_FLOWS_PENDING`
+
+The operator completed the one-time original-booking receipt acknowledgement for `TPL-QA-HOTEL-M3B-WD-001`. Canonical readback proves lifecycle `PARTNER_ACKNOWLEDGED` version 2, one active allocation, unchanged `TEST_NO_PAYMENT`, and cancellation request `TPL-CAN-50E650A8` still `SUBMITTED/ROUTED` version 1 with no Hotel response. The acknowledgement did not approve, reject, cancel or financially mutate the request/booking.
+
+Operator feedback identified that booking receipt, modification, cancellation and withdrawn history needed explicit purpose labels. Website `b6e7955` and native Mobile `4342a14` now distinguish **New/original booking receipt**, **Revised booking receipt**, **Customer modification request**, **Customer cancellation request**, and read-only **Customer withdrew … request**. Hotel Yes/No buttons name the active modification or cancellation; withdrawn records expose no acknowledgement action. Website focused tests pass 12/12 with scoped lint/diff; Mobile focused tests pass 3/3 with TypeScript, scoped lint and diff. No APK rebuild/reinstall is required. Website delivery is deliberately batched with the already verified cancellation-stamp corrections to conserve Vercel credits; no deployment occurred at this checkpoint.
+
+**Exact next action:** Partner Website → `TPL-QA-HOTEL-M3B-WD-001` → cancellation request `TPL-CAN-50E650A8`; enter `Synthetic cancellation cannot be supported — QA Only` and submit **No · Hotel cannot support request** once. This is a recommendation to TPL, not the final rejection.
+
 ## HOTEL-M3B rejected-cancellation Admin intake observation — 2026-09-25
 
 **Checkpoint:** `TPL-PARTNER-HOTEL-M3B-REJECTION-ADMIN-ROUTING-LIVE-20260925-16`
