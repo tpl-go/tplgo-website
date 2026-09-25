@@ -1,3 +1,7 @@
+## HOTEL-M3B bounded Hotel No recommendation — 2026-09-25
+
+Checkpoint `TPL-PARTNER-HOTEL-M3B-REJECTION-HOTEL-NO-20260925-18` records request `TPL-CAN-50E650A8` as `UNDER_REVIEW/RESPONDED` version 2 with canonical `RECOMMEND_REJECT`. Booking/allocation/payment remain unchanged, pending jobs are zero and external delivery is zero. Exact next action is the authorized TPL Admin final Reject with a bounded synthetic reason; Approve & apply must not be used.
+
 ## HOTEL-M3B rejection booking acknowledgement and purpose clarity — 2026-09-25
 
 Checkpoint `TPL-PARTNER-HOTEL-M3B-REJECTION-ACK-PURPOSE-20260925-17` records the one-time original-booking acknowledgement for `TPL-QA-HOTEL-M3B-WD-001`: lifecycle is `PARTNER_ACKNOWLEDGED` version 2 while request `TPL-CAN-50E650A8` remains `SUBMITTED/ROUTED`, allocation/payment unchanged. Website `b6e7955` and Mobile `4342a14` add explicit booking receipt, modification, cancellation and withdrawn-purpose headings/buttons; focused Website 12/12 and Mobile 3/3 plus type/lint/diff pass. No deployment/APK change occurred; Website delivery remains batched with the stamp fix. Exact next action is one bounded Hotel No recommendation.

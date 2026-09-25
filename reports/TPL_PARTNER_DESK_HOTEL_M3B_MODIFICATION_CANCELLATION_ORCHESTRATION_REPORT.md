@@ -1,3 +1,15 @@
+## HOTEL-M3B bounded Hotel No recommendation — 2026-09-25
+
+**Checkpoint:** `TPL-PARTNER-HOTEL-M3B-REJECTION-HOTEL-NO-20260925-18`
+
+**Status remains:** `HOTEL_M3B_MODIFICATION_CANCELLATION_AUTOMATION_READY_STAGING_PARTIAL_CORRECTED_LIVE_FLOWS_PENDING`
+
+The operator submitted the bounded Hotel **No** response once for customer cancellation request `TPL-CAN-50E650A8`. Canonical readback proves request `UNDER_REVIEW`, routing `RESPONDED`, version 2, recommendation `RECOMMEND_REJECT`, routed and partner-response timestamps present. This is an operational recommendation only; TPL Admin remains final authority.
+
+The booking remains `PARTNER_ACKNOWLEDGED` version 2, its one allocation remains active quantity 1, and payment remains `TEST_NO_PAYMENT`. Pending request jobs are zero after the response, outbox external delivery is zero, and staging/production API health is 200. No cancellation, availability release, payment/refund/Wallet/provider/external-notification or production mutation occurred.
+
+**Exact next action:** staging Admin opens request `TPL-CAN-50E650A8`, enters `Rejected after synthetic Hotel No response — QA Only`, chooses **Reject**, reviews the inline confirmation and clicks **Confirm reject** once. Do not choose Approve & apply.
+
 ## HOTEL-M3B rejection booking acknowledgement and purpose clarity — 2026-09-25
 
 **Checkpoint:** `TPL-PARTNER-HOTEL-M3B-REJECTION-ACK-PURPOSE-20260925-17`
