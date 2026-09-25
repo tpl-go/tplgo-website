@@ -1,3 +1,21 @@
+## HOTEL-M3B TPL-to-Hotel authority flow visibility — 2026-09-25
+
+**Checkpoint:** `TPL-PARTNER-HOTEL-M3B-AUTHORITY-FLOW-VISIBILITY-20260925-10`
+
+**Status remains:** `HOTEL_M3B_MODIFICATION_CANCELLATION_AUTOMATION_READY_STAGING_PARTIAL_CORRECTED_LIVE_FLOWS_PENDING`
+
+The operator reconfirmed the required authority order: **Customer request → TPL intake/Admin visibility → TPL System automatically routes to the Hotel → Hotel returns Yes/No → TPL Admin makes the final decision → canonical booking and customer status update**. Routine forwarding remains automatic under the accepted automation-ready design; Admin does not need a manual Forward action. The Partner recommendation never applies the booking change.
+
+Backend enforcement already matched this order. The customer request is `SUBMITTED` and immediately visible to Admin, Partner acknowledgement moves it to `UNDER_REVIEW`, and only an authorized Admin can decide/apply it. The remaining defect was presentation: Admin showed the aggregate states but did not display the authority handoff as one readable sequence.
+
+Website/Admin `51302d5` adds a four-stage request strip: **Customer → TPL**, **TPL System → Hotel**, **Hotel → TPL**, and **TPL → Customer**. It marks the first two stages complete for the current automatically routed request, shows **Waiting for Hotel Yes/No response** as the current stage, and keeps the final TPL decision visibly locked. The original booking acknowledgement remains explicitly separate. No Backend, schema, request, booking, allocation or payment state changed.
+
+Focused request-flow contracts pass 10/10; scoped ESLint and `git diff --check` pass. READY Preview `dpl_G6jYYcRYj7crivmXyCmCBcx9AKhn` is assigned only to `staging.tplgo.com`; staging Website, staging API and untouched production API return 200. Production, finance, provider calls and external delivery remain unchanged/zero.
+
+**Exact next action:** Admin → retained synthetic Partner → Bookings → select request `TPL-MOD-830F5568` and confirm the four-stage strip shows stages 1–2 complete, stage 3 waiting for Hotel Yes/No, and stage 4 waiting/locked. This is read-only; do not approve/reject yet. After that observation, the Hotel Partner should submit one Yes/No response through the normal Partner surface.
+
+Preserved: completed M2.6–M2.7B-G and HOTEL-M3A statuses; fixed **46 requirements / 213 units**; `PARTNER_PROGRESS_PERCENTAGE_NOT_YET_AUDITABLE`; `MOBILE_USER_PARITY=COMPLETE`; `PARTNER_MOBILE_PARITY=OPEN`; `PHASE_1_STEP_1=OPEN`. HOTEL-M3C is not started.
+
 ## HOTEL-M3B Admin request/booking state separation — 2026-09-25
 
 **Checkpoint:** `TPL-PARTNER-HOTEL-M3B-ADMIN-STATE-SEPARATION-20260925-09`

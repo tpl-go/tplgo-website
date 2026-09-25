@@ -1,3 +1,13 @@
+## HOTEL-M3B TPL-to-Hotel authority flow visibility — 2026-09-25
+
+Checkpoint `TPL-PARTNER-HOTEL-M3B-AUTHORITY-FLOW-VISIBILITY-20260925-10` preserves **`HOTEL_M3B_MODIFICATION_CANCELLATION_AUTOMATION_READY_STAGING_PARTIAL_CORRECTED_LIVE_FLOWS_PENDING`**. The accepted order is now explicit in Admin: **Customer → TPL intake → automatic TPL System routing to Hotel → Hotel Yes/No → TPL final decision → customer update**. Partner response is operational confirmation only and cannot apply the booking change.
+
+Website/Admin `51302d5` adds a four-stage authority strip and marks the current routed request at **Waiting for Hotel Yes/No response**, while the final TPL decision remains visibly locked. Backend authorization/order and all canonical data are unchanged. Focused contracts pass 10/10 with scoped lint/diff; READY Preview `dpl_G6jYYcRYj7crivmXyCmCBcx9AKhn` is assigned only to staging. Staging Website/API and untouched production API return 200; production, finance, provider and external delivery remain unchanged.
+
+Exact next action: read-only Admin confirmation on `TPL-MOD-830F5568` that stages 1–2 are complete, stage 3 is waiting for Hotel response and stage 4 is locked. The Hotel Partner response follows only after this observation. Full corrected M3B live/export gates remain open and HOTEL-M3C is not started.
+
+All completed M2.6–M2.7B-G and HOTEL-M3A statuses, fixed **46 requirements / 213 units**, `PARTNER_PROGRESS_PERCENTAGE_NOT_YET_AUDITABLE`, `MOBILE_USER_PARITY=COMPLETE`, `PARTNER_MOBILE_PARITY=OPEN` and `PHASE_1_STEP_1=OPEN` remain preserved.
+
 ## HOTEL-M3B Admin request/booking state separation — 2026-09-25
 
 **Checkpoint:** `TPL-PARTNER-HOTEL-M3B-ADMIN-STATE-SEPARATION-20260925-09`
