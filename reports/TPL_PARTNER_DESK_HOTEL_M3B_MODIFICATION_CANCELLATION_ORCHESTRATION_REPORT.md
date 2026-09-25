@@ -1,4 +1,19 @@
 # TPL Partner Desk — HOTEL-M3B Modification and Cancellation Request Orchestration
+## Mobile approved-request status refresh repair — 2026-09-25
+
+**Checkpoint:** `TPL-PARTNER-HOTEL-M3B-20260925-MOBILE-REQUEST-STATUS-REFRESH-14`
+**Previous/current status:** `HOTEL_M3B_MODIFICATION_CANCELLATION_ORCHESTRATION_STAGING_PARTIAL_MOBILE_STATUS_RECHECK_PENDING`
+
+The operator authenticated Website check passed: the Partner Website correctly shows the customer-only request boundary and does not expose Partner modification/cancellation submission or withdrawal. On native Mobile, the canonical booking update was visible after Admin approval, but the request panel did not advance its displayed status.
+
+The defect was isolated to Mobile presentation and refresh behavior. The request panel loaded its request snapshot only when mounted, and its progress mapper treated the absence of an open request as the Admin-decision stage even when the newest retained request was terminal `APPROVED`. Mobile commit `bb942014db12fcf74494006867def5cde146e031` now reloads request status on foreground, every 15 seconds while active, and through an explicit **Refresh request status** action. It selects the newest canonical request, maps `SUBMITTED → Hotel review`, `UNDER_REVIEW → Admin decision`, and `APPROVED → Updated`, and shows a terminal summary stating that Admin approved and applied the request.
+
+Focused Jest passes 3/3, including terminal-stage mapping and newest-request selection; TypeScript, scoped ESLint and `git diff --check` pass. The existing Development APK/app data are retained. Metro is running and serves this JS update; no native dependency/configuration changed. Backend `e46336f`, Website `189921f`, their staging deployments, canonical data, allocation, finance and production were not changed by this repair.
+
+**Exact next action:** in the connected Mobile app open `TPL-QA-HOTEL-M3B-MOD-001` → Modification & cancellation, tap **Refresh request status** once, and confirm **Latest customer request: APPROVED** with the progress tracker on **Updated**. Confirm that no Partner Submit modification, Submit cancellation or Withdraw control is present. Do not perform another stay action. HOTEL-M3C is not started.
+
+Completed M2.6–M2.7B-G and HOTEL-M3A statuses, fixed **46 requirements / 213 units**, `PARTNER_PROGRESS_PERCENTAGE_NOT_YET_AUDITABLE`, `MOBILE_USER_PARITY=COMPLETE`, `PARTNER_MOBILE_PARITY=OPEN` and `PHASE_1_STEP_1=OPEN` remain preserved.
+
 ## Customer-only modification/cancellation request authority — 2026-09-25
 
 **Checkpoint:** `TPL-PARTNER-HOTEL-M3B-20260925-CUSTOMER-ONLY-REQUEST-AUTHORITY-13`

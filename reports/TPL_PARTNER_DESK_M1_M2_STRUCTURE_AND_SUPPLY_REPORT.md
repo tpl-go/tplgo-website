@@ -1,4 +1,10 @@
 # Partner Desk M1/M2 — structure and supply/media delivery
+## HOTEL-M3B continuation — 2026-09-25 — Mobile approved-request refresh repair
+
+Checkpoint **TPL-PARTNER-HOTEL-M3B-20260925-MOBILE-REQUEST-STATUS-REFRESH-14** records Website customer-only presentation PASS and preserves **HOTEL_M3B_MODIFICATION_CANCELLATION_ORCHESTRATION_STAGING_PARTIAL_MOBILE_STATUS_RECHECK_PENDING**. Mobile showed the updated booking after Admin approval but left the request panel at its earlier stage because the panel loaded once and did not map terminal `APPROVED` to **Updated**.
+
+Mobile `bb94201` adds foreground, 15-second active and manual request-status refresh, selects the newest canonical request and renders the approved terminal summary. Focused tests pass 3/3; TypeScript, scoped lint and diff pass. Existing APK/app data and Metro are reused; Backend, Website, staging data, production and financial/provider state are unchanged. Exact remaining gate is one authenticated Mobile refresh confirming **Latest customer request: APPROVED**, **Updated**, and no Partner Submit/Withdraw action. Program flags remain preserved and HOTEL-M3C is not started.
+
 ## HOTEL-M3B continuation — 2026-09-25 — customer-only request authority
 
 Checkpoint **TPL-PARTNER-HOTEL-M3B-20260925-CUSTOMER-ONLY-REQUEST-AUTHORITY-13** preserves **HOTEL_M3B_MODIFICATION_CANCELLATION_ORCHESTRATION_STAGING_PARTIAL_AUTHENTICATED_LIVE_FLOW_PENDING**. Only the owning customer may create, submit or withdraw a modification/cancellation request through My Booking. Hotel Partner authority is now limited to reading the incoming request and sending its operational review to Admin; direct Partner create/submit/withdraw calls fail with HTTP 403 `HOTEL_REQUEST_CUSTOMER_ONLY`. Partner Website and Mobile no longer expose those request controls.
