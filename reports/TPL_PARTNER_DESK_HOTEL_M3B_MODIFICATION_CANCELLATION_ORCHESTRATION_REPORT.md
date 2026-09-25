@@ -1,4 +1,18 @@
 # TPL Partner Desk — HOTEL-M3B Modification and Cancellation Request Orchestration
+## Revised-booking acknowledgement completed — 2026-09-25
+
+**Checkpoint:** `TPL-PARTNER-HOTEL-M3B-20260925-REVISED-ACKNOWLEDGED-12`
+**Previous/current status:** `HOTEL_M3B_MODIFICATION_CANCELLATION_ORCHESTRATION_STAGING_PARTIAL_AUTHENTICATED_LIVE_FLOW_PENDING`
+
+The operator used **Acknowledge revised booking** once. Canonical PostgreSQL readback shows booking `TPL-QA-HOTEL-M3B-MOD-001` is now `PARTNER_ACKNOWLEDGED` version 4 with `acknowledged=true`; request `TPL-MOD-F1658BA6` remains terminal `APPROVED` version 3. Revised dates 2026-10-02 through 2026-10-03, one adult, zero children, one allocated room and availability 4/8/version 6 remain unchanged.
+
+The immutable timeline contains exactly two acknowledgement events for two different confirmed booking versions: original receipt at version 2, then revised receipt at version 4 after Admin applied the modification at version 3. This is intentional version receipt, not repeated acknowledgement of one version. The server transition matrix exposes `ACKNOWLEDGE` only from `CONFIRMED`; from `PARTNER_ACKNOWLEDGED` it exposes `MARK_READY` (and time-gated no-show), so a duplicate acknowledgement is rejected even if a stale client button were replayed. The Website labels the second receipt as revised and derives the next guidance from canonical status.
+
+Five related internal outbox rows exist with zero external delivery. Allocation, payment `TEST_NO_PAYMENT`, finance, provider and production state are unchanged; staging and production APIs remain 200. No source, deployment or APK changed after the prior Website `2cb7113` / READY `dpl_9hASsLsMaTFT1k9F8G59mkcufnaQ`.
+
+**Exact next action:** refresh the Partner Website booking once and confirm the acknowledgement action is absent and **Mark ready for check-in** is the only primary stay action. Do not click Mark ready in this read-only confirmation. HOTEL-M3C is not started.
+
+Completed statuses and fixed **46 requirements / 213 units**, `PARTNER_PROGRESS_PERCENTAGE_NOT_YET_AUDITABLE`, `MOBILE_USER_PARITY=COMPLETE`, `PARTNER_MOBILE_PARITY=OPEN` and `PHASE_1_STEP_1=OPEN` remain preserved.
 ## Live modification approval and atomic application — 2026-09-25
 
 **Checkpoint:** `TPL-PARTNER-HOTEL-M3B-20260925-MODIFICATION-APPLIED-11`

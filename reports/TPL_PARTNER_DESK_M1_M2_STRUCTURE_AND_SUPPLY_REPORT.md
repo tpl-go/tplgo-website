@@ -1,4 +1,9 @@
 # Partner Desk M1/M2 — structure and supply/media delivery
+## HOTEL-M3B continuation — 2026-09-25 — revised booking acknowledged
+
+Checkpoint **TPL-PARTNER-HOTEL-M3B-20260925-REVISED-ACKNOWLEDGED-12** preserves **HOTEL_M3B_MODIFICATION_CANCELLATION_ORCHESTRATION_STAGING_PARTIAL_AUTHENTICATED_LIVE_FLOW_PENDING**. The operator acknowledged the revised booking once. Canonical state is now `PARTNER_ACKNOWLEDGED`/v4; the request remains `APPROVED`/v3, allocation stays once and availability remains 4/8/v6.
+
+Timeline evidence distinguishes the original v2 receipt from the revised v4 receipt. The server permits acknowledgement only from `CONFIRMED`; the acknowledged state exposes `MARK_READY`, so repeated acknowledgement of the same version is rejected. Payment/provider/external delivery and production are unchanged. Exact next action is one read-only refresh confirming the Acknowledge control is absent and **Mark ready for check-in** is the next action. Program flags remain preserved and HOTEL-M3C is not started.
 ## HOTEL-M3B continuation — 2026-09-25 — modification approved and applied
 
 Checkpoint **TPL-PARTNER-HOTEL-M3B-20260925-MODIFICATION-APPLIED-11** preserves **HOTEL_M3B_MODIFICATION_CANCELLATION_ORCHESTRATION_STAGING_PARTIAL_AUTHENTICATED_LIVE_FLOW_PENDING**. The operator completed the repaired Admin decision flow. Canonical PostgreSQL readback shows request `TPL-MOD-F1658BA6` `APPROVED`/v3 and the same booking `CONFIRMED`/v3, with revised acknowledgement pending.
