@@ -1,3 +1,7 @@
+## HOTEL-M3B rejected-cancellation Admin intake observation — 2026-09-25
+
+Checkpoint `TPL-PARTNER-HOTEL-M3B-REJECTION-ADMIN-ROUTING-LIVE-20260925-16` records the operator’s authenticated Admin observation that request `TPL-CAN-50E650A8` shows **TPL System sent** and has automatically reached the Hotel. No decision or data mutation occurred. Status remains partial pending the separate one-time booking acknowledgement, Hotel No recommendation, TPL rejection, timeout/escalation and final parity/export closure.
+
 ## HOTEL-M3B rejected-cancellation intake and automatic routing — 2026-09-25
 
 Checkpoint `TPL-PARTNER-HOTEL-M3B-REJECTION-INTAKE-ROUTING-20260925-15` preserves **`HOTEL_M3B_MODIFICATION_CANCELLATION_AUTOMATION_READY_STAGING_PARTIAL_CORRECTED_LIVE_FLOWS_PENDING`**. Customer request `TPL-CAN-50E650A8` was submitted once for `TPL-QA-HOTEL-M3B-WD-001` and is canonically `SUBMITTED/ROUTED` version 1 with requester `CUSTOMER`. Booking remains confirmed/version 1, one allocation remains active and payment remains `TEST_NO_PAYMENT`; zero external delivery occurred. Exact next action is a read-only Admin confirmation of immediate intake and automatic Hotel routing, with the final decision still locked.

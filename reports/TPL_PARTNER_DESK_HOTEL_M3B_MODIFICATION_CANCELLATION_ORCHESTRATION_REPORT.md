@@ -1,3 +1,13 @@
+## HOTEL-M3B rejected-cancellation Admin intake observation — 2026-09-25
+
+**Checkpoint:** `TPL-PARTNER-HOTEL-M3B-REJECTION-ADMIN-ROUTING-LIVE-20260925-16`
+
+**Status remains:** `HOTEL_M3B_MODIFICATION_CANCELLATION_AUTOMATION_READY_STAGING_PARTIAL_CORRECTED_LIVE_FLOWS_PENDING`
+
+The operator observed request `TPL-CAN-50E650A8` in authenticated staging Admin and confirmed **TPL System sent** / the request has been sent to the Hotel. This closes the live immediate-Admin-visibility and automatic-routing observation for the rejected-cancellation scenario. The observation was read-only; TPL final decision was not performed and canonical booking/allocation/payment state remains unchanged from checkpoint 15.
+
+**Exact next action:** Partner Website → Command Center → Bookings → `TPL-QA-HOTEL-M3B-WD-001` → click **Acknowledge original booking once**. This records receipt of the confirmed booking only; it does not approve/reject the cancellation request. Do not send the Hotel No response in the same step.
+
 ## HOTEL-M3B rejected-cancellation intake and automatic routing — 2026-09-25
 
 **Checkpoint:** `TPL-PARTNER-HOTEL-M3B-REJECTION-INTAKE-ROUTING-20260925-15`
