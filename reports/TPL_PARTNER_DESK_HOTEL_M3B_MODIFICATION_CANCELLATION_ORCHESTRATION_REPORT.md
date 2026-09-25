@@ -1,3 +1,19 @@
+## HOTEL-M3B Partner modified-booking marker and revised acknowledgement — 2026-09-25
+
+**Checkpoint:** `TPL-PARTNER-HOTEL-M3B-PARTNER-MODIFIED-MARKER-20260925-13`
+
+**Status remains:** `HOTEL_M3B_MODIFICATION_CANCELLATION_AUTOMATION_READY_STAGING_PARTIAL_CORRECTED_LIVE_FLOWS_PENDING`
+
+The operator acknowledged the revised booking once and confirmed the new **Modified booking** marker on the Partner booking row/detail. The marker is derived from the immutable `hotel.booking.modification.applied` timeline event, so it remains visible after the one-time revised acknowledgement while the lifecycle advances normally. It does not depend on the transient acknowledgement button or fixture name.
+
+Read-only canonical reconciliation confirms `TPL-QA-HOTEL-M3B-MOD-001` is `PARTNER_ACKNOWLEDGED`, version 6, acknowledged, allocated, and retains the applied 2026-10-01 through 2026-10-03 stay with three adults and zero children. Request `TPL-MOD-830F5568` remains `APPROVED`, routing `COMPLETED`, Hotel recommendation `RECOMMEND_APPROVE`, version 3. Payment disclosure remains `TEST_NO_PAYMENT`.
+
+Website source `7490679` adds the bounded orange marker to the Partner booking list and selected detail header. Focused request/presentation tests pass 12/12, scoped ESLint and `git diff --check` pass, and the Webpack production build compiles and generates 245/245 pages. READY deployment `dpl_ExNKhb8DXcK5YrWMZV7AdbdX9Kuq` is assigned only to `staging.tplgo.com`; the operator confirmed the marker live. Backend and Mobile source/APK did not change. No booking/request/allocation/payment/refund/settlement/provider/external-delivery or production mutation was made by this presentation repair.
+
+Full HOTEL-M3B PASS remains gated by customer-origin cancellation, withdrawal/rejection no-mutation, timeout/escalation and final export/live reconciliation. **Exact next action:** Customer Website → My Booking → Upcoming → `TPL-QA-HOTEL-M3B-CAN-001` → **Cancel Booking**; submit one bounded fictional cancellation reason once. Do not use Partner Desk to create the request and do not make the Hotel/Admin response in the same step.
+
+Preserved: completed M2.6–M2.7B-G and HOTEL-M3A statuses; fixed **46 requirements / 213 units**; `PARTNER_PROGRESS_PERCENTAGE_NOT_YET_AUDITABLE`; `MOBILE_USER_PARITY=COMPLETE`; `PARTNER_MOBILE_PARITY=OPEN`; `PHASE_1_STEP_1=OPEN`. HOTEL-M3C is not started.
+
 ## HOTEL-M3B approved modification customer parity — 2026-09-25
 
 **Checkpoint:** `TPL-PARTNER-HOTEL-M3B-MODIFICATION-APPROVED-CUSTOMER-PARITY-20260925-12`
