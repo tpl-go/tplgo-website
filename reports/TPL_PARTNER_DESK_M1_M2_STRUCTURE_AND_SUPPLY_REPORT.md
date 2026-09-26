@@ -1,3 +1,7 @@
+## HOTEL-M3B controlled reminder and timeout escalation — 2026-09-26
+
+Checkpoint `TPL-PARTNER-HOTEL-M3B-TIMEOUT-REMINDER-ESCALATION-20260926-20` records live staging request `TPL-MOD-64AF1A33` as `SUBMITTED / ESCALATED` version 1 after exactly one route, one reminder and one timeout-escalation job, all completed in one attempt. Booking `TPL-QA-HOTEL-M3B-WD-001` remains `PARTNER_ACKNOWLEDGED` version 2 with one active allocation, availability 3/version 8 and `TEST_NO_PAYMENT`; external delivery, provider calls and financial mutation remain zero. The canonical timeout gate is closed. Authenticated cross-surface display could not be certified because the supported browser connection failed; the request is intentionally retained open for that observation before customer withdrawal. One batched Website deployment, full regression and final cross-surface/export reconciliation remain.
+
 ## HOTEL-M3B final rejected cancellation with no mutation — 2026-09-25
 
 Checkpoint `TPL-PARTNER-HOTEL-M3B-REJECTION-FINAL-NO-MUTATION-20260925-19` records authorized TPL rejection of `TPL-CAN-50E650A8`. Request is `REJECTED/COMPLETED` version 3; booking remains `PARTNER_ACKNOWLEDGED` version 2, one allocation remains active, availability remains 3/version 8 and payment remains `TEST_NO_PAYMENT`. Pending jobs and external delivery are zero. Rejection caused no canonical booking/allocation/availability/financial mutation. Timeout/escalation, one batched Website deployment, full regression and final cross-surface/export reconciliation remain.

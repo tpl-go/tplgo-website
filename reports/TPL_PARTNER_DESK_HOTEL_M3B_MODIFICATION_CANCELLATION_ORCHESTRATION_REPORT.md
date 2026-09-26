@@ -1,3 +1,15 @@
+## HOTEL-M3B controlled reminder and timeout escalation — 2026-09-26
+
+**Checkpoint:** `TPL-PARTNER-HOTEL-M3B-TIMEOUT-REMINDER-ESCALATION-20260926-20`
+
+**Status remains:** `HOTEL_M3B_MODIFICATION_CANCELLATION_AUTOMATION_READY_STAGING_PARTIAL_CORRECTED_LIVE_FLOWS_PENDING`
+
+The owning synthetic customer submitted bounded modification request `TPL-MOD-64AF1A33` on retained booking `TPL-QA-HOTEL-M3B-WD-001` through the real staging service boundary. Automatic routing completed once in 39 ms. The controlled clock advanced the internal reminder job and timeout-escalation job separately; canonical PostgreSQL readback proves one completed route, one completed reminder and one completed timeout escalation, each with one attempt and no error. The request remains `SUBMITTED / ESCALATED` version 1 so its overdue/Admin-monitoring presentation can be observed before cleanup. Its four ordered events are customer submission, system routing, system reminder due and system timeout escalation.
+
+No canonical booking or financial mutation occurred: the booking remains `PARTNER_ACKNOWLEDGED` version 2, its only allocation remains active quantity 1, availability remains 3/version 8 and payment remains `TEST_NO_PAYMENT`. The request produced three bounded internal outbox rows with zero external delivery, provider call or financial mutation. Automation remains `MANUAL`, provider `NONE`, auto decision Off; staging and untouched production API health are 200.
+
+The in-app browser connection failed during supported setup, so no authenticated visual PASS is inferred. The controlled canonical timeout/reminder/escalation gate is closed; authenticated Admin/Partner/Customer display of `TPL-MOD-64AF1A33`, the single batched Website deployment, full M3B regression and final CSV/XLSX/PDF/Print reconciliation remain. After cross-surface observation, the owning customer should withdraw this still-open synthetic request once so it cannot remain as stale staging work. HOTEL-M3C remains unstarted.
+
 ## HOTEL-M3B final rejected cancellation with no mutation — 2026-09-25
 
 **Checkpoint:** `TPL-PARTNER-HOTEL-M3B-REJECTION-FINAL-NO-MUTATION-20260925-19`
